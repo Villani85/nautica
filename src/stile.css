@@ -35,6 +35,13 @@
   /* sotto il taglio — acqua profonda */
   --acqua:#071A1D;
   --acqua-viva:#0F3438;
+
+  /* LO SPACCO: meta' aria e meta' acqua, con lo stacco secco al 50%. E' l'unica
+     idea meccanica del sito, e da qui in poi vive in una riga sola — cosi' il
+     fondo della sezione e quello della tela non possono scollarsi. */
+  --spacco:linear-gradient(to bottom,
+    var(--aria) 0%,var(--aria) 50%,
+    var(--acqua-viva) 50%,var(--acqua) 100%);
   --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua */
   /* l'unico accento saturo, e sta sotto la linea */
   --recupero:#4FE0C4;
@@ -172,9 +179,7 @@ p{max-width:60ch}
 .atto{position:relative}
 .atto--taglio,.atto--demo{
   min-height:100svh;
-  background:linear-gradient(to bottom,
-    var(--aria) 0%,var(--aria) 50%,
-    var(--acqua-viva) 50%,var(--acqua) 100%);
+  background:var(--spacco);
 }
 .linea{
   position:absolute;left:0;right:0;top:50%;height:1px;
@@ -205,11 +210,15 @@ p{max-width:60ch}
 .atto--demo{background:none;min-height:auto;height:520svh}
 .palco{
   position:sticky;top:0;height:100svh;overflow:hidden;
-  background:linear-gradient(to bottom,
-    var(--aria) 0%,var(--aria) 50%,
-    var(--acqua-viva) 50%,var(--acqua) 100%);
+  background:var(--spacco);
 }
 .scena{position:absolute;inset:0}
+/* La tela WebGL e' trasparente sopra la linea — verificato leggendo l'alpha
+   dal browser: 0 a tutte e sette le battute — e il fondo del .palco traspare.
+   PROVATO E BOCCIATO: dare lo STESSO fondo anche alla tela non serve a niente.
+   Per una tela accelerata il fondo dell'elemento finisce nello stesso livello
+   di composizione del genitore, quindi si perde insieme a lui. Registrato qui
+   perche' e' la cosa che verrebbe in mente per prima. */
 .scena canvas{width:100%;height:100%}
 .patto{
   font-variation-settings:var(--v-dato);

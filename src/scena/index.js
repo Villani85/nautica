@@ -213,7 +213,12 @@ export function creaScena (contenitore) {
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
     for (const p of pinne) p.aggiorna(sim.S.pinna * p.lato)
 
-    if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame)
+    // L'onda si spegne DOVE STA L'OBIETTIVO, quindi la posizione della camera
+    // le va passata: e' calcolata poche righe piu' sotto, per questo si anima
+    // il mare con quella del fotogramma precedente. Uno sfasamento di un
+    // fotogramma su un raggio di 5,5 unita' non si vede — la camera si sposta
+    // di millesimi per giro.
+    if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z)
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)
