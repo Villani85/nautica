@@ -141,3 +141,106 @@ in un elenco.
 Il passo successivo è una prova di composizione: le stesse tre schermate — il
 titolo che attraversa la linea, le letture della dimostrazione, la tabella dei
 numeri — composte con due o tre coppie candidate e messe a confronto.
+
+---
+
+# La proposta: Recursive. Gratis, e migliore dei criteri che l'avevano generata
+
+Verificata eseguendo, non scelta leggendo un elenco.
+
+**Recursive** — Stephen Nixon / Arrow Type — **OFL-1.1**, self-hostable via
+`@fontsource-variable/recursive` (nessun CDN, quindi **D06** è salva).
+
+## Perché batte una coppia comprata, sui nostri stessi criteri
+
+### Criterio 1 — mono sorella: qui non è sorella, è la stessa
+
+Recursive ha un asse **`MONO`, da 0 a 1, passo 0,01**. Non è una famiglia con
+un mono affiancato: è **un disegno solo** che scorre da proporzionale a
+monospaziato.
+
+Verificato misurando le larghezze reali dopo aver istanziato il font:
+
+| | `i` | `W` | `m` | cifre | `.` | larghezze distinte |
+|---|---|---|---|---|---|---|
+| **MONO = 0** | 350 | 950 | 850 | 600 | 350 | 4 → proporzionale |
+| **MONO = 1** | 600 | 600 | 600 | 600 | 600 | **1 → monospaziato** |
+
+La coerenza fra display ed etichette non «arriva gratis»: è **tautologica**.
+Nessuno può sbagliare l'abbinamento perché non c'è un abbinamento.
+
+### Criterio 2 — cifre tabulari: ci sono, e in un modo più solido
+
+`tnum` **non esiste** in Recursive. Le funzioni presenti sono `ccmp dnom frac
+liga locl numr pnum rvrn`.
+
+Non serve: **le cifre sono larghe 600 in entrambe le modalità**, quindi sono
+**tabulari per costruzione**, e `pnum` è semmai la via d'uscita verso le
+proporzionali.
+
+È una garanzia più forte di una funzione OpenType: una funzione si può
+dimenticare di attivare, o farsi azzerare da un `font-feature-settings` scritto
+altrove. Una larghezza no. Le letture del rollio cambiano sessanta volte al
+secondo: qui non ballano perché **non possono**.
+
+### Criterio 3 — variabile, e pesa meno di quello che abbiamo
+
+Il file variabile completo pesa 297,8 KB, che sarebbe stato un no. Ma il font si
+**istanzia** sui due estremi dell'asse e si sottoinsiema ai glifi che il sito
+usa davvero. Misurato:
+
+| | peso |
+|---|---|
+| MONO = 0, peso ancora variabile 300–1000 | 31,9 KB |
+| MONO = 1, peso ancora variabile 300–1000 | 31,0 KB |
+| **totale, con il peso variabile** | **62,9 KB** |
+| totale, a peso fisso | **24,8 KB** |
+| *oggi: 4 file statici Space Grotesk + JetBrains* | *67,2 KB* |
+
+**62,9 KB contro 67,2**, e in cambio il peso diventa **continuo da 300 a 1000**
+invece di due valori fissi. A peso fisso si scende a 24,8 KB, cioè **−63%**
+sulla voce dominante del percorso critico.
+
+## E la ragione che vale più delle tre messe insieme
+
+Un asse che scorre da **proporzionale a macchina** è la tesi del sito scritta
+nel sistema tipografico.
+
+Sopra la linea la gente sta comoda: proporzionale, umano, `MONO = 0`. Sotto la
+linea lavorano le macchine: monospaziato, tecnico, `MONO = 1`. Non è un
+abbinamento scelto perché sta bene — è **lo stesso argomento del taglio,
+applicato alle lettere**, e discende dalla regola generativa invece di
+affiancarsi ad essa.
+
+È esattamente ciò che il 40% del Design premia: non una bella scelta, un
+sistema che deriva da un principio.
+
+*Cautela, perché è il genere di idea che scivola in una trovata:* i due lati
+usano **i due estremi**, fermi. Far scorrere l'asse con lo scorrimento sarebbe
+un effetto, e la regola di casa dice che la settima idea che non discende dal
+taglio si rifiuta.
+
+## Cosa questo cambia in D40, D41 e D42
+
+- **D40** (le due famiglie si cambiano) — confermata, e adesso c'è la sostituta.
+- **D41** (i tre criteri) — soddisfatti tutti e tre, e due in modo più forte di
+  come erano stati posti.
+- **D42** (licenza commerciale, non di prova) — **decade**. OFL-1.1 copre l'uso
+  commerciale e la ridistribuzione self-hosted. Restano gli obblighi della
+  licenza: mantenere la nota di copyright e non vendere il font da solo.
+
+Le centinaia di euro previste per una coppia di fonderia non servono più. Non
+perché si sia rinunciato al livello, ma perché **il criterio giusto non era il
+prezzo**: era non somigliare a un modello preconfezionato, e avere un sistema
+invece di due scelte.
+
+## Cosa resta da fare prima di adottarla
+
+La prova di composizione resta necessaria, e non è una formalità: **i numeri
+misurati dicono che si può, non che è bello.** Le stesse tre schermate — il
+titolo che attraversa la linea, le letture della dimostrazione, la tabella dei
+numeri — composte con Recursive ai due estremi, guardate, e confrontate con
+almeno una coppia di fonderia per non innamorarsi della soluzione elegante.
+
+Lo strumento che ha prodotto questi pesi va salvato: serve a rifare la misura
+ogni volta che cambia l'insieme dei glifi.
