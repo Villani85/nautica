@@ -95,10 +95,30 @@ caricato solo all'occorrenza. JS totale 143,6 KB contro un cancello di 250.
 ### Accessibilita', misurata in pagina
 
 - **contrasto**: 78 testi controllati, 10 sotto soglia — **tutti nella testata
-  fissa**, a 2,95:1 sopra le sezioni scure. Corretto: la testata ora prende il
-  `data-lato` della sezione che le passa sotto;
-- **bersagli**: 5 sotto 44 px, tutti voci di menu a 32 px. Corretti;
+  fissa**, a 2,95:1 sopra le sezioni scure. Corretto: la testata prende il
+  `data-lato` della sezione che le passa sotto, **verificato guardando**;
+- **bersagli**: da 5 sotto 44 px a **zero**;
 - **overflow orizzontale**: assente a 1536 px.
+
+> ### Tre modi in cui il metro del contrasto ha mentito, in mezz'ora
+>
+> Vale piu' del risultato, perche' tornano tutti e tre.
+>
+> **1 · `backgroundColor` di un gradiente e' trasparente.** Trattarlo come nero
+> dava 3,47:1 su un testo che ne fa 4,82. Un colore che non c'e' non e' nero.
+>
+> **2 · Per un elemento `fixed` l'antenato non e' cio' che si vede.** Risalendo
+> il DOM si arriva al `body`, non alla sezione che gli passa sotto. Serve
+> `elementsFromPoint`, cioe' una sonda, non l'albero.
+>
+> **3 · Gli elementi fuori schermo falsano tutto.** `offsetParent` e' vero anche
+> per una sezione lontana; la sonda finisce su un punto qualsiasi e restituisce
+> rapporti da 1,0 su testi che non sono nemmeno in inquadratura.
+>
+> E il quarto, che non e' del metro ma dell'ambiente: **in una scheda in secondo
+> piano Chrome non consegna gli eventi di scorrimento**. La testata non cambiava
+> lato e sembrava un difetto del codice. Verificato con i comandi del browser,
+> che tengono la scheda attiva: funziona.
 
 ---
 

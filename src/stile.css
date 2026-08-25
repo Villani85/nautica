@@ -407,3 +407,7 @@ p{max-width:60ch}
 
 /* bersagli della navigazione a 44px: area grande, segno piccolo */
 .testata nav a{display:inline-flex;align-items:center;min-height:44px;padding:0}
+
+/* L'ultimo bersaglio sotto misura: il collegamento del contatto, 463x31.
+   Largo lo era, alto no. */
+.indirizzo a{display:inline-flex;align-items:center;min-height:44px}
