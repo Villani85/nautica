@@ -1,6 +1,6 @@
 # Stato del progetto
 
-**Aggiornato:** 2026-08-25 · **Giro:** 4 · **Fase:** il sito esiste, il bersaglio e' stato rifondato.
+**Aggiornato:** 2026-08-26, notte · **Giro:** 5 · **Fase:** fondamenta della sequenza costruite e collaudate.
 
 ---
 
@@ -232,3 +232,94 @@ Simon. Il criterio non e' piu' *"e' abbastanza bello per vincere qualcosa?"* ma:
 
 Se la risposta e' no, non si costruisce il resto del sito: si rifanno art
 direction, modello e regia.
+
+
+---
+
+# Giro 5 — la notte del 25/26 agosto
+
+Lavorato da soli sul piano approvato. Tutto quello che segue e' **collaudato**,
+non dichiarato: `node strumenti/collaudo-rollio.mjs` e `collaudo-scafo.mjs`
+escono con errore se qualcosa si rompe.
+
+## La riduzione del rollio adesso si guadagna
+
+Era il divario piu' grave fra i documenti e il codice: `simulazione.js` aveva
+ancora `SMORZAMENTO = 0.11` **scritto a mano**, e il sito mostrava "89%" senza
+averlo mai calcolato.
+
+Ora e' un sistema del secondo ordine integrato con Eulero semi-implicito, con
+**due corse in parallelo** — identiche tranne che una ha autorita' zero. Il
+numero a schermo e' il rapporto fra i due picchi.
+
+E due cose che il modello vecchio non aveva:
+
+- **la velocita' comanda.** `C(V) = C0·(V/V_rif)²`, perche' una pinna produce
+  portanza solo in moto. A nave ferma la riduzione vale **zero**, misurato.
+  Niente soglia artificiale a 6 nodi: il quadrato la produce da sola. Chiude A06;
+- **lo stallo.** Oltre i 20 gradi la portanza *cala* invece di essere tagliata.
+  Con un semplice `clamp` il sistema resta lineare, e la riduzione esce identica
+  a ogni stato del mare — cinque numeri uguali che a schermo leggono come
+  inventati anche essendo veri.
+
+Misurato: **88-91% a velocita' di servizio**, che scende a **16,8% al mare 5 con
+8 nodi** — pinne sature, efficacia che crolla — e a **0% a nave ferma**.
+
+## Quattro difetti che nessun collaudo numerico poteva vedere
+
+Li ha trovati tutti l'occhio su un provino ingrandito, e tre erano superfici:
+
+1. la **prua e lo specchio** erano aperti: si guardava dentro lo scafo;
+2. il **ponte** era aperto: stessa cosa, terza forma;
+3. la **luce di fondale**, intensita' 12, si trovava DENTRO la carena sezionata
+   e ne illuminava l'interno di verde. Isolata con `?senzaAcqua=1` — una prova,
+   non una deduzione: tolto il mare, il verde restava;
+4. e il piu' insidioso: **544 normali di murata su 544 puntavano dentro**.
+   L'avvolgimento del loft era rovesciato dall'inizio, e con un materiale a
+   doppia faccia non si vedeva. E' emerso solo separando esterno e interno.
+
+Il collaudo adesso esce con errore se una sola normale punta dentro.
+
+## E un cancello che mentiva
+
+Il collaudo del rollio passava **tre volte su quattro**. Un cancello che suona a
+intermittenza e' peggio di nessun cancello.
+
+La diagnosi vale piu' del difetto: cercavo l'escursione della riduzione fra
+stati del mare **a velocita' di servizio**, dove la pinna non satura mai e il
+sistema E' lineare. Non sbagliava il modello: sbagliava il regime in cui
+misuravo. E spostando la misura a 8 nodi, dove la non linearita' vive, il
+sistema e' saturo e caotico — anche l'escursione diventa rumorosa.
+
+La forma giusta della domanda e' statistica: si confronta la varianza **fra**
+stati del mare con quella **dentro** uno stesso stato. 27,6 punti contro 6,7,
+rapporto 4,12x. Dodici corse su dodici, adesso.
+
+## Il mare fuori dal finestrino
+
+La tuga ha un'apertura vera — fascia bassa, buco, fascia alta, cinque montanti —
+e dietro c'e' un orizzonte in **coordinate mondo**, dentro la sovrastruttura.
+Quando lo scafo rolla, l'orizzonte resta piatto **da solo**.
+
+Prima stesura sbagliata e lasciata scritta nel file: l'avevo messo su un cilindro
+di raggio 34 attorno a tutta la scena. Copriva il fondo e **cancellava il taglio
+al 50%** — non un'apertura, un fondale, cioe' esattamente cio' che la regola
+vieta.
+
+Il ripiego procedurale funziona gia': cielo, riga netta a meta', mare che si
+incupisce e si increspa con lo stato del mare. **Il filmato vero manca**, e
+quando arriva va girato con l'orizzonte a meta' fotogramma esatta — altrimenti
+nell'inquadratura ce ne sono due.
+
+## Cosa manca, in ordine
+
+1. **le persone** — A08 aperta sul lato della fotografia: il meccanismo
+   dell'apertura c'e', l'asset no;
+2. **la sequenza a sette battute** (Fase 2 del piano): la regia c'e' a meta',
+   il taglio del titolo e la sezione funzionano, il resto no;
+3. **il copy in inglese** — A02 decisa, non applicata;
+4. **la preview pubblica**: serve un tuo clic. Settings → Pages → Source:
+   GitHub Actions;
+5. **il mobile**, che non ho potuto verificare davvero: il ridimensionamento
+   della finestra non cambia il viewport, e la regola del repo chiede comunque
+   un dispositivo reale.
