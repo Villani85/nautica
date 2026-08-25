@@ -14,6 +14,19 @@ dove servono.
 | `valuta-awwwards/` | come si stima il livello di un sito e come si misurano i proxy oggettivi |
 | `render3d-in-video-reale/` | esperienze 3D guidate dallo scroll: progettazione della coreografia, Blender, video scrubbato |
 | `blender/` | il 3D offline, per il fotorealismo estremo. Controparte di `stack-sito-immersivo` |
+| `confronto-gemini/` | registrare un sito e farlo giudicare alla cieca da un valutatore esterno. È lo strumento del confronto che il piano prevede prima della candidatura |
+
+Il repertorio di siti analizzati sta invece in [`../riferimenti/`](../riferimenti/):
+40 schede e 33 documenti tecnici, con l'indice che dice quale leggere per quale problema.
+
+## Skill che NON sono qui, e perché
+
+Nell'ambiente di lavoro ce ne sono altre utili a questo progetto — le skill
+ufficiali **GSAP** (core, timeline, ScrollTrigger, plugin, performance, utils),
+`web-design`, `frontend-design`, `playwright-recording`, `ffmpeg`. Non sono
+state copiate perché **non sono nostre**: ripubblicare materiale di terzi su un
+repository pubblico è un problema di licenza, non una svista. Si citano per nome
+e si installano da chi le pubblica.
 
 ---
 

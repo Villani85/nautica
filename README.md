@@ -33,6 +33,9 @@ Un numero autorale spacciato per misura costa più di quanto rende.
 | [`docs/03-DECISIONI.md`](docs/03-DECISIONI.md) | registro: decisioni prese, proposte, aperte |
 | [`docs/04-MISURE.md`](docs/04-MISURE.md) | il libro mastro dei numeri |
 | [`feedback/`](feedback/) | i contributi esterni e l'esito delle verifiche |
+| [`riferimenti/`](riferimenti/) | **40 schede di siti premiati e 33 documenti tecnici**, scritti perché un'AI sappia tutto di un sito senza navigarci |
+| [`skill/`](skill/) | il know-how dello studio: stack immersivo, valutazione, 3D, Blender, confronto alla cieca |
+| [`src/`](src/) · [`index.html`](index.html) | il sito |
 | [`prototipo/`](prototipo/) | il punto di partenza, versionato com'era |
 
 ## Il prototipo
