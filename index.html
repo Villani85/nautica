@@ -57,6 +57,10 @@
       <span class="et">Picco 10 s</span>
       <span class="cifra"><output id="v-picco">0,0</output><u>°</u></span>
     </div>
+    <div class="dato">
+      <span class="et">Andatura</span>
+      <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
+    </div>
     <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
       <span class="et">Riduzione</span>
       <span class="cifra"><output id="v-riduzione">0</output><u>%</u></span>
@@ -80,6 +84,11 @@
     <div class="mare">
       <p class="et et--centro" id="et-mare">Stato del mare</p>
       <div id="mare" class="mare__scala" role="group" aria-labelledby="et-mare"></div>
+    </div>
+    <div class="andatura">
+      <label class="et et--centro" for="velocita">Andatura</label>
+      <input type="range" id="velocita" class="cursore" min="0" max="20" step="1" value="12"
+             aria-describedby="v-velocita">
     </div>
     <button type="button" id="stab" class="interruttore" aria-pressed="false">
       <span class="spia" aria-hidden="true"></span>

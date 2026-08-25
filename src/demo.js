@@ -34,7 +34,8 @@ export function avviaDimostrazione () {
     carico: $('#v-carico'),
     recupero: $('#v-recupero'),
     fCarico: $('#b-carico .riempi'),
-    fRecupero: $('#b-recupero .riempi')
+    fRecupero: $('#b-recupero .riempi'),
+    velocita: $('#v-velocita')
   })
 
   let inCorso = false
@@ -60,6 +61,19 @@ export function avviaDimostrazione () {
   collegaComandi({
     contenitore: $('#mare'), toggle: $('#stab'), sim, alCambio: risveglia
   })
+  /**
+   * L'ANDATURA. E' la seconda cosa che si scopre: le pinne producono portanza
+   * solo in moto, quindi sotto una certa velocita' l'interruttore si accende e
+   * non succede niente. Un <input type=range> vero, non un div con listener:
+   * arriva gia' accessibile da tastiera e annunciato.
+   */
+  const cursore = $('#velocita')
+  cursore.addEventListener('input', () => {
+    sim.S.velocita = Number(cursore.value)
+    sim.azzeraPicchi()
+    risveglia()
+  })
+
   collegaPuntoDiVista({
     tela: scena.tela, ruota: scena.ruota, suggerimento: $('#nota')
   })

@@ -341,3 +341,37 @@ p{max-width:60ch}
     transition-duration:.01ms!important;scroll-behavior:auto!important;
   }
 }
+
+/* ═══ ANDATURA ═══
+   Un <input type="range"> vero, stilizzato — non un div con un listener.
+   La tastiera, il lettore di schermo e il trascinamento arrivano dal browser.
+   L'area sensibile e' 44px anche se il segno visibile e' una riga sottile. */
+.andatura{display:flex;flex-direction:column;gap:var(--u);align-items:center}
+.cursore{
+  -webkit-appearance:none;appearance:none;
+  width:132px;height:44px;background:none;cursor:pointer;margin:0;
+}
+.cursore::-webkit-slider-runnable-track{height:2px;background:rgba(127,163,165,.3)}
+.cursore::-moz-range-track{height:2px;background:rgba(127,163,165,.3)}
+.cursore::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;margin-top:-8px;
+}
+.cursore::-moz-range-thumb{
+  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;
+}
+.cursore:focus-visible{outline:2px solid var(--recupero);outline-offset:4px}
+
+/* ═══ TESTATA CHE SEGUE IL LATO ═══
+   DIFETTO CORRETTO — la testata e' fixed e non sta dentro nessuna sezione,
+   quindi non ereditava mai il --tenue del sistema [data-lato]. Colore
+   inchiodato a --inchiostro-tenue: misurato 2,95:1 sopra le sezioni scure,
+   contro una soglia di 4,5. Sopra #offerta era inchiostro su acqua profonda.
+   Ora il lato glielo assegna main.js dalla sezione che le sta sotto. */
+.testata[data-lato="sotto"] .occhiello{color:var(--acqua-tenue)}
+.testata[data-lato="sotto"] .occhiello b{color:var(--aria)}
+.testata[data-lato="sotto"] nav a{color:var(--acqua-tenue)}
+.testata[data-lato="sotto"] nav a:hover{color:var(--aria)}
+
+/* bersagli della navigazione a 44px: area grande, segno piccolo */
+.testata nav a{display:inline-flex;align-items:center;min-height:44px;padding:0}

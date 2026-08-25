@@ -54,6 +54,39 @@ function mostraRipiego (testo) {
   document.querySelector('#scena').hidden = true
 }
 
+/**
+ * LA TESTATA SEGUE IL LATO DELLA SEZIONE CHE LE STA SOTTO.
+ *
+ * E' `position:fixed`, quindi non sta dentro nessuna sezione e non eredita
+ * mai il `--tenue` del sistema `[data-lato]` che governa tutto il resto.
+ * Misurato: 2,95:1 sopra le sezioni scure, contro una soglia di 4,5 — sopra
+ * l'offerta il testo era inchiostro su acqua profonda.
+ *
+ * Si riusa il sistema che esiste invece di aggiungerne uno: alla testata viene
+ * assegnato il `data-lato` della sezione che le passa sotto.
+ */
+const testata = document.querySelector('.testata')
+if (testata) {
+  const sezioni = [...document.querySelectorAll('[data-lato]')].filter(e => e !== testata)
+  const quota = () => testata.getBoundingClientRect().bottom
+  let ultimo = null
+  const segui = () => {
+    const y = quota()
+    let lato = 'sopra'
+    for (const s of sezioni) {
+      const r = s.getBoundingClientRect()
+      if (r.top <= y && r.bottom > y) lato = s.dataset.lato
+    }
+    // "misto" e' la dimostrazione: sopra la linea e' carta, e la testata sta
+    // in alto, quindi si comporta come "sopra".
+    const eff = lato === 'misto' ? 'sopra' : lato
+    if (eff !== ultimo) { ultimo = eff; testata.dataset.lato = eff }
+  }
+  addEventListener('scroll', segui, { passive: true })
+  addEventListener('resize', segui)
+  segui()
+}
+
 const demo = document.querySelector('#dimostrazione')
 if (demo) {
   const carica = new IntersectionObserver(async (voci, oss) => {
