@@ -156,7 +156,7 @@ p{max-width:60ch}
    lo scorrimento dentro la sezione guida il piano di taglio che entra nello
    scafo. Non e' scroll-jacking — lo scorrimento resta quello del browser,
    nessun gesto viene intercettato e nessuna sezione viene incatenata. */
-.atto--demo{background:none;min-height:auto;height:260svh}
+.atto--demo{background:none;min-height:auto;height:520svh}
 .palco{
   position:sticky;top:0;height:100svh;overflow:hidden;
   background:linear-gradient(to bottom,
@@ -179,10 +179,15 @@ p{max-width:60ch}
 .nota[data-visto="si"]{opacity:0}
 
 .pannello{position:absolute;z-index:6;font-family:var(--t-dato)}
-.pannello--letture{left:var(--u4);bottom:var(--u4);display:flex;gap:var(--u6);align-items:flex-end}
+/* Con la quarta lettura — l'andatura — il pannello si e' allargato fino a
+   sovrapporsi ai comandi. Misurato guardando, non previsto: la griglia tiene
+   le letture su due colonne quando servono, invece di allungarsi. */
+.pannello--letture{left:var(--u4);bottom:var(--u4);display:grid;
+  grid-template-columns:repeat(2,auto);gap:var(--u2) var(--u4);align-items:end;
+  max-width:min(34vw,340px)}
 .dato{display:flex;flex-direction:column;gap:var(--u)}
 .cifra{
-  font-size:clamp(28px,4vw,46px);font-weight:400;line-height:.94;color:var(--aria);
+  font-size:clamp(24px,3vw,38px);font-weight:400;line-height:.94;color:var(--aria);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;
 }
 .cifra u{text-decoration:none;font-size:.42em;color:var(--acqua-tenue);margin-left:3px}
@@ -247,21 +252,43 @@ p{max-width:60ch}
 .richiamo:hover{color:var(--recupero);border-color:rgba(79,224,196,.55)}
 .richiamo--pieno{position:static;transform:none}
 
-/* la didascalia del piano di sezione: compare quando il taglio entra */
-.spaccato{
-  position:absolute;left:var(--u4);top:calc(50% + var(--u8));z-index:7;
-  max-width:34ch;opacity:0;transform:translateY(12px);
-  transition:opacity .5s,transform .5s;pointer-events:none;
+/* ═══ LA DIDASCALIA DELLE BATTUTE ═══
+   Sta sotto la linea, nel campo dell'acqua: e' il registro tecnico. Cambia
+   contenuto a ogni battuta, non posizione — quello che si muove e' la nave. */
+.battuta{
+  position:absolute;left:var(--u4);top:calc(50% + var(--u6));z-index:7;
+  max-width:36ch;pointer-events:none;
 }
-.spaccato[data-fase="aperto"]{opacity:1;transform:none}
-.spaccato h3{color:var(--aria);margin:var(--u) 0}
-.spaccato p{color:var(--acqua-tenue);font-size:15px}
+.battuta h3{color:var(--aria);margin:var(--u) 0 var(--u2);font-size:var(--sottotitolo)}
+.battuta p{color:var(--acqua-tenue);font-size:15px;max-width:36ch}
+.battuta .et{color:var(--acqua-tenue)}
+.battuta__spento{color:var(--carico)!important;margin-top:var(--u2);display:none}
+.battuta[data-spento="si"] .battuta__spento{display:block}
 
-/* mentre la sezione si apre, i comandi della dimostrazione si ritirano */
-.palco[data-fase="sezione"] .pannello--energia,
-.palco[data-fase="sezione"] .comandi,
-.palco[data-fase="sezione"] .richiamo{opacity:0;pointer-events:none}
-.pannello--energia,.comandi,.richiamo{transition:opacity .4s}
+/* ═══ COSA E' IN SCENA A OGNI BATTUTA ═══
+   I comandi non stanno sempre li': arrivano quando servono e si ritirano
+   quando il racconto passa oltre. Nessuno di essi viene DISABILITATO — solo
+   nascosto alla vista — perche' la tastiera non deve perdere il filo. */
+.comandi,.richiamo,.pannello--energia,.pannello--letture{transition:opacity .45s}
+
+/* battuta 1: solo la nave che emerge */
+.palco[data-battuta="emerge"] .comandi,
+.palco[data-battuta="emerge"] .richiamo,
+.palco[data-battuta="emerge"] .pannello--energia,
+.palco[data-battuta="emerge"] .pannello--letture{opacity:0}
+
+/* battute 6-7: la sezione. I comandi si ritirano, le letture restano */
+.palco[data-battuta="taglio"] .comandi,
+.palco[data-battuta="taglio"] .richiamo,
+.palco[data-battuta="meccanismo"] .comandi,
+.palco[data-battuta="meccanismo"] .richiamo{opacity:0;pointer-events:none}
+.palco[data-battuta="taglio"] .pannello--energia,
+.palco[data-battuta="meccanismo"] .pannello--energia{opacity:0}
+
+/* l'interruttore chiede attenzione solo quando e' il suo momento */
+.palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){
+  border-color:var(--recupero);color:var(--recupero);
+}
 
 .ripiego{
   position:absolute;inset:auto var(--u4) var(--u12) var(--u4);z-index:8;

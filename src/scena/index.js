@@ -125,6 +125,23 @@ export function creaScena (contenitore) {
   let azimut = 0.34
   let azimutTarget = 0.34
   let spaccato = 0
+  let emersione = 0
+
+  /**
+   * L'EMERSIONE — il principio che regge tutta la sequenza (D39).
+   *
+   * **Non e' la camera a scendere: e' la nave a emergere.** La differenza non
+   * e' di gusto. La camera a quota zero e' cio' che tiene la linea di
+   * galleggiamento a meta' schermo esatta, e quindi la giunzione fra fondo CSS
+   * e canvas a **zero pixel** — l'unica idea meccanica del sito. Muovendo la
+   * camera quella giunzione si perde; muovendo la nave, no.
+   *
+   * A 0 lo scafo e' sotto: si vede solo il mare. A 1 galleggia alla sua quota.
+   */
+  function impostaEmersione (v) {
+    emersione = MathUtils.clamp(v, 0, 1)
+    nave.position.y = MathUtils.lerp(-4.2, 0, emersione)
+  }
 
   /**
    * MOMENTO 3 — il taglio entra nel prodotto.
@@ -216,5 +233,7 @@ export function creaScena (contenitore) {
     render.render(scena, camera)
   }
 
-  return { render, camera, ridimensiona, ruota, disegna, impostaSpaccato, tela: render.domElement }
+  impostaEmersione(1)
+
+  return { render, camera, ridimensiona, ruota, disegna, impostaSpaccato, impostaEmersione, tela: render.domElement }
 }

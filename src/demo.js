@@ -2,6 +2,7 @@ import { creaScena } from './scena/index.js'
 import { creaSimulazione } from './scena/simulazione.js'
 import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
+import { creaRegia } from './regia.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -58,8 +59,18 @@ export function avviaDimostrazione () {
   }
   const risveglia = () => { if (sim.S.ridotto) sveglia(); else avviaCiclo() }
 
+  const palco = document.querySelector('.palco')
+  const regia = creaRegia({
+    scena, sim, palco,
+    didascalia: $('#battuta'),
+    alCambio: risveglia
+  })
+
   collegaComandi({
-    contenitore: $('#mare'), toggle: $('#stab'), sim, alCambio: risveglia
+    contenitore: $('#mare'), toggle: $('#stab'), sim,
+    // La regia va rivalutata anche quando cambia lo STATO, non solo la
+    // posizione: accendendo il sistema da fermi il testo restava indietro.
+    alCambio: () => { risveglia(); regia?.rivaluta?.() }
   })
   /**
    * L'ANDATURA. E' la seconda cosa che si scopre: le pinne producono portanza
@@ -114,25 +125,21 @@ export function avviaDimostrazione () {
    * inerziale la pagina si sposta anche DOPO il calcolo, e una soglia fissa
    * sbaglia proprio mentre l'utente guarda.
    */
-  const INIZIO_SEZIONE = 0.45
-  const palco = document.querySelector('.palco')
-  const didascalia = $('#spaccato')
-  let ultimaFase = null
-
+  /**
+   * La posizione si legge dal rect VERO a ogni evento, non da una soglia in
+   * pixel calcolata una volta: con lo scorrimento inerziale la pagina si
+   * sposta anche DOPO il calcolo, e una soglia fissa sbaglia proprio mentre
+   * l'utente guarda.
+   *
+   * Lo scorrimento non viene intercettato: nessun gesto rubato, nessuna
+   * sezione incatenata, e si puo' tornare indietro (D27).
+   */
   function leggiScorrimento () {
     const r = sezione.getBoundingClientRect()
     const corsa = r.height - window.innerHeight
     if (corsa <= 0) return
     const p = Math.min(1, Math.max(0, -r.top / corsa))
-    const sp = p <= INIZIO_SEZIONE ? 0 : (p - INIZIO_SEZIONE) / (1 - INIZIO_SEZIONE)
-    scena.impostaSpaccato(sp)
-
-    const fase = sp > 0.02 ? 'sezione' : 'dimostrazione'
-    if (fase !== ultimaFase) {
-      ultimaFase = fase
-      palco.dataset.fase = fase
-      didascalia.dataset.fase = fase === 'sezione' ? 'aperto' : 'chiuso'
-    }
+    regia(p)
     if (sim.S.ridotto) sveglia()
   }
 
