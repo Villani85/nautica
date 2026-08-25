@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Provino tipografico — Recursive contro la coppia attuale</title>
+<style>
+@font-face{font-family:'Space Grotesk';font-weight:300;font-display:block;
+  src:url('/public/font/space-grotesk-300.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:700;font-display:block;
+  src:url('/public/font/space-grotesk-700.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:block;
+  src:url('/public/font/jetbrains-mono-400.woff2') format('woff2')}
+@font-face{font-family:'Recursive';font-weight:300 900;font-display:block;
+  src:url('font/recursive-var.woff2') format('woff2-variations')}
+
+:root{
+  --aria:#E9E5DD; --inchiostro:#15181B; --inchiostro-tenue:#5F6367;
+  --acqua:#071A1D; --acqua-viva:#0F3438; --acqua-tenue:#7FA3A5; --recupero:#4FE0C4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
+
+/* i due sistemi */
+.attuale{--display:'Space Grotesk',sans-serif; --dato:'JetBrains Mono',monospace;
+         --pesoDisplay:300; --varDisplay:normal; --varDato:normal}
+.nuovo  {--display:'Recursive',sans-serif;     --dato:'Recursive',monospace;
+         --pesoDisplay:300;
+         --varDisplay:"MONO" 0; --varDato:"MONO" 1}
+
+.colonne{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#333}
+.etichetta{grid-column:1/-1;background:#1a1c1e;padding:14px 20px 6px;
+  font:11px/1 ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:#7a7a7a}
+.intestazione{background:#1a1c1e;padding:6px 20px 14px;
+  font:11px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#e0e0e0}
+
+/* ═══ 1 · il titolo sul taglio ═══ */
+.titolo{position:relative;height:260px;
+  background:linear-gradient(to bottom,var(--aria) 0%,var(--aria) 50%,var(--acqua-viva) 50%,var(--acqua) 100%);
+  display:grid;place-items:center}
+.titolo h1{font-family:var(--display);font-variation-settings:var(--varDisplay);
+  font-weight:300;font-size:clamp(30px,4.4vw,58px);letter-spacing:-.035em;line-height:.98;
+  text-align:center;position:relative}
+.titolo .sopra{position:absolute;inset:0;color:var(--inchiostro);clip-path:inset(0 0 50% 0)}
+.titolo .sotto{color:var(--aria);clip-path:inset(50% 0 0 0)}
+.titolo em{font-style:normal;font-weight:700}
+
+/* ═══ 2 · le letture della dimostrazione ═══ */
+.letture{background:var(--acqua);padding:26px 20px;
+  display:grid;grid-template-columns:repeat(2,auto);gap:14px 36px;justify-content:start}
+.dato{display:flex;flex-direction:column;gap:6px}
+.et{font-family:var(--dato);font-variation-settings:var(--varDato);
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--acqua-tenue)}
+.cifra{font-family:var(--dato);font-variation-settings:var(--varDato);
+  font-size:36px;line-height:.94;color:var(--aria);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.cifra u{text-decoration:none;font-size:.42em;color:var(--acqua-tenue);margin-left:3px}
+.cifra.acc{color:var(--recupero)}
+
+/* ═══ 3 · la tabella dei numeri ═══ */
+.numeri{background:var(--aria);color:var(--inchiostro);padding:24px 20px;
+  font-family:var(--display);font-variation-settings:var(--varDisplay)}
+.numeri h3{font-size:18px;font-weight:400;letter-spacing:-.01em;margin-bottom:12px}
+.numeri dl{display:grid;gap:1px;background:rgba(95,99,103,.24);
+  border-block:1px solid rgba(95,99,103,.24)}
+.numeri div{display:flex;justify-content:space-between;gap:24px;background:var(--aria);padding:7px 0}
+.numeri dt{color:var(--inchiostro-tenue);font-size:14px}
+.numeri dd{font-family:var(--dato);font-variation-settings:var(--varDato);
+  font-variant-numeric:tabular-nums;font-size:14px}
+
+/* ═══ 4 · la prova che decide ═══ */
+.prova{padding:26px 20px;background:var(--acqua)}
+.prova .grande{font-family:var(--dato);font-variation-settings:var(--varDato);
+  font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--acqua-tenue);
+  line-height:2.2}
+.prova .carta{background:var(--aria);margin-top:14px;padding:16px}
+.prova .carta span{font-family:var(--dato);font-variation-settings:var(--varDato);
+  font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--inchiostro-tenue);
+  line-height:2.2}
+</style>
+</head>
+<body>
+
+<div class="colonne">
+  <p class="etichetta">1 · il titolo sul taglio</p>
+  <div class="intestazione">Space Grotesk 300 / 700</div>
+  <div class="intestazione">Recursive · MONO 0</div>
+
+  <div class="titolo attuale"><h1>
+    <span class="sopra" aria-hidden="true">What you buy<br>is <em>underneath</em>.</span>
+    <span class="sotto">What you buy<br>is <em>underneath</em>.</span>
+  </h1></div>
+  <div class="titolo nuovo"><h1>
+    <span class="sopra" aria-hidden="true">What you buy<br>is <em>underneath</em>.</span>
+    <span class="sotto">What you buy<br>is <em>underneath</em>.</span>
+  </h1></div>
+
+  <p class="etichetta">2 · le letture — cambiano sessanta volte al secondo</p>
+  <div class="intestazione">JetBrains Mono 400</div>
+  <div class="intestazione">Recursive · MONO 1</div>
+
+  <div class="letture attuale">
+    <div class="dato"><span class="et">Roll</span><span class="cifra">1,1<u>°</u></span></div>
+    <div class="dato"><span class="et">Peak, 10 s</span><span class="cifra">11,0<u>°</u></span></div>
+    <div class="dato"><span class="et">Speed</span><span class="cifra">12<u>kn</u></span></div>
+    <div class="dato"><span class="et">Reduction</span><span class="cifra acc">88<u>%</u></span></div>
+  </div>
+  <div class="letture nuovo">
+    <div class="dato"><span class="et">Roll</span><span class="cifra">1,1<u>°</u></span></div>
+    <div class="dato"><span class="et">Peak, 10 s</span><span class="cifra">11,0<u>°</u></span></div>
+    <div class="dato"><span class="et">Speed</span><span class="cifra">12<u>kn</u></span></div>
+    <div class="dato"><span class="et">Reduction</span><span class="cifra acc">88<u>%</u></span></div>
+  </div>
+
+  <p class="etichetta">3 · la tabella dei numeri della sezione tecnica</p>
+  <div class="intestazione">Space Grotesk + JetBrains</div>
+  <div class="intestazione">Recursive · MONO 0 + MONO 1</div>
+
+  <div class="numeri attuale">
+    <h3>The numbers, measured</h3>
+    <dl>
+      <div><dt>Critical path, fonts excluded</dt><dd>7.6 KB</dd></div>
+      <div><dt>— of which JavaScript</dt><dd>1.5 KB</dd></div>
+      <div><dt>3D engine, on demand</dt><dd>145.9 KB</dd></div>
+      <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
+      <div><dt>3D models downloaded</dt><dd>0 bytes</dd></div>
+    </dl>
+  </div>
+  <div class="numeri nuovo">
+    <h3>The numbers, measured</h3>
+    <dl>
+      <div><dt>Critical path, fonts excluded</dt><dd>7.6 KB</dd></div>
+      <div><dt>— of which JavaScript</dt><dd>1.5 KB</dd></div>
+      <div><dt>3D engine, on demand</dt><dd>145.9 KB</dd></div>
+      <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
+      <div><dt>3D models downloaded</dt><dd>0 bytes</dd></div>
+    </dl>
+  </div>
+
+  <p class="etichetta">4 · la prova che decide — tavola navale o barra di stato?</p>
+  <div class="intestazione">JetBrains Mono</div>
+  <div class="intestazione">Recursive · MONO 1</div>
+
+  <div class="prova attuale">
+    <div class="grande">Section plane · Frame 41 · Scale 1:100</div>
+    <div class="carta"><span>Illustrative model · Generic geometry</span></div>
+  </div>
+  <div class="prova nuovo">
+    <div class="grande">Section plane · Frame 41 · Scale 1:100</div>
+    <div class="carta"><span>Illustrative model · Generic geometry</span></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -354,3 +354,64 @@ fonderia**, e allora torna il costo che D42 aveva previsto.
 Il provino: titolo sul taglio, letture della dimostrazione, tabella dei numeri
 della sezione tecnica, **coi numeri veri dentro**, e a fianco almeno una coppia
 comprata, per non innamorarsi della soluzione elegante.
+
+---
+
+# Il provino, fatto — e cosa ha detto
+
+`provino/tipografia.html`, quattro confronti affiancati con i testi e i numeri
+veri del sito. Generato con `python strumenti/font-recursive.py`, che va
+rieseguito ogni volta che cambia l'insieme dei glifi.
+
+## Il peso, rimisurato sul sottoinsieme definitivo
+
+**99 glifi · un file solo · `MONO` e peso entrambi variabili · 39,6 KB**
+contro i **67,2 KB** dei quattro statici di oggi: **−41 %**, e una richiesta di
+rete invece di quattro.
+
+Lo strumento **esce con errore** se l'asse `MONO` non sopravvive
+all'istanziazione o se il file supera i 60 KB — cioè se il vantaggio che
+giustifica il cambio è sparito senza che nessuno se ne accorga.
+
+## La domanda era: tavola navale o barra di stato?
+
+Guardando la stessa riga — `SECTION PLANE · FRAME 41 · SCALE 1:100`,
+maiuscoletto a +0,24em — nelle due monospaziate, la differenza non è
+un'impressione, sono due dettagli nominabili:
+
+- **JetBrains Mono ha lo zero col punto dentro.** È uno dei segnali più
+  immediati dell'estetica da terminale: esiste per distinguere `0` da `O`
+  leggendo codice, e non serve a nient'altro. Si vede benissimo in `1:100`;
+- **JetBrains ha l'uno con la base a grazia**, altra convenzione da editor.
+
+Recursive a `MONO 1` non ha né l'uno né l'altro: zero pieno e semplice, uno con
+la sola bandierina. Le lettere sono più larghe e più aperte, e alla spaziatura
+del maiuscoletto **leggono come l'annotazione di una tavola, non come una riga
+di stato**.
+
+> **Verdetto: passa.** Il timore era fondato — Recursive *è* il carattere degli
+> editor — ma i segnali che tradiscono quel registro li porta JetBrains, non lei.
+
+## Quanto vale questo verdetto, e quanto no
+
+È **un paio d'occhi su uno schermo**, e va detto. Non è una misura ripetibile
+come il peso o il contrasto: è un giudizio, e i giudizi su questo progetto
+hanno già sbagliato quattro volte.
+
+Quello che regge da solo, senza fidarsi di me:
+- 39,6 KB contro 67,2, misurati;
+- cifre tabulari **per costruzione** (600 unità in entrambe le modalità),
+  misurate sulle larghezze reali;
+- una famiglia sola invece di due, quindi nessun abbinamento da sbagliare;
+- OFL-1.1: nessun costo, nessun problema di licenza commerciale.
+
+Quello che vorrei confermato da qualcun altro: che la riga in maiuscoletto legga
+davvero come una didascalia tecnica e non come un terminale. È la domanda posta
+prima di guardare, e la risposta la può ribaltare solo un occhio diverso dal mio.
+
+## Cosa manca prima di adottarla
+
+Il provino confronta **quattro composizioni**, non il sito. Prima di sostituire
+i font in produzione va guardata la sequenza intera con Recursive dentro —
+perché la tipografia si giudica sopra un'esperienza, non sopra quattro riquadri
+affiancati.
