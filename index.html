@@ -61,7 +61,7 @@
       <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
     </div>
     <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
-      <span class="et">Reduction</span>
+      <span class="et">Reduction, RMS</span>
       <span class="cifra"><output id="v-riduzione">0</output><u>%</u></span>
     </div>
   </div>
@@ -137,11 +137,22 @@
 
     <h3>The reduction is measured, not declared</h3>
     <p>Two simulations run in parallel, identical except that one has no fin
-    authority. The number on screen is <em>one minus the ratio of the two
-    peaks</em>. It changes with the sea and with the speed, because in reality it
-    does: fins produce lift only when the ship is making way, so at anchor the
-    reduction is zero, and in heavy weather the fins stall and their
-    effectiveness collapses.</p>
+    authority. The number on screen is <em>one minus the ratio of the two RMS
+    roll amplitudes</em>, taken at steady state and averaged over five
+    independent draws of the sea. It changes with the sea and with the speed,
+    because in reality it does: fins produce lift only when the ship is making
+    way, so at anchor the reduction is zero, and in heavy weather the fins stall
+    and their effectiveness collapses.</p>
+    <p>It reads RMS rather than peak, and it is worth saying why. The forcing is
+    a sum of three harmonics whose periods do not divide into one another, so
+    they never come back into phase: the largest roll inside any finite window
+    depends on where in that beat you happened to look, and converges on
+    nothing. We measured it — the peak ratio moved by 5.6 points between page
+    loads. The RMS ratio moves by 0.2. RMS is also the quantity the industry
+    quotes, which we found out after choosing it for the other reason.</p>
+    <p>The live readings above — roll, and peak over ten seconds — stay
+    instantaneous. Being tied to the frame you are looking at is the whole point
+    of a reading. A ratio is not a reading, and needs steady state.</p>
 
     <h3>The energy model is declared illustrative</h3>
     <p>The two bars show an index from 0 to 100, not kilowatts. The multipliers

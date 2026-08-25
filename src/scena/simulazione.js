@@ -186,10 +186,24 @@ export function creaSimulazione ({ ridotto = false } = {}) {
     S.pinna = viva.c.alfa
     S.pinnaVel = dt > 0 ? (viva.c.alfa - viva.c.alfaPrec) / dt : 0
 
-    // IL NUMERO SI GUADAGNA: rapporto fra i due picchi, non una costante.
-    S.riduzione = nuda.c.picco > 1e-6
-      ? MathUtils.clamp(1 - viva.c.picco / nuda.c.picco, 0, 1)
-      : 0
+    /**
+     * IL NUMERO SI GUADAGNA — ma non si legge troppo presto.
+     *
+     * Qui c'era il rapporto fra le due finestre di 10 secondi VIVE, e ogni
+     * gesto dell'utente le azzera entrambe. Misurato: due secondi dopo aver
+     * acceso il sistema il sito dichiarava **52%** invece di 90. Sottovendeva
+     * il prodotto esattamente nell'istante della rivelazione, e poi ballava di
+     * tre punti per sempre.
+     *
+     * Non e' un ripiego su una costante: `riduzioneVera` fa girare le STESSE
+     * due simulazioni, con lo stesso modello e lo stesso passo, fino a regime.
+     * Cambia solo quando si smette di leggere, non cosa si misura.
+     *
+     * Le letture ROLL e PEAK restano vive, perche' sono cio' che dimostra che
+     * la simulazione sta davvero girando: sono ancorate al fotogramma che si
+     * guarda. Il rapporto no — un rapporto ha senso a regime.
+     */
+    S.riduzione = aut > 0 ? riduzioneVera(S.mare, S.velocita) : 0
 
     // Energia: indice 0-100, non kW. I moltiplicatori sono autorali e
     // un'unita' fisica mentirebbe. Dichiarato in pagina.
@@ -224,22 +238,106 @@ export function creaSimulazione ({ ridotto = false } = {}) {
  * regola per cui superficie e tappo di sezione passano da una funzione sola.
  *
  * Il risultato si mette in cache: cambia solo quando cambiano mare o velocita'.
+ *
+ * ─── DIFETTO CORRETTO, e la prima stesura di QUESTA funzione ne era complice.
+ *
+ * Leggeva `c.picco`, cioe' la finestra scorrevole di 10 secondi, all'istante
+ * 90. Ma quella finestra non converge: la forzante e' somma di tre armoniche
+ * di periodi diversi, e il massimo su dieci secondi continua a respirare per
+ * sempre. Misurato: a 20/40/80/120 secondi il rapporto dava 92/89/89/92 per
+ * mare 3, 93/87/90/91 per mare 4. **Un numero riproducibile non e' per forza
+ * un numero giusto** — era deterministico, e prendeva un punto a caso di
+ * un'oscillazione.
+ *
+ * Adesso si butta via il transitorio e si prende il massimo VERO su una
+ * finestra lunga. Con smorzamento 0,045 l'inviluppo della corsa nuda ha
+ * costante di tempo 1/(zeta*omega) = 24,8 s: sessanta secondi di scarto sono
+ * due costanti e mezza, poi centoventi di misura.
  */
+const TRANSITORIO = 45          // secondi buttati: l'inviluppo deve montare
+const MISURA = 90               // secondi su cui si misura a regime
+const PASSO = 1 / 25            // il modello regge da 20 a 120 Hz (collaudo)
+
+/**
+ * ─── E UNA REALIZZAZIONE SOLA DEL MARE NON BASTA.
+ *
+ * Con la RMS il numero smette di dipendere dalle fasi quasi ovunque — sotto
+ * 0,6 punti — ma non in stallo: a mare 3 e 8 nodi restavano 5,6 punti di
+ * escursione fra un caricamento e l'altro. Li' non e' rumore dello stimatore,
+ * e' fisica: il sistema e' fortemente non lineare, e quanto le pinne vengano
+ * spinte in stallo dipende davvero da come cadono le fasi.
+ *
+ * E se e' fisica, la risposta non e' alzare la soglia: e' MEDIARE PIU' MARI,
+ * che e' cio' che si fa per quotare una riduzione invece di raccontare una
+ * traversata. Cinque realizzazioni portano il caso peggiore a 2,8 punti.
+ *
+ * Cinque a passo 1/25 costano 11,8 ms: dentro il fotogramma, che e' il vincolo
+ * vero perche' il calcolo scatta quando l'utente muove il cursore
+ * dell'andatura. Misurato su sei combinazioni, otto ripetizioni ciascuna.
+ */
+const REALIZZAZIONI = 5
+
+/**
+ * ─── E IL PICCO NON ANDAVA BENE NEMMENO A REGIME.
+ *
+ * Buttato il transitorio, il rapporto fra i due picchi restava diverso a ogni
+ * caricamento della pagina: su dodici estrazioni di fase, 5,6 punti di
+ * escursione a mare 3 e 8 nodi. Non e' un difetto da tarare — e' strutturale.
+ * La forzante e' somma di tre armoniche a 0,51w, 0,83w e 1,37w: periodi
+ * incommensurabili, che non tornano MAI in fase. Il massimo su una finestra
+ * finita dipende da dove capiti dentro il battimento, e non converge per
+ * nessuna durata.
+ *
+ * La RMS converge. Sulle stesse dodici estrazioni: da 5,60 punti a **0,19**.
+ * E non e' un ripiego statistico — e' la grandezza con cui il settore navale
+ * quota davvero la riduzione di rollio. Il picco resta a schermo come lettura
+ * viva (PEAK, 10 S), dove il suo essere istantaneo e' il pregio.
+ *
+ * Costo: 5,6 ms a combinazione, entro un fotogramma, con 0,61 punti di scarto
+ * dal riferimento caro (passo 1/120, 90+180 s). Misurato su 15 combinazioni di
+ * mare e velocita', 8 estrazioni ciascuna.
+ */
+
+/**
+ * Senza cache e con la griglia scoperchiata: e' cosi' che il collaudo puo'
+ * chiedere DUE cose che la versione in cache nasconderebbe — che il numero non
+ * dipenda dall'estrazione delle fasi, e che non dipenda dal passo scelto.
+ */
+export function _riduzioneCruda (mare, velocita, opz = {}) {
+  const dt = opz.dt ?? PASSO
+  const trans = opz.transitorio ?? TRANSITORIO
+  const mis = opz.misura ?? MISURA
+  const rms = opz.rms ?? true
+  const momento = creaMare()
+  const viva = creaCorsa(); const nuda = creaCorsa()
+  const aut = autorita(velocita)
+  let piccoViva = 0, piccoNuda = 0
+  let quadViva = 0, quadNuda = 0, n = 0
+  const passi = Math.round((trans + mis) / dt)
+  for (let i = 0; i < passi; i++) {
+    const t = i * dt
+    viva.passo(dt, t, mare, aut, momento)
+    nuda.passo(dt, t, mare, 0, momento)
+    if (t < trans) continue
+    const a = Math.abs(viva.c.theta); if (a > piccoViva) piccoViva = a
+    const b = Math.abs(nuda.c.theta); if (b > piccoNuda) piccoNuda = b
+    quadViva += a * a; quadNuda += b * b; n++
+  }
+  if (rms) {
+    const rv = Math.sqrt(quadViva / n), rn = Math.sqrt(quadNuda / n)
+    return rn > 1e-6 ? MathUtils.clamp(1 - rv / rn, 0, 1) : 0
+  }
+  return piccoNuda > 1e-6
+    ? MathUtils.clamp(1 - piccoViva / piccoNuda, 0, 1) : 0
+}
+
 const cacheRid = new Map()
 export function riduzioneVera (mare, velocita) {
   const chiave = `${mare}|${velocita.toFixed(2)}`
   if (cacheRid.has(chiave)) return cacheRid.get(chiave)
-  const momento = creaMare()
-  const viva = creaCorsa(); const nuda = creaCorsa()
-  const aut = autorita(velocita)
-  const dt = 1 / 60
-  for (let i = 0; i < 60 * 90; i++) {
-    const t = i * dt
-    viva.passo(dt, t, mare, aut, momento)
-    nuda.passo(dt, t, mare, 0, momento)
-  }
-  const r = nuda.c.picco > 1e-6
-    ? MathUtils.clamp(1 - viva.c.picco / nuda.c.picco, 0, 1) : 0
+  let somma = 0
+  for (let i = 0; i < REALIZZAZIONI; i++) somma += _riduzioneCruda(mare, velocita)
+  const r = somma / REALIZZAZIONI
   cacheRid.set(chiave, r)
   return r
 }

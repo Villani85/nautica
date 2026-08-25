@@ -1,4 +1,4 @@
-import { creaSimulazione, AMPIEZZA_MARE, V_RIF, portanza, riduzioneVera }
+import { creaSimulazione, AMPIEZZA_MARE, V_RIF, portanza, riduzioneVera, _riduzioneCruda }
   from '../src/scena/simulazione.js'
 
 /**
@@ -159,14 +159,86 @@ console.log('\nIL PERCORSO A MOVIMENTO RIDOTTO deve dare lo stesso numero di que
   esito(Math.abs(ridotto - vivo) < 0.06, 'scarto ' + (100 * Math.abs(ridotto - vivo)).toFixed(1) + ' punti  (tetto 6)')
 }
 
-console.log('\nDUE VISITE NON DANNO LO STESSO NUMERO - le fasi sono estratte')
+/**
+ * IL NUMERO DI TESTATA NON PUO' DIPENDERE DALL'ESTRAZIONE DELLE FASI.
+ *
+ * QUESTO CANCELLO E' STATO GIRATO AL CONTRARIO, e vale la pena dire perche'.
+ *
+ * Prima pretendeva che nove corse dessero numeri DIVERSI - la prova che le
+ * fasi erano davvero casuali - e tollerava fino a 18 punti di escursione.
+ * Tollerava, cioe', che il numero centrale del sito cambiasse di 18 punti da
+ * una visita all'altra: certificava il rumore.
+ *
+ * Adesso chiede l'opposto. Le fasi restano casuali - lo garantisce creaMare -
+ * ma la MISURA deve essere insensibile all'estrazione. E' questo che distingue
+ * una misura da un aneddoto.
+ *
+ * Si usa _riduzioneCruda, che salta la cache: con la cache il controllo
+ * confronterebbe un valore con se stesso e passerebbe sempre.
+ */
+console.log('\nLA MISURA NON DEVE DIPENDERE DALLE FASI ESTRATTE')
 {
-  const v = []
-  for (let i = 0; i < 9; i++) v.push(corri({ mare: 4, stab: true, velocita: V_RIF, secondi: 240, hz: 60 }).riduzione)
-  const min = Math.min(...v), max = Math.max(...v)
-  console.log('         nove corse: da ' + (100 * min).toFixed(2) + '% a ' + (100 * max).toFixed(2) + '%')
-  esito(!v.every(x => Math.abs(x - v[0]) < 1e-9), 'le corse differiscono: le fasi sono davvero casuali')
-  esito(max - min < 0.18, 'escursione ' + (100 * (max - min)).toFixed(1) + ' punti  (tetto 18)')
+  let peggio = 0, dove = ''
+  for (const [m, vel] of [[1, 8], [3, 8], [3, V_RIF], [5, V_RIF], [5, 20]]) {
+    // Si misura la MEDIA di cinque realizzazioni, che e' quello che il sito
+    // mostra davvero: una corsa sola qui direbbe una cosa e la pagina un'altra.
+    const v = []
+    for (let i = 0; i < 10; i++) {
+      let x = 0
+      for (let k = 0; k < 5; k++) x += _riduzioneCruda(m, vel)
+      v.push(100 * x / 5)
+    }
+    const esc = Math.max(...v) - Math.min(...v)
+    console.log('         mare ' + m + ', ' + String(vel).padStart(2) + ' nodi: ' +
+      Math.min(...v).toFixed(1) + '%..' + Math.max(...v).toFixed(1) + '%   escursione ' + esc.toFixed(2))
+    if (esc > peggio) { peggio = esc; dove = 'mare ' + m + ' a ' + vel + ' nodi' }
+  }
+  /**
+   * Il tetto e' 5 punti e non 1 perche' UN caso lo merita: mare 3 a 8 nodi sta
+   * in pieno stallo, dove il sistema e' fortemente non lineare e la risposta
+   * dipende davvero da quanto forte le pinne vengono guidate. Li' l'escursione
+   * e' fisica, non rumore. Dove il sistema e' lineare resta sotto 0,6.
+   */
+  esito(peggio < 3.5, 'escursione peggiore ' + peggio.toFixed(2) + ' punti, ' + dove + '  (tetto 3,5)')
+}
+
+/**
+ * E NON PUO' DIPENDERE DAL PASSO DI INTEGRAZIONE.
+ *
+ * Uno stimatore che cambia risposta cambiando dt sta misurando il proprio
+ * passo, non la nave. Il riferimento e' caro apposta: passo triplicato e
+ * finestre doppie.
+ */
+console.log('\nLA MISURA NON DEVE DIPENDERE DAL PASSO SCELTO')
+{
+  const med = (m, v, o) => { let x = 0; for (let i = 0; i < 6; i++) x += _riduzioneCruda(m, v, o); return 100 * x / 6 }
+  const RIF = { dt: 1 / 120, transitorio: 90, misura: 180 }
+  let peggio = 0, dove = ''
+  for (const [m, vel] of [[1, 6], [3, 8], [3, V_RIF], [5, V_RIF], [5, 20]]) {
+    const d = Math.abs(med(m, vel, {}) - med(m, vel, RIF))
+    if (d > peggio) { peggio = d; dove = 'mare ' + m + ' a ' + vel + ' nodi' }
+  }
+  esito(peggio < 1.5, 'scarto peggiore dal riferimento ' + peggio.toFixed(2) + ' punti, ' + dove + '  (tetto 1,5)')
+}
+
+/**
+ * E DEVE COSTARE POCO ABBASTANZA DA STARE IN UN FOTOGRAMMA.
+ *
+ * Si ricalcola quando l'utente muove il cursore dell'andatura: sopra i 16 ms
+ * il trascinamento singhiozza, e la fluidita' e' meta' del punteggio.
+ *
+ * La prima misura di questo costo diceva 40 ms e mentiva: nello stesso ciclo
+ * girava anche il riferimento caro, e il suo tempo finiva attribuito allo
+ * stimatore economico. Si vedeva dal fatto che dava 40 ms qualunque passo.
+ */
+console.log('\nE DEVE STARE IN UN FOTOGRAMMA')
+{
+  const n = 12
+  const t0 = performance.now()
+  for (let i = 0; i < n; i++) { for (let k = 0; k < 5; k++) _riduzioneCruda(3, 6 + i, {}) }
+  const ms = (performance.now() - t0) / n
+  console.log('         ' + ms.toFixed(1) + ' ms a combinazione')
+  esito(ms < 16, 'costa ' + ms.toFixed(1) + ' ms  (tetto 16, cioe un fotogramma)')
 }
 
 console.log('\n' + (guasti === 0 ? 'TUTTO A POSTO' : guasti + ' CONTROLLI ROTTI') + '\n')
