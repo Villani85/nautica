@@ -1,28 +1,28 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Quello che compri sta sotto — stabilizzazione a pinne</title>
-<meta name="description" content="Sito a tesi: il pezzo che vale di più è quello che non vedi mai. Dimostrazione interattiva di un sistema di stabilizzazione a pinne, con il metodo e i numeri dichiarati.">
+<title>What you are buying is underneath — fin stabilisation</title>
+<meta name="description" content="A site with an argument: the part worth most is the one you never see. An interactive demonstration of a fin stabiliser, with the method and the numbers stated.">
 <meta name="theme-color" content="#071A1D">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Quello che compri sta sotto">
-<meta property="og:description" content="Dimostrazione interattiva di un sistema di stabilizzazione a pinne. Modello illustrativo, geometria generica.">
+<meta property="og:title" content="What you are buying is underneath">
+<meta property="og:description" content="An interactive demonstration of a fin stabiliser. Illustrative model, generic geometry.">
 <link rel="preload" href="/font/space-grotesk-300.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/font/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
 
-<a class="salta" href="#dimostrazione">Salta alla dimostrazione</a>
+<a class="salta" href="#dimostrazione">Skip to the demonstration</a>
 
 <header class="testata" data-lato="sopra">
-  <p class="occhiello"><b>Prova tecnica</b> <span>Sistema di stabilizzazione a pinne</span></p>
-  <nav aria-label="Sezioni">
-    <a href="#dimostrazione">Dimostrazione</a>
-    <a href="#fattura">Come è fatta</a>
-    <a href="#offerta">Col vostro prodotto</a>
-    <a href="#contatto">Contatto</a>
+  <p class="occhiello"><b>Technical study</b> <span>Fin stabiliser system</span></p>
+  <nav aria-label="Sections">
+    <a href="#dimostrazione">Demonstration</a>
+    <a href="#fattura">How it is made</a>
+    <a href="#offerta">With your product</a>
+    <a href="#contatto">Contact</a>
   </nav>
 </header>
 
@@ -32,49 +32,49 @@
 <section id="apertura" class="atto atto--taglio" data-lato="misto">
   <div class="linea linea--apertura" id="linea-apertura" aria-hidden="true"></div>
   <h1 class="taglio" data-taglio="#linea-apertura">
-    <span class="taglio__strato taglio__strato--sopra" aria-hidden="true">Quello che compri sta <em>sotto</em>.</span>
-    <span class="taglio__strato taglio__strato--sotto">Quello che compri sta <em>sotto</em>.</span>
+    <span class="taglio__strato taglio__strato--sopra" aria-hidden="true">What you buy<br>is <em>underneath</em>.</span>
+    <span class="taglio__strato taglio__strato--sotto">What you buy<br>is <em>underneath</em>.</span>
   </h1>
 </section>
 
 <!-- 2 · LA DIMOSTRAZIONE -->
 <section id="dimostrazione" class="atto atto--demo" data-lato="misto" aria-labelledby="tit-demo">
-  <h2 id="tit-demo" class="via">La dimostrazione</h2>
+  <h2 id="tit-demo" class="via">The demonstration</h2>
 
   <div class="palco">
   <div id="scena" class="scena"></div>
   <div class="linea linea--acqua" aria-hidden="true"></div>
 
-  <p id="patto" class="patto">Modello illustrativo · Geometria generica · Valori normalizzati</p>
-  <p id="nota" class="nota">Trascina o usa le frecce per ruotare</p>
+  <p id="patto" class="patto">Illustrative model · Generic geometry · Normalised values</p>
+  <p id="nota" class="nota">Drag, or use the arrow keys, to rotate</p>
 
   <div class="pannello pannello--letture" id="lettura">
     <div class="dato">
-      <span class="et">Rollio</span>
+      <span class="et">Roll</span>
       <span class="cifra"><output id="v-rollio">0,0</output><u>°</u></span>
     </div>
     <div class="dato">
-      <span class="et">Picco 10 s</span>
+      <span class="et">Peak, 10 s</span>
       <span class="cifra"><output id="v-picco">0,0</output><u>°</u></span>
     </div>
     <div class="dato">
-      <span class="et">Andatura</span>
+      <span class="et">Speed</span>
       <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
     </div>
     <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
-      <span class="et">Riduzione</span>
+      <span class="et">Reduction</span>
       <span class="cifra"><output id="v-riduzione">0</output><u>%</u></span>
     </div>
   </div>
 
   <div class="pannello pannello--energia" id="energia">
     <div class="barra" id="b-carico">
-      <p class="riga"><span class="et">Assorbimento</span>
+      <p class="riga"><span class="et">Draw</span>
         <span class="val"><output id="v-carico">0</output><i>/100</i></span></p>
       <div class="pista"><div class="riempi"></div></div>
     </div>
     <div class="barra" id="b-recupero">
-      <p class="riga"><span class="et">Recupero</span>
+      <p class="riga"><span class="et">Recovery</span>
         <span class="val"><output id="v-recupero">0</output><i>/100</i></span></p>
       <div class="pista"><div class="riempi"></div></div>
     </div>
@@ -82,139 +82,145 @@
 
   <div class="comandi">
     <div class="mare">
-      <p class="et et--centro" id="et-mare">Stato del mare</p>
+      <p class="et et--centro" id="et-mare">Sea state</p>
       <div id="mare" class="mare__scala" role="group" aria-labelledby="et-mare"></div>
     </div>
     <div class="andatura">
-      <label class="et et--centro" for="velocita">Andatura</label>
+      <label class="et et--centro" for="velocita">Speed</label>
       <input type="range" id="velocita" class="cursore" min="0" max="20" step="1" value="12"
              aria-describedby="v-velocita">
     </div>
     <button type="button" id="stab" class="interruttore" aria-pressed="false">
       <span class="spia" aria-hidden="true"></span>
-      <span>Stabilizzazione</span>
+      <span>Stabilisation</span>
     </button>
   </div>
 
-  <button type="button" id="apri-chiusura" class="richiamo">Per il vostro prodotto</button>
+  <button type="button" id="apri-chiusura" class="richiamo">For your product</button>
 
   <div id="battuta" class="battuta" data-spento="no" aria-live="polite">
-    <p class="et"><span data-ruolo="numero">01</span> — La sequenza</p>
-    <h3 data-ruolo="titolo">La superficie si apre</h3>
-    <p data-ruolo="testo">Quaranta metri di scafo.</p>
-    <p class="battuta__spento">Il sistema è spento: la nave continua a rollare.</p>
+    <p class="et"><span data-ruolo="numero">01</span> — The sequence</p>
+    <h3 data-ruolo="titolo">The surface opens</h3>
+    <p data-ruolo="testo">Forty metres of hull.</p>
+    <p class="battuta__spento">The system is off. The ship keeps rolling.</p>
   </div>
 
   <p id="ripiego" class="ripiego" hidden>
-    Questa dimostrazione disegna un sistema di stabilizzazione in tempo reale e
-    richiede WebGL, che questo browser non espone. Il resto della pagina funziona
-    lo stesso: la sezione <a href="#fattura">Come è fatta</a> racconta il
-    meccanismo per esteso.
+    This demonstration draws a stabiliser system in real time and needs WebGL,
+    which this browser does not expose. The rest of the page still works: the
+    section <a href="#fattura">How it is made</a> describes the mechanism in full.
   </p>
   </div>
 </section>
 
-<!-- 3 · COME È FATTA -->
+<!-- 3 · HOW IT IS MADE -->
 <section id="fattura" class="atto atto--testo" data-lato="sopra" aria-labelledby="tit-fattura">
   <div class="colonna">
-    <p class="et">03 — Come è fatta</p>
-    <h2 id="tit-fattura">Il taglio non è un'immagine.<br>È una scelta di camera.</h2>
+    <p class="et">03 — How it is made</p>
+    <h2 id="tit-fattura">The cut is not a picture.<br>It is a camera decision.</h2>
 
-    <p>La camera sta a quota zero e guarda l'orizzonte. Da questa sola decisione
-    discende tutto il resto: la linea di galleggiamento cade <em>sempre</em> a
-    metà schermo esatta, qualunque sia la proporzione della finestra. Il fondo
-    della pagina può quindi spaccarsi al 50% con un margine netto e combaciare
-    con il disegno in tempo reale senza che nulla vada sincronizzato.</p>
+    <p>The camera sits at height zero and looks at the horizon. Everything else
+    follows from that one choice: the waterline falls <em>always</em> at exactly
+    half the screen, whatever the proportions of the window. The page background
+    can therefore split at 50% with a hard stop and meet the real-time drawing
+    without anything being synchronised.</p>
 
-    <p>Non c'è codice che tenga allineate le due metà, perché non serve. È la
-    differenza fra un effetto e una geometria.</p>
+    <p>No code keeps the two halves aligned, because none is needed. That is the
+    difference between an effect and a geometry.</p>
 
-    <h3>La geometria è procedurale</h3>
-    <p>Nessun modello di terzi: scafo, coperta, alberi passanti, flange, riduttori
-    esagonali, bielle e pinne sono curve descritte nel codice ed estruse. Costa
-    più tempo di un file scaricato, e in cambio non porta nessun problema di
-    licenza, pesa quello che decidiamo noi e si modifica cambiando un numero.</p>
+    <h3>The hull is a loft between stations</h3>
+    <p>Eight sections along the length, interpolated. No third-party model:
+    hull, deck, shafts, flanges, gearboxes, connecting rods and fins are curves
+    described in code. And the section cap at any station is <em>the same
+    function</em> that generates the surface — not a second implementation that
+    would silently drift apart. A test proves the two coincide to within
+    7.2 × 10⁻⁸, the precision of a 32-bit float.</p>
 
-    <h3>Il modello energetico è dichiarato illustrativo</h3>
-    <p>Le due barre mostrano un indice da 0 a 100, non kilowatt. I moltiplicatori
-    sono scelti da noi perché la lettura sia comprensibile, e mettere un'unità
-    fisica sarebbe una bugia detta bene. Le pinne contrastano la <em>velocità</em>
-    di rollio e non l'angolo: è la differenza fra stabilizzare e raddrizzare.</p>
+    <h3>The reduction is measured, not declared</h3>
+    <p>Two simulations run in parallel, identical except that one has no fin
+    authority. The number on screen is <em>one minus the ratio of the two
+    peaks</em>. It changes with the sea and with the speed, because in reality it
+    does: fins produce lift only when the ship is making way, so at anchor the
+    reduction is zero, and in heavy weather the fins stall and their
+    effectiveness collapses.</p>
 
-    <h3>I numeri, misurati</h3>
-    <p class="magra">Misurati sulla compilazione di produzione, non su
-    localhost e non a occhio. Le voci con il trattino non sono ancora state
-    misurate, e finché lo sono restano col trattino.</p>
+    <h3>The energy model is declared illustrative</h3>
+    <p>The two bars show an index from 0 to 100, not kilowatts. The multipliers
+    are ours, chosen so the reading is legible, and putting a physical unit on
+    them would be a lie told well.</p>
+
+    <h3>The numbers, measured</h3>
+    <p class="magra">Measured on the production build, not on localhost and not
+    by eye. Entries with a dash have not been measured yet, and they keep the
+    dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Percorso critico, font esclusi (gzip)</dt><dd>7,6 KB</dd></div>
-      <div><dt>— di cui JavaScript</dt><dd>1,5 KB</dd></div>
-      <div><dt>— di cui CSS</dt><dd>2,8 KB</dd></div>
-      <div><dt>Font, self-hosted e sottoinsiemati</dt><dd>67,2 KB</dd></div>
-      <div><dt>Motore 3D, caricato solo all'occorrenza (gzip)</dt><dd>138,9 KB</dd></div>
-      <div><dt>JavaScript totale (gzip)</dt><dd>140,4 KB</dd></div>
-      <div><dt>Modelli 3D scaricati</dt><dd>0 byte</dd></div>
-      <div><dt>Dipendenze da CDN</dt><dd>nessuna</dd></div>
-      <div><dt>Contrasto del testo più tenue</dt><dd>4,82:1</dd></div>
-      <div><dt>LCP su 4G reale</dt><dd>—</dd></div>
-      <div><dt>Fotogrammi al secondo, Android di fascia media</dt><dd>—</dd></div>
+      <div><dt>Critical path, fonts excluded (gzip)</dt><dd>7.6 KB</dd></div>
+      <div><dt>— of which JavaScript</dt><dd>1.5 KB</dd></div>
+      <div><dt>Fonts, self-hosted and subset</dt><dd>67.2 KB</dd></div>
+      <div><dt>3D engine, loaded only on demand (gzip)</dt><dd>145.9 KB</dd></div>
+      <div><dt>3D models downloaded</dt><dd>0 bytes</dd></div>
+      <div><dt>CDN dependencies</dt><dd>none</dd></div>
+      <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
+      <div><dt>Largest Contentful Paint, real 4G</dt><dd>—</dd></div>
+      <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
     </dl>
 
-    <p>Il motore 3D pesa 138,9 KB compressi e non sta sul percorso critico:
-    viene chiesto solo quando la dimostrazione si avvicina allo schermo. È la
-    ragione vera per cui il codice è stato portato a moduli: <em>non</em> il peso
-    complessivo, che misurato era già dentro il limite, ma il fatto che 139 KB
-    di motore non stiano più fra chi apre la pagina e la prima cosa che legge.</p>
+    <p>The 3D engine weighs 145.9 KB compressed and is not on the critical path:
+    it is requested only when the demonstration comes near. That is the real
+    reason the code was moved to ES modules — <em>not</em> the total weight,
+    which measured was already inside the budget, but the fact that 146 KB of
+    engine no longer sit between someone opening the page and the first thing
+    they read.</p>
 
-    <p class="magra">Il metodo, gli errori commessi e il modo in cui sono stati
-    trovati stanno per esteso nel repository pubblico, cronologia compresa.</p>
+    <p class="magra">The method, the mistakes made and how they were found are
+    in the public repository, commit history included.</p>
   </div>
 </section>
 
-<!-- 4 · COL VOSTRO PRODOTTO -->
+<!-- 4 · WITH YOUR PRODUCT -->
 <section id="offerta" class="atto atto--testo" data-lato="sotto" aria-labelledby="tit-offerta">
   <div class="colonna">
-    <p class="et">04 — Col vostro prodotto</p>
-    <h2 id="tit-offerta">Questo modello è generico.<br>Il <em>vostro</em> no.</h2>
+    <p class="et">04 — With your product</p>
+    <h2 id="tit-offerta">This model is generic.<br><em>Yours</em> is not.</h2>
 
-    <p>Con il vostro CAD, i vostri dati e il vostro prodotto, la stessa
-    interazione diventa una dimostrazione commerciale: sul sito, nella
-    presentazione per i concessionari, sul monitor in fiera, sul tablet
-    dell'agente.</p>
+    <p>With your CAD, your data and your product, the same interaction becomes a
+    commercial demonstration: on your site, in the dealer presentation, on the
+    monitor at the trade fair, on the agent’s tablet.</p>
 
     <div class="scambio">
       <div>
-        <h3>Cosa serve da voi</h3>
+        <h3>What we need from you</h3>
         <ul>
-          <li>il CAD del componente, anche non semplificato</li>
-          <li>i dati di funzionamento che potete rendere pubblici</li>
-          <li>la documentazione tecnica già esistente</li>
-          <li>chi in azienda decide cosa si può mostrare e cosa no</li>
+          <li>the CAD of the component, simplified or not</li>
+          <li>the operating data you are able to make public</li>
+          <li>the technical documentation that already exists</li>
+          <li>whoever decides what may be shown and what may not</li>
         </ul>
       </div>
       <div>
-        <h3>Cosa esce</h3>
+        <h3>What you get</h3>
         <ul>
-          <li>la dimostrazione, sul vostro sito</li>
-          <li>la stessa, in una presentazione per i concessionari</li>
-          <li>una versione a schermo intero per il monitor in fiera</li>
-          <li>una versione tattile per il tablet dell'agente</li>
+          <li>the demonstration, on your own site</li>
+          <li>the same thing, as a dealer presentation</li>
+          <li>a full-screen version for the trade fair monitor</li>
+          <li>a touch version for the agent’s tablet</li>
         </ul>
       </div>
     </div>
 
-    <p class="magra">Alcuni settori si portano dietro vincoli su cosa è
-    rappresentabile — marcature, dichiarazioni di conformità, dati di collaudo.
-    Si guardano prima di cominciare, non dopo.</p>
+    <p class="magra">Some sectors carry constraints on what may be shown —
+    markings, declarations of conformity, test data. Those get looked at before
+    starting, not after.</p>
   </div>
 </section>
 
-<!-- 5 · CONTATTO -->
+<!-- 5 · CONTACT -->
 <section id="contatto" class="atto atto--contatto" data-lato="sopra" aria-labelledby="tit-contatto">
   <div class="colonna">
-    <h2 id="tit-contatto" class="via">Contatto</h2>
+    <h2 id="tit-contatto" class="via">Contact</h2>
     <p class="indirizzo">
-      <a href="https://github.com/Villani85/nautica">Il repository, cronologia compresa</a>
+      <a href="https://github.com/Villani85/nautica">The repository, commit history included</a>
     </p>
   </div>
 </section>
@@ -222,17 +228,17 @@
 </main>
 
 <dialog id="chiusura" class="foglio" aria-labelledby="tit-chiusura">
-  <h2 id="tit-chiusura">Questo modello è generico.<br>Il <em>vostro</em> no.</h2>
-  <p>Con il vostro CAD, i vostri dati e il vostro prodotto, la stessa interazione
-  diventa una dimostrazione commerciale: sul sito, nella presentazione per i
-  concessionari, sul monitor in fiera, sul tablet dell'agente.</p>
+  <h2 id="tit-chiusura">This model is generic.<br><em>Yours</em> is not.</h2>
+  <p>With your CAD, your data and your product, the same interaction becomes a
+  commercial demonstration: on your site, in the dealer presentation, on the
+  monitor at the trade fair, on the agent’s tablet.</p>
   <ul class="etichette">
-    <li>Stabilizzatori</li><li>Thruster</li><li>Passerelle</li>
-    <li>Movimentazioni</li><li>Sistemi sotto coperta</li>
+    <li>Stabilisers</li><li>Thrusters</li><li>Passerelles</li>
+    <li>Handling gear</li><li>Below-deck systems</li>
   </ul>
   <div class="foglio__piede">
-    <a href="#offerta" class="richiamo richiamo--pieno">Vai alla sezione completa</a>
-    <button type="button" id="chiudi">Torna alla dimostrazione</button>
+    <a href="#offerta" class="richiamo richiamo--pieno">Go to the full section</a>
+    <button type="button" id="chiudi">Back to the demonstration</button>
   </div>
 </dialog>
 

@@ -19,7 +19,7 @@ export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
     b.className = 'mare__tacca'
     b.style.setProperty('--altezza', `${16 + n * 16}%`)
     b.setAttribute('aria-pressed', String(n === sim.S.mare))
-    b.setAttribute('aria-label', `Mare forza ${n}, ampiezza nominale ${String(AMPIEZZA_MARE[n]).replace('.', ',')} gradi`)
+    b.setAttribute('aria-label', `Sea state ${n}, nominal roll amplitude ${AMPIEZZA_MARE[n]} degrees`)
     b.innerHTML = '<span class="mare__barra" aria-hidden="true"></span>'
     b.addEventListener('click', () => {
       sim.S.mare = n
@@ -68,7 +68,7 @@ export function collegaPuntoDiVista ({ tela, ruota, suggerimento }) {
 
   tela.tabIndex = 0
   tela.setAttribute('role', 'application')
-  tela.setAttribute('aria-label', 'Vista della sezione. Frecce sinistra e destra per ruotare il punto di vista.')
+  tela.setAttribute('aria-label', 'Section view. Left and right arrow keys rotate the point of view.')
   tela.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') { ruota(-0.12); nascondiSuggerimento(); e.preventDefault() }
     if (e.key === 'ArrowRight') { ruota(0.12); nascondiSuggerimento(); e.preventDefault() }

@@ -25,38 +25,38 @@ export const BATTUTE = [
   {
     id: 'emerge',
     da: 0.00, a: 0.13,
-    titolo: 'La superficie si apre',
-    testo: 'Quaranta metri di scafo. Sopra la linea sta il prodotto che si compra; sotto, quello che lo fa funzionare.'
+    titolo: 'The surface opens',
+    testo: 'Forty metres of hull. Above the line is the product you buy; below it, the part that makes it work.'
   },
   {
     id: 'mare',
     da: 0.13, a: 0.30,
-    titolo: 'Il mare sale',
-    testo: 'Stato del mare 4. Una carena nuda ha uno smorzamento bassissimo: e’ il motivo per cui gli stabilizzatori esistono.'
+    titolo: 'The sea gets up',
+    testo: 'Sea state 4. A bare hull damps almost nothing — which is the reason stabilisers exist at all.'
   },
   {
     id: 'invito',
     da: 0.30, a: 0.44,
-    titolo: 'Il sistema è spento',
-    testo: 'Accendilo. È l’unica cosa che ti viene chiesta — e se non lo fai, la nave continua a rollare.'
+    titolo: 'The system is off',
+    testo: 'Turn it on. It is the only thing you are asked to do — and if you do not, the ship keeps rolling.'
   },
   {
     id: 'calma',
     da: 0.44, a: 0.60,
-    titolo: 'La nave si calma',
-    testo: 'La riduzione non è dichiarata: girano due simulazioni in parallelo, una con le pinne e una senza, e il numero è il rapporto fra i due picchi.'
+    titolo: 'The ship settles',
+    testo: 'The reduction is not declared. Two simulations run in parallel, one with the fins and one without, and the number is the ratio between the two peaks.'
   },
   {
     id: 'taglio',
     da: 0.60, a: 0.80,
-    titolo: 'Il taglio entra nello scafo',
-    testo: 'Il piano di sezione corre lungo la nave. La faccia del taglio non è approssimata: è la stessa curva che genera la carena.'
+    titolo: 'The cut enters the hull',
+    testo: 'The section plane runs along the ship. The cut face is not an approximation: it is the same curve that generates the hull.'
   },
   {
     id: 'meccanismo',
     da: 0.80, a: 1.01,
-    titolo: 'Il pezzo che non vedi mai',
-    testo: 'Albero passante, flangia di attraversamento carena, collare di tenuta, riduttore, biella. Costa una frazione della barca e decide se ci si sta comodi.'
+    titolo: 'The part you never see',
+    testo: 'Shaft, hull penetration flange, gland, gearbox, connecting rod. It costs a fraction of the boat, and it decides whether anyone is comfortable on board.'
   }
 ]
 

@@ -146,9 +146,14 @@ p{max-width:60ch}
 
 /* 1 · apertura */
 .atto--taglio{display:grid;place-items:center;padding:var(--u12) var(--u4)}
+/* Il titolo va a capo dove decidiamo noi, non dove capita.
+   La frase si divide dove si divide il senso: "what you buy" resta sopra la
+   linea, "is underneath" ci finisce sotto — e la parola dice quello che fa.
+   L'interlinea stretta tiene la seconda riga a cavallo del taglio, cosi' il
+   ritaglio prende comunque i tratti discendenti della prima. */
 .atto--taglio h1{
-  font-size:var(--display);letter-spacing:-.035em;line-height:1;
-  position:relative;z-index:6;text-align:center;
+  font-size:var(--display);letter-spacing:-.035em;line-height:.98;
+  position:relative;z-index:6;text-align:center;text-wrap:pretty;
 }
 
 /* 2 · dimostrazione

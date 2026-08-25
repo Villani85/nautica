@@ -111,7 +111,7 @@ if (demo) {
       modulo = await import('./demo.js')
     } catch (e) {
       console.error('[nautica] il modulo della dimostrazione non e\' arrivato', e)
-      mostraRipiego('Il codice della dimostrazione non è stato caricato. Ricaricando la pagina di solito si risolve.')
+      mostraRipiego('The demonstration code did not load. Reloading the page usually fixes it.')
       return
     }
     try {
