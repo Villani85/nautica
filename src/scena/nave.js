@@ -3,6 +3,7 @@ import {
   EdgesGeometry, LineSegments, LineBasicMaterial, MeshBasicMaterial, DoubleSide
 } from 'three'
 import { materiali } from './materiali.js'
+import { costruisciGuscio, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
 
 /** Sezione maestra dello scafo, estrusa lungo Z — che e' l'asse di rollio. */
 function sezioneScafo () {
@@ -86,9 +87,16 @@ function orienta (mesh, ay, az, by, bz) {
   mesh.scale.y = Math.sqrt(dy * dy + dz * dz)
 }
 
+/** Dove stanno gli stabilizzatori lungo la nave: poco a proravia di mezzo. */
+export const Z_PINNE = -1.2
+
 function costruisciGruppoPinna (lato, geoPinna) {
   const gruppo = new Group()
-  gruppo.position.set(lato * 1.44, -0.34, 0)
+  // Il gruppo si monta sul GINOCCHIO DI CARENA, che e' dove sta nella realta'
+  // e dove la sezione dice che sta: si interroga lo scafo invece di scegliere
+  // due coordinate a occhio. Se domani le ordinate cambiano, si sposta da solo.
+  const sez = sezioneA(tDaZ(Z_PINNE))
+  gruppo.position.set(lato * sez.spigoloX, sez.spigoloY, Z_PINNE)
   const X = v => lato * v
 
   // fondazione: il macchinario poggia su qualcosa
@@ -185,28 +193,48 @@ export function costruisciNave () {
   // e' quello che resta, ed e' la tesi del sito resa visibile.
   const guscio = []
 
-  const geoScafo = new ExtrudeGeometry(sezioneScafo(), {
-    depth: 3.0, bevelEnabled: true, bevelThickness: 0.02,
-    bevelSize: 0.02, bevelSegments: 2, curveSegments: 26
-  })
-  geoScafo.translate(0, 0, -1.5)
+  /**
+   * LO SCAFO E' UN LOFT FRA ORDINATE, non piu' una sezione estrusa.
+   * Prua stretta e a V, poppa larga e quasi piatta: una carena vera.
+   *
+   * Il trucco del tappo esatto sopravvive, e anzi si rafforza: la sezione a
+   * una quota qualsiasi e' l'interpolazione fra le due ordinate adiacenti, e
+   * `tappoA` la calcola con LA STESSA funzione che genera la superficie.
+   * `strumenti/collaudo-scafo.mjs` lo prova a otto quote.
+   */
+  const geoScafo = costruisciGuscio(72)
   const scafo = new Mesh(geoScafo, materiali.scafo)
   nave.add(scafo); guscio.push(scafo)
+
+  /**
+   * DIFETTO TROVATO GUARDANDO IL PROVINO: il loft e' un tubo, aperto ai due
+   * estremi. Con la camera a +z si guardava dentro lo scafo attraverso lo
+   * specchio di poppa e si vedeva l'interno della prua, illuminato dalle sole
+   * luci fredde: una macchia verde dove doveva esserci una murata.
+   *
+   * Le chiusure si generano con la STESSA `tappoA` del piano di sezione. Non
+   * e' un espediente: la prua e lo specchio SONO due sezioni, agli estremi.
+   */
+  for (const z of [PRUA_Z + 0.005, POPPA_Z - 0.005]) {
+    const chiusura = new Mesh(tappoA(z), materiali.scafo)
+    nave.add(chiusura); guscio.push(chiusura)
+  }
 
   // Lo spigolo chiaro e' la stessa idea del taglio applicata al volume:
   // dice dove finisce il pezzo senza aggiungere una luce.
   const spigoli = new LineSegments(
-    new EdgesGeometry(geoScafo, 28),
+    new EdgesGeometry(geoScafo, 42),
     new LineBasicMaterial({ color: 0xe9e5dd, transparent: true, opacity: 0.22 })
   )
   nave.add(spigoli); guscio.push(spigoli)
 
-  const coperta = new Mesh(new BoxGeometry(3.06, 0.09, 3.02), materiali.coperta)
-  coperta.position.set(0, 0.94, 0); nave.add(coperta); guscio.push(coperta)
-  const tuga = new Mesh(new BoxGeometry(2.15, 0.66, 1.85), materiali.coperta)
-  tuga.position.set(0, 1.31, -0.35); nave.add(tuga); guscio.push(tuga)
-  const vetri = new Mesh(new BoxGeometry(2.17, 0.20, 1.87), materiali.vetro)
-  vetri.position.set(0, 1.40, -0.35); nave.add(vetri); guscio.push(vetri)
+  // Sovrastruttura, proporzionata alla nave vera: 16 unita' di lunghezza,
+  // non piu' 3. Sta a mezzanave e non arriva ne' a prua ne' allo specchio.
+  const larghTuga = sezioneA(tDaZ(1.5)).semilarg * 1.16
+  const tuga = new Mesh(new BoxGeometry(larghTuga, 0.72, 6.2), materiali.coperta)
+  tuga.position.set(0, 1.28, 0.6); nave.add(tuga); guscio.push(tuga)
+  const vetri = new Mesh(new BoxGeometry(larghTuga + 0.02, 0.22, 6.24), materiali.vetro)
+  vetri.position.set(0, 1.40, 0.6); nave.add(vetri); guscio.push(vetri)
 
   // Nasce con corda in X e apertura in Z; la ruoto una volta sola alla
   // creazione, cosi' l'apertura va fuoribordo e la corda resta longitudinale.
@@ -225,21 +253,31 @@ export function costruisciNave () {
   }
 
   /**
-   * LA FACCIA DI SEZIONE.
+   * LA FACCIA DI SEZIONE, ricalcolata alla quota del piano.
    *
-   * Lo scafo e' l'estrusione di una Shape piana lungo Z: la sua sezione a
-   * qualunque quota **e' quella stessa Shape**. Quindi il tappo non va
-   * approssimato ne' ricavato con lo stencil — si genera esatto dalla curva
-   * che ha prodotto il volume, e resta esatto anche se domani lo scafo cambia
-   * forma. E' il colore della carta da disegno: il taglio riporta il pezzo al
-   * disegno tecnico da cui viene.
+   * Prima era una `Shape` fissa, perche' lo scafo era un'estrusione e la
+   * sezione era sempre la stessa. Ora la sezione cambia lungo la nave, quindi
+   * il tappo va rigenerato quando il piano si sposta — ma **con la stessa
+   * funzione che genera la superficie**, mai con una seconda implementazione.
+   *
+   * Si rigenera solo oltre una soglia: lo scorrimento arriva decine di volte
+   * al secondo e costruire una geometria a ogni evento sarebbe spazzatura.
    */
   const tappo = new Mesh(
-    new ShapeGeometry(sezioneScafo(), 26),
+    tappoA(POPPA_Z),
     new MeshBasicMaterial({ color: 0xe9e5dd, side: DoubleSide, transparent: true, opacity: 0 })
   )
   tappo.visible = false
   nave.add(tappo)
 
-  return { nave, pinne, guscio, tappo }
+  let quotaTappo = POPPA_Z
+  function spostaTappo (z) {
+    const dentro = Math.max(PRUA_Z + 0.01, Math.min(POPPA_Z - 0.01, z))
+    if (Math.abs(dentro - quotaTappo) < 0.02) return
+    quotaTappo = dentro
+    tappo.geometry.dispose()
+    tappo.geometry = tappoA(dentro)
+  }
+
+  return { nave, pinne, guscio, tappo, spostaTappo }
 }

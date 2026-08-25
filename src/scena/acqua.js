@@ -3,20 +3,22 @@ import {
   DoubleSide, Group
 } from 'three'
 
-const LARG = 30
-const PROF = 15
+const LARG = 46
+const PROF = 46
 
 /**
- * L'acqua esiste solo nella meta' posteriore: davanti e' sezionata.
- * E' la regola del taglio applicata al mare — non un espediente per
- * risparmiare triangoli, anche se lo e' pure.
+ * Il mare copre tutta la nave: 46 unita' di lato per uno scafo che ne misura
+ * 16, cosi' l'orizzonte non finisce mai dentro l'inquadratura.
+ *
+ * (Prima era mezzo piano, spostato dietro la nave, perche' lo scafo era lungo
+ * tre unita' e davanti veniva sezionato. Con il loft non e' piu' vero: il
+ * commento diceva una cosa che il codice non faceva piu'.)
  */
 export function costruisciAcqua () {
   const gruppo = new Group()
 
-  const superficie = new PlaneGeometry(LARG, PROF, 56, 30)
+  const superficie = new PlaneGeometry(LARG, PROF, 76, 76)
   superficie.rotateX(-Math.PI / 2)
-  superficie.translate(0, 0, -PROF / 2)
 
   const pelo = new Mesh(superficie, new MeshStandardMaterial({
     color: 0x14454a, metalness: 0.32, roughness: 0.14,
@@ -28,7 +30,7 @@ export function costruisciAcqua () {
     new BoxGeometry(LARG, 13, PROF),
     new MeshBasicMaterial({ color: 0x061518, transparent: true, opacity: 0.72, depthWrite: false })
   )
-  volume.position.set(0, -6.5, -PROF / 2)
+  volume.position.set(0, -6.5, 0)
   gruppo.add(volume)
 
   // il filo del taglio, alla quota zero esatta

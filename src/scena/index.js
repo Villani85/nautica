@@ -2,19 +2,24 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
   PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3
 } from 'three'
-import { costruisciNave } from './nave.js'
+import { costruisciNave, Z_PINNE } from './nave.js'
+import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
 
-const RAGGIO = 11.5
-const RAGGIO_SEZIONE = 7.4
+const RAGGIO = 25.0
+const RAGGIO_SEZIONE = 8.6
 const AZIMUT_MAX = 0.92
 
 /** Dove sta il meccanismo: e' li' che la camera va a finire. */
 const MIRA_MECCANISMO = 1.15
 
-/** Quota del piano di sezione: fuori dallo scafo, poi dentro. */
-const Z_FUORI = 1.62
-const Z_DENTRO = 0.18
+/**
+ * Quota del piano di sezione LUNGO la nave. Parte da poppa, cioe' fuori da
+ * tutto, e arriva poco a poppavia degli stabilizzatori: la fetta che si toglie
+ * scopre il locale macchine.
+ */
+const Z_FUORI = POPPA_Z + 0.4
+const Z_DENTRO = Z_PINNE + 0.55
 
 /**
  * Taratura delle luci dopo il porto a three 0.185.
@@ -70,7 +75,7 @@ export function creaScena (contenitore) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 22, 1.2)
   fondale.position.set(0, -5.5, 2.5); scena.add(fondale)
 
-  const { nave, pinne, guscio, tappo } = costruisciNave()
+  const { nave, pinne, guscio, tappo, spostaTappo } = costruisciNave()
   scena.add(nave)
 
   /**
@@ -109,7 +114,7 @@ export function creaScena (contenitore) {
   function impostaSpaccato (p) {
     spaccato = MathUtils.clamp(p, 0, 1)
     pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
-    tappo.position.z = pianoSezione.constant
+    spostaTappo(pianoSezione.constant)
     tappo.visible = spaccato > 0.002
     tappo.material.opacity = Math.min(1, spaccato * 5)
   }
@@ -166,11 +171,15 @@ export function creaScena (contenitore) {
 
     azimut += (azimutTarget - azimut) * Math.min(1, dt * 5)
     const raggio = MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato)
-    const mira = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
-    camera.position.x = mira + Math.sin(azimut) * raggio
-    camera.position.z = Math.cos(azimut) * raggio
+    const miraX = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
+    // La camera insegue la sezione anche IN LUNGHEZZA: da mezzanave al
+    // meccanismo. La quota resta zero — e' quello che tiene la linea a meta'
+    // schermo, e quindi la giunzione col fondo CSS a zero pixel.
+    const miraZ = MathUtils.lerp(0, Z_PINNE, spaccato)
+    camera.position.x = miraX + Math.sin(azimut) * raggio
+    camera.position.z = miraZ + Math.cos(azimut) * raggio
     camera.position.y = 0
-    camera.lookAt(mira, 0, 0)
+    camera.lookAt(miraX, 0, miraZ)
 
     render.render(scena, camera)
   }
