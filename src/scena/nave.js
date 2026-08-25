@@ -3,7 +3,7 @@ import {
   EdgesGeometry, LineSegments, LineBasicMaterial, MeshBasicMaterial, DoubleSide
 } from 'three'
 import { materiali } from './materiali.js'
-import { costruisciGuscio, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
+import { costruisciGuscio, costruisciPonte, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
 
 /** Sezione maestra dello scafo, estrusa lungo Z — che e' l'asse di rollio. */
 function sezioneScafo () {
@@ -220,6 +220,10 @@ export function costruisciNave () {
     nave.add(chiusura); guscio.push(chiusura)
   }
 
+  // E il terzo lato aperto: il ponte.
+  const ponte = new Mesh(costruisciPonte(72), materiali.coperta)
+  nave.add(ponte); guscio.push(ponte)
+
   // Lo spigolo chiaro e' la stessa idea del taglio applicata al volume:
   // dice dove finisce il pezzo senza aggiungere una luce.
   const spigoli = new LineSegments(
@@ -228,13 +232,32 @@ export function costruisciNave () {
   )
   nave.add(spigoli); guscio.push(spigoli)
 
-  // Sovrastruttura, proporzionata alla nave vera: 16 unita' di lunghezza,
-  // non piu' 3. Sta a mezzanave e non arriva ne' a prua ne' allo specchio.
-  const larghTuga = sezioneA(tDaZ(1.5)).semilarg * 1.16
-  const tuga = new Mesh(new BoxGeometry(larghTuga, 0.72, 6.2), materiali.coperta)
-  tuga.position.set(0, 1.28, 0.6); nave.add(tuga); guscio.push(tuga)
-  const vetri = new Mesh(new BoxGeometry(larghTuga + 0.02, 0.22, 6.24), materiali.vetro)
-  vetri.position.set(0, 1.40, 0.6); nave.add(vetri); guscio.push(vetri)
+  /**
+   * SOVRASTRUTTURA — appoggiata al ponte, non a una quota scelta a occhio.
+   *
+   * Col cavallino vero il trincarino sale verso prua di 118 cm su 40 m. Una
+   * tuga a quota fissa finisce interrata di 34 cm all'estremita' prodiera e
+   * sollevata di 3 a poppa: un difetto misurato, non temuto.
+   *
+   * Quindi la quota e l'inclinazione si RICAVANO dal ponte alle sue due
+   * estremita'. Se domani le ordinate cambiano, o la tuga si allunga verso
+   * prua, si riappoggia da sola invece di scollarsi in silenzio.
+   */
+  const TUGA_Z = 0.6, TUGA_LUNG = 6.2, TUGA_ALT = 0.72
+  const zProra = TUGA_Z - TUGA_LUNG / 2
+  const zPoppa = TUGA_Z + TUGA_LUNG / 2
+  const pontePro = sezioneA(tDaZ(zProra)).ponteY
+  const pontePop = sezioneA(tDaZ(zPoppa)).ponteY
+  const inclinaz = Math.atan2(pontePro - pontePop, TUGA_LUNG)   // il cavallino sotto la tuga
+  const quotaTuga = (pontePro + pontePop) / 2 + TUGA_ALT / 2
+
+  const larghTuga = sezioneA(tDaZ(TUGA_Z)).semilarg * 1.16
+  const tuga = new Mesh(new BoxGeometry(larghTuga, TUGA_ALT, TUGA_LUNG), materiali.coperta)
+  tuga.position.set(0, quotaTuga, TUGA_Z); tuga.rotation.x = -inclinaz
+  nave.add(tuga); guscio.push(tuga)
+  const vetri = new Mesh(new BoxGeometry(larghTuga + 0.02, 0.22, TUGA_LUNG + 0.04), materiali.vetro)
+  vetri.position.set(0, quotaTuga + 0.12, TUGA_Z); vetri.rotation.x = -inclinaz
+  nave.add(vetri); guscio.push(vetri)
 
   // Nasce con corda in X e apertura in Z; la ruoto una volta sola alla
   // creazione, cosi' l'apertura va fuoribordo e la corda resta longitudinale.

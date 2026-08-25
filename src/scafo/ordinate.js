@@ -23,19 +23,33 @@ const LUNG = POPPA_Z - PRUA_Z
 
 /**
  * Ordinate: mezza sezione, lato dritto. t = 0 prua, t = 1 specchio.
- * Verificate: 40,0 m x 8,30 m, L/B 4,82, pescaggio 2,35 m,
- * deadrise da 58,0 gradi a prua a 15,3 allo specchio.
+ *
+ * DUE DIFETTI CORRETTI nella prima stesura, trovati misurando la tabella
+ * invece di guardarla:
+ *
+ * 1. A t=0 la semilarghezza era 0,26. Chiudendo il loft con `tappoA` quello
+ *    diventava una PIASTRA PIATTA larga 1,30 m e alta 4,05 — quasi quattro
+ *    metri quadri di lamiera verticale al posto del dritto di prua. Ora la
+ *    prima ordinata e' un dritto vero: 0,04 di semilarghezza, 20 cm.
+ *
+ * 2. Il cavallino era 30 cm su 40 m, con rapporto di bordo libero
+ *    prua/mezzanave a 1,10. Un quaranta metri sta fra 1,35 e 1,55: sotto quel
+ *    valore lo scafo legge come una chiatta, ed e' esattamente il rilievo
+ *    arrivato guardando la scena. La quota del ponte segue ora una curva
+ *    (1-t)^2,5 fra 0,890 a poppa e 1,360 a prua, non una spezzata: una
+ *    spezzata produce grinze visibili sul trincarino.
  */
 const ORDINATE = [
   // t     semilarg  chiglia  spigoloY  spigoloX  ponteY
-  [0.00,   0.26,    -0.60,   -0.28,    0.20,     1.02],
-  [0.14,   0.76,    -0.86,   -0.30,    0.62,     0.99],
-  [0.28,   1.16,    -0.94,   -0.28,    1.02,     0.96],
-  [0.42,   1.46,    -0.94,   -0.26,    1.36,     0.94],
-  [0.56,   1.62,    -0.90,   -0.24,    1.56,     0.92],
-  [0.70,   1.66,    -0.82,   -0.22,    1.63,     0.91],
-  [0.85,   1.62,    -0.72,   -0.20,    1.60,     0.90],
-  [1.00,   1.55,    -0.60,   -0.18,    1.54,     0.90]
+  [0.00,   0.04,    -0.30,   -0.22,    0.03,     1.360],   // dritto di prua
+  [0.06,   0.34,    -0.62,   -0.28,    0.26,     1.293],
+  [0.16,   0.82,    -0.86,   -0.30,    0.66,     1.194],
+  [0.30,   1.20,    -0.94,   -0.28,    1.06,     1.083],
+  [0.44,   1.48,    -0.94,   -0.26,    1.38,     1.000],
+  [0.58,   1.62,    -0.90,   -0.24,    1.56,     0.944],
+  [0.72,   1.66,    -0.82,   -0.22,    1.63,     0.910],
+  [0.86,   1.62,    -0.72,   -0.20,    1.60,     0.893],
+  [1.00,   1.55,    -0.60,   -0.18,    1.54,     0.890]
 ]
 
 /** L'UNICA interpolazione. Tutto il resto del file la chiama. */
@@ -150,6 +164,40 @@ export function costruisciGuscio (anelli = 64) {
     }
   }
 
+  const g = new BufferGeometry()
+  g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
+  g.setIndex(idx)
+  g.computeVertexNormals()
+  return g
+}
+
+/**
+ * IL PONTE — la striscia fra trincarino di dritta e trincarino di sinistra.
+ *
+ * Senza, il guscio e' un trogolo aperto: la camera vede dentro lo scafo
+ * ovunque la sovrastruttura non copra, e l'interno — illuminato dalle sole
+ * luci fredde — legge come una macchia verde. E' lo stesso difetto gia'
+ * trovato agli estremi, in una terza forma.
+ *
+ * Anche qui nessuna geometria nuova: i bordi sono gli ultimi punti di
+ * `contornoA`, cioe' la superficie stessa. Se il cavallino cambia, il ponte
+ * lo segue senza che nessuno lo aggiorni.
+ */
+export function costruisciPonte (anelli = 72) {
+  const pos = []
+  for (let a = 0; a <= anelli; a++) {
+    const t = a / anelli
+    const z = zDaT(t)
+    const c = contornoA(t)
+    const dritta = c[GIRO]                 // ultimo punto del lato dritto: il trincarino
+    const sinistra = c[c.length - GIRO]    // il suo speculare a sinistra
+    pos.push(dritta[0], dritta[1], z, sinistra[0], sinistra[1], z)
+  }
+  const idx = []
+  for (let a = 0; a < anelli; a++) {
+    const b = a * 2, n = (a + 1) * 2
+    idx.push(b, n, n + 1, b, n + 1, b + 1)
+  }
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
   g.setIndex(idx)
