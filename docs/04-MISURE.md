@@ -28,18 +28,32 @@ prima di essere stato misurato due volte, in due sessioni diverse.
 Il sito non gira: esiste il prototipo, non l'applicazione. Le uniche misure
 disponibili oggi sono **statiche sul file**, e sono queste.
 
-### Peso del prototipo — 2026-08-25, misurato sul sorgente
+### Peso del prototipo — 2026-08-25, byte e gzip
 
-| voce | peso su disco |
-|---|---|
-| bundle three.js UMD inline (r12x/r13x) | 589,3 KB |
-| font base64 nel CSS (4 `@font-face`) | 89,6 KB |
-| codice d'autore (CSS + HTML + simulazione) | 23,1 KB |
-| **totale** | **702,0 KB** |
+| blocco | byte | gzip -9 |
+|---|---|---|
+| bundle three.js UMD inline (r12x/r13x) | 603.462 | 148.751 (145,3 KB) |
+| CSS + font base64 (4 `@font-face`) | 99.783 | 72.291 (70,6 KB) |
+| simulazione d'autore | 12.114 | 4.213 (4,1 KB) |
+| **file completo** | **718.877** | **226.935 (221,6 KB)** |
+| **JS totale** | | **149,4 KB** |
 
-Strumento: conteggio byte sul file, non peso trasferito. **Il peso in rete
-(gzip/brotli) non è ancora stato misurato** e sarà sensibilmente più basso: non
-usare questi numeri per dire "quanto pesa il sito".
+Strumento: `wc -c` per i byte, `gzip -9` per il compresso, blocchi separati con
+uno script Python sul sorgente. Condizioni: file su disco, non servito da un
+server reale — brotli e la compressione del server daranno numeri diversi.
+
+**Esito: il budget del brief (JS < 250 KB gzipped) è già rispettato**, con
+margine. Un revisore esterno ha misurato 227.862 B e ~153 KB con strumenti suoi:
+lo scarto rispetto ai miei 226.935 B e 149,4 KB è di implementazione gzip, non
+di sostanza.
+
+> **Errore già commesso su questa stessa riga, lasciato scritto perché non si
+> ripeta.** Nella revisione 1 questo blocco riportava solo i byte su disco, con
+> l'avvertenza — scritta qui sotto, di mia mano — di non usarli per dire quanto
+> pesa il sito. Due sezioni più in là, in `01-AUDIT`, li ho usati esattamente
+> così, concludendo che il prototipo sfondava un budget che invece rispettava.
+> **Scrivere la regola non basta.** Costa attenzione soprattutto quando il numero
+> sbagliato conferma quello che si sperava di trovare.
 
 ---
 
