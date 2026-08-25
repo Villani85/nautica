@@ -115,7 +115,7 @@ function costruisciGruppoPinna (lato, geoPinna) {
     aletta.rotation.z = Math.PI / 2
     aletta.position.set(X(-0.99 + a * 0.043), 0.03, 0); gruppo.add(aletta)
   }
-  const calotta = new Mesh(new CylinderGeometry(0.10, 0.135, 0.09, 22), materiali.bronzo)
+  const calotta = new Mesh(new CylinderGeometry(0.10, 0.135, 0.09, 22), materiali.accento)
   calotta.rotation.z = Math.PI / 2; calotta.position.set(X(-1.07), 0.03, 0); gruppo.add(calotta)
 
   // riduttore e giunto
@@ -162,14 +162,16 @@ function costruisciGruppoPinna (lato, geoPinna) {
   if (lato < 0) pinna.rotation.y = Math.PI
   rotante.add(pinna)
 
-  // manovella e biella: ricalcolate a ogni fotogramma
+  // Manovella e biella: ricalcolate a ogni fotogramma.
+  // ACCENTO SOLO SU CIO' CHE SI MUOVE (D31): biella e i due perni. La
+  // manovella resta acciaio perche' e' un braccio, non un'articolazione.
   const manovella = asta(0.05, materiali.acciaio)
   manovella.position.x = X(-0.34); gruppo.add(manovella)
-  const biella = asta(0.042, materiali.bronzo)
+  const biella = asta(0.042, materiali.accento)
   biella.position.x = X(-0.30); gruppo.add(biella)
-  const pernoBiella = new Mesh(new CylinderGeometry(0.032, 0.032, 0.13, 14), materiali.bronzo)
+  const pernoBiella = new Mesh(new CylinderGeometry(0.036, 0.036, 0.14, 14), materiali.accento)
   pernoBiella.rotation.z = Math.PI / 2; pernoBiella.position.x = X(-0.32); gruppo.add(pernoBiella)
-  const pernoLeva = new Mesh(new CylinderGeometry(0.032, 0.032, 0.13, 14), materiali.bronzo)
+  const pernoLeva = new Mesh(new CylinderGeometry(0.036, 0.036, 0.14, 14), materiali.accento)
   pernoLeva.rotation.z = Math.PI / 2; pernoLeva.position.x = X(-0.26); gruppo.add(pernoLeva)
 
   function aggiorna (theta) {
@@ -205,6 +207,9 @@ export function costruisciNave () {
   const geoScafo = costruisciGuscio(72)
   const scafo = new Mesh(geoScafo, materiali.scafo)
   nave.add(scafo); guscio.push(scafo)
+  // La faccia interna, disegnata a parte e scura: vedi materiali.interno
+  const dentro = new Mesh(geoScafo, materiali.interno)
+  nave.add(dentro); guscio.push(dentro)
 
   /**
    * DIFETTO TROVATO GUARDANDO IL PROVINO: il loft e' un tubo, aperto ai due

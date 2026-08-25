@@ -1,4 +1,4 @@
-import { BufferGeometry, BufferAttribute, Shape, ShapeGeometry } from 'three'
+import { BufferGeometry, BufferAttribute, Shape, Path, ShapeGeometry } from 'three'
 
 /**
  * LO SCAFO — loft fra ordinate.
@@ -132,11 +132,102 @@ export function profiloA (t) {
 }
 
 /**
- * IL TAPPO a una quota qualsiasi. Non approssimato, non ricavato con lo
- * stencil: e' `profiloA` della stessa t che genera la superficie.
+ * SPESSORE DELLA PARETE nella faccia di sezione.
+ *
+ * Non e' lo spessore vero di un fasciame — quello sarebbe 3 cm, cioe' 0,012
+ * unita', e a schermo non si vedrebbe. E' lo spessore del DISEGNO: in una
+ * tavola tecnica la parete tagliata si annerisce perche' si veda, non perche'
+ * sia in scala. 11 cm e' la quota che legge da spaccato senza diventare assurda.
+ */
+const PARETE = 0.045
+
+/**
+ * Il contorno interno: lo stesso profilo, spostato verso l'interno di
+ * `PARETE` lungo la normale in ogni punto.
+ *
+ * Non una seconda tabella e non una scalatura verso il centro — che
+ * assottiglierebbe la parete dove la sezione e' larga e la ingrosserebbe dove
+ * e' stretta. La normale si ricava dai due segmenti adiacenti, e il verso dal
+ * segno dell'area: cosi' funziona comunque, anche se un giorno il contorno
+ * viene percorso al contrario.
+ */
+export function contornoInternoA (t, parete = PARETE) {
+  const p = contornoA(t)
+  const n = p.length
+
+  let area = 0
+  for (let i = 0; i < n; i++) {
+    const a = p[i], b = p[(i + 1) % n]
+    area += a[0] * b[1] - b[0] * a[1]
+  }
+  const verso = area > 0 ? 1 : -1
+
+  const dentro = []
+  for (let i = 0; i < n; i++) {
+    const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n]
+    let nx = 0, ny = 0
+    for (const [q, r] of [[a, b], [b, c]]) {
+      const dx = r[0] - q[0], dy = r[1] - q[1]
+      const L = Math.hypot(dx, dy) || 1
+      nx += -dy / L; ny += dx / L
+    }
+    const L = Math.hypot(nx, ny) || 1
+    // La normale sinistra di un poligono percorso in senso antiorario punta
+    // gia' DENTRO: si somma, non si sottrae. Sbagliando il segno l'anello
+    // veniva piu' grande dell'esterno, e il controllo lo bocciava — che e'
+    // esattamente il suo mestiere.
+    dentro.push([b[0] + verso * (nx / L) * parete, b[1] + verso * (ny / L) * parete])
+  }
+  return dentro
+}
+
+/**
+ * Il contorno interno regge? A prua la sezione e' larga 10 cm: una parete da
+ * 11 la farebbe collassare su se stessa, e il triangolatore produrrebbe una
+ * figura rovesciata **senza dare errore**. Si controlla che l'area interna sia
+ * ancora positiva e sensibilmente piu' piccola di quella esterna.
+ */
+function areaSegnata (p) {
+  let a = 0
+  for (let i = 0; i < p.length; i++) {
+    const u = p[i], v = p[(i + 1) % p.length]
+    a += u[0] * v[1] - v[0] * u[1]
+  }
+  return a / 2
+}
+
+function internoValido (esterno, interno) {
+  const ae = areaSegnata(esterno)
+  const ai = areaSegnata(interno)
+  // Il VERSO deve restare lo stesso. Con il valore assoluto un contorno
+  // rovesciato — quello che succede quando la parete e' piu' spessa della
+  // meta' della sezione — passerebbe il controllo e il triangolatore
+  // produrrebbe una figura sbagliata senza dare errore.
+  if (Math.sign(ae) !== Math.sign(ai)) return false
+  const r = Math.abs(ai) / Math.abs(ae)
+  return r > 0.02 && r < 0.94
+}
+
+/**
+ * IL TAPPO a una quota qualsiasi, come ANELLO fra profilo esterno e interno.
+ *
+ * Non approssimato, non ricavato con lo stencil: e' `profiloA` della stessa t
+ * che genera la superficie. Dove la sezione e' troppo piccola perche' una
+ * parete ci stia — la prua — il tappo torna pieno invece di rovesciarsi.
  */
 export function tappoA (z) {
-  const g = new ShapeGeometry(profiloA(tDaZ(z)))
+  const t = tDaZ(z)
+  const esterno = contornoA(t)
+  const interno = contornoInternoA(t)
+  const sh = profiloA(t)
+  if (internoValido(esterno, interno)) {
+    const buco = new Path()
+    buco.moveTo(interno[0][0], interno[0][1])
+    for (let i = 1; i < interno.length; i++) buco.lineTo(interno[i][0], interno[i][1])
+    buco.closePath()
+    sh.holes.push(buco)
+  }
+  const g = new ShapeGeometry(sh)
   g.translate(0, 0, z)
   return g
 }

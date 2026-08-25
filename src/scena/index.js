@@ -6,8 +6,8 @@ import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
 
-const RAGGIO = 25.0
-const RAGGIO_SEZIONE = 8.6
+const RAGGIO = 19.5
+const RAGGIO_SEZIONE = 7.2
 const AZIMUT_MAX = 0.92
 
 /** Dove sta il meccanismo: e' li' che la camera va a finire. */
@@ -33,7 +33,19 @@ const LUCI = {
   emisfero: 2.7,
   sole: 3.6,
   controluce: 1.4,
-  fondale: 12
+  /**
+   * DIFETTO TROVATO GUARDANDO, E ISOLATO CON UNA PROVA.
+   *
+   * Questa luce serviva a dare fondo all'acqua profonda. Con lo scafo
+   * sezionato pero' si e' trovata DENTRO la carena, e a intensita' 12 con
+   * portata 22 ne illuminava l'interno di verde: una cavita' accesa dove
+   * doveva esserci buio.
+   *
+   * Isolata togliendo l'acqua (`?senzaAcqua=1`): il verde restava, quindi non
+   * era il mare. Ora e' piu' debole e piu' in basso, e la portata non arriva
+   * piu' all'interno dello scafo.
+   */
+  fondale: 3.2
 }
 
 export function creaScena (contenitore) {
@@ -72,8 +84,8 @@ export function creaScena (contenitore) {
   sole.position.set(4.5, 7, 6); scena.add(sole)
   const controluce = new DirectionalLight(0x9fd8cc, LUCI.controluce)
   controluce.position.set(-6, 2.5, -4); scena.add(controluce)
-  const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 22, 1.2)
-  fondale.position.set(0, -5.5, 2.5); scena.add(fondale)
+  const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
+  fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
   const { nave, pinne, guscio, tappo, spostaTappo } = costruisciNave()
   scena.add(nave)
@@ -86,7 +98,13 @@ export function creaScena (contenitore) {
   const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
   for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
   const acqua = costruisciAcqua()
-  scena.add(acqua.gruppo)
+  /**
+   * Interruttore di prova: `?senzaAcqua=1` toglie il mare.
+   * Resta in produzione apposta — e' costato un ciclo di compilazione e ha
+   * isolato in un colpo un difetto che stavo per attribuire all'acqua.
+   * Uno strumento che si puo' rifare quando serve vale piu' di una deduzione.
+   */
+  if (!location.search.includes('senzaAcqua')) scena.add(acqua.gruppo)
 
   const orologio = new Clock()
   let t = 0
