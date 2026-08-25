@@ -1,6 +1,6 @@
 # Stato del progetto
 
-**Aggiornato:** 2026-08-25 · **Giro:** 3 · **Fase:** il sito esiste.
+**Aggiornato:** 2026-08-25 · **Giro:** 4 · **Fase:** il sito esiste, il bersaglio e' stato rifondato.
 
 ---
 
@@ -102,7 +102,8 @@ Markup 7,40. Il sito dell'anno prende **7,00 in accessibilità**: è il punto pi
 debole dei vincitori e il meno costoso da superare — ed è esattamente il terreno
 di questo commit.
 
-Il percorso completo e il piano stanno in `docs/05-PERCORSO-PREMIO.md`.
+Il piano sta in `docs/06-SEQUENZA-D-ORO.md`; la ricerca sul percorso annuale,
+con la verifica, in `docs/05-SITO-DELL-ANNO.md`.
 
 ## Il prossimo passo: la sequenza d'oro
 
@@ -140,3 +141,94 @@ scambiarli per ufficiali è già costato un giro di lavoro su questo progetto.
   giuria **e** 6,5 dagli utenti qualificati. Con rete community pari a zero non
   si prende nemmeno quello, e non si recupera lavorando meglio alla fine.
 - **A01 nome** e **A02 lingua** restano aperte. Non bloccano la sequenza d'oro.
+
+---
+
+## Giro 4 — il bersaglio rifondato
+
+Arrivata una ricerca sui vincitori reali. Verificata sull'elenco ufficiale,
+contando le trenta schede in pagina.
+
+### Il fatto che cambia tutto, in meglio
+
+**I siti autoprodotti vincono il Sito dell'Anno, e non per caso.** Nell'elenco
+ci sono **quattro nomi di persona** — Bruno Simon, Claudio Guglieri, Louis
+Paquet, Zhenya Rynzhuk — piu' i siti che gli studi hanno fatto di se stessi
+(Lusion, Noomo, Active Theory, Synchronized Studio, abeto, The First The Last).
+
+La categoria in cui rientra questo progetto non e' un'eccezione nell'elenco: e'
+una presenza stabile. Nessuno lo aveva verificato prima.
+
+### E il fatto che alza l'asticella tecnica
+
+**28 vincitori SOTY su 30 hanno anche il Developer Award.** Contati. Siccome il
+DEV si assegna solo ai SOTD che superano 7 con una giuria di soli sviluppatori,
+il livello tecnico del Sito dell'Anno **e' quello**. La sezione 3 smette di
+essere contenuto opzionale — non perche' la giuria la legga, ma perche' il sito
+deve *essere* a quel livello.
+
+### Il bersaglio non e' piu' un voto
+
+> Per diventare Sito dell'Anno non basta massimizzare il punteggio: bisogna
+> diventare il sito che la giuria **ricorda** e vuole premiare a fine anno.
+
+Opal Tadpole ha vinto il SOTY partendo da 7,52; Noomo da 7,72. Lusion v3 da
+8,25. Il voto serve per entrare, non decide il premio annuale.
+
+E il calendario e' lungo: il SOTY 2027 richiede un SOTD nel 2027, poi il SOTM
+di quel mese, con annuncio a febbraio 2028. **Un arco da diciotto mesi**, non da
+cinque settimane.
+
+### Tre regole di casa che cambiano
+
+- **D19 — la geometria procedurale smette di essere un obbligo.** Diventa: asset
+  originali e controllati, nessun modello generico o senza licenza. Se la
+  qualita' richiede un modello costruito apposta in Blender, si costruisce.
+- **D20 — gli effetti al mouse passano da vietati a non essenziali.** La ragione
+  del divieto non era il mouse: era la *dipendenza* dal mouse. La regola nuova
+  conserva la ragione — nessun momento puo' dipendere dal puntatore, il telefono
+  ha un'esperienza equivalente — e lascia cadere il divieto.
+- **D21 — tre picchi, non sei momenti.** Il taglio · la stabilizzazione · dentro
+  lo scafo. Tutto il resto usa la stessa grammatica senza competere.
+
+### La tensione da decidere, e non e' mia
+
+I vincitori SOTY autoprodotti **non sono sensati: sono ossessivi.** Bruno Simon
+ha buttato via la struttura di un portfolio per tenere una sola idea — niente
+sezione servizi, niente elenco clienti.
+
+Il brief attuale disegna un sito sensato, ed e' la struttura giusta per un
+Honorable Mention e per contendere un SOTD. Ma **sensato e' la forma che arriva
+a 8.** Non e' un argomento per togliere offerta e contatto: e' un argomento per
+non lasciarle diventare la parte normale di un sito per il resto ossessivo.
+E' la mossa M8, e la decide il committente.
+
+### La rete: il rischio piu' grande, e non e' tecnico
+
+Gli utenti votano a **tre** livelli: 6,5 anche da loro per l'Honorable Mention;
+10 utenti PRO per anticipare il SOTD; al SOTM i voti utente pesano di piu'.
+Oggi la presenza su Awwwards e' **zero**. E' lavoro di mesi, va avviato in
+parallelo, e non si recupera lavorando meglio alla fine. E' la mossa M7.
+
+---
+
+## Il prossimo risultato, e le condizioni per considerarlo riuscito
+
+Non un altro documento, e non un semplice porto. Deve contenere:
+
+1. progetto Vite reale — **fatto**;
+2. apertura col taglio funzionante — **fatto**;
+3. dimostrazione dello stabilizzatore — **fatto**;
+4. **prima apertura dello scafo** — da fare;
+5. resa desktop e mobile — parziale, da misurare sul telefono;
+6. **link pubblico** — serve che Pages venga abilitato;
+7. **video di 20-30 secondi** della sequenza — da fare;
+8. nessuno dei difetti gia' individuati — **fatto**.
+
+Poi il confronto **alla cieca** con Lando Norris, Lusion, Messenger e Bruno
+Simon. Il criterio non e' piu' *"e' abbastanza bello per vincere qualcosa?"* ma:
+
+> **puo' essere ricordato fra i migliori siti dell'intero anno?**
+
+Se la risposta e' no, non si costruisce il resto del sito: si rifanno art
+direction, modello e regia.

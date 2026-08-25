@@ -48,6 +48,44 @@ Stati: **PRESA** · **PROPOSTA** (in attesa di approvazione) · **APERTA**.
 | P03 | 2026-08-25 | `prefers-reduced-motion` **a stati confrontabili** invece del congelamento attuale | oggi la dimostrazione si spegne e chi ha quella preferenza non vede la tesi del sito | basso |
 | P04 | 2026-08-25 | Il feedback delle altre AI passa da **file nel repo**, non da GitHub Issues | funziona anche con AI che sanno solo leggere un URL pubblico; e la discussione resta versionata insieme al codice | nullo — già impostato |
 
+
+## Prese — giro 4, dopo la ricerca sul Sito dell'Anno
+
+| # | data | decisione | ragione |
+|---|---|---|---|
+| D19 | 2026-08-25 | **La geometria procedurale smette di essere un obbligo.** La regola diventa: *asset originali e controllati, nessun modello generico o senza licenza* | D05 era stato preso per licenza e peso, e per quelli resta valido. Ma come vincolo assoluto diventa una prigione: se la qualita' richiesta pretende un modello costruito apposta in Blender, si costruisce. Autore e committente devono coincidere — quello e' il vincolo vero, ed e' anche cio' che rende il progetto ammissibile |
+| D20 | 2026-08-25 | **Gli effetti al mouse passano da vietati a non essenziali.** Il desktop puo' avere una risposta piu' ricca; nessun momento o informazione puo' dipendere dal puntatore; il telefono ha un'esperienza equivalente, non impoverita | Lusion e Noomo hanno vinto anche con interazione al cursore. Il divieto assoluto era troppo rigido — ma la ragione che lo aveva generato non era il mouse: era la **dipendenza** dal mouse. La regola nuova conserva la ragione e lascia cadere il divieto |
+| D21 | 2026-08-25 | **Tre picchi memorabili, non sei momenti distribuiti**: il taglio, la stabilizzazione, dentro lo scafo. Menu, transizioni, offerta e contatto usano la stessa grammatica ma non competono con i tre | sei momenti equivalenti diluiscono; i vincitori hanno una sequenza che si racconta in una frase |
+| D22 | 2026-08-25 | **Il Developer Award e' trattato come requisito, non come premio aggiuntivo** | verificato: 28 vincitori SOTY su 30 lo hanno. Il livello tecnico del SOTY e' quello che supera 7 con una giuria di soli sviluppatori |
+| D23 | 2026-08-25 | **Il lancio fa parte del progetto**, non e' quello che viene dopo: video, clip dei momenti, case study in inglese, scheda Awwwards curata, crediti precisi | il premio annuale non si decide il giorno della candidatura: dipende dal fatto che il sito continui a essere visto |
+
+### I bersagli interni, per competere
+
+Non sono soglie ufficiali: sono il livello a cui progettare. Il riferimento e'
+Lando Norris, Site of the Year 2025, che ha totalizzato 8,18.
+
+| area | bersaglio | Lando Norris |
+|---|---|---|
+| Design | ≥ 8,2 | 8,12 |
+| Usability | ≥ 8,0 | 7,90 |
+| Creativity | ≥ 8,5 | 8,71 |
+| Content | ≥ 8,0 | 8,18 |
+| DEV — Animazioni/Transizioni | ≥ 9 | 8,60 |
+| DEV — WPO | ≥ 8,5 | 7,60 |
+| DEV — Responsive | ≥ 8,5 | 7,40 |
+| DEV — Accessibilita' | ≥ 8 | **7,00** |
+
+L'ultima riga e' la piu' interessante: il sito dell'anno prende **7,00 in
+accessibilita'**. E' il terreno dove si supera un vincitore con lavoro
+ordinario fatto bene, ed e' gia' quasi tutto in piedi.
+
+### Le due mosse che non c'erano
+
+| # | mossa | perche' non e' rimandabile |
+|---|---|---|
+| **M7** | **Costruire la presenza su Awwwards**, da adesso e in parallelo alla costruzione | gli utenti votano a **tre** livelli: 6,5 anche da loro per l'Honorable Mention; 10 utenti PRO per anticipare il SOTD; al SOTM i voti utente pesano di piu'. Oggi la presenza e' zero, ed e' lavoro di mesi che non si recupera lavorando meglio alla fine |
+| **M8** | **Decidere quanto il sito puo' permettersi di essere ossessivo** invece che sensato | i vincitori SOTY autoprodotti non sono sensati: Bruno Simon ha buttato la struttura di un portfolio per tenere una sola idea. Un sito sensato arriva a 8. Non e' un argomento per togliere offerta e contatto: e' un argomento per non lasciarle diventare la parte normale di un sito per il resto ossessivo |
+
 ---
 
 ## Aperte — bloccano del lavoro reale
