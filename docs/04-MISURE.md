@@ -57,6 +57,51 @@ di sostanza.
 
 ---
 
+## Misure prese — 2026-08-25, notte
+
+### Comportamento del rollio (`node strumenti/collaudo-rollio.mjs`)
+
+Il numero della riduzione **non e' piu' dichiarato**: girano due simulazioni in
+parallelo, identiche tranne che una ha autorita' zero, e a schermo va il
+rapporto fra i due picchi.
+
+| condizione | riduzione misurata |
+|---|---|
+| 12 nodi, mare 1-5 | 88,4 % - 91,7 % (regime lineare) |
+| 8 nodi, mare 1 | 79,5 % ± 3,5 |
+| 8 nodi, mare 5 | **16,8 % ± 7,3** |
+| 6 nodi, mare 4 | 12,7 % |
+| 3 nodi, mare 4 | 0,9 % |
+| **0 nodi** | **0,00 %** |
+
+Integratore stabile su 20 minuti simulati a 20, 30, 60 e 120 Hz. Carena nuda
+entro il 30 % delle ampiezze nominali. Due visite danno numeri diversi
+(escursione 5,3 punti su nove corse).
+
+### Geometria (`node strumenti/collaudo-scafo.mjs`)
+
+| grandezza | valore |
+|---|---|
+| scarto tappo/superficie | **7,22 × 10⁻⁸** (precisione float32) |
+| sezioni degeneri su 501 | 0 |
+| quote con tappo ad anello | 40 su 41 |
+| normali di murata rivolte dentro | 0 su 544 |
+
+### Peso della compilazione (`npm run peso`)
+
+Percorso critico **75,8 KB gzip**, di cui 67,2 di font. Motore 3D 145,9 KB,
+caricato solo all'occorrenza. JS totale 143,6 KB contro un cancello di 250.
+
+### Accessibilita', misurata in pagina
+
+- **contrasto**: 78 testi controllati, 10 sotto soglia — **tutti nella testata
+  fissa**, a 2,95:1 sopra le sezioni scure. Corretto: la testata ora prende il
+  `data-lato` della sezione che le passa sotto;
+- **bersagli**: 5 sotto 44 px, tutti voci di menu a 32 px. Corretti;
+- **overflow orizzontale**: assente a 1536 px.
+
+---
+
 ## Da misurare — la tabella si riempie man mano
 
 | metrica | soglia | valore | data | condizioni | strumento |
