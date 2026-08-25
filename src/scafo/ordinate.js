@@ -250,8 +250,14 @@ export function costruisciGuscio (anelli = 64) {
     const succ = (a + 1) * PER_ANELLO
     for (let i = 0; i < PER_ANELLO; i++) {
       const j = (i + 1) % PER_ANELLO
-      idx.push(base + i, succ + i, succ + j)
-      idx.push(base + i, succ + j, base + j)
+      // AVVOLGIMENTO: le normali devono puntare FUORI.
+      // La prima stesura le faceva puntare dentro — tutte e 544 quelle di
+      // murata. Con un materiale a doppia faccia non si vedeva: three rovescia
+      // la normale sulle facce posteriori e l'illuminazione tornava. Il difetto
+      // e' emerso solo separando esterno e interno in due materiali, quando le
+      // due facce si sono scambiate e la murata e' diventata nera.
+      idx.push(base + i, succ + j, succ + i)
+      idx.push(base + i, base + j, succ + j)
     }
   }
 
@@ -287,7 +293,10 @@ export function costruisciPonte (anelli = 72) {
   const idx = []
   for (let a = 0; a < anelli; a++) {
     const b = a * 2, n = (a + 1) * 2
-    idx.push(b, n, n + 1, b, n + 1, b + 1)
+    // Stesso difetto del guscio, trovato dallo stesso controllo: le normali
+    // del ponte puntavano in giu'. Un ponte illuminato da sotto non da' errore,
+    // da' una superficie che sembra sbagliata e non si sa perche'.
+    idx.push(b, n + 1, n, b, b + 1, n + 1)
   }
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))

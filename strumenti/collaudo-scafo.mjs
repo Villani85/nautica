@@ -92,3 +92,26 @@ console.log('501 sezioni campionate: ' + (ok ? 'nessuna degenere' : 'ERRORE'))
   if (rotti > 0) { console.error('  ROTTO: l\'offset va nel verso sbagliato'); process.exitCode = 1 }
   else console.log('  OK — l\'interno sta sempre dentro l\'esterno')
 }
+
+// ─── IL VERSO DELLE NORMALI ───────────────────────────────────────────────
+{
+  const { costruisciGuscio, costruisciPonte } = await import('../src/scafo/ordinate.js')
+  console.log('\nIL VERSO DELLE NORMALI — un guscio rovesciato non da\' errore')
+  const g = costruisciGuscio(24)
+  const p = g.attributes.position.array, n = g.attributes.normal.array
+  let fuori = 0, dentro = 0
+  for (let i = 0; i < p.length; i += 3) {
+    if (Math.abs(p[i]) < 0.5) continue
+    if (p[i] * n[i] > 0) fuori++; else dentro++
+  }
+  console.log(`  murata: fuori ${fuori}  dentro ${dentro}`)
+  if (dentro > 0) { console.error('  ROTTO: ci sono normali di murata che puntano dentro'); process.exitCode = 1 }
+  else console.log('  OK — la murata guarda fuori')
+
+  const q = costruisciPonte(24), nq = q.attributes.normal.array
+  let su = 0, giu = 0
+  for (let i = 0; i < nq.length; i += 3) { if (nq[i + 1] > 0) su++; else giu++ }
+  console.log(`  ponte: in su ${su}  in giu ${giu}`)
+  if (giu > 0) { console.error('  ROTTO: il ponte guarda in giu\''); process.exitCode = 1 }
+  else console.log('  OK — il ponte guarda in su')
+}

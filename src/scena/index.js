@@ -5,6 +5,7 @@ import {
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
+import { costruisciFuoribordo } from './fuoribordo.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
@@ -97,6 +98,16 @@ export function creaScena (contenitore) {
    */
   const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
   for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
+  /**
+   * IL FUORIBORDO sta in coordinate MONDO — non e' figlio della nave — ma
+   * fisicamente dentro la tuga, cosi' si vede solo attraverso il finestrino.
+   * E' quello che fa arrivare il rollio gratis: la stanza ruota, l'orizzonte
+   * no, e la finestra gli passa davanti.
+   */
+  const fuoribordo = costruisciFuoribordo()
+  fuoribordo.gruppo.position.set(0, 1.28, 0.6)   // dentro la sovrastruttura
+  scena.add(fuoribordo.gruppo)
+
   const acqua = costruisciAcqua()
   /**
    * Interruttore di prova: `?senzaAcqua=1` toglie il mare.
@@ -186,6 +197,9 @@ export function creaScena (contenitore) {
     for (const p of pinne) p.aggiorna(sim.S.pinna * p.lato)
 
     if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame)
+    // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
+    // essa: non puo' contraddire cio' che l'utente controlla.
+    fuoribordo.impostaMare(sim.S.mare)
 
     azimut += (azimutTarget - azimut) * Math.min(1, dt * 5)
     const raggio = MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato)

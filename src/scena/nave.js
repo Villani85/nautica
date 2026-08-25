@@ -257,12 +257,36 @@ export function costruisciNave () {
   const quotaTuga = (pontePro + pontePop) / 2 + TUGA_ALT / 2
 
   const larghTuga = sezioneA(tDaZ(TUGA_Z)).semilarg * 1.16
-  const tuga = new Mesh(new BoxGeometry(larghTuga, TUGA_ALT, TUGA_LUNG), materiali.coperta)
-  tuga.position.set(0, quotaTuga, TUGA_Z); tuga.rotation.x = -inclinaz
-  nave.add(tuga); guscio.push(tuga)
-  const vetri = new Mesh(new BoxGeometry(larghTuga + 0.02, 0.22, TUGA_LUNG + 0.04), materiali.vetro)
-  vetri.position.set(0, quotaTuga + 0.12, TUGA_Z); vetri.rotation.x = -inclinaz
-  nave.add(vetri); guscio.push(vetri)
+
+  /**
+   * IL FINESTRINO E' UN'APERTURA VERA, non una fascia scura dipinta.
+   *
+   * La regola: cio' che e' diagramma si costruisce, cio' che e' fotografia si
+   * vede ATTRAVERSO un'apertura. Perche' la seconda meta' valga, l'apertura
+   * deve essere un buco: la tuga si divide in fascia bassa e fascia alta, e
+   * fra le due non c'e' niente. Guardando la nave di traverso si passa da un
+   * finestrino all'altro e si finisce sull'orizzonte, che sta in coordinate
+   * mondo e quindi non rolla con la stanza.
+   */
+  const H_FIN = 0.26                      // altezza dell'apertura
+  const H_BAS = (TUGA_ALT - H_FIN) * 0.42 // parapetto
+  const H_ALT = TUGA_ALT - H_FIN - H_BAS  // fascia sopra e tetto
+
+  const basso = new Mesh(new BoxGeometry(larghTuga, H_BAS, TUGA_LUNG), materiali.coperta)
+  basso.position.set(0, quotaTuga - TUGA_ALT / 2 + H_BAS / 2, TUGA_Z)
+  basso.rotation.x = -inclinaz; nave.add(basso); guscio.push(basso)
+
+  const alto = new Mesh(new BoxGeometry(larghTuga, H_ALT, TUGA_LUNG), materiali.coperta)
+  alto.position.set(0, quotaTuga + TUGA_ALT / 2 - H_ALT / 2, TUGA_Z)
+  alto.rotation.x = -inclinaz; nave.add(alto); guscio.push(alto)
+
+  // I montanti: senza, l'apertura legge come una fessura invece che come una
+  // vetrata. Sono anche cio' che da' la scala alla sovrastruttura.
+  for (let i = -2; i <= 2; i++) {
+    const m = new Mesh(new BoxGeometry(larghTuga + 0.01, H_FIN, 0.05), materiali.acciaio)
+    m.position.set(0, quotaTuga - TUGA_ALT / 2 + H_BAS + H_FIN / 2, TUGA_Z + i * (TUGA_LUNG / 5.2))
+    m.rotation.x = -inclinaz; nave.add(m); guscio.push(m)
+  }
 
   // Nasce con corda in X e apertura in Z; la ruoto una volta sola alla
   // creazione, cosi' l'apertura va fuoribordo e la corda resta longitudinale.
