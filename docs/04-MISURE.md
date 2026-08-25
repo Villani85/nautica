@@ -89,8 +89,15 @@ entro il 30 % delle ampiezze nominali. Due visite danno numeri diversi
 
 ### Peso della compilazione (`npm run peso`)
 
-Percorso critico **75,8 KB gzip**, di cui 67,2 di font. Motore 3D 145,9 KB,
-caricato solo all'occorrenza. JS totale 143,6 KB contro un cancello di 250.
+Dopo l'adozione di Recursive — una famiglia sola al posto di quattro file:
+
+| | prima | dopo |
+|---|---|---|
+| font | 67,2 KB | **39,7 KB** |
+| percorso critico, totale gzip | 75,8 KB | **48,5 KB** |
+
+**−36 % sul percorso critico**, tutto dal carattere. Motore 3D 143,6 KB gzip,
+caricato solo all'occorrenza. JS totale 145,2 KB contro un cancello di 250.
 
 ### Accessibilita', misurata in pagina
 

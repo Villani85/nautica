@@ -1,12 +1,26 @@
-/* ═══ FONT — self-hosted, sottoinsiemati, nessun dominio esterno ═══ */
-@font-face{font-family:'Space Grotesk';font-weight:300;font-style:normal;font-display:swap;
-  src:url('/font/space-grotesk-300.woff2') format('woff2')}
-@font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;
-  src:url('/font/space-grotesk-700.woff2') format('woff2')}
-@font-face{font-family:'JetBrains Mono';font-weight:400;font-style:normal;font-display:swap;
-  src:url('/font/jetbrains-mono-400.woff2') format('woff2')}
-@font-face{font-family:'JetBrains Mono';font-weight:700;font-style:normal;font-display:swap;
-  src:url('/font/jetbrains-mono-700.woff2') format('woff2')}
+/* ═══ IL CARATTERE — uno solo, con un asse che va da umano a macchina ═══
+   Recursive, OFL-1.1, self-hosted: nessun CDN.
+
+   UN FILE, DUE REGISTRI. L'asse `MONO` va da 0 (proporzionale) a 1
+   (monospaziato): non e' una famiglia con una monospaziata affiancata, e' lo
+   stesso disegno. La coerenza fra display ed etichette non "arriva gratis":
+   e' tautologica, perche' non c'e' un abbinamento da sbagliare.
+
+   E l'asse E' la tesi del sito scritta nelle lettere: sopra la linea
+   proporzionale e umano, sotto monospaziato e tecnico. I due lati usano i due
+   ESTREMI, fermi — farlo scorrere con lo scorrimento sarebbe un effetto, cioe'
+   la settima idea che non discende dal taglio.
+
+   Misurato: 39,6 KB con MONO e peso entrambi variabili, contro i 67,2 KB dei
+   quattro file statici che sostituisce. Rigenerabile con
+   `python strumenti/font-recursive.py`, che esce con errore se l'asse sparisce
+   o se il peso supera i 60 KB. */
+@font-face{
+  font-family:'Recursive';
+  font-weight:300 900;
+  font-display:swap;
+  src:url('/font/recursive-var.woff2') format('woff2-variations');
+}
 
 /* ═══ SISTEMA ═══
    Due palette divise dal taglio, non una unificata. Il rischio che sembrino
@@ -26,8 +40,13 @@
   --recupero:#4FE0C4;
   --carico:#F5E3B8;
 
-  --t-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --t-dato:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --t-display:'Recursive',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --t-dato:'Recursive',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+
+  /* I due estremi dell'asse. E gli altri assi INCHIODATI: `CRSV` ha default
+     0,5, cioe' corsivo automatico, e va portato a zero. */
+  --v-display:'MONO' 0,'CASL' 0,'slnt' 0,'CRSV' 0;
+  --v-dato:'MONO' 1,'CASL' 0,'slnt' 0,'CRSV' 0;
 
   /* griglia a 8px, senza eccezioni */
   --u:8px;
@@ -45,7 +64,19 @@
 *{margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{
-  font-family:var(--t-display);font-weight:300;font-size:var(--corpo);line-height:1.55;
+  font-family:var(--t-display);font-variation-settings:var(--v-display);
+  font-weight:350;font-size:var(--corpo);line-height:1.6;
+
+  /**
+   * DIVIETO: mai `pnum`.
+   *
+   * Le cifre di Recursive sono larghe 600 in entrambe le modalita', quindi
+   * tabulari PER COSTRUZIONE — una garanzia piu' solida di una funzione
+   * OpenType, che si puo' dimenticare di attivare. Ma nel GSUB c'e' `pnum`, e
+   * misurato porta l'1 da 600 a 400: e' la cifra piu' frequente in una lettura
+   * che cambia sessanta volte al secondo, e basta lei per far ballare la riga.
+   */
+  font-feature-settings:'pnum' 0;
   background:var(--acqua);color:var(--inchiostro);
   -webkit-font-smoothing:antialiased;
   overflow-x:hidden;
@@ -58,14 +89,21 @@ a{color:inherit}
 [data-lato="sotto"]{background:var(--acqua);color:var(--acqua-tenue);--tenue:var(--acqua-tenue)}
 [data-lato="misto"]{--tenue:var(--acqua-tenue)}
 
-/* ═══ TIPOGRAFIA ═══ */
-h1,h2,h3{font-weight:300;letter-spacing:-.03em;line-height:1.08;text-wrap:balance}
-h2{font-size:var(--titolo)}
-h3{font-size:var(--sottotitolo);letter-spacing:-.01em;font-weight:400}
-em{font-style:normal;font-weight:700}
+/* ═══ TIPOGRAFIA ═══
+   CON UNA FAMIGLIA SOLA, LA GERARCHIA LA FA IL PESO.
+   Con due famiglie il contrasto arrivava dal disegno: grottesca contro
+   monospaziata. Con Recursive quel contrasto non c'e' piu', e tenendo tutto a
+   300 titoli e corpo si appiattivano — visto nel provino della sequenza, non
+   previsto. L'asse del peso va da 300 a 900 ed e' li' apposta. */
+h1,h2,h3{letter-spacing:-.03em;line-height:1.08;text-wrap:balance}
+h1{font-weight:300}
+h2{font-size:var(--titolo);font-weight:400}
+h3{font-size:var(--sottotitolo);letter-spacing:-.012em;font-weight:600}
+em{font-style:normal;font-weight:800}
 p{max-width:60ch}
 
 .et{
+  font-variation-settings:var(--v-dato);
   font-family:var(--t-dato);font-size:var(--etichetta);font-weight:400;
   letter-spacing:.2em;text-transform:uppercase;color:var(--tenue);
   display:block;
@@ -77,6 +115,7 @@ p{max-width:60ch}
 .via{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
 .salta{
+  font-variation-settings:var(--v-dato);
   position:fixed;top:var(--u);left:var(--u);z-index:100;
   background:var(--recupero);color:var(--acqua);
   padding:var(--u2) var(--u3);font-family:var(--t-dato);font-size:12px;
@@ -114,6 +153,7 @@ p{max-width:60ch}
   background:none;pointer-events:none;flex-wrap:wrap;
 }
 .occhiello{
+  font-variation-settings:var(--v-dato);
   font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.22em;
   text-transform:uppercase;color:var(--inchiostro-tenue);
   display:flex;gap:var(--u2);flex-wrap:wrap;max-width:none;
@@ -121,6 +161,7 @@ p{max-width:60ch}
 .occhiello b{font-weight:700;color:var(--inchiostro)}
 .testata nav{display:flex;gap:var(--u3);pointer-events:auto;flex-wrap:wrap}
 .testata nav a{
+  font-variation-settings:var(--v-dato);
   font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
   text-transform:uppercase;color:var(--inchiostro-tenue);text-decoration:none;
   padding:var(--u) 0;
@@ -171,11 +212,13 @@ p{max-width:60ch}
 .scena{position:absolute;inset:0}
 .scena canvas{width:100%;height:100%}
 .patto{
+  font-variation-settings:var(--v-dato);
   position:absolute;left:var(--u4);top:calc(50% + var(--u3));z-index:6;
   font-family:var(--t-dato);font-size:9px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--acqua-tenue);max-width:none;
 }
 .nota{
+  font-variation-settings:var(--v-dato);
   position:absolute;right:var(--u4);top:var(--u12);z-index:6;
   font-family:var(--t-dato);font-size:9px;letter-spacing:.18em;
   text-transform:uppercase;color:var(--inchiostro-tenue);max-width:none;
@@ -192,6 +235,7 @@ p{max-width:60ch}
   max-width:min(34vw,340px)}
 .dato{display:flex;flex-direction:column;gap:var(--u)}
 .cifra{
+  font-variation-settings:var(--v-dato);
   font-size:clamp(24px,3vw,38px);font-weight:400;line-height:.94;color:var(--aria);
   font-variant-numeric:tabular-nums;letter-spacing:-.03em;
 }
@@ -232,6 +276,7 @@ p{max-width:60ch}
 .mare__tacca[aria-pressed="true"] .mare__barra{background:var(--aria)}
 
 .interruttore{
+  font-variation-settings:var(--v-dato);
   display:flex;align-items:center;gap:var(--u2);
   min-height:44px;padding:var(--u2) var(--u3);
   background:none;border:1px solid rgba(127,163,165,.4);cursor:pointer;
@@ -246,6 +291,7 @@ p{max-width:60ch}
 .interruttore[aria-pressed="true"] .spia{background:var(--recupero);box-shadow:0 0 9px var(--recupero)}
 
 .richiamo{
+  font-variation-settings:var(--v-dato);
   position:absolute;right:var(--u4);top:calc(50% + var(--u6));z-index:7;
   min-height:44px;padding:var(--u2) var(--u3);
   background:none;border:1px solid rgba(127,163,165,.4);cursor:pointer;
@@ -312,7 +358,7 @@ p{max-width:60ch}
 .numeri>div{display:flex;justify-content:space-between;gap:var(--u3);
   background:var(--aria);padding:var(--u2) 0}
 .numeri dt{color:var(--tenue);font-size:15px}
-.numeri dd{font-family:var(--t-dato);font-variant-numeric:tabular-nums;font-size:15px}
+.numeri dd{font-variation-settings:var(--v-dato);font-family:var(--t-dato);font-variant-numeric:tabular-nums;font-size:15px}
 
 .scambio{display:grid;gap:var(--u6);grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .scambio ul{list-style:none;display:flex;flex-direction:column;gap:var(--u)}
@@ -331,7 +377,7 @@ p{max-width:60ch}
 .foglio h2 em{color:var(--recupero)}
 .foglio p{margin-bottom:var(--u3)}
 .etichette{list-style:none;display:flex;flex-wrap:wrap;gap:var(--u);margin-bottom:var(--u4)}
-.etichette li{font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
+.etichette li{font-variation-settings:var(--v-dato);font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
   text-transform:uppercase;color:var(--aria);
   border:1px solid rgba(127,163,165,.32);padding:var(--u) var(--u2)}
 .foglio__piede{display:flex;gap:var(--u3);flex-wrap:wrap;align-items:center}

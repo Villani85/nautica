@@ -26,7 +26,7 @@ from fontTools.subset import Subsetter, Options
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 RADICE = os.path.dirname(QUI)
-USCITA = os.path.join(RADICE, 'provino', 'font')
+USCITA = os.path.join(RADICE, 'public', 'font')
 
 # I glifi che il sito usa davvero: inglese, cifre, segni tecnici.
 # Se il copy cambia, questa riga cambia e il peso va rimisurato.
@@ -35,7 +35,7 @@ TESTO = (
     'abcdefghijklmnopqrstuvwxyz'
     '0123456789'
     '.,;:!?\'’"()[]{}—–-/\\|&%°+*=<>@# '
-    '·→×≤≥'
+    '·→×≤≥'  # se questa riga cambia, il peso dichiarato altrove non vale piu'
 )
 
 # Gli assi che restano variabili, e quelli che si inchiodano.
