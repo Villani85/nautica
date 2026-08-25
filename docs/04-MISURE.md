@@ -99,6 +99,21 @@ Dopo l'adozione di Recursive — una famiglia sola al posto di quattro file:
 **−36 % sul percorso critico**, tutto dal carattere. Motore 3D 143,6 KB gzip,
 caricato solo all'occorrenza. JS totale 145,2 KB contro un cancello di 250.
 
+### Movimento ridotto — verificato guardando
+
+`?ridotto=1` forza la preferenza: la preferenza di sistema non si puo' cambiare
+da una scheda automatizzata, e **un requisito che non si puo' provare e' un
+requisito dichiarato e basta**.
+
+Risultato: la nave sta **inclinata al suo angolo di picco e ferma** — 12,0° al
+mare 4 — invece di essere congelata a zero. Niente si muove da solo, la
+sequenza resta percorribile, e lo sbandamento si vede: la tesi e' ancora
+dimostrabile. Accendendo il sistema l'angolo scende, e i due stati restano
+confrontabili.
+
+E il numero della riduzione arriva **integrando davvero**, non da una formula
+chiusa: nessuna seconda verita' per chi ha quella preferenza.
+
 ### Accessibilita', misurata in pagina
 
 - **contrasto**: 78 testi controllati, 10 sotto soglia — **tutti nella testata

@@ -25,7 +25,16 @@ export function avviaDimostrazione () {
   }
 
   const preferenza = window.matchMedia('(prefers-reduced-motion: reduce)')
-  const sim = creaSimulazione({ ridotto: preferenza.matches })
+  /**
+   * Interruttore di prova: `?ridotto=1` forza il movimento ridotto.
+   *
+   * Resta in produzione, come `?senzaAcqua=1`. La preferenza di sistema non si
+   * puo' cambiare da una scheda automatizzata, e un requisito che non si puo'
+   * provare e' un requisito che si dichiara e basta — che e' esattamente cio'
+   * che questo progetto non fa.
+   */
+  const forzato = location.search.includes('ridotto=1')
+  const sim = creaSimulazione({ ridotto: preferenza.matches || forzato })
 
   const aggiornaLetture = creaLetture({
     rollio: $('#v-rollio'),
