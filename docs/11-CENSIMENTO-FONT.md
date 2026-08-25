@@ -244,3 +244,113 @@ almeno una coppia di fonderia per non innamorarsi della soluzione elegante.
 
 Lo strumento che ha prodotto questi pesi va salvato: serve a rifare la misura
 ogni volta che cambia l'insieme dei glifi.
+
+---
+
+# Revisione della proposta — tre correzioni, tutte accettate
+
+## 1. Un file solo batte due istanze — misurato di nuovo
+
+La proposta confezionava due istanze, una per estremo dell'asse. È peggio.
+Rimisurato in modo indipendente su un sottoinsieme di **108 glifi** (l'altra
+misura ne usava 86, da cui il piccolo scarto nelle cifre; l'ordine è identico):
+
+| strategia | peso | contro oggi | richieste |
+|---|---|---|---|
+| A · due istanze MONO, peso variabile | 62,0 KB | −7,7% | 2 |
+| **B · UN file, `MONO` *e* peso entrambi variabili** | **40,2 KB** | **−40,2%** | **1** |
+| C · due istanze a peso fisso | 24,8 KB | −63,2% | 2 |
+
+La ragione è giusta: **due file istanziati duplicano le curve**, un file
+variabile le condivide. La B tiene tutta la flessibilità — peso continuo *e*
+asse MONO — a due terzi del costo della A, con **una sola richiesta di rete**.
+
+> **B è la strategia adottata.**
+
+### E l'ordine delle operazioni non è un dettaglio
+
+**Si sottoinsiema PRIMA, si istanzia DOPO.** Invertendo, `gvar` resta incoerente
+col nuovo insieme di glifi e fontTools muore su `space` — un errore che sembra
+un font rotto e non lo è.
+
+Nota di onestà: quell'errore l'ho incontrato costruendo la prima misura, e l'ho
+**aggirato** con un salva-e-ricarica invece di capirlo. Funzionava, quindi ho
+smesso di guardare. La diagnosi è arrivata da un altro.
+
+## 2. «Tabulari per costruzione» era troppo forte
+
+La garanzia diceva: le cifre sono 600 in entrambe le modalità, quindi non
+possono ballare. Vero per **default**, ma nel GSUB c'è **`pnum`**.
+
+Misurato che cosa fa davvero:
+
+```
+pnum sostituisce 10 glifi
+  1  ->  one.sans     larghezza 600 -> 400
+  gli altri nove      larghezza 600 -> 600
+```
+
+**Solo l'`1` cambia larghezza, e passa da 600 a 400.** È la cifra più frequente
+in una lettura che conta, e basta lei: `1,3°` che diventa `11,3°` sposterebbe
+l'intera riga.
+
+Quindi la garanzia va riscritta **come divieto**, non come proprietà:
+
+> Nel foglio di stile, mai `font-feature-settings` con `pnum`. E gli assi vanno
+> inchiodati: `CRSV` ha default **0,5** — corsivo automatico — e va portato a
+> **0**; `slnt` a 0; `CASL` è già 0.
+
+L'elenco delle funzioni `ccmp dnom frac liga locl numr pnum rvrn` e il default
+`CRSV 0,5` erano **entrambi nell'output che avevo già stampato**. Li avevo sotto
+gli occhi e ho tratto la conclusione senza leggerli.
+
+## 3. La domanda scomoda: Recursive non è nella faccetta più di Space Grotesk
+
+È vero, ed è il rilievo più difficile perché **non si risolve con una misura**.
+
+Il censimento diceva: il campo che vince compra i caratteri. Recursive è
+gratuita, sta su Fontsource, e nella faccetta dei SOTD **non compare**. Se il
+criterio fosse l'appartenenza al campo, Recursive fallisce come Space Grotesk.
+
+La riformulazione — *non si comprano i punti, si compra il non somigliare a un
+modello preconfezionato* — regge, ma sposta il test sulla **distintività**. E lì
+Recursive ha un problema specifico: **è il carattere degli editor di codice.** È
+lì che quasi chiunque in giuria l'ha vista.
+
+### Quello che si può aggiungere, e non è una difesa
+
+**Il rischio è strutturale al mono gratuito, non specifico a Recursive.** Quasi
+ogni buona monospaziata libera nasce per scrivere codice — è il motivo per cui
+esiste. Cambiare Recursive con un'altra mono gratuita non esce dal problema: lo
+sposta.
+
+**Quello che differenzia è la presentazione, non la scelta.** Un terminale è:
+minuscolo, spaziatura stretta, fondo scuro, colori di sintassi, corpo da lettura.
+Le nostre etichette sono **maiuscoletto, +0,2em di spaziatura, 10px, inchiostro
+su carta**. È il registro con cui una tavola tecnica annota una vista, non quello
+con cui un editor mostra del codice. E il display a `MONO = 0` non somiglia a un
+editor per niente: è una grottesca proporzionale.
+
+**Un dettaglio verificabile a favore:** la funzione `zero` è **assente** dal
+GSUB — non esiste uno zero barrato nemmeno come alternativa. Lo zero barrato è
+uno dei segnali più immediati dell'estetica da terminale, e qui non è
+disponibile neanche volendo.
+
+### Ma decide il provino, e va detto cosa guardare
+
+La domanda a cui il provino deve rispondere è una sola, e va posta prima di
+guardare, non dopo:
+
+> L'etichetta in maiuscoletto spaziato legge come **la didascalia di una tavola
+> navale** o come **una barra di stato**?
+
+Se legge come una tavola, si è vinto due volte: perché l'asse `MONO` *è* la tesi
+del sito scritta nelle lettere, e quello nessuna coppia comprata lo dà.
+
+Se legge come una barra di stato, il ripiego non è un'altra mono gratuita — che
+ha lo stesso problema — ma **una grottesca distintiva con la sua mono di
+fonderia**, e allora torna il costo che D42 aveva previsto.
+
+Il provino: titolo sul taglio, letture della dimostrazione, tabella dei numeri
+della sezione tecnica, **coi numeri veri dentro**, e a fianco almeno una coppia
+comprata, per non innamorarsi della soluzione elegante.
