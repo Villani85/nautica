@@ -1,12 +1,20 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping
+  PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3
 } from 'three'
 import { costruisciNave } from './nave.js'
 import { costruisciAcqua } from './acqua.js'
 
 const RAGGIO = 11.5
+const RAGGIO_SEZIONE = 7.4
 const AZIMUT_MAX = 0.92
+
+/** Dove sta il meccanismo: e' li' che la camera va a finire. */
+const MIRA_MECCANISMO = 1.15
+
+/** Quota del piano di sezione: fuori dallo scafo, poi dentro. */
+const Z_FUORI = 1.62
+const Z_DENTRO = 0.18
 
 /**
  * Taratura delle luci dopo il porto a three 0.185.
@@ -45,6 +53,9 @@ export function creaScena (contenitore) {
   if (!render.getContext()) return null
 
   render.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+  // Il piano di sezione taglia solo i materiali del guscio: quello che resta
+  // e' il meccanismo, cioe' la tesi del sito.
+  render.localClippingEnabled = true
   render.outputColorSpace = SRGBColorSpace
   // Nessun tone mapping: i colori devono restare gli stessi del foglio di
   // stile, o la giunzione fra fondo CSS e canvas si vede.
@@ -59,8 +70,16 @@ export function creaScena (contenitore) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 22, 1.2)
   fondale.position.set(0, -5.5, 2.5); scena.add(fondale)
 
-  const { nave, pinne } = costruisciNave()
+  const { nave, pinne, guscio, tappo } = costruisciNave()
   scena.add(nave)
+
+  /**
+   * Il piano tiene i punti con `normale · p + costante > 0`. Con normale
+   * (0,0,-1) tiene `z < costante`: abbassando la costante si toglie la meta'
+   * vicina alla camera. Lo scafo va da z = -1,5 a z = +1,5.
+   */
+  const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
+  for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
   const acqua = costruisciAcqua()
   scena.add(acqua.gruppo)
 
@@ -71,6 +90,29 @@ export function creaScena (contenitore) {
   // ruotati, cosi' il volume e' leggibile prima di qualunque interazione.
   let azimut = 0.34
   let azimutTarget = 0.34
+  let spaccato = 0
+
+  /**
+   * MOMENTO 3 — il taglio entra nel prodotto.
+   *
+   * `p` va da 0 (scafo intero) a 1 (sezione aperta sul meccanismo). Guidato
+   * dallo scorrimento, quindi dall'utente: non parte da solo, e con movimento
+   * ridotto resta comunque disponibile perche' e' una risposta a un gesto, non
+   * un'animazione autonoma.
+   *
+   * La camera **resta a quota zero** anche mentre si avvicina: e' il vincolo
+   * che tiene la linea di galleggiamento sempre a meta' schermo, e quindi la
+   * giunzione col fondo CSS. Cambia solo dove guarda, in orizzontale. Il
+   * meccanismo sta a y = -0,34, cioe' compare appena SOTTO la linea — che e'
+   * esattamente la tesi: la parte che vale sta sotto.
+   */
+  function impostaSpaccato (p) {
+    spaccato = MathUtils.clamp(p, 0, 1)
+    pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
+    tappo.position.z = pianoSezione.constant
+    tappo.visible = spaccato > 0.002
+    tappo.material.opacity = Math.min(1, spaccato * 5)
+  }
 
   /**
    * DIFETTO CORRETTO — misurato, non dedotto.
@@ -112,7 +154,10 @@ export function creaScena (contenitore) {
 
     sim.passo(dt, t)
 
-    nave.rotation.z = MathUtils.degToRad(sim.S.rollio)
+    // Non si seziona un oggetto in movimento: mentre il piano entra, il
+    // rollio si acquieta. Non e' un vezzo — un disegno tecnico e' fermo, ed e'
+    // il registro in cui il taglio riporta il pezzo.
+    nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - spaccato)
     for (const p of pinne) {
       p.perno.rotation.z = sim.S.pinna * p.lato
       p.biella.rotation.z = -sim.S.pinna * p.lato * 2.1
@@ -121,13 +166,15 @@ export function creaScena (contenitore) {
     if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame)
 
     azimut += (azimutTarget - azimut) * Math.min(1, dt * 5)
-    camera.position.x = Math.sin(azimut) * RAGGIO
-    camera.position.z = Math.cos(azimut) * RAGGIO
+    const raggio = MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato)
+    const mira = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
+    camera.position.x = mira + Math.sin(azimut) * raggio
+    camera.position.z = Math.cos(azimut) * raggio
     camera.position.y = 0
-    camera.lookAt(0, 0, 0)
+    camera.lookAt(mira, 0, 0)
 
     render.render(scena, camera)
   }
 
-  return { render, camera, ridimensiona, ruota, disegna, tela: render.domElement }
+  return { render, camera, ridimensiona, ruota, disegna, impostaSpaccato, tela: render.domElement }
 }

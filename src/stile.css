@@ -151,8 +151,18 @@ p{max-width:60ch}
   position:relative;z-index:6;text-align:center;
 }
 
-/* 2 · dimostrazione */
-.atto--demo{overflow:hidden}
+/* 2 · dimostrazione
+   La sezione e' alta piu' di uno schermo e il palco resta fisso in cima:
+   lo scorrimento dentro la sezione guida il piano di taglio che entra nello
+   scafo. Non e' scroll-jacking — lo scorrimento resta quello del browser,
+   nessun gesto viene intercettato e nessuna sezione viene incatenata. */
+.atto--demo{background:none;min-height:auto;height:260svh}
+.palco{
+  position:sticky;top:0;height:100svh;overflow:hidden;
+  background:linear-gradient(to bottom,
+    var(--aria) 0%,var(--aria) 50%,
+    var(--acqua-viva) 50%,var(--acqua) 100%);
+}
 .scena{position:absolute;inset:0}
 .scena canvas{width:100%;height:100%}
 .patto{
@@ -236,6 +246,22 @@ p{max-width:60ch}
 }
 .richiamo:hover{color:var(--recupero);border-color:rgba(79,224,196,.55)}
 .richiamo--pieno{position:static;transform:none}
+
+/* la didascalia del piano di sezione: compare quando il taglio entra */
+.spaccato{
+  position:absolute;left:var(--u4);top:calc(50% + var(--u8));z-index:7;
+  max-width:34ch;opacity:0;transform:translateY(12px);
+  transition:opacity .5s,transform .5s;pointer-events:none;
+}
+.spaccato[data-fase="aperto"]{opacity:1;transform:none}
+.spaccato h3{color:var(--aria);margin:var(--u) 0}
+.spaccato p{color:var(--acqua-tenue);font-size:15px}
+
+/* mentre la sezione si apre, i comandi della dimostrazione si ritirano */
+.palco[data-fase="sezione"] .pannello--energia,
+.palco[data-fase="sezione"] .comandi,
+.palco[data-fase="sezione"] .richiamo{opacity:0;pointer-events:none}
+.pannello--energia,.comandi,.richiamo{transition:opacity .4s}
 
 .ripiego{
   position:absolute;inset:auto var(--u4) var(--u12) var(--u4);z-index:8;

@@ -78,10 +78,53 @@ export function avviaDimostrazione () {
    * disegna affatto: e' meta' della batteria di un telefono, e non costa
    * niente in leggibilita'.
    */
+  const sezione = $('#dimostrazione')
   const osservatore = new IntersectionObserver((voci) => {
     for (const v of voci) v.isIntersecting ? risveglia() : fermaCiclo()
   }, { threshold: 0.05 })
-  osservatore.observe($('#dimostrazione'))
+  osservatore.observe(sezione)
+
+  /**
+   * MOMENTO 3 — il taglio entra nello scafo, guidato dallo scorrimento.
+   *
+   * La sezione e' alta piu' di uno schermo e il palco resta fisso: la corsa
+   * disponibile e' `altezza sezione - altezza finestra`. La prima meta' resta
+   * dedicata alla dimostrazione; nella seconda il piano di sezione entra.
+   *
+   * Lo scorrimento NON viene intercettato: nessun gesto rubato, nessuna
+   * sezione incatenata, la rotellina e la barra restano quelle del browser.
+   * E' l'utente a decidere quanto aprire, e puo' tornare indietro.
+   *
+   * La posizione si legge a ogni fotogramma dal `getBoundingClientRect` vero,
+   * non da una soglia in pixel calcolata una volta: con uno scorrimento
+   * inerziale la pagina si sposta anche DOPO il calcolo, e una soglia fissa
+   * sbaglia proprio mentre l'utente guarda.
+   */
+  const INIZIO_SEZIONE = 0.45
+  const palco = document.querySelector('.palco')
+  const didascalia = $('#spaccato')
+  let ultimaFase = null
+
+  function leggiScorrimento () {
+    const r = sezione.getBoundingClientRect()
+    const corsa = r.height - window.innerHeight
+    if (corsa <= 0) return
+    const p = Math.min(1, Math.max(0, -r.top / corsa))
+    const sp = p <= INIZIO_SEZIONE ? 0 : (p - INIZIO_SEZIONE) / (1 - INIZIO_SEZIONE)
+    scena.impostaSpaccato(sp)
+
+    const fase = sp > 0.02 ? 'sezione' : 'dimostrazione'
+    if (fase !== ultimaFase) {
+      ultimaFase = fase
+      palco.dataset.fase = fase
+      didascalia.dataset.fase = fase === 'sezione' ? 'aperto' : 'chiuso'
+    }
+    if (sim.S.ridotto) sveglia()
+  }
+
+  addEventListener('scroll', leggiScorrimento, { passive: true })
+  addEventListener('resize', leggiScorrimento)
+  leggiScorrimento()
 
   risveglia()
 }
