@@ -4,6 +4,7 @@ import {
 } from 'three'
 import { materiali } from './materiali.js'
 import { costruisciGuscio, costruisciPonte, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
+import { costruisciAllestimento } from './allestimento.js'
 
 /** Sezione maestra dello scafo, estrusa lungo Z — che e' l'asse di rollio. */
 function sezioneScafo () {
@@ -279,6 +280,19 @@ export function costruisciNave () {
   const alto = new Mesh(new BoxGeometry(larghTuga, H_ALT, TUGA_LUNG), materiali.coperta)
   alto.position.set(0, quotaTuga + TUGA_ALT / 2 - H_ALT / 2, TUGA_Z)
   alto.rotation.x = -inclinaz; nave.add(alto); guscio.push(alto)
+
+  /**
+   * L'ALLESTIMENTO sta DENTRO la tuga ed e' figlio della nave: rolla con la
+   * stanza. L'orizzonte no. Guardando dal finestrino si vedono insieme, ed e'
+   * quella differenza la tesi.
+   *
+   * NON entra nel guscio: il piano di sezione non lo taglia. Se il taglio
+   * passasse di li' si vedrebbero due persone sezionate a meta', che e' una
+   * cosa che non si fa.
+   */
+  const allest = costruisciAllestimento(TUGA_Z, quotaTuga - TUGA_ALT / 2, larghTuga)
+  allest.gruppo.rotation.x = -inclinaz
+  nave.add(allest.gruppo)
 
   // I montanti: senza, l'apertura legge come una fessura invece che come una
   // vetrata. Sono anche cio' che da' la scala alla sovrastruttura.
