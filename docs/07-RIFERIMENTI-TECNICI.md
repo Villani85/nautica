@@ -128,10 +128,33 @@ dell'**89%**. Il riferimento reale: le pinne attive dominano le installazioni
 commerciali grandi che richiedono **60% o meglio** alla velocità di servizio;
 oltre il **90%** si trova in applicazioni militari e su specifici stati del mare.
 
-L'89% non è impossibile, ma è la cifra migliore del settore presentata come
-comportamento normale. Su un sito che ha come registro l'onestà dichiarata —
-*«modello illustrativo, valori normalizzati»* — è una stonatura. Una riduzione
-fra **70% e 80%** è difendibile, e non toglie niente all'effetto.
+> ## ERRATA — 2026-08-25, stessa giornata. Questo paragrafo era sbagliato.
+>
+> Avevo scritto che l'89% era «la cifra migliore del settore presentata come
+> normale» e che andava portato fra il 70% e l'80%. **È falso, ed è un mio
+> errore di lettura.**
+>
+> Il «60% o meglio» che avevo citato riguarda le **installazioni su navi
+> commerciali grandi**, dove è un *requisito minimo* — una popolazione diversa
+> e un tipo di soglia opposto. Sugli **yacht**, i costruttori e la stampa di
+> settore pubblicano comunemente **fino al 90% in navigazione** e **circa il
+> 70% da fermi** con i sistemi a velocità zero.
+>
+> Quindi **l'89% è difendibile**, e la taratura non va abbassata.
+>
+> Resta valida **una sola metà** del rilievo, e per un motivo diverso: la stessa
+> fonte dice che il risultato *«dipende enormemente dalle condizioni del mare»*.
+> Il difetto non è che il numero sia alto: è che il nostro è **costante**. Un
+> 89% identico a ogni stato del mare descrive un sistema che nella realtà non
+> esiste. Vedi la revisione in `feedback/progetto-tecnico-2026-08-25.md`.
+>
+> Fonti: [Boat International](https://www.boatinternational.com/yachts/luxury-yacht-advice/yacht-advice-stabilisers)
+> · [Power & Motoryacht](https://powerandmotoryacht.com/maintenance/everything-you-ever-wanted-know-about-marine-stabilizers/)
+> · [Sleipner](https://www.sleipnergroup.com/leisure/stabilization-system-for-recreational-yachts/stabilizers)
+>
+> È la quarta volta in questo repository che una cifra corretta viaggia insieme
+> a una conclusione sbagliata. Le altre tre le avevo trovate io negli altri:
+> questa è mia, e l'ha trovata qualcun altro.
 
 ---
 

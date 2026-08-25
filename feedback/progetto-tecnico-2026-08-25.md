@@ -132,11 +132,30 @@ saturazione della pinna emerge dal modello invece di essere aggiunta al bordo; e
 il sito guadagna un secondo momento da scoprire — *la parte invisibile funziona
 solo se la nave cammina*.
 
-**E c'è un secondo problema, indipendente.** L'89% è la cifra migliore del
-settore presentata come normale: il riferimento commerciale è **60% o meglio**,
-oltre il 90% è militare. Ora che il numero è *misurato*, la taratura di `K` e
-`C₀` va scelta perché atterri fra **70% e 80%** alla velocità di servizio.
-Altrimenti si è costruito un misuratore onesto puntato su un progetto ottimista.
+### Due correzioni a quanto scritto sopra, arrivate dall'autore della specifica
+
+**(a) `C(V)` da sola non basta, e lo dice giustamente.** A velocità fissa il
+sistema resta lineare, quindi la riduzione resta piatta al variare del mare.
+`C(V)` fa variare il risultato con la **velocità**, non con lo stato del mare.
+Quello che rompe la linearità è la **saturazione**, e meglio ancora lo
+**stallo**: oltre i ~20-25° la portanza deve *calare*, non essere tagliata di
+netto. Le due cose lavorano insieme — a bassa andatura serve più angolo per la
+stessa correzione, quindi si satura prima — ma nessuna delle due basta da sola.
+
+La mia formulazione «da una riga sola escono quattro cose» era **sovrastimata**:
+la saturazione non emerge da `C(V)`, emerge dalla non linearità. `C(V)` decide
+*quando*.
+
+**(b) L'89% NON va abbassato. Questo era un mio errore.** Avevo scritto che il
+riferimento commerciale è «60% o meglio» e oltre il 90% è militare. Il «60% o
+meglio» riguarda le **navi commerciali grandi**, dove è un *requisito minimo*:
+popolazione diversa, soglia di segno opposto. Sugli yacht si pubblica
+comunemente **fino al 90% in navigazione**, ~70% da fermi. Errata completa in
+`docs/07-RIFERIMENTI-TECNICI.md` §3.3.
+
+Resta valida **una metà** del rilievo: la stessa fonte dice che il risultato
+dipende enormemente dalle condizioni. Il problema non è che 89 sia alto — è che
+sia **costante**.
 
 ## 5 — Le persone generate · **CONFERMATO**
 
