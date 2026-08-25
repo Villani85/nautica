@@ -89,6 +89,22 @@ quelli che la skill `stack-sito-immersivo` cita.
 
 ---
 
+## `tripo/` — generare modelli 3D da riga di comando
+
+Documentazione della CLI Tripo: 15 file del fornitore (`tripo-cli@0.2.0`, MIT)
+più i nostri appunti di lavorazione. **Nessuna chiave dentro** — verificato
+passando una ripulitura che non ha modificato un solo byte, il che dimostra che
+non c'era niente da rimuovere.
+
+Prima di usarla su questo progetto si legge [`tripo/NOTA.md`](tripo/NOTA.md), che
+spiega perché di norma **non** va usata: D19 chiede asset originali, e su
+*velocity* un modello generato da poche viste aveva le **normali ondeggianti**.
+Qui lo scafo è l'estrusione di una curva, ed è quella proprietà che rende esatta
+la faccia del piano di sezione. Resta utile per provini di forma buttati via
+subito.
+
+---
+
 ## Cosa NON è stato pubblicato, e perché
 
 Il repertorio originale contiene anche la **strategia commerciale dello studio**:
