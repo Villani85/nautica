@@ -1,0 +1,317 @@
+/* ═══ FONT — self-hosted, sottoinsiemati, nessun dominio esterno ═══ */
+@font-face{font-family:'Space Grotesk';font-weight:300;font-style:normal;font-display:swap;
+  src:url('/font/space-grotesk-300.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;
+  src:url('/font/space-grotesk-700.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:400;font-style:normal;font-display:swap;
+  src:url('/font/jetbrains-mono-400.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:700;font-style:normal;font-display:swap;
+  src:url('/font/jetbrains-mono-700.woff2') format('woff2')}
+
+/* ═══ SISTEMA ═══
+   Due palette divise dal taglio, non una unificata. Il rischio che sembrino
+   due siti si governa tenendo IDENTICI scala tipografica e ritmo di spaziatura
+   su entrambi i lati: cambia il colore, non la misura.                        */
+:root{
+  /* sopra il taglio — carta da disegno navale */
+  --aria:#E9E5DD;
+  --inchiostro:#15181B;
+  --inchiostro-tenue:#5F6367;   /* 4,82:1 su --aria. Il #6A6E72 del prototipo
+                                   dava 4,09:1 e non passava WCAG AA. */
+  /* sotto il taglio — acqua profonda */
+  --acqua:#071A1D;
+  --acqua-viva:#0F3438;
+  --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua */
+  /* l'unico accento saturo, e sta sotto la linea */
+  --recupero:#4FE0C4;
+  --carico:#F5E3B8;
+
+  --t-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --t-dato:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+
+  /* griglia a 8px, senza eccezioni */
+  --u:8px;
+  --u2:16px; --u3:24px; --u4:32px; --u6:48px; --u8:64px; --u12:96px;
+
+  /* scala tipografica, ratio 1.333, base 16px */
+  --display:clamp(40px,7vw,96px);
+  --titolo:clamp(28px,4vw,48px);
+  --sottotitolo:clamp(20px,2.2vw,24px);
+  --corpo:17px;
+  --etichetta:10px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--t-display);font-weight:300;font-size:var(--corpo);line-height:1.55;
+  background:var(--acqua);color:var(--inchiostro);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img,canvas{display:block;max-width:100%}
+a{color:inherit}
+
+/* ═══ I DUE LATI ═══ */
+[data-lato="sopra"]{background:var(--aria);color:var(--inchiostro);--tenue:var(--inchiostro-tenue)}
+[data-lato="sotto"]{background:var(--acqua);color:var(--acqua-tenue);--tenue:var(--acqua-tenue)}
+[data-lato="misto"]{--tenue:var(--acqua-tenue)}
+
+/* ═══ TIPOGRAFIA ═══ */
+h1,h2,h3{font-weight:300;letter-spacing:-.03em;line-height:1.08;text-wrap:balance}
+h2{font-size:var(--titolo)}
+h3{font-size:var(--sottotitolo);letter-spacing:-.01em;font-weight:400}
+em{font-style:normal;font-weight:700}
+p{max-width:60ch}
+
+.et{
+  font-family:var(--t-dato);font-size:var(--etichetta);font-weight:400;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--tenue);
+  display:block;
+}
+.et--centro{text-align:center}
+.magra{color:var(--tenue);font-size:15px}
+
+/* accessibile ma fuori dallo schermo */
+.via{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.salta{
+  position:fixed;top:var(--u);left:var(--u);z-index:100;
+  background:var(--recupero);color:var(--acqua);
+  padding:var(--u2) var(--u3);font-family:var(--t-dato);font-size:12px;
+  letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+  transform:translateY(-200%);
+}
+.salta:focus{transform:none}
+
+:focus-visible{outline:2px solid var(--recupero);outline-offset:3px}
+[data-lato="sopra"] :focus-visible{outline-color:var(--inchiostro)}
+
+/* ═══ IL TAGLIO DEL TITOLO ═══
+   Le due copie sono ritagliate sulla quota REALE della linea, misurata sul
+   nodo a ogni ridimensionamento (vedi tagliaTitoli in main.js) e passata qui
+   come --quota. Il 50% e' solo il valore di partenza prima della misura.
+   Nel prototipo questo meccanismo era dichiarato nei commenti e non esisteva:
+   due copie sovrapposte senza alcun ritaglio.                                 */
+.taglio{position:relative;display:block;--quota:50%}
+.taglio__strato{display:block}
+.taglio__strato--sopra{
+  position:absolute;inset:0;
+  color:var(--inchiostro);
+  clip-path:inset(0 0 calc(100% - var(--quota)) 0);
+}
+.taglio__strato--sotto{
+  color:var(--aria);
+  clip-path:inset(var(--quota) 0 0 0);
+}
+
+/* ═══ TESTATA ═══ */
+.testata{
+  position:fixed;top:0;left:0;right:0;z-index:20;
+  display:flex;justify-content:space-between;align-items:baseline;gap:var(--u3);
+  padding:var(--u3) var(--u4);
+  background:none;pointer-events:none;flex-wrap:wrap;
+}
+.occhiello{
+  font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.22em;
+  text-transform:uppercase;color:var(--inchiostro-tenue);
+  display:flex;gap:var(--u2);flex-wrap:wrap;max-width:none;
+}
+.occhiello b{font-weight:700;color:var(--inchiostro)}
+.testata nav{display:flex;gap:var(--u3);pointer-events:auto;flex-wrap:wrap}
+.testata nav a{
+  font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--inchiostro-tenue);text-decoration:none;
+  padding:var(--u) 0;
+}
+.testata nav a:hover{color:var(--inchiostro)}
+
+/* ═══ ATTI ═══ */
+.atto{position:relative}
+.atto--taglio,.atto--demo{
+  min-height:100svh;
+  background:linear-gradient(to bottom,
+    var(--aria) 0%,var(--aria) 50%,
+    var(--acqua-viva) 50%,var(--acqua) 100%);
+}
+.linea{
+  position:absolute;left:0;right:0;top:50%;height:1px;
+  background:var(--inchiostro);opacity:.55;z-index:5;pointer-events:none;
+}
+.linea::after{
+  content:'';position:absolute;left:0;right:0;top:1px;height:22px;
+  background:linear-gradient(to bottom,rgba(79,224,196,.16),transparent);
+}
+
+/* 1 · apertura */
+.atto--taglio{display:grid;place-items:center;padding:var(--u12) var(--u4)}
+.atto--taglio h1{
+  font-size:var(--display);letter-spacing:-.035em;line-height:1;
+  position:relative;z-index:6;text-align:center;
+}
+
+/* 2 · dimostrazione */
+.atto--demo{overflow:hidden}
+.scena{position:absolute;inset:0}
+.scena canvas{width:100%;height:100%}
+.patto{
+  position:absolute;left:var(--u4);top:calc(50% + var(--u3));z-index:6;
+  font-family:var(--t-dato);font-size:9px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--acqua-tenue);max-width:none;
+}
+.nota{
+  position:absolute;right:var(--u4);top:var(--u12);z-index:6;
+  font-family:var(--t-dato);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--inchiostro-tenue);max-width:none;
+  transition:opacity .5s;
+}
+.nota[data-visto="si"]{opacity:0}
+
+.pannello{position:absolute;z-index:6;font-family:var(--t-dato)}
+.pannello--letture{left:var(--u4);bottom:var(--u4);display:flex;gap:var(--u6);align-items:flex-end}
+.dato{display:flex;flex-direction:column;gap:var(--u)}
+.cifra{
+  font-size:clamp(28px,4vw,46px);font-weight:400;line-height:.94;color:var(--aria);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+}
+.cifra u{text-decoration:none;font-size:.42em;color:var(--acqua-tenue);margin-left:3px}
+.dato--evidenza{transition:opacity .45s;opacity:0}
+.dato--evidenza[data-attiva="si"]{opacity:1}
+.dato--evidenza .cifra{color:var(--recupero)}
+
+.pannello--energia{right:var(--u4);bottom:var(--u4);width:min(232px,40vw)}
+.barra{margin-bottom:var(--u2)}
+.barra .riga{display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:var(--u);max-width:none}
+.val{font-size:11px;color:var(--aria);font-variant-numeric:tabular-nums}
+.val i{font-style:normal;color:var(--acqua-tenue);font-size:9px}
+.pista{height:3px;background:rgba(127,163,165,.2);position:relative;overflow:hidden}
+.riempi{position:absolute;inset:0 100% 0 0;transition:right .06s linear}
+#b-carico .riempi{background:var(--carico)}
+#b-recupero .riempi{background:var(--recupero)}
+
+/* ═══ COMANDI ═══
+   I bersagli sono 44x44 anche se il segno visibile e' una barra sottile:
+   nel prototipo il piu' piccolo era 20x7px, sotto sia il minimo WCAG AA
+   (24x24) sia il livello AAA e le linee guida Apple (44x44).                  */
+.comandi{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:var(--u4);z-index:7;
+  display:flex;gap:var(--u4);align-items:flex-end;
+}
+.mare__scala{display:flex;align-items:flex-end}
+.mare__tacca{
+  width:44px;height:44px;border:0;padding:0;background:none;cursor:pointer;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.mare__barra{
+  display:block;width:20px;height:var(--altezza,50%);
+  background:rgba(127,163,165,.26);transition:background .18s;
+}
+.mare__tacca:hover .mare__barra{background:rgba(127,163,165,.55)}
+.mare__tacca[aria-pressed="true"] .mare__barra{background:var(--aria)}
+
+.interruttore{
+  display:flex;align-items:center;gap:var(--u2);
+  min-height:44px;padding:var(--u2) var(--u3);
+  background:none;border:1px solid rgba(127,163,165,.4);cursor:pointer;
+  font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.18em;
+  text-transform:uppercase;color:var(--acqua-tenue);
+  transition:border-color .2s,color .2s;
+}
+.interruttore:hover{border-color:var(--acqua-tenue)}
+.spia{width:7px;height:7px;border-radius:50%;background:rgba(127,163,165,.35);
+  transition:background .3s,box-shadow .3s}
+.interruttore[aria-pressed="true"]{color:var(--recupero);border-color:rgba(79,224,196,.55)}
+.interruttore[aria-pressed="true"] .spia{background:var(--recupero);box-shadow:0 0 9px var(--recupero)}
+
+.richiamo{
+  position:absolute;right:var(--u4);top:calc(50% + var(--u6));z-index:7;
+  min-height:44px;padding:var(--u2) var(--u3);
+  background:none;border:1px solid rgba(127,163,165,.4);cursor:pointer;
+  font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.18em;
+  text-transform:uppercase;color:var(--acqua-tenue);text-decoration:none;
+  display:inline-flex;align-items:center;
+  transition:border-color .2s,color .2s;
+}
+.richiamo:hover{color:var(--recupero);border-color:rgba(79,224,196,.55)}
+.richiamo--pieno{position:static;transform:none}
+
+.ripiego{
+  position:absolute;inset:auto var(--u4) var(--u12) var(--u4);z-index:8;
+  color:var(--acqua-tenue);max-width:44ch;
+}
+
+/* ═══ ATTI DI TESTO ═══ */
+.atto--testo,.atto--contatto{padding:var(--u12) var(--u4)}
+.colonna{max-width:72ch;margin:0 auto;display:flex;flex-direction:column;gap:var(--u3)}
+.colonna h2{margin-bottom:var(--u2)}
+.colonna h3{margin-top:var(--u3)}
+[data-lato="sotto"] h2,[data-lato="sotto"] h3{color:var(--aria)}
+[data-lato="sotto"] em{color:var(--recupero)}
+
+.numeri{display:grid;gap:1px;background:rgba(95,99,103,.22);border-block:1px solid rgba(95,99,103,.22)}
+.numeri>div{display:flex;justify-content:space-between;gap:var(--u3);
+  background:var(--aria);padding:var(--u2) 0}
+.numeri dt{color:var(--tenue);font-size:15px}
+.numeri dd{font-family:var(--t-dato);font-variant-numeric:tabular-nums;font-size:15px}
+
+.scambio{display:grid;gap:var(--u6);grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.scambio ul{list-style:none;display:flex;flex-direction:column;gap:var(--u)}
+.scambio li{padding-left:var(--u2);border-left:1px solid rgba(127,163,165,.35)}
+
+.atto--contatto{min-height:50svh;display:grid;place-items:center}
+.indirizzo a{font-size:var(--sottotitolo)}
+
+/* ═══ LA CHIUSURA — <dialog> nativo ═══ */
+.foglio{
+  border:0;padding:var(--u6);max-width:min(640px,92vw);
+  background:var(--acqua);color:var(--acqua-tenue);
+}
+.foglio::backdrop{background:rgba(7,26,29,.92)}
+.foglio h2{color:var(--aria);margin-bottom:var(--u3)}
+.foglio h2 em{color:var(--recupero)}
+.foglio p{margin-bottom:var(--u3)}
+.etichette{list-style:none;display:flex;flex-wrap:wrap;gap:var(--u);margin-bottom:var(--u4)}
+.etichette li{font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--aria);
+  border:1px solid rgba(127,163,165,.32);padding:var(--u) var(--u2)}
+.foglio__piede{display:flex;gap:var(--u3);flex-wrap:wrap;align-items:center}
+#chiudi{background:none;border:0;cursor:pointer;font-family:var(--t-dato);
+  font-size:var(--etichetta);letter-spacing:.18em;text-transform:uppercase;
+  color:var(--acqua-tenue);min-height:44px;padding:var(--u) 0}
+#chiudi:hover{color:var(--aria)}
+
+/* ═══ TELEFONO ═══
+   Parita', non un messaggio di scuse: nel prototipo il richiamo commerciale
+   era display:none sotto 820px, cioe' irraggiungibile proprio dove passa
+   meta' del pubblico.                                                        */
+@media (max-width:820px){
+  .testata{padding:var(--u2)}
+  .occhiello span{display:none}
+  .patto{left:var(--u2);font-size:8px;letter-spacing:.14em}
+  .nota{right:var(--u2);top:var(--u8);font-size:8px}
+
+  .pannello--letture{left:var(--u2);right:var(--u2);bottom:calc(var(--u12) + var(--u6));
+    gap:var(--u3);justify-content:space-between}
+  .pannello--energia{left:var(--u2);right:var(--u2);width:auto;
+    bottom:calc(var(--u12) + var(--u2));display:flex;gap:var(--u3)}
+  .pannello--energia .barra{flex:1;margin:0}
+  .cifra{font-size:clamp(22px,7vw,32px)}
+
+  .comandi{bottom:var(--u2);gap:var(--u2);flex-direction:column;align-items:center;width:100%}
+  .richiamo{position:static;transform:none;order:3}
+  .atto--testo,.atto--contatto{padding:var(--u8) var(--u2)}
+  .foglio{padding:var(--u3)}
+}
+
+/* ═══ MOVIMENTO RIDOTTO ═══
+   Si onora DENTRO l'esperienza: spariscono le transizioni e l'oscillazione
+   autonoma (vedi simulazione.js), non spariscono i contenuti. La
+   dimostrazione resta confrontabile a stati.                                  */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important;
+  }
+}

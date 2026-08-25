@@ -30,7 +30,11 @@ di terzi, nessun rischio di licenza. Il brief lo chiedeva e il prototipo già lo
 
 Due letture, e servono entrambe.
 
-**Il lavoro d'autore è 4,1 KB gzipped.** Tutto il resto è materiale trasportato.
+**Il lavoro d'autore è 23.647 B, cioè 7,5 KB gzipped** — misurato come tutto il
+file meno il bundle three.js meno i quattro blocchi base64 dei font. La
+revisione 2 diceva "4,1 KB": contava solo il secondo `<script>` e buttava via
+HTML e CSS d'autore, che sono lavoro quanto il resto — anzi, il taglio del
+titolo vive proprio nel CSS.
 
 **Il budget del brief è già rispettato.** JS totale in gzip: **149,4 KB** contro
 i 250 KB fissati. Chi cita "702 KB" o "718 KB" sta citando byte su disco, che
@@ -92,9 +96,11 @@ Non è un difetto da correggere: è il primo momento-firma **da costruire**.
 
 ### 3.1 — Il peso, per la ragione giusta
 Il budget è rispettato (149,4 KB gzipped di JS contro 250). Il motivo per andare
-a moduli ES è un altro: **145,3 KB gzipped di codice mai eseguito** vanno
-comunque scaricati, decompressi e analizzati prima che il primo pixel arrivi, e
-quello ricade su LCP e INP. La scena usa una manciata di classi (`Scene`,
+a moduli ES è un altro: **145,3 KB gzipped di API in gran parte inutilizzate**
+vanno comunque scaricati, decompressi e **analizzati** prima che il primo pixel
+arrivi, e quello ricade su LCP e INP. (Non "codice mai eseguito": il browser
+quel codice lo valuta comunque — è esattamente il costo che il caricamento
+differito toglie di mezzo.) La scena usa una manciata di classi (`Scene`,
 `PerspectiveCamera`, `WebGLRenderer`, `Shape`, `ExtrudeGeometry`, `PlaneGeometry`,
 `BoxGeometry`, `CylinderGeometry`, `EdgesGeometry`, 4 luci, `MeshStandardMaterial`,
 `Clock`). Il guadagno atteso è sul tempo, non sul budget — e va **misurato**,

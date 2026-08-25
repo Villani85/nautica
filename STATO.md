@@ -1,125 +1,142 @@
 # Stato del progetto
 
-**Aggiornato:** 2026-08-25 · **Giro:** 2 · **Fase:** fondazioni corrette, porto
-non ancora iniziato.
-
-Questo è il file da leggere per primo. Chi dà feedback parta da qui e poi legga
-`feedback/COME-DARE-FEEDBACK.md`.
+**Aggiornato:** 2026-08-25 · **Giro:** 3 · **Fase:** il sito esiste.
 
 ---
 
-## Cosa è successo in questo giro
+## Cosa contiene questo commit
 
-Sono arrivati **due contributi esterni**. Hanno trovato, fra le altre cose, **due
-errori importanti nell'audit del giro 1**. Entrambi verificati, entrambi
-confermati, entrambi miei.
+**Il sito.** Vite 8.2.2 + three 0.185.1 a moduli ES, cinque sezioni, la
+dimostrazione portata dal prototipo e i difetti corretti. Il commit precedente
+era stato giudicato — giustamente — *"una spiegazione molto ben scritta del
+perché il giro 1 non funzionava"*.
 
-I documenti sono stati corretti e i due errori sono lasciati scritti — con il
-modo in cui sono nati — invece di essere fatti sparire. La cronologia git
-conserva le versioni sbagliate.
+### Il peso, misurato sulla compilazione di produzione
 
-### Errore 1 — Il taglio del titolo era dichiarato fatto, e non esiste
+| | raw | gzip | brotli |
+|---|---|---|---|
+| **percorso critico** (HTML + CSS + JS) | 23,1 KB | **7,6 KB** | 6,7 KB |
+| font, self-hosted e sottoinsiemati | 67,2 KB | 67,2 KB | 67,2 KB |
+| motore 3D, **caricato solo all'occorrenza** | 549,2 KB | 138,9 KB | 114,1 KB |
+| JS totale | | **140,4 KB** | (cancello del brief: 250 KB) |
 
-L'audit elencava fra le cose acquisite *"il titolo che attraversa la linea e
-cambia colore a metà glifo"*. Nel CSS d'autore **non c'è alcun ritaglio**: la
-sola occorrenza di `clip` in tutto il file sta dentro il bundle three.js. Le due
-copie del titolo sono sovrapposte e la chiara copre l'altra per intero; e il
-titolo sta in alto, non incontra mai il 50%.
+**Da 221,6 KB gzipped tutti insieme a 7,6 KB prima del primo disegno.** Il
+motore 3D si carica quando la dimostrazione si avvicina, non prima. È la ragione
+vera per cui il porto valeva la pena: misurato, il guadagno di *peso* era sotto
+il chilobyte — il guadagno sta nel non avere 139 KB di motore fra chi apre la
+pagina e la prima cosa che legge.
 
-Come è nato: ho letto il **commento CSS che dichiarava l'intenzione** e l'ho
-riportato come implementazione, senza cercare il meccanismo che l'avrebbe
-realizzata. *Un commento non è una prova che il codice faccia quella cosa.*
+### I difetti corretti, tutti verificati prima e dopo
 
-### Errore 2 — La conclusione sul peso era sbagliata
+1. **Il taglio del titolo ora esiste.** Era dichiarato nei commenti del
+   prototipo e non implementato: nessun `clip-path` in tutto il file. Ora le due
+   copie sono ritagliate sulla **quota reale** della linea, misurata sui nodi e
+   ricalcolata a ogni ridimensionamento e a font caricati.
+2. **Perdita di memoria e rallentamento progressivo** con `prefers-reduced-motion`:
+   la finestra dei picchi usa un orologio che avanza sempre, più un tetto rigido
+   sui campioni. Due difese indipendenti.
+3. **Movimento ridotto onorato dentro l'esperienza**: niente oscillazione
+   autonoma, ma i due stati restano confrontabili — la tesi resta dimostrabile.
+4. **Modale**: `<dialog>` nativo. Trappola del focus, Escape, inertizzazione e
+   ritorno del focus sono del browser, non codice nostro che può sbagliare.
+5. **Bersagli tattili 44×44** con il segno visibile che resta sottile.
+6. **Parità su mobile**: il richiamo commerciale non è più `display:none`.
+7. **Navigazione da tastiera** per il punto di vista (frecce).
 
-L'audit usava i 702 KB su disco per dire che il prototipo sfondava il budget di
-250 KB gzipped. **Misurato: 149,4 KB di JS gzipped. Il budget è rispettato con
-margine.** Il porto a moduli ES resta giusto, ma per un'altra ragione: 145 KB
-gzipped di codice mai eseguito vanno comunque scaricati e analizzati prima del
-primo pixel, e quello ricade su LCP e INP.
+### Due difetti nuovi, trovati misurando in esecuzione
 
-Come è nato: ho usato un numero vero fuori dal suo dominio. In `04-MISURE.md`
-avevo scritto di mia mano che non andava fatto, e due sezioni più in là l'ho fatto.
+8. **Contrasto sotto soglia.** `--inchiostro-tenue:#6A6E72` sulla carta dava
+   **4,09:1**, sotto il minimo AA. Corretto a `#5F6367` → **4,82:1**.
+9. **Il canvas non combaciava col taglio.** `setSize()` scrive anche lo stile in
+   linea, che batte il foglio di stile: il canvas restava alto 730 in un
+   contenitore da 678, e il suo centro — dove cade sempre la linea di
+   galleggiamento — finiva **26 px sotto** lo stacco del fondo CSS. Si vedeva
+   come una cucitura, ed era proprio l'idea del sito che si rompeva. Corretto con
+   `setSize(w, h, false)` e un `ResizeObserver` sul contenitore. Verificato:
+   scarto fra i centri **0 px**.
 
-### Errore 3 — Il "rubric Awwwards" citato non esiste
+### E un difetto nel mio stesso codice di sicurezza
 
-`02-OBIETTIVO-9.md` attribuiva ad Awwwards anchor di punteggio, nomi di famiglie
-tipografiche e soglie di web vitals. Verificato sulla pagina ufficiale: Awwwards
-pubblica **solo** pesi, quorum di 18 giurati con 3 voti scartati, 5 giorni di
-votazione, soglia HM 6,5, e le regole dei premi. Nient'altro.
-
-Gli anchor venivano da una **scala interna di questo studio**. È uno strumento
-di lavoro legittimo; citarlo come documento ufficiale no. Le attribuzioni sono
-corrette, e la scala resta dichiarata per quello che è.
-
-**Conseguenza:** la proposta P01 (cambiare le due famiglie tipografiche) perdeva
-la sua unica prova. È declassata da mossa numero uno a intervento successivo, e
-la decisione sulle sostitute aspetta una misura vera.
-
-### Errore 4 — Il Developer Award non è un premio intermedio
-
-Testo ufficiale: *"All SOTD winning sites are sent to the developer jury."* Si
-apre **solo dopo** aver vinto il Site of the Day. La sezione 3 resta giusta come
-contenuto, ma smette di essere una scorciatoia verso un premio: il SOTD si vince
-sul 70% Design+Usability, votato da chi guarda il sito, non il codice.
-
----
-
-## Gli altri difetti verificati in questo giro
-
-Tutti sul prototipo, tutti confermati leggendo il sorgente:
-
-- **perdita di memoria con `prefers-reduced-motion`** — `S.picchi` riceve un
-  oggetto per fotogramma e non viene mai svuotato, perché la pulizia dipende da
-  un tempo che è congelato. In più `reduce` scorre l'intero array a ogni
-  fotogramma: è anche un **rallentamento progressivo**, e colpisce proprio chi
-  aveva chiesto meno movimento;
-- **bersagli tattili da 20 × 7 px** contro i 44 × 44 richiesti;
-- **modale accessibile da tastiera anche da chiusa** — `opacity:0` non toglie dal
-  tab order, e `aria-modal="true"` resta attivo;
-- **pulsante della chiusura commerciale nascosto sotto 820px** (già nel giro 1);
-- **nessuna preview pubblica**: GitHub Pages dà 404 e il README non ha nemmeno
-  un'immagine.
+Il blocco che gestiva i guasti mostrava «serve WebGL» qualunque cosa fosse
+andata storta. Durante il collaudo un modulo non è arrivato e la pagina ha
+dichiarato all'utente che il suo browser non supporta WebGL. Era falso, e
+nascondeva a me il guasto vero. Ora i due casi sono distinti e l'eccezione
+finisce sempre in console.
 
 ---
 
-## La critica che pesa di più
+## Una trappola in cui sono caduto, e che vale la pena leggere
 
-> *"Il progetto sta rischiando di produrre più documentazione che sito."*
+Durante la verifica ho misurato che i pulsanti del mare non c'erano e che lo
+stato era sbagliato. Stavo per correggere due difetti — **che non esistevano**.
 
-È fondata, e viene accolta senza riserve. Al giro 1 il repository conteneva sei
-documenti e zero righe di codice di produzione. **Non ci sarà un giro 3 di soli
-documenti.**
+La scheda del browser era in secondo piano, e Chrome non consegna le callback di
+`IntersectionObserver` alle schede nascoste. Lo strumento non dava errore: dava
+numeri, plausibili e sbagliati.
 
----
-
-## L'ordine di lavoro, adottato
-
-Entrambi i revisori, per strade diverse, hanno indicato lo stesso ordine:
-
-1. **porto a Vite + moduli ES**, ri-tarando luci e gestione del colore guardando
-   il provino (i default di three sono cambiati da r152: i valori attuali non si
-   ricopiano);
-2. **i difetti verificati** — a partire dal taglio del titolo, che non è una
-   correzione ma il primo momento-firma da costruire davvero;
-3. **preview pubblica** e un'immagine nel README;
-4. **prima campagna di misure**, con le condizioni di prova fissate una volta.
-
-**Nome, lingua e famiglie tipografiche non bloccano nessuno di questi quattro**,
-e non li si aspetta.
+Se ne sono usciti tre insegnamenti concreti:
+- una misura sul browser va accompagnata da `document.visibilityState`;
+- il disallineamento del canvas invece era **vero**, e si è distinto dagli
+  artefatti perché due osservazioni indipendenti concordavano: lo scarto nel DOM
+  e la cucitura visibile nel provino;
+- una prova che fallisce per tutte le varianti (qui: ogni `rootMargin`, incluso
+  `0px`) non sta misurando la variante. Sta misurando altro.
 
 ---
 
-## Su cosa serve ancora un parere
+## Il bersaglio, corretto
 
-1. **A02 — la lingua.** Proposta motivata: **inglese**, con i nomi dei componenti
-   meccanici lasciati anche in italiano dove sono termini d'arte. L'argomento è
-   in `docs/03-DECISIONI.md`. Serve la decisione del committente, ma **non blocca**.
-2. **A01 — il nome.** Idem: serve, non blocca.
-3. **I punteggi reali dei SOTD.** Affermazione mia del giro 1 ("8 medio-alti")
-   contestata ("7,2–7,5"). **Non ho una misura per nessuna delle due e ho
-   ritirato la mia.** Chi può aprire le schede di una ventina di SOTD e leggere i
-   voti dove sono esposti chiuda la questione.
-4. **Il censimento delle `font-family` degli ultimi 20 SOTD.** È la misura che
-   decide se la tesi "il font battuto costa punti" regge come causa o resta un
-   gusto. Da fare prima di scegliere le sostitute.
+Era "9 su ogni criterio". Con i punteggi veri sotto gli occhi, va corretto —
+e la correzione rende il progetto **più** ambizioso, non meno.
+
+**Lando Norris** (OFF+BRAND), SOTD 17 nov 2025 e poi **Site of the Year 2025**:
+**8,18/10** — Design 8,12 · Usability **7,90** · Creativity 8,71 · Content 8,18.
+Bruno Simon, SOTM 2026: **8,11**.
+
+**Il massimo premio dell'anno si prende con 8,2, non con 9.** E il criterio più
+debole del sito dell'anno è la **Usability, a 7,90**, su un peso del 30%.
+
+Il **Developer Award ha sei criteri suoi**, che nessun documento aveva: Semantics/SEO
+7,40 · Animations 8,60 · **Accessibility 7,00** · WPO 7,60 · Responsive 7,40 ·
+Markup 7,40. Il sito dell'anno prende **7,00 in accessibilità**: è il punto più
+debole dei vincitori e il meno costoso da superare — ed è esattamente il terreno
+di questo commit.
+
+Il percorso completo e il piano stanno in `docs/05-PERCORSO-PREMIO.md`.
+
+## Il prossimo passo: la sequenza d'oro
+
+**Non si costruiscono le altre sezioni adesso.** Prima 20–30 secondi di
+esperienza alla qualità finale: la superficie si apre, appare la nave, il mare
+sale, l'utente accende il sistema, la nave si calma, il taglio entra nello
+scafo, il meccanismo nascosto viene rivelato.
+
+Con una regola che ha un esito possibile negativo: **se quella sequenza non
+regge il confronto alla cieca con un Site of the Month, le altre quattro sezioni
+non si fanno — si rifà la sequenza.**
+
+---
+
+## Le skill dello studio sono nel repo
+
+`skill/` contiene il know-how con cui questo sito viene costruito e giudicato:
+`stack-sito-immersivo`, `valuta-awwwards`, `render3d-in-video-reale`, `blender`.
+
+Chi le usa legga prima `skill/README.md`: gli anchor di punteggio in
+`valuta-awwwards` sono **una scala interna di studio, non criteri Awwwards**, e
+scambiarli per ufficiali è già costato un giro di lavoro su questo progetto.
+
+---
+
+## Cosa manca ancora
+
+- **La preview pubblica non è ancora attiva.** Il workflow c'è
+  (`.github/workflows/pubblica.yml`) ma GitHub Pages va abilitato una volta
+  nelle impostazioni del repository, con sorgente **GitHub Actions**.
+- **Nessuna misura in esecuzione**: LCP, INP, CLS, FPS su Android reale,
+  Lighthouse mobile. La sezione 3 del sito le mostra col trattino, ed è voluto:
+  finché non sono misurate restano col trattino.
+- **A05, la questione più a rischio**: l'Honorable Mention richiede 6,5 dalla
+  giuria **e** 6,5 dagli utenti qualificati. Con rete community pari a zero non
+  si prende nemmeno quello, e non si recupera lavorando meglio alla fine.
+- **A01 nome** e **A02 lingua** restano aperte. Non bloccano la sequenza d'oro.

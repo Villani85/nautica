@@ -193,7 +193,7 @@ Stima interna da revisione statica, **non una previsione di voto Awwwards**. Il
 peso non compare più fra le ragioni: misurato, è a posto.
 
 Serve a dire una cosa sola, che è vera: **il divario non è nell'idea, è
-nell'esecuzione.** L'idea regge; il guscio no, e tre dei sei momenti che
+nell'esecuzione.** L'idea regge; il guscio no, e **cinque dei sei** momenti che
 dovrebbero portarla non esistono ancora.
 
 ---

@@ -43,7 +43,7 @@ Stati: **PRESA** · **PROPOSTA** (in attesa di approvazione) · **APERTA**.
 | # | data | proposta | ragione | costo |
 |---|---|---|---|---|
 | ~~P01~~ | ~~2026-08-25~~ | ~~**Sostituire Space Grotesk e JetBrains Mono**, come mossa numero uno~~ | ~~il rubric Awwwards cita Space Grotesk fra gli anti-pattern; Design pesa il 40%~~ | ~~quasi nullo~~ |
-| **P01-bis** | 2026-08-25 | **Sostituire le due famiglie, ma dopo i difetti verificati e dopo una misura** | la motivazione originale si appoggiava a un rubric che non esiste (vedi D14). Che le due famiglie siano sovraesposte resta una **preferenza di studio sostenibile**, non un requisito di giuria. E il costo non è "quasi nullo": ridisegnare la scala, ritarare tracking e interlinea e rifare i provini è lavoro vero | medio, e da pagare dopo |
+| **P01-bis** | 2026-08-25 | **Sostituire le due famiglie, ma dopo i difetti verificati e dopo una misura** | la motivazione originale si appoggiava a un rubric che non esiste (vedi D13). Che le due famiglie siano sovraesposte resta una **preferenza di studio sostenibile**, non un requisito di giuria. E il costo non è "quasi nullo": ridisegnare la scala, ritarare tracking e interlinea e rifare i provini è lavoro vero | medio, e da pagare dopo |
 | P02 | 2026-08-25 | Portare a **cinque i momenti in cui il taglio agisce** (apertura, dimostrazione, spaccato tecnico, transizioni, menu) | l'anchor 8 chiede 2–4 momenti firma, oggi ce n'è uno; ma sono istanze della stessa regola, non idee nuove — quindi non violano il "niente altre trovate" del brief | medio, è lavoro di regia |
 | P03 | 2026-08-25 | `prefers-reduced-motion` **a stati confrontabili** invece del congelamento attuale | oggi la dimostrazione si spegne e chi ha quella preferenza non vede la tesi del sito | basso |
 | P04 | 2026-08-25 | Il feedback delle altre AI passa da **file nel repo**, non da GitHub Issues | funziona anche con AI che sanno solo leggere un URL pubblico; e la discussione resta versionata insieme al codice | nullo — già impostato |
@@ -57,6 +57,7 @@ Stati: **PRESA** · **PROPOSTA** (in attesa di approvazione) · **APERTA**.
 | A01 | brief §7.1 | **Il nome del sito** | il registro di ogni riga di testo, il marchio, il dominio | nome di studio (es. il titolo del brief), oppure nome proprio |
 | A02 | brief §7.2 | **La lingua** | tutto il copy, e la leggibilità della sezione 3 da parte della giuria | inglese; italiano con etichette tecniche in inglese; italiano puro |
 | A03 | brief §7.3 | **Il primo capitolo dopo lo stabilizzatore** | niente, per ora — ma decide se la struttura deve reggere un secondo settore | ancora nautica, oppure un settore diverso per dimostrare che il metodo si trasferisce |
+| A05 | N1 del 2° revisore | **La rete nella community Awwwards** | l'Honorable Mention, quindi tutto il percorso | serve 6,5 **anche** dagli utenti qualificati, oltre che dalla giuria: due votazioni separate. Con rete pari a zero non si prende nemmeno l'HM, ed e' l'unica cosa che non si recupera lavorando meglio alla fine |
 | A04 | P01-bis | **Quali due famiglie tipografiche** | il CSS, ma **non** il porto a Vite né i difetti | da decidere **dopo** il censimento delle `font-family` degli ultimi 20 SOTD |
 
 ### Su A02, l'argomento è cambiato — e la conclusione si è rafforzata

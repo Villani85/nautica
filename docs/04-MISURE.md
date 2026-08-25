@@ -69,7 +69,7 @@ di sostanza.
 | asset 3D totali | < 500 KB | — | — | — | — |
 | FPS sostenuto desktop | 60 | — | — | — | — |
 | FPS minimo Android medio | ≥ 30 | — | — | dispositivo reale, non emulato | — |
-| Lighthouse mobile | ≥ 70 | — | — | gate Mobile Excellence | — |
+| Lighthouse mobile | ≥ 70 | — | — | qualificazione alla track **Mobile Excellence**, che e' un premio a se' e non un cancello sul SOTD | — |
 | contrasto corpo sotto la linea | ≥ 4,5:1 | — | — | `#7FA3A5` su `#071A1D` | — |
 | contrasto corpo sopra la linea | ≥ 4,5:1 | — | — | — | — |
 | touch target sotto 44px | 0 | — | — | 390×844 | — |
