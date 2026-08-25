@@ -99,6 +99,7 @@ ordinario fatto bene, ed e' gia' quasi tutto in piedi.
 | A01 | brief §7.1 | **Il nome del sito** | il registro di ogni riga di testo, il marchio, il dominio | nome di studio (es. il titolo del brief), oppure nome proprio |
 | A02 | brief §7.2 | **La lingua** | tutto il copy, e la leggibilità della sezione 3 da parte della giuria | inglese; italiano con etichette tecniche in inglese; italiano puro |
 | A03 | brief §7.3 | **Il primo capitolo dopo lo stabilizzatore** | niente, per ora — ma decide se la struttura deve reggere un secondo settore | ancora nautica, oppure un settore diverso per dimostrare che il metodo si trasferisce |
+| A06 | 07-RIFERIMENTI-TECNICI §3.1 | **Le pinne attive non funzionano da ferme**: si aggiunge la velocita' come grandezza visibile, o si dichiara il limite? | la verosimiglianza della dimostrazione davanti a un tecnico del settore | aggiungere la velocita' e' la strada che rafforza la tesi — *la parte invisibile funziona solo se la nave cammina* — ma allunga il lavoro sulla sequenza d'oro |
 | A05 | N1 del 2° revisore | **La rete nella community Awwwards** | l'Honorable Mention, quindi tutto il percorso | serve 6,5 **anche** dagli utenti qualificati, oltre che dalla giuria: due votazioni separate. Con rete pari a zero non si prende nemmeno l'HM, ed e' l'unica cosa che non si recupera lavorando meglio alla fine |
 | A04 | P01-bis | **Quali due famiglie tipografiche** | il CSS, ma **non** il porto a Vite né i difetti | da decidere **dopo** il censimento delle `font-family` degli ultimi 20 SOTD |
 
