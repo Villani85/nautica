@@ -254,10 +254,20 @@ export function creaSalone (contenitore) {
    * 720 — misurato col gradiente verticale, non a occhio: il mio occhio diceva
    * 33% e sbagliava, perche' il gradiente piu' forte era il bordo di una PRUA
    * che il modello aveva aggiunto nonostante il prompt negativo la escludesse.
-   * Ritagliato in una fascia centrata sull'orizzonte, prua esclusa: 36 KB.
+   * Ritagliato in una fascia centrata sull'orizzonte: 64 KB, e l'orizzonte
+   * cade al **50,0%** della fascia, verificato rimisurandolo dopo il ritaglio.
+   *
+   * E IL PRIMO CLIP ERA SBAGLIATO, anche se sembrava bello. Frangeva come
+   * un'onda su un fondale — shore break — invece di essere mare lungo che
+   * incontra una barca, e aveva una prua in basso che il negativo escludeva.
+   * Due cose che il prompt aveva chiesto di NON avere. La cura non e' stata
+   * insistere sul negativo ma nominare la FISICA: «deep open ocean, hundreds of
+   * miles from any coast, long-period swell that lifts and passes, never
+   * curling, whitecaps torn sideways by wind». Chiedere la causa invece
+   * dell'effetto.
    */
   const mare = new Mesh(
-    new PlaneGeometry(LARG * 2.6, (LARG * 2.6) * 140 / 1024),
+    new PlaneGeometry(LARG * 2.6, (LARG * 2.6) * 142 / 1024),
     new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })
   )
   mare.position.set(0, 1.32, -PROF / 2 - 2.6)
