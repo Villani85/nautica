@@ -181,12 +181,37 @@ p{max-width:60ch}
 }
 
 /* ═══ TESTATA ═══ */
+/* ─── L'INTESTAZIONE E' FISSA, QUINDI IL TESTO LE SCORRE DENTRO ───
+
+   Difetto vero, visto in tre punti diversi del sito: «fraction of the boat»
+   stampato sopra «TECHNICAL STUDY», e in `#fattura` un paragrafo intero
+   attraverso «FIN STABILISER SYSTEM». Due testi sovrapposti, illeggibili tutti
+   e due, e sembrava un problema di impaginazione della sezione.
+
+   Un fondo pieno chiuderebbe la fascia in alto come una barra, che qui non
+   c'entra niente: sopra la linea c'e' la carta e basta. Serve invece un velo
+   che si spegne — abbastanza da staccare le due etichette, non abbastanza da
+   diventare un elemento.
+
+   Prende il colore del LATO in cui si trova, che `main.js` gia' aggiorna
+   scorrendo: sopra la linea e' carta, sotto e' acqua. Se prendesse un colore
+   solo, in una sezione su due sarebbe una macchia. */
 .testata{
   position:fixed;top:0;left:0;right:0;z-index:20;
   display:flex;justify-content:space-between;align-items:baseline;gap:var(--u3);
   padding:var(--u3) var(--u4);
   background:none;pointer-events:none;flex-wrap:wrap;
 }
+.testata::before{
+  content:'';position:absolute;inset:0 0 auto 0;height:calc(100% + var(--u4));
+  z-index:-1;pointer-events:none;
+  background:linear-gradient(to bottom,var(--aria) 38%,transparent);
+}
+.testata[data-lato="sotto"]::before{
+  background:linear-gradient(to bottom,var(--acqua) 38%,transparent);
+}
+/* Sopra la scena mista la testata sta sempre nella meta' di carta: il velo di
+   carta e' quello giusto, ed e' anche quello che gia' c'e' come ripiego. */
 .occhiello{
   font-variation-settings:var(--v-dato);
   font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.22em;
