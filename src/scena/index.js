@@ -8,6 +8,7 @@ import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
+import { creaSalone3D } from './salone3d.js'
 import { creaAmbiente } from './ambiente.js'
 import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
@@ -165,7 +166,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
-  const { nave, agganci, guscio, tappo, spostaTappo } = costruisciNave()
+  const { nave, agganci, guscio, tappo, spostaTappo, tuga } = costruisciNave()
   scena.add(nave)
 
   /**
@@ -223,6 +224,22 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * `materiali.js`, e senza il piano la sovrastruttura resterebbe intera mentre
    * lo scafo si apre — una nave tagliata a meta' con la tuga intatta sopra.
    */
+  /**
+   * ─── IL SALONE, DENTRO QUESTA SCENA
+   *
+   * Dietro `?unica=1` finche' non regge da solo. Il capitolo che oggi vive in
+   * DOM diventa geometria di questa nave: stesso renderer, stessa camera,
+   * stesso mare, stesso integratore. Non e' un effetto in piu' — e' la
+   * risposta al rilievo che le due meta' del sito erano due sistemi diversi.
+   *
+   * Sta DENTRO la tuga, alla quota che `nave.js` ha calcolato sul cavallino:
+   * nessun numero riscritto, nessuna posa scelta a occhio.
+   */
+  const salone = location.search.includes('unica')
+    ? creaSalone3D(base, tuga)
+    : null
+  if (salone) { nave.add(salone.gruppo); salone.riproduci() }
+
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
   sovra.caricato
@@ -354,6 +371,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
+    if (salone) {
+      salone.aggiorna(sim.S.rollio, dt)
+      // si vede solo finche' la camera e' dentro la tuga
+      salone.mostra(1 - MathUtils.clamp(emersione * 1.6, 0, 1))
+    }
+
     for (const i of impianti) {
       i.aggiorna({ pinna: sim.S.pinna * i.lato })
       // §4.2 · il coperchio si stacca quando il taglio arriva al carter
@@ -437,6 +460,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       get impiantoRapporto () { return impianti[0]?.rapporto ?? null },
       get impiantoEccentricita () { return impianti[0]?.eccentricita ?? null },
       get impiantoDati () { return impianti[0]?.dati ?? null },
+      tugaPareti: tuga.pareti,
       /** Chi c'e' a questo punto dello schermo? Coordinate 0-1. */
       chi (u, v) {
         raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)

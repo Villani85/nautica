@@ -50,13 +50,46 @@ export const Z_PINNE = -1.2
  * passano a `strumenti/esporta-coperta.mjs`, che li scrive nel file che Blender
  * legge.
  */
-export const TUGA = { z: 0.6, lung: 6.2, alt: 0.72, fattoreLarghezza: 1.16 }
+export const TUGA = { z: 0.6, lung: 6.2, alt: 0.94, fattoreLarghezza: 1.16 }
+/*
+ * L'ALTEZZA E' PASSATA DA 0,72 A 0,94 — da 1,80 m a 2,35 m.
+ *
+ * Due ragioni, e la seconda e' quella che ha forzato la mano.
+ *
+ *   1. **1,80 m non e' un ponte abitabile.** Su una barca vera un ponte sta
+ *      fra 2,1 e 2,4 m. Una tuga bassa e lunga e' parte del motivo per cui la
+ *      nave leggeva come un pontone anche dopo che i ponti alti erano
+ *      diventati tre;
+ *
+ *   2. **la fotografia del salone non ci stava dentro.** Portare il salone
+ *      dentro la stessa scena 3D — che e' il rilievo aperto piu' grosso —
+ *      vuol dire metterlo come piano nel volume della tuga. Un'inquadratura
+ *      16:10 alta quanto un ponte da 1,80 m sarebbe larga tre metri e mezzo:
+ *      il salone della fotografia e' piu' largo di cosi'. Non era un problema
+ *      di posizionamento, era un problema di quota.
+ *
+ * Il numero non e' scelto guardando lo schermo (§12): e' l'altezza minima che
+ * fa stare la fotografia a scala dentro la larghezza della tuga.
+ */
 
 export function costruisciNave () {
   const nave = new Group()
   // Il guscio e' cio' che il piano di sezione taglia via; il meccanismo no —
   // e' quello che resta, ed e' la tesi del sito resa visibile.
   const guscio = []
+  /**
+   * LE PARETI DELLA TUGA, tenute a parte.
+   *
+   * Sono la rappresentazione ESTERNA del salone: due fasce piene con una
+   * feritoia in mezzo. Vanno benissimo guardate da fuori — sono il finestrino.
+   * Da DENTRO non hanno senso: chi e' seduto in salotto non guarda il mondo
+   * attraverso una fessura alta ventisei centimetri, e infatti mettendoci la
+   * camera si vedeva la fotografia ridotta a una striscia.
+   *
+   * Quindi con la scena unica si spengono mentre la camera e' dentro, e
+   * tornano mentre esce: e' il momento in cui la stanza diventa una finestra.
+   */
+  const pareti = []
 
   /**
    * LO SCAFO E' UN LOFT FRA ORDINATE, non piu' una sezione estrusa.
@@ -167,10 +200,12 @@ export function costruisciNave () {
   const basso = new Mesh(new BoxGeometry(larghTuga, H_BAS, TUGA_LUNG), materiali.coperta)
   basso.position.set(0, quotaTuga - TUGA_ALT / 2 + H_BAS / 2, TUGA_Z)
   basso.rotation.x = -inclinaz; nave.add(basso); guscio.push(basso)
+  pareti.push(basso)
 
   const alto = new Mesh(new BoxGeometry(larghTuga, H_ALT, TUGA_LUNG), materiali.coperta)
   alto.position.set(0, quotaTuga + TUGA_ALT / 2 - H_ALT / 2, TUGA_Z)
   alto.rotation.x = -inclinaz; nave.add(alto); guscio.push(alto)
+  pareti.push(alto)
 
   /**
    * L'ALLESTIMENTO sta DENTRO la tuga ed e' figlio della nave: rolla con la
@@ -187,10 +222,31 @@ export function costruisciNave () {
 
   // I montanti: senza, l'apertura legge come una fessura invece che come una
   // vetrata. Sono anche cio' che da' la scala alla sovrastruttura.
+  /**
+   * DUE MONTANTI PER STAZIONE, SUI FIANCHI — non una sbarra che attraversa.
+   *
+   * Erano `BoxGeometry(larghTuga + 0.01, ...)`: barre larghe quanto tutta la
+   * tuga, che passavano **dentro la stanza** da murata a murata. Da fuori non
+   * si vedeva, perche' da fuori se ne vede solo l'estremita' nel finestrino.
+   *
+   * Si e' visto mettendo la camera dentro il salone: il raggio d'ispezione ha
+   * risposto «Mesh, colore #49555a, a 1,13 unita'» — l'acciaio dei montanti —
+   * davanti alla fotografia che avrebbe dovuto riempire il fotogramma. Cinque
+   * sbarre d'acciaio attraverso un salotto.
+   *
+   * Un montante vero sta sul piano del finestrino e basta. La correzione toglie
+   * anche un vincolo assurdo: con una sbarra ogni 1,19 unita' non esisteva
+   * nessuna distanza a cui mettere la camera senza averne una davanti.
+   */
   for (let i = -2; i <= 2; i++) {
-    const m = new Mesh(new BoxGeometry(larghTuga + 0.01, H_FIN, 0.05), materiali.acciaio)
-    m.position.set(0, quotaTuga - TUGA_ALT / 2 + H_BAS + H_FIN / 2, TUGA_Z + i * (TUGA_LUNG / 5.2))
-    m.rotation.x = -inclinaz; nave.add(m); guscio.push(m)
+    const z = TUGA_Z + i * (TUGA_LUNG / 5.2)
+    const y = quotaTuga - TUGA_ALT / 2 + H_BAS + H_FIN / 2
+    for (const lato of [-1, 1]) {
+      const m = new Mesh(new BoxGeometry(0.06, H_FIN, 0.05), materiali.acciaio)
+      m.position.set(lato * (larghTuga / 2 - 0.02), y, z)
+      m.rotation.x = -inclinaz; nave.add(m); guscio.push(m)
+      pareti.push(m)
+    }
   }
 
   // Nasce con corda in X e apertura in Z; la ruoto una volta sola alla
@@ -245,5 +301,17 @@ export function costruisciNave () {
     tappo.geometry = tappoA(dentro)
   }
 
-  return { nave, agganci, guscio, tappo, spostaTappo }
+  return {
+    nave, agganci, guscio, tappo, spostaTappo,
+    /**
+     * DOVE STA LA TUGA, calcolata qui una volta sola.
+     *
+     * Serve al salone, che deve stare DENTRO quel volume alla sua quota vera.
+     * Ricavarla di nuovo altrove vorrebbe dire rifare `quotaTuga` — che
+     * dipende dal cavallino alle due estremita' — e sarebbe la seconda
+     * implementazione della stessa cosa: quella che non da' errore e diverge
+     * in silenzio.
+     */
+    tuga: { z: TUGA_Z, quota: quotaTuga, largh: larghTuga, alt: TUGA_ALT, pareti }
+  }
 }
