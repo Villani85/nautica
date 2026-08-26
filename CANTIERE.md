@@ -63,6 +63,78 @@ carter sigillato, e il taglio che lo apre diventa la rivelazione.
 **La prossima consegna ammessa è un GLB grezzo dentro il sito**, non un altro
 piano. `[~]` in corso.
 
+### 1ter · La notte del 26-27 agosto — cosa è cambiato davvero `[x]`
+
+**L'impianto è integrato, dettagliato e compresso.** 1686 KB → 223 KB con
+meshopt, misurato contro Draco (236 KB + 251 KB di decodificatore contro 223 +
+28). I 44.000 triangoli restano: per la GPU non erano mai stati un problema,
+era solo il trasferimento.
+
+**Tre numeri dichiarati che la geometria non rispettava**, tutti dello stesso
+genere — un valore plausibile che nessuno confronta con niente:
+
+| dichiarato | disegnato | come si nascondeva |
+|---|---|---|
+| eccentricità 12 mm | 0,5 mm | «misurata» dal `boundingSphere` di un disco costruito **centrato sull'asse**: restituiva l'asimmetria dei 29 lobi. Finita, plausibile, mai zero, quindi nessun ripiego scattava |
+| apertura pinna 1,50 m | 1,68 m | la riga che la stampava faceva `mx[0] - 0.18` — il massimo X di *qualunque* oggetto meno una costante. Tornava per aritmetica |
+| area pinna 2,20 m² | ~0,7 m² | nessuno aveva mai integrato il profilo. Ora la corda si **ricava** dall'area, sulle stesse stazioni con cui la mesh è costruita |
+
+**Due cancelli nuovi, e fanno due domande diverse.** `collaudo-glb.mjs` legge il
+file: nomi, geometria sotto ogni nodo, unità, apertura dal piano del fasciame,
+area contro il rettangolo che contiene la pinna, e se l'orbita dichiarata sia
+abbastanza grande da **vedersi**. Rotto apposta quattro volte: li becca tutti e
+quattro. `collaudo-cinematica.mjs` guarda il sito che gira — rapporto osservato
+29,00 esatti in tre punti del capitolo — e ha insegnato tre cose scritte in
+testa al file, di cui una vale oltre questo progetto: **confrontare il moto con
+il numero dichiarato è circolare**, e il cancello passava su un riduttore che
+orbitava di un millimetro.
+
+**La nave.** Aveva un livello solo: due `BoxGeometry` alte 1,8 m su 15,5. Ora i
+due ponti superiori, la coperta in teak, la murata, la battagliola, l'hard-top e
+l'albero arrivano da Blender (58 KB compressi), appoggiati al cavallino **vero**
+letto da `ordinate.js` e passato a Blender da `strumenti/esporta-coperta.mjs` —
+non ricopiato. La tuga del ponte principale resta nel sito perché dentro ha
+un'**apertura vera**, ed è da lì che si vedono il salone e l'orizzonte.
+
+E lo scafo non è più acciaio grezzo: `metalness 0.42 / roughness 0.44` è la
+ricetta di una lamiera non trattata. La vernice non è un conduttore. Ora è
+lucido e **riflette la linea dell'orizzonte su se stesso**, che è la tesi del
+sito applicata alla carena. Con finestre di murata e fascia al galleggiamento
+dipinte nel materiale, perché le UV non ci sono ancora.
+
+**Le ombre**, che non c'erano affatto: con tre ponti sovrapposti la scena
+leggeva come carta ritagliata. Una sola luce proietta — due ombre su una barca
+al sole sono il primo indizio che la scena è finta.
+
+**La continuità, su richiesta esplicita** («non devono essere scene separate»,
+«come se andassi giù nella barca»). La causa non era la regia: ogni sezione
+dipingeva lo spacco su **se stessa**, e `.atto--salone` è alta 220svh, quindi la
+sua linea cadeva a 110svh. Ora lo spacco è uno strato fisso dietro tutta la
+pagina, i due capitoli si sovrappongono di uno schermo, e l'apertura del salone
+**sale** negli ultimi metri: chi guarda sprofonda, e la nave che emerge è la
+stessa discesa vista da fuori.
+
+**Un difetto vecchio trovato per strada**, e non era di stanotte:
+`document.querySelector('.palco')` in `demo.js` restituiva il palco del
+**salone**, che nel DOM viene prima. Da sempre la regia scriveva `data-battuta`
+sull'elemento sbagliato, quindi tutte le regole che nascondono i pannelli
+durante il taglio non hanno **mai** funzionato. Non si vedeva come un errore: si
+vedeva come una cosa che non succedeva mai.
+
+**Cosa resta aperto, e va detto:**
+
+- il tone mapping non è ancora deciso **misurando** (Mossa A del piano). Con
+  ambiente, ombre e uno scafo a rugosità 0,13 le alte luci possono tagliare, e
+  finché non si campionano carta, linea e coperta con e senza ACES è
+  un'ipotesi;
+- lo scafo non ha UV né mappe cotte: la variazione di rugosità — l'indizio
+  numero uno di §7 — è ancora costante. Debito dichiarato, non nascosto;
+- i tre filmati del mare (`mare-calmo/formato/duro`) non ci sono: il contratto
+  «mare → rollio → risposta meccanica» resta incompleto a monte;
+- la figura al bordo su telefono.
+
+---
+
 ### 1bis · Il registro di cosa e' uscito
 
 - `[x]` **il quadrilatero manovella–biella–leva**, 99 righe piu' `profiloPinna`
