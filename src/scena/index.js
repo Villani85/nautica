@@ -18,6 +18,10 @@ const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
 const RAGGIO_MECCANISMO = 2.6
+/** Quanto sta a poppavia del salone la camera, seduta dentro. */
+const DENTRO_SALONE = 1.15
+/** La scena unica e' ancora dietro un interruttore: vedi `salone3d.js`. */
+const LA_SCENA_E_UNA = typeof location !== 'undefined' && location.search.includes('unica')
 const AZIMUT_MAX = 0.92
 
 /** Dove sta il meccanismo: e' li' che la camera va a finire. */
@@ -167,6 +171,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
   const { nave, agganci, guscio, tappo, spostaTappo, tuga } = costruisciNave()
+  const tugaQuota = tuga.quota
+  const tugaZ = tuga.z
   scena.add(nave)
 
   /**
@@ -276,6 +282,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let spaccato = 0
   let emersione = 0
   let avvicinamento = 0
+  /**
+   * QUANTO SI E' USCITI DAL SALONE. 0 = seduti dentro, 1 = l'inquadratura di
+   * sempre, la nave intera da 19,5 unita'. Vive solo con `?unica=1`.
+   */
+  let uscita = LA_SCENA_E_UNA ? 0 : 1
 
   /**
    * L'EMERSIONE — il principio che regge tutta la sequenza (D39).
@@ -289,7 +300,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * A 0 lo scafo e' sotto: si vede solo il mare. A 1 galleggia alla sua quota.
    */
   function impostaEmersione (v) {
-    emersione = MathUtils.clamp(v, 0, 1)
+    /**
+     * CON LA SCENA UNICA LA NAVE NON EMERGE, E NON E' UNA SEMPLIFICAZIONE.
+     *
+     * L'emersione serviva a far comparire la nave dal nulla all'inizio del
+     * capitolo: senza, lo schermo era vuoto. Con il salone dentro la scena il
+     * capitolo comincia **seduti dentro quella nave**, e una nave dentro cui si
+     * e' seduti non puo' essere sommersa. Lasciandola salire, la camera partiva
+     * sotto la linea d'acqua — misurato: il filo del taglio, che sta a quota
+     * zero esatta, tagliava l'inquadratura del salone a venticinque centimetri
+     * dall'obiettivo.
+     *
+     * Chi scende adesso e' la camera, non la nave. Ed e' l'inversione giusta:
+     * era gia' scritta in D39 al contrario per una ragione che qui decade —
+     * «non e' la camera a scendere» valeva finche' la camera doveva restare a
+     * quota zero, e non deve: l'invariante e' il beccheggio, non la quota.
+     */
+    emersione = LA_SCENA_E_UNA ? 1 : MathUtils.clamp(v, 0, 1)
     nave.position.y = MathUtils.lerp(-4.2, 0, emersione)
   }
 
@@ -308,6 +335,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * esattamente la tesi: la parte che vale sta sotto.
    */
   /** §L'ultima battuta porta la camera sul pezzo. Vedi `regia.js`. */
+  /** Da dentro il salone alla nave intera, in un movimento solo. */
+  function impostaUscita (v) {
+    if (!LA_SCENA_E_UNA) return
+    uscita = MathUtils.clamp(v, 0, 1)
+  }
+
   function impostaAvvicinamento (v) {
     avvicinamento = MathUtils.clamp(v, 0, 1)
   }
@@ -373,8 +406,16 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
     if (salone) {
       salone.aggiorna(sim.S.rollio, dt)
-      // si vede solo finche' la camera e' dentro la tuga
-      salone.mostra(1 - MathUtils.clamp(emersione * 1.6, 0, 1))
+      // si spegne mentre si esce, non prima: dentro e' tutto cio' che c'e'
+      // e la fotografia resta accesa a lungo: dopo il varco e' cio' che si
+      // vede DENTRO il finestrino, ed e' l'unico posto del sito in cui si
+      // guardano delle persone. Si spegne solo quando la nave e' lontana.
+      salone.mostra(1 - MathUtils.clamp((uscita - 0.62) / 0.30, 0, 1))
+      // la stanza NON rolla: chi e' seduto dentro ha il proprio salotto come
+      // riferimento, e a inclinarsi e' l'orizzonte. La contro-rotazione
+      // annulla quella della nave, di cui il gruppo e' figlio per seguirne la
+      // quota. Vedi `composito.js` §5.1: e' la stessa correzione, in 3D.
+      salone.gruppo.rotation.z = -nave.rotation.z
     }
 
     for (const i of impianti) {
@@ -412,10 +453,49 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // meccanismo. La quota resta zero — e' quello che tiene la linea a meta'
     // schermo, e quindi la giunzione col fondo CSS a zero pixel.
     const miraZ = MathUtils.lerp(0, Z_PINNE, spaccato)
-    camera.position.x = miraX + Math.sin(azimut) * raggio
-    camera.position.z = miraZ + Math.cos(azimut) * raggio
-    camera.position.y = 0
-    camera.lookAt(miraX, 0, miraZ)
+
+    /**
+     * ─── DA DENTRO IL SALONE ALLA NAVE INTERA, IN UN MOVIMENTO SOLO
+     *
+     * Con `?unica=1` la camera comincia SEDUTA nel salone e ne esce
+     * attraversando il fasciame. Non e' un effetto: e' cio' che rende una sola
+     * esperienza due capitoli che prima erano due scene.
+     *
+     * LA CAMERA NON BECCHEGGIA MAI, e da li' discende tutto il resto. Il sito
+     * lo scrive gia' in pagina, e per settimane l'avevamo capito al contrario:
+     * l'invariante non e' la QUOTA ZERO, e' il beccheggio zero. Una camera
+     * livellata proietta il piano dell'acqua sulla mezzeria del fotogramma **da
+     * qualunque altezza**. Quindi puo' scendere davvero — dal ponte alla
+     * chiglia — e la giunzione col fondo CSS resta a zero pixel per tutta la
+     * discesa. Senza questo, il salone dentro la scena sarebbe stato
+     * impossibile: sta a un metro e mezzo sopra l'acqua.
+     *
+     * Percio' il bersaglio si guarda sempre alla QUOTA DELLA CAMERA, mai alla
+     * quota dell'oggetto. Guardare il meccanismo «per bene» vorrebbe dire
+     * inclinare in giu', e la linea se ne andrebbe al primo grado.
+     */
+    const dentroY = nave.position.y + tugaQuota
+    const fuoriX = miraX + Math.sin(azimut) * raggio
+    const fuoriZ = miraZ + Math.cos(azimut) * raggio
+
+    camera.position.x = MathUtils.lerp(0, fuoriX, uscita)
+    camera.position.y = MathUtils.lerp(dentroY, 0, uscita)
+    camera.position.z = MathUtils.lerp(tugaZ + DENTRO_SALONE, fuoriZ, uscita)
+    camera.lookAt(
+      MathUtils.lerp(0, miraX, uscita),
+      camera.position.y,
+      MathUtils.lerp(tugaZ, miraZ, uscita))
+
+    if (salone) {
+      // le pareti della tuga sono la faccia ESTERNA del salone: mentre si e'
+      // dentro non ci sono, e tornano proprio quando la stanza diventa finestra
+      // Tornano PRESTO — appena la camera ha varcato il piano del finestrino.
+      // A 0,42 si usciva e si continuava a vedere il salotto aperto sul fianco,
+      // come una casa senza una parete. A 0,20 la stanza diventa finestra nello
+      // stesso istante in cui si e' fuori.
+      const fuori = uscita > 0.20
+      for (const m of tuga.pareti) m.visible = fuori
+    }
 
     /**
      * Lo stato della scena esce nel DOM: i cancelli e le diagnosi lo leggono
@@ -480,7 +560,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   return {
     render, camera, ridimensiona, ruota, disegna,
-    impostaSpaccato, impostaEmersione, impostaAvvicinamento,
+    impostaSpaccato, impostaEmersione, impostaAvvicinamento, impostaUscita,
     tela: render.domElement
   }
 }

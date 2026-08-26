@@ -146,6 +146,14 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
      */
     scena.impostaAvvicinamento(dolce(fra(p, 0.82, 1.00)))
 
+    /**
+     * L'USCITA DAL SALONE occupa la prima battuta. Con la scena unica non c'e'
+     * piu' un capitolo che finisce e uno che comincia: c'e' una camera che si
+     * alza dalla poltrona e esce dallo scafo. Senza `?unica=1` questa chiamata
+     * non fa niente e la corsa resta quella di sempre.
+     */
+    scena.impostaUscita(dolce(fra(p, 0.00, 0.15)))
+
     const { indice, b } = battutaA(p)
 
     /**
