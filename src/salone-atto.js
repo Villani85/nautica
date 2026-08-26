@@ -82,7 +82,7 @@ export async function avviaSalone () {
     avanza(dt, marca)
 
     if (scena.disegna) scena.disegna(sim, marca)
-    else scena.aggiorna(sim.S.rollio)
+    else scena.aggiorna(sim.S.rollio, dt)
     palco.dataset.spento = sim.S.stab ? 'no' : 'si'
     tasto?.setAttribute('aria-pressed', String(sim.S.stab))
     /**
@@ -99,6 +99,7 @@ export async function avviaSalone () {
      * da spento, restare ferma da acceso, e l'orizzonte non deve ruotare mai.
      */
     palco.dataset.rollio = sim.S.rollio.toFixed(2)
+    if (scena.posa) palco.dataset.posa = scena.posa().toFixed(3)
   }
 
   /**

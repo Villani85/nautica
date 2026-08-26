@@ -10,6 +10,7 @@
     "riduzioni": "node strumenti/genera-riduzioni.mjs",
     "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs",
     "collaudo:impaginato": "node strumenti/collaudo-impaginato.mjs",
+    "collaudo:posa": "node strumenti/collaudo-posa.mjs",
     "sagome": "node strumenti/sagoma.mjs"
   },
   "dependencies": {

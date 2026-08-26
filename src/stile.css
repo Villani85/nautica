@@ -471,8 +471,23 @@ p{max-width:60ch}
    che il capitolo racconta non compariva mai.
    Alzando il riquadro del 12% l'orizzonte scende al 38%, cioe' dentro i vetri.
    Sotto resta scoperto, ma sotto c'e' la fotografia della stanza, che e' opaca. */
+/* Il filmato del mare: fermo, e alzato quel tanto che serve perche' l'orizzonte
+   cada DENTRO la fascia dei finestrini invece che sul suo bordo inferiore.
+
+   Il conto, misurato e non stimato: la striscia e' 1024x142 con l'orizzonte al
+   57,7% dell'altezza; `object-fit: cover` la ingrandisce 3,7 volte per riempire
+   il palco (l'eccedenza e' tutta orizzontale, quindi `object-position` non ha
+   nessuna presa verticale — l'unico comando e' `top`). Con -12% l'orizzonte
+   cadeva a 240 px su un palco di 525, e la fascia dei vetri sta fra 120 e 244:
+   si vedeva solo cielo, mentre la didascalia diceva che l'orizzonte e' l'unica
+   cosa ferma. Un sito che dichiara di misurare non puo' contraddirsi
+   nell'immagine che sta accanto alla frase.
+
+   Con -23% l'orizzonte scende a 182, cioe' al centro della fascia. L'altezza
+   resta 100%: cambiarla cambierebbe la scala di `cover` e quindi rimuoverebbe
+   l'orizzonte di nuovo. */
 .composito__mare{
-  position:absolute;left:-12%;width:124%;top:-12%;height:100%;
+  position:absolute;left:-12%;width:124%;top:-23%;height:100%;
   object-fit:cover;pointer-events:none;
 }
 /* Le due pose sono piu' grandi del riquadro: ruotando, una fotografia grande
@@ -481,6 +496,9 @@ p{max-width:60ch}
 .composito__stanza{
   position:absolute;inset:-9%;width:118%;height:118%;
   background-size:cover;background-position:center;
+  /* lo strato puo' essere un <video>: `cover` vale per entrambi, cosi' la
+     maschera combacia comunque sia fatta la sorgente */
+  object-fit:cover;
   -webkit-mask-size:cover;mask-size:cover;
   -webkit-mask-position:center;mask-position:center;
   -webkit-mask-mode:luminance;mask-mode:luminance;
