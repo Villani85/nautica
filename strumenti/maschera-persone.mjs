@@ -256,6 +256,81 @@ for (let s = 0; s < W * H; s++) {
 }
 console.log(`  ${quante} regioni tenute sopra ${MINIMA} px`)
 
+/**
+ * ─── LE TESTE NON ENTRANO NELLO SCAMBIO, ed e' la cura di un difetto che il
+ * committente ha marcato come obbligatorio: «il volto si trascina un alone
+ * intorno alla testa dei soggetti».
+ *
+ * L'alone e' inevitabile finche' il bordo del ritaglio passa vicino a una
+ * faccia. Le due sorgenti — il filmato e la fotografia tesa — non sono lo stesso
+ * render: hanno grana, compressione e micro-posa diverse. Su un divano crema
+ * quella differenza non si vede; **sui capelli si vede sempre**, perche' i
+ * capelli sono il posto dell'immagine dove due sorgenti diverse divergono di
+ * piu'. Non e' un problema di quanto e' morbido il bordo: un bordo netto da' una
+ * frangia, uno sfumato da' un fantasma. L'unica cura e' non farlo passare di li'.
+ *
+ * Quindi la testa si sottrae dal ritaglio, e viene SEMPRE dal filmato. Non e'
+ * una perdita: nel filmato la testa e' viva — respira, si gira, i capelli si
+ * muovono — mentre nella fotografia tesa sarebbe ferma. Lo scambio resta dove
+ * serve davvero, cioe' dove il corpo cambia posa: braccia, mani, busto.
+ *
+ * La testa si trova dalla forma della persona, non a coordinate scritte a mano:
+ * per ogni regione si prende la fascia alta, e il centro si calcola sulle righe
+ * piu' alte — dove c'e' solo la testa e non ancora le spalle.
+ */
+const ALTEZZA_TESTA = 0.30   // frazione alta della persona che si considera testa
+const MARGINE_TESTA = 1.35   // e quanto si allarga, perche' il bordo stia lontano dai capelli
+
+function togliTeste (mappa) {
+  // le regioni si ritrovano sulla mappa gia' filtrata
+  const visto2 = new Uint8Array(W * H)
+  const tolte = []
+  for (let s0 = 0; s0 < W * H; s0++) {
+    if (!mappa[s0] || visto2[s0]) continue
+    let t2 = 0, f2 = 0
+    const gruppo = []
+    coda[f2++] = s0; visto2[s0] = 1
+    while (t2 < f2) {
+      const q = coda[t2++]; gruppo.push(q)
+      const qx = q % W, qy = (q / W) | 0
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = qx + dx, ny = qy + dy
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
+        const r = ny * W + nx
+        if (!visto2[r] && mappa[r]) { visto2[r] = 1; coda[f2++] = r }
+      }
+    }
+    if (gruppo.length < MINIMA) continue
+    let y0 = H, y1 = 0, x0 = W, x1 = 0
+    for (const q of gruppo) {
+      const qx = q % W, qy = (q / W) | 0
+      if (qy < y0) y0 = qy; if (qy > y1) y1 = qy
+      if (qx < x0) x0 = qx; if (qx > x1) x1 = qx
+    }
+    const alt = y1 - y0
+    if (alt < 60) continue   // non e' una persona intera: nessuna testa da togliere
+    // il centro della testa si prende sulle righe piu' alte, dove non ci sono le spalle
+    const limite = y0 + alt * 0.12
+    let sx = 0, n = 0
+    for (const q of gruppo) { const qy = (q / W) | 0; if (qy <= limite) { sx += q % W; n++ } }
+    if (!n) continue
+    const cx = sx / n
+    const rx = Math.max(18, (x1 - x0) * 0.22 * MARGINE_TESTA)
+    const ry = alt * ALTEZZA_TESTA * MARGINE_TESTA / 2
+    const cy = y0 + ry * 0.78
+    for (let y = Math.max(0, Math.floor(cy - ry)); y < Math.min(H, cy + ry); y++) {
+      for (let x = Math.max(0, Math.floor(cx - rx)); x < Math.min(W, cx + rx); x++) {
+        const dx = (x - cx) / rx, dy = (y - cy) / ry
+        if (dx * dx + dy * dy <= 1) mappa[y * W + x] = 0
+      }
+    }
+    tolte.push({ cx: Math.round(cx), cy: Math.round(cy), rx: Math.round(rx), ry: Math.round(ry) })
+  }
+  console.log(`  teste tolte dallo scambio: ${tolte.map(t => `(${t.cx},${t.cy}) r ${t.rx}x${t.ry}`).join(' · ') || 'nessuna'}`)
+}
+
+togliTeste(buone)
+
 const sfoca = (src, r) => {
   const t = new Float32Array(W * H), o = new Float32Array(W * H)
   for (let y = 0; y < H; y++) {
@@ -298,7 +373,20 @@ const sfoca = (src, r) => {
  * La pelle non si puo' riconoscere per colore, provato: R-B fa 48-70 sui volti
  * e 45-47 su divano e pavimento. Un punto di margine non e' un discriminante.
  */
-const CRESCITA = 14
+/**
+ * IL CORPO SI ALLARGA, LA TESTA NO — e le due cose vanno insieme.
+ *
+ * Escludendo la testa dallo scambio l'alone e' sparito, ed e' comparso il
+ * difetto che l'alone nascondeva: **il busto doppio**. Il corpo calmo del
+ * filmato non viene cancellato dove la posa tesa ha solo divano, perche' li' la
+ * differenza e' chiaro su chiaro — il punto cieco di sempre. Serve un ritaglio
+ * generoso sul CORPO, che si mangi la posa calma per intero.
+ *
+ * Generoso e' possibile solo perche' la testa e' fuori: il bordo largo cade sul
+ * divano e sulla parete, dove le due sorgenti combaciano. Era il bordo vicino ai
+ * capelli a non poter essere ne' largo ne' stretto.
+ */
+const CRESCITA = 26
 const MORBIDO = 0
 const f = new Float32Array(W * H)
 for (let p = 0; p < W * H; p++) f[p] = buone[p]

@@ -45,8 +45,34 @@ export const materiali = {
    * geometria da 4.000 triangoli, e toglie l'unica cosa che rovinava lo
    * spaccato.
    */
+  /**
+   * ─── E DEVE PERDERE SEMPRE CONTRO LA FACCIA ESTERNA
+   *
+   * Il guscio si disegna DUE VOLTE sulla stessa geometria: la faccia esterna
+   * con `scafo` in FrontSide, quella interna con questo in BackSide. Due mesh
+   * complanari si contendono il buffer di profondita', e chi vince dipende dalla
+   * precisione a quella distanza.
+   *
+   * A schermo si vedeva **la meta' poppiera del fianco nera**, con un confine
+   * netto a mezzanave: non era una normale invertita (misurate: zero facce
+   * girate), non era un buco nella geometria (misurata: lo scafo arriva al
+   * trincarino da prua a poppa), non era il piano di sezione (misurato:
+   * spaccato = 0). Era il confine di precisione del buffer: la prua e' piu'
+   * lontana e vinceva, la poppa e' piu' vicina e perdeva.
+   *
+   * Mezzo yacht renderizzato con la faccia interna legge come una chiatta con
+   * la stiva aperta — ed e' il difetto che il committente ha nominato in tre
+   * parole, «stiamo parlando di yacht». Nessuna texture e nessun ambiente
+   * salvano una faccia che non dovrebbe vedersi.
+   *
+   * `polygonOffset` spinge questa faccia indietro di un filo: coplanare non lo
+   * e' piu', e la contesa non c'e' piu'. Dentro la sezione resta visibile
+   * esattamente come prima, perche' li' la faccia esterna e' stata tagliata via
+   * e non c'e' nessuno con cui contendersi il pixel.
+   */
   interno: new MeshStandardMaterial({
-    color: 0x1b2224, metalness: 0.05, roughness: 0.95, side: BackSide
+    color: 0x1b2224, metalness: 0.05, roughness: 0.95, side: BackSide,
+    polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4
   }),
 
   accento: new MeshStandardMaterial({

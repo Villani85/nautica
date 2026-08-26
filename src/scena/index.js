@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
   PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3,
-  PMREMGenerator
+  PMREMGenerator, Raycaster
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
@@ -254,9 +254,6 @@ export function creaScena (contenitore) {
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
     acqua.chiarisci(spaccato)
-    // e nel taglio si schiarisce, altrimenti copre il pezzo che il taglio serve
-    // a mostrare: vedi la nota in acqua.js
-    acqua.chiarisci(spaccato)
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)
@@ -273,7 +270,52 @@ export function creaScena (contenitore) {
     camera.position.y = 0
     camera.lookAt(miraX, 0, miraZ)
 
+    /**
+     * Lo stato della scena esce nel DOM: i cancelli e le diagnosi lo leggono
+     * senza dover entrare nel modulo. E' la stessa cosa che fa il salone con
+     * dataset.rollio, ed e' costata due ore di deduzioni sbagliate prima di
+     * esistere: guardando una schermata non si distingue una sezione aperta a
+     * meta' da un materiale scuro.
+     */
+    contenitore.dataset.spaccato = spaccato.toFixed(3)
+    contenitore.dataset.emersione = emersione.toFixed(3)
+
     render.render(scena, camera)
+  }
+
+  /**
+   * ─── UNA FINESTRA SULLA SCENA, e non e' un vezzo da sviluppatore
+   *
+   * Con `?ispeziona=1` la scena, la camera e il renderer finiscono su
+   * `window.__nautica`. Serve a puntare un raggio contro un pixel e farsi dire
+   * QUALE oggetto c'e' li'.
+   *
+   * L'ho aggiunta dopo aver bruciato mezza sessione a dedurre l'identita' di una
+   * macchia scura sul fianco della nave: normali invertite (misurate: no), buco
+   * nella geometria (misurato: no), piano di sezione (misurato: no), materiale
+   * sbagliato (colorato: no). Quattro ipotesi, quattro misure, e la risposta
+   * l'avrebbe data un raggio in due secondi.
+   *
+   * *Quando si guarda un'immagine e ci si chiede COSA sia una cosa, la domanda
+   * non e' visiva: e' di identita', e va fatta alla scena.*
+   */
+  if (location.search.includes('ispeziona')) {
+    const raggio = new Raycaster()
+    window.__nautica = {
+      scena, camera, render, nave,
+      /** Chi c'e' a questo punto dello schermo? Coordinate 0-1. */
+      chi (u, v) {
+        raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)
+        return raggio.intersectObjects(scena.children, true).slice(0, 4).map(i => ({
+          nome: i.object.nome || i.object.name || '(senza nome)',
+          tipo: i.object.type,
+          colore: i.object.material && i.object.material.color ? '#' + i.object.material.color.getHexString() : '?',
+          lato: i.object.material ? i.object.material.side : '?',
+          distanza: +i.distance.toFixed(2),
+          punto: [i.point.x, i.point.y, i.point.z].map(x => +x.toFixed(2))
+        }))
+      }
+    }
   }
 
   impostaEmersione(1)
