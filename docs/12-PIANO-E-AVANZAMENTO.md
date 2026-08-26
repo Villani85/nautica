@@ -360,8 +360,19 @@ Sagome e fotografie stanno in `riferimenti/sagome/`, versionate.
 | strato | cosa | ruota? |
 |---|---|---|
 | 1 | il mare, filmato | **no** |
-| 2 | la stanza, fotografia coi finestrini bucati | **sì**, col rollio vero |
-| 3 | la cornice dell'apertura | mai |
+| 2 | la stanza fuori dalla regione delle persone | **sì**, col rollio vero |
+| 3 | la posa calma, dentro quella regione, opacità `1−q` | **sì** |
+| 4 | la posa tesa, dentro quella regione, opacità `q` | **sì** |
+| 5 | la cornice dell'apertura | mai |
+
+Gli strati 2, 3 e 4 accettano indifferentemente **una fotografia o un filmato**:
+maschera, rotazione e dissolvenza non sanno cosa stanno mostrando. È la forma
+ibrida decisa col committente — **il filmato dà la vita, la simulazione dà
+l'inclinazione** — e passare dall'una all'altro è una riga in `SORGENTE`, dentro
+`src/scena/composito.js`.
+
+Lo strato 2 esiste perché i cuscini non devono mai dissolversi: vedi il difetto
+15 qui sopra.
 
 Non c'è una riga che tenga fermo il mare: è fermo perché **nessuno lo tocca**. La
 stanza si inclina contro un orizzonte che non si inclina con lei.
@@ -397,6 +408,120 @@ perché il modello aveva riquadrato e le due immagini non si allineavano più.
    simulazione, e il capitolo mostrava una stanza dritta mentre la didascalia
    diceva che rollava. *Chi legge uno stato deve anche farlo avanzare, se è
    l'unico sveglio.*
+
+### 15 · Quattro persone invece di due, e tre cure sbagliate prima di capire
+
+**Sintomo.** Il committente ha visto il difetto prima di me: *«i cuscini sono
+diversi»*. Confrontando le due fotografie pixel per pixel aveva ragione — oltre
+alle due figure cambiano i cuscini e il bordo del tavolo. Il modello non
+ricopia, rigenera, e ciò che rigenera non torna mai identico. Dissolvendole
+intere, durante la transizione i mobili si trasformavano.
+
+**La cura ovvia, e le volte che ha fallito.** Ritagliare la posa tesa sulle sole
+persone e sovrapporla alla calma. A schermo comparivano **quattro persone**. Ho
+dato la colpa al ritaglio e l'ho rifatto quattro volte:
+
+| tentativo | risultato |
+|---|---|
+| le due macchie di differenza più grandi | quattro persone |
+| tutte le macchie sopra 1200 px, dilatate di 22 | quattro persone |
+| il riquadro rettangolare di tutte le macchie umane | copriva il **71,5%** dell'immagine |
+| il riquadro della sola macchia più grande per lato | quattro persone |
+
+**Come l'ho isolato.** Componendo la stessa maschera **fuori dal sito**, con
+ffmpeg e la posa tesa piena: **due persone pulite**. Il ritaglio era già giusto.
+Poi ho rifatto la composizione aggiungendo l'intersezione con la maschera dei
+finestrini, cioè quello che fa `composito.js`: **quattro persone**. Riprodotto
+in due comandi, senza browser.
+
+**La causa.** Le due maschere si combattono. Le figure calme siedono con la
+testa appoggiata ai vetri. Lì `tesa-maschera` è nera — deve esserlo, è il buco
+del finestrino — quindi buca anche il ritaglio delle persone, e la posa tesa
+**non può disegnare sopra la testa calma**.
+
+*Quando un difetto non si sposta pur cambiando la cosa che lo causa, la cosa che
+lo causa è un'altra. Isolarlo fuori dal contesto costa dieci minuti e li ripaga
+tutti.*
+
+**La forma che regge**, tre strati di stanza invece di due: la stanza **fuori**
+dalla regione delle persone — non si dissolve mai, quindi i cuscini non cambiano
+per costruzione e non per taratura — e **dentro** la regione le due pose che si
+scambiano. Dove la posa tesa ha un finestrino al posto di una testa compare il
+mare, che è ciò che c'è davvero dietro quella testa quando la persona si è
+spostata.
+
+### 16 · Il filmato generato aveva una carrellata che a occhio non si vede
+
+**Sintomo.** Il primo filmato del salone — 1280×720, stessa inquadratura della
+sagoma, stesse persone, col gesto di puntellarsi al secondo 3,1 — sembrava
+perfetto. La stanza resta diritta e l'orizzonte piatto, che è ciò che serve:
+l'inclinazione la deve dare la simulazione.
+
+**Il difetto.** Una lentissima **carrellata in avanti**: fra il primo e l'ultimo
+fotogramma la stanza cresce nell'inquadratura. Il prompt negativo la vietava
+esplicitamente. La maschera dei finestrini è fissa: se i vetri si ingrandiscono
+escono da sotto i loro buchi e il mare compare sul divano.
+
+**Non si corregge dopo.** `vidstab` corregge traslazione e rotazione, **non la
+scala**: provato, il filmato esce identico.
+
+**Perché è successo.** Il prompt chiedeva alla stanza di sbandare. Un modello
+generativo non sa inclinare una stanza tenendo fermo l'orizzonte, quindi
+traduce il dramma nell'unico modo che conosce: **muovendo la camera**. La cura
+non è un divieto più forte — c'era già ed è stato ignorato — è **togliere la
+richiesta di rollio**, che non serve perché l'inclinazione la mette il sito, e
+chiedere la staticità come *genere* (`fixed security-camera footage`) invece che
+come divieto. Misure e prompt in `riferimenti/prompt/salone-filmati.md`.
+
+### 17 · Tre metri rotti di fila, sulla stessa domanda
+
+Serviva un cancello che dicesse se la camera di un filmato sta ferma. Ne ho
+scritti tre, e i primi due davano numeri.
+
+**Primo.** L'orizzonte come il salto di luminanza più forte dentro la fascia dei
+vetri, con una retta adattata. Nel primo secondo il mare è annegato nella
+foschia, quindi il salto più forte non era l'orizzonte, **era il davanzale**. Ne
+usciva *2,43 gradi di inclinazione dell'orizzonte*: un numero che descriveva un
+pezzo di arredamento, e stavo per far rigenerare un filmato per un difetto che
+non aveva. L'ho scoperto solo guardando i fotogrammi a piena risoluzione — i
+montanti erano verticali in tutti i campioni.
+
+**Secondo.** Adattare il **profilo per righe** fra ogni fotogramma e il primo,
+cercando scala e spostamento. Sembra solido. Su un mare — profilo a rampa liscia
+— ingrandire e spostare producono quasi la stessa cosa, quindi il conto si
+appoggia dove capita e il residuo resta bassissimo, perché una rampa combacia
+sempre con sé stessa: **10,6% di carrellata su un filmato che sta fermo**, e
+bocciava l'unica clip già buona. Ho aggiunto una prova di risolvenza — di quanto
+posso sbagliare la scala prima che il residuo peggiori del 5% — e ha bocciato
+anche la stanza: **1,6%** contro un tetto dello 0,5%. Non era tarato male, era
+cieco a quella grandezza. Trentaquattro secondi per non sapere niente.
+
+**Terzo, e funziona.** Due bordi orizzontali netti — il taglio dei vetri in
+alto, la linea del pavimento in basso — e la loro **distanza**: è
+l'ingrandimento, il loro punto medio è la traslazione, la differenza fra metà
+sinistra e metà destra è la rotazione. I bordi distano centinaia di righe,
+quindi la leva c'è, e un bordo netto si localizza sotto il pixel interpolando la
+parabola sul massimo del gradiente. Risolve lo **0,187%** contro un tetto dello
+0,5%, **e lo stampa prima dei numeri**. 1,6 secondi.
+
+*Il metro giusto non è quello più raffinato: è quello che ha la leva sulla
+grandezza che gli si chiede. E deve dichiararla, altrimenti chi legge non ha
+modo di sapere che sta guardando rumore.*
+
+### 18 · Il mare si vedeva solo come cielo, sotto una didascalia che diceva il contrario
+
+**Sintomo.** Nei finestrini si vedeva una fascia chiara uniforme, mentre la
+didascalia dice *«the horizon is the only thing standing still»*.
+
+**Il conto.** La striscia del mare è 1024×142 con l'orizzonte al 57,7%;
+`object-fit: cover` la ingrandisce 3,7 volte per riempire il palco, e
+l'eccedenza è **tutta orizzontale** — quindi `object-position` non ha nessuna
+presa verticale, e l'unico comando è `top`. Con `-12%` l'orizzonte cadeva a
+240 px su un palco di 525, e la fascia dei vetri sta fra 120 e 244: era **sul
+bordo inferiore**. Con `-23%` scende a 182, al centro della fascia.
+
+*Un sito che dichiara di misurare non può contraddirsi nell'immagine che sta
+accanto alla frase.*
 
 ### E il primo mare era sbagliato anche se era bello
 
