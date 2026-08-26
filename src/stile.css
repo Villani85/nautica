@@ -535,7 +535,18 @@ p{max-width:60ch}
 .palco--salone[data-spento="si"] .salone__spento{display:block}
 
 @media (max-width:820px){
-  .apertura{width:calc(100vw - var(--u4));transform:translate(-50%,-78%)}
+  /* ─── L'APERTURA DEBORDA, e non e' un vezzo
+
+     Su uno schermo stretto un'apertura larga quanto la finestra lascia 400 px di
+     carta vuota sopra e riduce le persone a due macchie. La fotografia pero'
+     ha gli estremi sacrificabili — a sinistra mare aperto, a destra il fondo
+     della stanza — mentre il centro porta il montante e le persone.
+     Debordando del 32% tutto cresce di un terzo e si perde il 16% per lato,
+     cioe' proprio le parti che non raccontano niente. */
+  /* e il ritaglio si sposta verso le PERSONE: il debordamento simmetrico
+     tagliava fuori la donna, cioe' meta' della coppia — e la coppia e' il
+     soggetto. Si perde mare aperto a sinistra, che non racconta niente. */
+  .apertura{width:132vw;transform:translate(-61%,-74%)}
   .apertura__pelo{top:78%}
   .apertura__sommerso{height:22%}
   .salone__didascalia{left:var(--u2);right:var(--u2);bottom:var(--u3);max-width:none}

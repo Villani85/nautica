@@ -80,18 +80,25 @@ piano. `[~]` in corso.
   *Un cancello che protegge qualcosa che non esiste più è peggio di nessun
   cancello: passa sempre verde e insegna che verde non significa niente.*
 
-### 2 · Il telefono, progettato come versione diversa `[ ]`
+### 2 · Il telefono `[~]`
 
-Non basta spostare `object-position`. L'inquadratura è composta in orizzontale —
-mare a sinistra, persone a destra — e su uno schermo verticale una delle due
-sparisce. Verificato: a schermo stretto si vede solo il mare.
+**Il rilievo era vecchio.** «A schermo stretto si vede solo il mare» valeva per
+la composizione precedente — quella con la fascia di finestrini. Con la
+fotografia nuova il telefono mostra **entrambi i mondi**: misurato a 390×844,
+apertura piena, nessuno scorrimento laterale, interruttore a 774 px dall'alto,
+cioè sotto il pollice.
 
-- [ ] a schermo stretto l'apertura inquadra **la metà destra**, le persone, e il
-      mare resta la fascia sopra la linea;
-- [ ] orizzonte sempre visibile, persone sempre leggibili;
-- [ ] interruttore raggiungibile col pollice;
-- [ ] misure vere quando il sito è pubblico: LCP ≤ 2,5 s · INP ≤ 200 ms ·
-      CLS ≤ 0,1 al 75º percentile.
+- `[x]` l'apertura deborda del 32% invece di stare dentro la finestra: prima
+  lasciava 400 px di carta vuota sopra e riduceva le persone a due macchie.
+  La fotografia ha gli estremi sacrificabili — mare aperto a sinistra, fondo
+  della stanza a destra — e il centro porta montante e persone;
+- `[x]` il ritaglio è spostato verso le persone (−61% invece di −50%): il
+  debordamento simmetrico tagliava fuori la donna, cioè metà della coppia;
+- `[ ]` la donna resta al bordo. Un'inquadratura dedicata al verticale la
+  recupererebbe del tutto;
+- `[ ]` misure vere quando il sito è pubblico: LCP ≤ 2,5 s · INP ≤ 200 ms ·
+  CLS ≤ 0,1 al 75º percentile, e frame rate su un Android reale — che
+  `docs/14` §9 mette come punto in cui **si decide il tetto** del modello.
 
 ### 3 · Il salone senza trucchi `[ ]`
 
