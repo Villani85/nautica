@@ -8,7 +8,7 @@
     "preview": "vite preview --port 5180",
     "peso": "node strumenti/peso.mjs",
     "riduzioni": "node strumenti/genera-riduzioni.mjs",
-    "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs && node strumenti/collaudo-fantasma.mjs && node strumenti/collaudo-filmato.mjs && node strumenti/collaudo-quote.mjs && node strumenti/collaudo-normali.mjs",
+    "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs && node strumenti/collaudo-fantasma.mjs && node strumenti/collaudo-filmato.mjs && node strumenti/collaudo-normali.mjs",
     "collaudo:impaginato": "node strumenti/collaudo-impaginato.mjs",
     "collaudo:posa": "node strumenti/collaudo-posa.mjs",
     "sagome": "node strumenti/sagoma.mjs"

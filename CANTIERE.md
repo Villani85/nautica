@@ -63,6 +63,23 @@ carter sigillato, e il taglio che lo apre diventa la rivelazione.
 **La prossima consegna ammessa è un GLB grezzo dentro il sito**, non un altro
 piano. `[~]` in corso.
 
+### 1bis · Il registro di cosa e' uscito
+
+- `[x]` **il quadrilatero manovella–biella–leva**, 99 righe piu' `profiloPinna`
+  e `asta`, e le costanti `RL RC LB CY CZ`. Sostituito da `impianto.glb` nello
+  stesso commit in cui il GLB entra, come vuole `docs/14` §2.
+- `[x]` **`strumenti/collaudo-quote.mjs`**, scritto un'ora prima su richiesta di
+  una revisione e **rimosso subito dopo**, ed è giusto così: verificava che due
+  descrizioni della stessa macchina coincidessero. Con una sola fonte geometrica
+  non c'è più niente da allineare, e il §2 lo dice — *«non si mantengono due
+  modelli con un collaudo che tenta di tenerli allineati»*.
+
+  Va detto perché sembra una contraddizione e non lo è: il cancello era giusto
+  **finché** i modelli erano due. Ed era già passato una volta dal falso al
+  vero — la prima stesura sosteneva di proteggere la fisica, e non era vero.
+  *Un cancello che protegge qualcosa che non esiste più è peggio di nessun
+  cancello: passa sempre verde e insegna che verde non significa niente.*
+
 ### 2 · Il telefono, progettato come versione diversa `[ ]`
 
 Non basta spostare `object-position`. L'inquadratura è composta in orizzontale —

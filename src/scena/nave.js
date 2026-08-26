@@ -20,15 +20,6 @@ function sezioneScafo () {
   return p
 }
 
-/** Profilo della pinna: un'ala, non una lastra. */
-function profiloPinna () {
-  const p = new Shape()
-  p.moveTo(-0.44, 0)
-  p.bezierCurveTo(-0.28, 0.105, 0.18, 0.075, 0.54, 0)
-  p.bezierCurveTo(0.18, -0.075, -0.28, -0.105, -0.44, 0)
-  return p
-}
-
 /* ────────────────────────────────────────────────────────────────
    IL QUADRILATERO ARTICOLATO
 
@@ -47,11 +38,6 @@ function profiloPinna () {
    biella resti rigida su tutta la corsa invece di allungarsi.
    ──────────────────────────────────────────────────────────────── */
 
-const RL = 0.22   // leva calettata sull'albero
-const RC = 0.11   // manovella in uscita dal riduttore
-const LB = 0.30   // biella, lunghezza fissa
-const CY = 0.36   // centro manovella, nel piano YZ del gruppo
-const CZ = -0.24
 
 /**
  * Dato il punto della leva, trova il perno di manovella come intersezione fra
@@ -73,13 +59,6 @@ function risolviManovella (py, pz) {
   return { y: CY + a * uy - h * uz, z: CZ + a * uz + h * uy }
 }
 
-/** Asta col perno nell'origine e il corpo verso +Y, per scalarla in lunghezza. */
-function asta (spessore, materiale) {
-  const g = new BoxGeometry(spessore, 1, spessore * 0.86)
-  g.translate(0, 0.5, 0)
-  return new Mesh(g, materiale)
-}
-
 /** Ruotando (0,1,0) attorno a X di φ si ottiene (0, cos φ, sin φ):
  *  quindi per collegare due punti del piano YZ basta φ = atan2(dz, dy). */
 function orienta (mesh, ay, az, by, bz) {
@@ -93,105 +72,6 @@ function orienta (mesh, ay, az, by, bz) {
 
 /** Dove stanno gli stabilizzatori lungo la nave: poco a proravia di mezzo. */
 export const Z_PINNE = -1.2
-
-function costruisciGruppoPinna (lato, geoPinna) {
-  const gruppo = new Group()
-  // Il gruppo si monta sul GINOCCHIO DI CARENA, che e' dove sta nella realta'
-  // e dove la sezione dice che sta: si interroga lo scafo invece di scegliere
-  // due coordinate a occhio. Se domani le ordinate cambiano, si sposta da solo.
-  const sez = sezioneA(tDaZ(Z_PINNE))
-  gruppo.position.set(lato * sez.spigoloX, sez.spigoloY, Z_PINNE)
-  const X = v => lato * v
-
-  // fondazione: il macchinario poggia su qualcosa
-  const culla = new Mesh(new BoxGeometry(1.02, 0.055, 0.36), materiali.acciaio)
-  culla.position.set(X(-0.50), 0.335, 0); gruppo.add(culla)
-  for (const x of [-0.88, -0.14]) {
-    const montante = new Mesh(new BoxGeometry(0.06, 0.34, 0.28), materiali.acciaio)
-    montante.position.set(X(x), 0.165, 0); gruppo.add(montante)
-  }
-
-  // motore elettrico con alette di raffreddamento
-  const motore = new Mesh(new CylinderGeometry(0.135, 0.135, 0.34, 22), materiali.acciaio)
-  motore.rotation.z = Math.PI / 2; motore.position.set(X(-0.86), 0.03, 0); gruppo.add(motore)
-  for (let a = 0; a < 7; a++) {
-    const aletta = new Mesh(new CylinderGeometry(0.163, 0.163, 0.011, 22), materiali.acciaio)
-    aletta.rotation.z = Math.PI / 2
-    aletta.position.set(X(-0.99 + a * 0.043), 0.03, 0); gruppo.add(aletta)
-  }
-  const calotta = new Mesh(new CylinderGeometry(0.10, 0.135, 0.09, 22), materiali.accento)
-  calotta.rotation.z = Math.PI / 2; calotta.position.set(X(-1.07), 0.03, 0); gruppo.add(calotta)
-
-  // riduttore e giunto
-  const riduttore = new Mesh(new BoxGeometry(0.30, 0.34, 0.28), materiali.acciaio)
-  riduttore.position.set(X(-0.55), 0.06, 0); gruppo.add(riduttore)
-  const giunto = new Mesh(new CylinderGeometry(0.085, 0.085, 0.20, 18), materiali.bronzo)
-  giunto.rotation.z = Math.PI / 2; giunto.position.set(X(-0.72), 0.03, 0); gruppo.add(giunto)
-  const mozzo = new Mesh(new CylinderGeometry(0.075, 0.075, 0.16, 18), materiali.bronzo)
-  mozzo.rotation.z = Math.PI / 2; mozzo.position.set(X(-0.34), CY, CZ); gruppo.add(mozzo)
-
-  // attraversamento carena: flangia imbullonata e premistoppa
-  const flangia = new Mesh(new CylinderGeometry(0.20, 0.20, 0.045, 26), materiali.bronzo)
-  flangia.rotation.z = Math.PI / 2; flangia.position.set(X(0.06), 0, 0); gruppo.add(flangia)
-  for (let b = 0; b < 8; b++) {
-    const ang = b / 8 * Math.PI * 2
-    const bullone = new Mesh(new CylinderGeometry(0.017, 0.017, 0.07, 6), materiali.acciaio)
-    bullone.rotation.z = Math.PI / 2
-    bullone.position.set(X(0.06), Math.cos(ang) * 0.155, Math.sin(ang) * 0.155)
-    gruppo.add(bullone)
-  }
-  const premistoppa = new Mesh(new CylinderGeometry(0.115, 0.135, 0.12, 22), materiali.bronzo)
-  premistoppa.rotation.z = Math.PI / 2; premistoppa.position.set(X(0.15), 0, 0); gruppo.add(premistoppa)
-
-  // parte rotante: albero, leva, radice, pinna
-  const rotante = new Group()
-  gruppo.add(rotante)
-
-  const albero = new Mesh(new CylinderGeometry(0.062, 0.062, 0.62, 20), materiali.acciaio)
-  albero.rotation.z = Math.PI / 2; rotante.add(albero)
-
-  const leva = asta(0.055, materiali.acciaio)
-  leva.scale.y = RL; leva.position.x = X(-0.22); rotante.add(leva)
-  const calettatura = new Mesh(new CylinderGeometry(0.072, 0.072, 0.09, 16), materiali.bronzo)
-  calettatura.rotation.z = Math.PI / 2; calettatura.position.x = X(-0.22); rotante.add(calettatura)
-
-  const radice = new Mesh(new CylinderGeometry(0.115, 0.145, 0.14, 22), materiali.acciaio)
-  radice.rotation.z = Math.PI / 2; radice.position.x = X(0.23); rotante.add(radice)
-
-  const pinna = new Mesh(geoPinna, materiali.acciaio)
-  pinna.position.x = X(0.28)
-  // Specchiata con una rotazione, non con una scala negativa: una scala
-  // negativa rovescia le normali e la pinna di sinistra si illuminerebbe
-  // al contrario di quella di destra.
-  if (lato < 0) pinna.rotation.y = Math.PI
-  rotante.add(pinna)
-
-  // Manovella e biella: ricalcolate a ogni fotogramma.
-  // ACCENTO SOLO SU CIO' CHE SI MUOVE (D31): biella e i due perni. La
-  // manovella resta acciaio perche' e' un braccio, non un'articolazione.
-  const manovella = asta(0.05, materiali.acciaio)
-  manovella.position.x = X(-0.34); gruppo.add(manovella)
-  const biella = asta(0.042, materiali.accento)
-  biella.position.x = X(-0.30); gruppo.add(biella)
-  const pernoBiella = new Mesh(new CylinderGeometry(0.036, 0.036, 0.14, 14), materiali.accento)
-  pernoBiella.rotation.z = Math.PI / 2; pernoBiella.position.x = X(-0.32); gruppo.add(pernoBiella)
-  const pernoLeva = new Mesh(new CylinderGeometry(0.036, 0.036, 0.14, 14), materiali.accento)
-  pernoLeva.rotation.z = Math.PI / 2; pernoLeva.position.x = X(-0.26); gruppo.add(pernoLeva)
-
-  function aggiorna (theta) {
-    rotante.rotation.x = theta
-    const py = RL * Math.cos(theta)
-    const pz = RL * Math.sin(theta)
-    const q = risolviManovella(py, pz)
-    orienta(manovella, CY, CZ, q.y, q.z)
-    orienta(biella, q.y, q.z, py, pz)
-    pernoBiella.position.y = q.y; pernoBiella.position.z = q.z
-    pernoLeva.position.y = py; pernoLeva.position.z = pz
-  }
-
-  aggiorna(0)
-  return { gruppo, lato, aggiorna }
-}
 
 export function costruisciNave () {
   const nave = new Group()
