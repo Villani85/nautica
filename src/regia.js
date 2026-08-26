@@ -92,8 +92,30 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
 
   function aggiorna (p) {
     ultimaP = p
-    // 1 - 2 · la nave emerge, poi il mare sale
-    scena.impostaEmersione(dolce(fra(p, 0.00, 0.13)))
+    /**
+     * 1 - 2 · la nave emerge, poi il mare sale.
+     *
+     * ─── NON SI PARTE DA ZERO, E NON E' UN VEZZO
+     *
+     * Con `emersione = 0` alla prima riga della sezione la nave e' sott'acqua e
+     * lo schermo e' **vuoto**: carta sopra la linea, acqua sotto, niente in
+     * mezzo. Il capitolo prima finisce con il finestrino del salone che esce
+     * dall'alto — anche quello, alla fine, uno schermo vuoto. Due schermate
+     * vuote di fila nel punto di giunzione, ed e' esattamente li' che il
+     * committente ha detto che si sentono due scene invece di una.
+     *
+     * Partendo da 0,42 la sovrastruttura e' gia' sopra la linea quando la
+     * sezione comincia: il finestrino sale, e cio' che resta al suo posto e'
+     * la barca vista da fuori, che continua a salire. La discesa non si
+     * interrompe mai — cambia solo il punto di vista, e il perno e' la linea
+     * dell'orizzonte, che nei due capitoli sta nello stesso posto.
+     *
+     * `SOTT_ACQUA` non e' zero anche per una ragione piu' semplice: uno schermo
+     * vuoto non e' un momento di respiro se dura piu' di un istante, e' un
+     * momento in cui si chiude la scheda.
+     */
+    const SOTT_ACQUA = 0.42
+    scena.impostaEmersione(SOTT_ACQUA + (1 - SOTT_ACQUA) * dolce(fra(p, 0.00, 0.13)))
 
     const salita = Math.round(fra(p, 0.13, 0.30) * 4)
     if (salita > mareRaggiunto) {

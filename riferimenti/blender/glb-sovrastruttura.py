@@ -158,6 +158,26 @@ def loft(nome, stazioni, materiale, chiudi=True):
     o = bpy.data.objects.new(nome, me)
     bpy.context.collection.objects.link(o)
     o.data.materials.append(MAT[materiale])
+
+    # ─── LE NORMALI VANNO RICALCOLATE, E NON E' UNA FORMALITA'
+    #
+    # `from_pydata` prende l'avvolgimento che gli do io, e il mio era rivolto
+    # DENTRO. Il guasto che ne e' venuto non somigliava a un guasto di normali:
+    # dall'esterno le pareti sparivano (culling della faccia frontale) e si
+    # vedeva attraverso la sovrastruttura la fascia del fuoribordo, che sta
+    # dentro la tuga. A schermo era un rettangolo chiaro sospeso sopra i ponti,
+    # e sembrava un pezzo modellato male, non una faccia al rovescio.
+    #
+    # Trovato interrogando la scena con `?ispeziona=1`: il raggio rispondeva
+    # «Mesh senza nome, colore #ffffff, lato 1» — BackSide — a diciannove unita'
+    # di distanza. Il nome del colpevole in due secondi, contro un'ora di
+    # ipotesi. E' la ragione per cui quello strumento vive in produzione.
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
     return o
 
 

@@ -103,6 +103,72 @@ export async function avviaSalone () {
   }
 
   /**
+   * ─── LA DISCESA: FRA I DUE CAPITOLI NON CI SONO DUE SCENE
+   *
+   * Richiesta esplicita del committente, e ha ragione: «da qui quando faro'
+   * scroll e' come se andassi giu' nella barca», «deve essere come se fosse la
+   * continuazione della stessa esperienza».
+   *
+   * Prima non lo era. Il salone e' un palco appiccicato che non segue lo
+   * scorrimento: finiva di colpo, e la dimostrazione cominciava altrove. Due
+   * scene, e il taglio si sentiva tutto.
+   *
+   * Cosa lo cuce, e costa una riga di trasformazione:
+   *
+   *   1. negli ultimi metri della sezione l'apertura **sale e si avvicina**.
+   *      Non e' la stanza che se ne va: e' chi guarda che sprofonda, e la
+   *      differenza si legge perche' la finestra passa SOPRA LA TESTA invece di
+   *      dissolversi;
+   *   2. la dimostrazione apre con lo scafo che **emerge dal basso** (D39, ed
+   *      era gia' cosi'). Vista da fuori, e' esattamente la stessa discesa:
+   *      la nave che sale e' chi guarda che scende;
+   *   3. la linea dell'orizzonte resta a meta' schermo in tutti e due, perche'
+   *      e' l'unica idea meccanica del sito. E' lei il perno attorno a cui la
+   *      continuita' regge: due inquadrature diverse sullo stesso posto.
+   *
+   * PERCHE' NON PORTARE LA CAMERA AL FINESTRINO: gia' provato, e sta scritto
+   * in `stile.css` — a 19,5 unita' il finestrino e' una fessura, e
+   * avvicinandosi l'inquadratura diventa un panino di fasce orizzontali. Tre
+   * rendering buttati. Non era taratura, era la premessa.
+   *
+   * La soglia e' una FRAZIONE della sezione, non un numero di pixel: sotto
+   * `soglie-scroll-mai-in-pixel` sta scritto perche', e vale anche qui — la
+   * sezione e' alta 220svh e su un telefono quello e' un altro numero.
+   */
+  const sezione = document.querySelector('#salone')
+  const apertura = document.querySelector('.apertura')
+  const didascalia = document.querySelector('.salone__didascalia')
+  const INIZIO_DISCESA = 0.70      // frazione della sezione: prima non succede niente
+  const AFFONDO = 96               // vh di risalita a fine corsa: si sta ancora
+                                 // muovendo quando la sezione si stacca, cosi' non
+                                 // resta uno schermo vuoto fra i due capitoli
+  const AVVICINA = 1.16            // quanto cresce mentre le si passa sotto
+
+  function seguiDiscesa () {
+    if (!sezione || !apertura) return
+    const r = sezione.getBoundingClientRect()
+    // quanto e' scorsa la sezione: 0 quando il palco si incolla, 1 quando si
+    // stacca. `r.height - innerHeight` e' la corsa utile dello sticky.
+    const corsa = r.height - innerHeight
+    const p = corsa > 0 ? Math.min(1, Math.max(0, -r.top / corsa)) : 0
+    const q = Math.max(0, (p - INIZIO_DISCESA) / (1 - INIZIO_DISCESA))
+    // accelera: sprofondare e' una caduta, non una traslazione uniforme
+    const e = q * q
+    apertura.style.setProperty('--discesa', (e * AFFONDO).toFixed(2) + 'vh')
+    apertura.style.setProperty('--avvicina', (1 + (AVVICINA - 1) * e).toFixed(4))
+    // la didascalia scende con la stanza e si spegne prima: se restasse,
+    // finirebbe sopra la carta coi colori pensati per l'acqua
+    if (didascalia) {
+      didascalia.style.setProperty('--discesa', (e * AFFONDO).toFixed(2) + 'vh')
+      didascalia.style.setProperty('--resta', Math.max(0, 1 - q * 2.2).toFixed(3))
+    }
+  }
+
+  addEventListener('scroll', seguiDiscesa, { passive: true })
+  addEventListener('resize', seguiDiscesa)
+  seguiDiscesa()
+
+  /**
    * Il ciclo dorme quando il capitolo non e' a schermo. Due contesti WebGL
    * accesi insieme sono due volte il lavoro per la scheda grafica, e uno dei
    * due sta disegnando qualcosa che nessuno guarda.
