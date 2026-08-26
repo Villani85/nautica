@@ -27,6 +27,21 @@ const forzato = location.search.includes('ridotto=1')
 export const sim = creaSimulazione({ ridotto: preferenza.matches || forzato })
 
 /**
+ * LA CONDIZIONE DI PARTENZA DELLA VISITA — mare quattro, sistema ACCESO.
+ *
+ * Il sito si apre sul salone, e si apre **calmo**: due persone comode, i
+ * bicchieri dritti, e fuori dal finestrino il mare che corre. Se si partisse
+ * col sistema spento non ci sarebbe niente da spegnere, e la prima cosa che si
+ * vede sarebbe una stanza che sbatte — cioe' il problema invece della sua
+ * soluzione. Si entra da dove si sta bene, e solo dopo si scopre a spese di chi.
+ *
+ * E mare quattro perche' e' quello che la didascalia dichiara: se lo stato
+ * fosse zero, spegnere non produrrebbe niente e l'invito sarebbe una bugia.
+ */
+sim.S.mare = 4
+sim.S.stab = true
+
+/**
  * Chi vuole sapere quando lo stato cambia si iscrive qui. Serve perche' i due
  * capitoli hanno cicli di disegno separati — quello del salone dorme mentre sei
  * nella dimostrazione — e chi dorme deve poter ridisegnare una volta quando

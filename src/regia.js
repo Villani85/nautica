@@ -25,14 +25,14 @@ export const BATTUTE = [
   {
     id: 'emerge',
     da: 0.00, a: 0.13,
-    titolo: 'The surface opens',
-    testo: 'Forty metres of hull. Above the line is the product you buy; below it, the part that makes it work.'
+    titolo: 'Now from the outside',
+    testo: 'Forty metres of hull, in the same conditions. Above the line is the product you buy; below it, the part that makes it work.'
   },
   {
     id: 'mare',
     da: 0.13, a: 0.30,
-    titolo: 'The sea gets up',
-    testo: 'Sea state 4. A bare hull damps almost nothing — which is the reason stabilisers exist at all.'
+    titolo: 'The same sea, from outside',
+    testo: 'This is the water that was running past the window a minute ago. Sea state 4 — a bare hull damps almost nothing against it, which is the whole reason stabilisers exist.'
   },
   {
     id: 'invito',

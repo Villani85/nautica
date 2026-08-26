@@ -118,15 +118,27 @@ export function creaSalone (contenitore) {
     return e
   }
 
-  // pavimento e cielo
-  scatola(LARG, 0.06, PROF, legno, 0, -0.03, 0)
-  scatola(LARG, 0.06, PROF, guscio, 0, ALT, 0)
-  // le due paratie laterali
-  scatola(0.08, ALT, PROF, guscio, -LARG / 2, ALT / 2, 0)
-  scatola(0.08, ALT, PROF, guscio, LARG / 2, ALT / 2, 0)
+  /**
+   * IL GUSCIO E' PIU' GRANDE DELL'INQUADRATURA, ed e' una necessita' non
+   * un'abbondanza.
+   *
+   * Ruotando di dieci gradi gli spigoli della stanza spazzano fuori dal
+   * fotogramma e, se il guscio finisse dove finisce la vista, si aprirebbero
+   * spicchi di fondo ai quattro angoli dell'apertura. Visto succedere: la
+   * stanza inclinata scopriva il bordo sinistro e l'illusione della finestra
+   * cadeva di colpo.
+   *
+   * Si allarga il guscio invece di stringere l'inquadratura, perche' stringere
+   * costerebbe i divani — e sono loro il soggetto.
+   */
+  const OLTRE = 1.9   // quanto il guscio sborda oltre cio' che si vede
+  scatola(LARG * OLTRE, 0.06, PROF * 1.4, legno, 0, -0.03, 0)
+  scatola(LARG * OLTRE, 0.06, PROF * 1.4, guscio, 0, ALT, 0)
+  scatola(0.08, ALT * 2.4, PROF * 1.4, guscio, -LARG / 2 * OLTRE, ALT / 2, 0)
+  scatola(0.08, ALT * 2.4, PROF * 1.4, guscio, LARG / 2 * OLTRE, ALT / 2, 0)
   // la murata davanti, spezzata dal finestrino: parapetto sotto, fascia sopra
-  scatola(LARG, FIN_BASSO, 0.08, guscio, 0, FIN_BASSO / 2, -PROF / 2)
-  scatola(LARG, ALT - FIN_ALTO, 0.08, guscio, 0, (ALT + FIN_ALTO) / 2, -PROF / 2)
+  scatola(LARG * OLTRE, FIN_BASSO, 0.08, guscio, 0, FIN_BASSO / 2, -PROF / 2)
+  scatola(LARG * OLTRE, ALT * 1.6 - FIN_ALTO, 0.08, guscio, 0, (ALT * 1.6 + FIN_ALTO) / 2, -PROF / 2)
   // i montanti: senza, l'apertura legge come una fessura invece che come vetrata
   for (const x of [-LARG / 2 + 0.05, -0.75, 0.75, LARG / 2 - 0.05]) {
     scatola(0.07, FIN_ALTO - FIN_BASSO, 0.09, scuro, x, (FIN_ALTO + FIN_BASSO) / 2, -PROF / 2)

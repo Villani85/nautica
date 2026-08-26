@@ -36,7 +36,47 @@
   </h1>
 </section>
 
-<!-- 2 · LA DIMOSTRAZIONE -->
+<!-- 2 · A BORDO — si entra SENTENDO, non capendo.
+     L'apertura ATTRAVERSA la linea: sopra e' fotografia, sotto e' sommersa.
+     E' la regola del progetto — cio' che e' diagramma si costruisce, cio' che
+     e' fotografia si vede attraverso un'apertura — applicata a un capitolo
+     intero invece che a un dettaglio. -->
+<section id="salone" class="atto atto--salone" data-lato="misto" aria-labelledby="tit-salone">
+  <h2 id="tit-salone" class="via">On board</h2>
+  <div class="palco palco--salone">
+
+    <div class="apertura">
+      <div id="scena-salone" class="apertura__scena"></div>
+      <div class="apertura__sommerso" aria-hidden="true"></div>
+      <div class="apertura__pelo" aria-hidden="true"></div>
+    </div>
+
+    <div class="salone__didascalia">
+      <p class="et">02 — On board</p>
+      <h3>Sea state four. Nobody in here is thinking about it.</h3>
+      <p>Outside the window the swell is running two metres. In the saloon the
+      glasses are standing up. Somebody decided that, and it cost a fraction of
+      what the boat cost — but you will never see the part that does it.</p>
+      <p class="salone__invito">Switch it off, and watch what the sea was doing
+      all along.</p>
+      <p class="salone__spento">Now the horizon is the only thing standing
+      still.</p>
+
+      <!-- L'INTERRUTTORE STA ANCHE QUI, e non e' una comodita'.
+           Senza, per spegnere bisognava risalire alla dimostrazione e tornare
+           giu': il momento — la stanza che si inclina mentre la guardi — non
+           poteva proprio accadere. E' lo stesso stato dell'altro capitolo, non
+           un secondo comando. -->
+      <button type="button" id="stab-salone" class="interruttore interruttore--salone"
+              aria-pressed="false">
+        <span class="interruttore__spia" aria-hidden="true"></span>Stabilisation
+      </button>
+    </div>
+
+  </div>
+</section>
+
+<!-- 3 · LA DIMOSTRAZIONE — adesso che hai sentito, vuoi sapere come -->
 <section id="dimostrazione" class="atto atto--demo" data-lato="misto" aria-labelledby="tit-demo">
   <h2 id="tit-demo" class="via">The demonstration</h2>
 
@@ -118,45 +158,6 @@
     which this browser does not expose. The rest of the page still works: the
     section <a href="#fattura">How it is made</a> describes the mechanism in full.
   </p>
-  </div>
-</section>
-
-<!-- 3 · ON BOARD — la meta' emotiva.
-     L'apertura ATTRAVERSA la linea: sopra e' fotografia, sotto e' sommersa.
-     E' la regola del progetto — cio' che e' diagramma si costruisce, cio' che
-     e' fotografia si vede attraverso un'apertura — applicata a un capitolo
-     intero invece che a un dettaglio. -->
-<section id="salone" class="atto atto--salone" data-lato="misto" aria-labelledby="tit-salone">
-  <h2 id="tit-salone" class="via">On board</h2>
-  <div class="palco palco--salone">
-
-    <div class="apertura">
-      <div id="scena-salone" class="apertura__scena"></div>
-      <div class="apertura__sommerso" aria-hidden="true"></div>
-      <div class="apertura__pelo" aria-hidden="true"></div>
-    </div>
-
-    <div class="salone__didascalia">
-      <p class="et">03 — On board</p>
-      <h3>The room rolls. The horizon does not.</h3>
-      <p>Sea state four, six metres above the machinery. Nothing here is
-      composited: the sea outside the window is in world coordinates and the
-      saloon is a child of the hull, so the difference between them is geometry.
-      Turn the system off and the room leans against a horizon that will not
-      lean with it.</p>
-      <p class="salone__spento">The system is off. Watch the glasses.</p>
-
-      <!-- L'INTERRUTTORE STA ANCHE QUI, e non e' una comodita'.
-           Senza, per spegnere bisognava risalire alla dimostrazione e tornare
-           giu': il momento — la stanza che si inclina mentre la guardi — non
-           poteva proprio accadere. E' lo stesso stato dell'altro capitolo, non
-           un secondo comando. -->
-      <button type="button" id="stab-salone" class="interruttore interruttore--salone"
-              aria-pressed="false">
-        <span class="interruttore__spia" aria-hidden="true"></span>Stabilisation
-      </button>
-    </div>
-
   </div>
 </section>
 
@@ -252,7 +253,7 @@
   </div>
 </section>
 
-<!-- 4 · WITH YOUR PRODUCT -->
+<!-- 5 · WITH YOUR PRODUCT -->
 <section id="offerta" class="atto atto--testo" data-lato="sotto" aria-labelledby="tit-offerta">
   <div class="colonna">
     <p class="et">05 — With your product</p>
@@ -289,7 +290,7 @@
   </div>
 </section>
 
-<!-- 5 · CONTACT -->
+<!-- 6 · CONTACT -->
 <section id="contatto" class="atto atto--contatto" data-lato="sopra" aria-labelledby="tit-contatto">
   <div class="colonna">
     <h2 id="tit-contatto" class="via">Contact</h2>

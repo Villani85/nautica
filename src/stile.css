@@ -483,7 +483,9 @@ p{max-width:60ch}
 }
 .salone__didascalia h3{color:var(--aria);margin:var(--u) 0 var(--u2);font-size:var(--sottotitolo)}
 .salone__didascalia p{color:var(--acqua-tenue);font-size:15px}
+.salone__invito{color:var(--recupero)!important;margin-top:var(--u2)}
 .salone__spento{color:var(--carico)!important;margin-top:var(--u2);display:none}
+.palco--salone[data-spento="si"] .salone__invito{display:none}
 .interruttore--salone{margin-top:var(--u3);pointer-events:auto}
 .salone__didascalia{pointer-events:none}
 .palco--salone[data-spento="si"] .salone__spento{display:block}
