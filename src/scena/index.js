@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
   PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3,
-  PMREMGenerator, Raycaster
+  PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
@@ -124,6 +124,40 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, LUCI.emisfero))
   const sole = new DirectionalLight(0xfff6e4, LUCI.sole)
   sole.position.set(4.5, 7, 6); scena.add(sole)
+
+  /**
+   * ─── LE OMBRE, e perche' non c'erano
+   *
+   * In tutta la scena non esisteva un `castShadow`. Con tre ponti sovrapposti
+   * il risultato si legge come **carta ritagliata**: il ponte superiore non si
+   * posa su quello sotto, la murata non lascia niente sulla coperta, e il
+   * cervello non riceve l'unico segnale che dice «questi volumi stanno uno
+   * davanti all'altro». Nessun materiale e nessun riflesso lo sostituisce.
+   *
+   * Una sola luce le proietta — il sole. Il controluce e la luce di fondale
+   * no: due sorgenti che proiettano danno due ombre, e due ombre su una barca
+   * ferma al sole sono il primo indizio che la scena e' finta.
+   *
+   * IL TRONCO E' STRETTO INTORNO ALLA NAVE, e non e' un'ottimizzazione: una
+   * mappa d'ombra copre il suo tronco con la stessa risoluzione qualunque sia
+   * la sua estensione. Coprire tutta la scena vorrebbe dire sprecare quasi
+   * tutti i texel sull'acqua vuota e lasciarne pochissimi alla sovrastruttura,
+   * che e' l'unico posto dove l'ombra ha qualcosa da dire.
+   *
+   * `normalBias` invece di `bias`: su superfici quasi parallele alla luce —
+   * il fianco dello scafo, quando il sole e' basso — un bias costante o
+   * produce righe (acne) o stacca l'ombra dal piede dell'oggetto. Il bias
+   * lungo la normale non ha quel compromesso.
+   */
+  render.shadowMap.enabled = true
+  render.shadowMap.type = PCFSoftShadowMap
+  sole.castShadow = true
+  sole.shadow.mapSize.set(2048, 2048)
+  const c = sole.shadow.camera
+  c.left = -11; c.right = 11; c.top = 8; c.bottom = -8
+  c.near = 0.5; c.far = 34
+  c.updateProjectionMatrix()
+  sole.shadow.normalBias = 0.03
   const controluce = new DirectionalLight(0x9fd8cc, LUCI.controluce)
   controluce.position.set(-6, 2.5, -4); scena.add(controluce)
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
@@ -165,6 +199,18 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
 
   /**
+   * Chi proietta e chi riceve. Lo scafo e la coperta fanno tutti e due: la
+   * murata deve lasciare la sua striscia sul teak, ed e' quella striscia a dire
+   * che la murata e' alta. Le LINEE no — uno spigolo disegnato non ha volume, e
+   * chiedergli un'ombra produce sfarfallio sul filo del ponte.
+   */
+  for (const m of guscio) {
+    if (!m.isMesh) continue
+    m.castShadow = true
+    m.receiveShadow = true
+  }
+
+  /**
    * I DUE PONTI SOPRA LA TUGA arrivano da Blender, e arrivano DOPO — come
    * l'impianto, per la stessa ragione: 58 KB non stanno nel percorso critico
    * della prima schermata. Chi guarda i primi istanti vede la nave a un solo
@@ -177,7 +223,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
-  sovra.caricato.catch(e => console.error('[nautica] sovrastruttura non caricata', e))
+  sovra.caricato
+    .then(({ parti }) => {
+      for (const m of parti) { m.castShadow = true; m.receiveShadow = true }
+    })
+    .catch(e => console.error('[nautica] sovrastruttura non caricata', e))
   /**
    * IL FUORIBORDO sta in coordinate MONDO — non e' figlio della nave — ma
    * fisicamente dentro la tuga, cosi' si vede solo attraverso il finestrino.
