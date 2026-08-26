@@ -193,7 +193,7 @@ export function creaSalone (contenitore) {
 
   const persone = []
   for (const s of [-1, 1]) {
-    const px = s * (LARG / 2 - 0.72)
+    const px = s * (LARG / 2 - 0.86)
     const p = new Group()
     p.position.set(px, 0, 0)
     stanza.add(p)
@@ -203,10 +203,19 @@ export function creaSalone (contenitore) {
       e.position.set(x, y, z); p.add(e); return e
     }
     const abito = s < 0 ? camicia : stoffa
-    const busto = dentro(0.34, 0.56, 0.26, abito, 0, 0.70, 0.02)
-    busto.rotation.x = 0.10
-    dentro(0.18, 0.22, 0.19, pelle, 0, 1.06, -0.02)
-    const gambe = dentro(0.30, 0.18, 0.62, stoffa, -s * 0.24, 0.46, 0.16)
+    /**
+     * Busto e testa vanno ALTI abbastanza da staccare dallo schienale: seduti
+     * troppo bassi diventavano un monolito scuro con un cubo sopra, e non si
+     * leggeva ne' una persona ne' una posa. Il collo — un pezzo di due
+     * centimetri — e' quello che separa la testa dalle spalle: senza, il
+     * profilo e' quello di un armadio.
+     */
+    const busto = dentro(0.36, 0.52, 0.28, abito, 0, 0.80, 0.04)
+    busto.rotation.x = 0.12
+    dentro(0.13, 0.09, 0.13, pelle, 0, 1.09, 0.01)          // collo
+    const testa = dentro(0.19, 0.23, 0.21, pelle, 0, 1.23, -0.01)
+    testa.rotation.y = s * 0.35                              // si guardano
+    const gambe = dentro(0.32, 0.20, 0.66, stoffa, -s * 0.26, 0.52, 0.20)
     gambe.rotation.z = s * 0.12
 
     /**
@@ -222,7 +231,7 @@ export function creaSalone (contenitore) {
      * anche senza saperla nominare.
      */
     const spalla = new Group()
-    spalla.position.set(s * 0.17, 0.92, 0.06)
+    spalla.position.set(s * 0.18, 1.00, 0.08)
     p.add(spalla)
     const braccio = new Mesh(new BoxGeometry(0.11, 0.10, 0.42), abito)
     braccio.position.set(0, 0, -0.19)   // si estende IN AVANTI dal perno
@@ -282,7 +291,17 @@ export function creaSalone (contenitore) {
     new PlaneGeometry(LARG * 2.6, (LARG * 2.6) * 142 / 1024),
     new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })
   )
-  mare.position.set(0, 1.32, -PROF / 2 - 2.6)
+  /**
+   * L'ORIZZONTE STA IN ALTO NEL FINESTRINO, non a meta'.
+   *
+   * Con il piano centrato all'altezza dell'occhio si vedeva meta' cielo e meta'
+   * acqua, che e' geometricamente corretto per uno sguardo perfettamente
+   * orizzontale — ma da un salone che guarda un mare forza quattro **l'acqua
+   * domina**, e il cielo e' una striscia. Alzando l'orizzonte il finestrino si
+   * riempie di mare, che e' cio' che si deve sentire: fuori sta succedendo
+   * qualcosa, qui dentro no.
+   */
+  mare.position.set(0, 1.62, -PROF / 2 - 2.6)
   scena.add(mare)
 
   const filmato = document.createElement('video')
