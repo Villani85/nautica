@@ -1,5 +1,5 @@
 import { creaScena } from './scena/index.js'
-import { creaSimulazione } from './scena/simulazione.js'
+import { sim, statoCambiato } from './stato.js'
 import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
 import { creaRegia } from './regia.js'
@@ -26,15 +26,20 @@ export function avviaDimostrazione () {
 
   const preferenza = window.matchMedia('(prefers-reduced-motion: reduce)')
   /**
-   * Interruttore di prova: `?ridotto=1` forza il movimento ridotto.
+   * LA SIMULAZIONE ARRIVA DA `stato.js`, e non si crea piu' qui.
    *
-   * Resta in produzione, come `?senzaAcqua=1`. La preferenza di sistema non si
-   * puo' cambiare da una scheda automatizzata, e un requisito che non si puo'
-   * provare e' un requisito che si dichiara e basta — che e' esattamente cio'
-   * che questo progetto non fa.
+   * DIFETTO PRESO GUARDANDO, appena il capitolo del salone e' esistito: si
+   * accendeva l'interruttore nella dimostrazione, si scendeva al salone, e la
+   * stanza continuava a rollare. Due capitoli, due simulazioni, due traversate
+   * diverse — e il sito che si smentiva da solo a due schermate di distanza.
+   *
+   * E' la bugia peggiore possibile qui, perche' l'argomento del sito e' proprio
+   * che sopra e sotto la linea sono **lo stesso integratore**. L'avevo scritto
+   * nel commento di `stato.js` e poi non avevo collegato il file.
+   *
+   * (`?ridotto=1` vive li' adesso, insieme alla preferenza di sistema: e' una
+   * proprieta' della visita, non di un capitolo.)
    */
-  const forzato = location.search.includes('ridotto=1')
-  const sim = creaSimulazione({ ridotto: preferenza.matches || forzato })
 
   const aggiornaLetture = creaLetture({
     rollio: $('#v-rollio'),
@@ -49,7 +54,7 @@ export function avviaDimostrazione () {
   })
 
   let inCorso = false
-  const passo = () => { scena.disegna(sim); aggiornaLetture(sim.S) }
+  const passo = (marca) => { scena.disegna(sim, marca); aggiornaLetture(sim.S) }
 
   function avviaCiclo () {
     if (inCorso || sim.S.ridotto) return
@@ -63,7 +68,7 @@ export function avviaDimostrazione () {
   /** Con movimento ridotto si disegna solo quando qualcosa cambia. */
   function sveglia () {
     let n = 0
-    const uno = () => { passo(); if (++n < 45) requestAnimationFrame(uno) }
+    const uno = (marca) => { passo(marca); if (++n < 45) requestAnimationFrame(uno) }
     requestAnimationFrame(uno)
   }
   const risveglia = () => { if (sim.S.ridotto) sveglia(); else avviaCiclo() }
@@ -79,7 +84,9 @@ export function avviaDimostrazione () {
     contenitore: $('#mare'), toggle: $('#stab'), sim,
     // La regia va rivalutata anche quando cambia lo STATO, non solo la
     // posizione: accendendo il sistema da fermi il testo restava indietro.
-    alCambio: () => { risveglia(); regia?.rivaluta?.() }
+    // Avvisa anche gli altri capitoli: il salone dorme mentre sei qui, e al
+    // risveglio deve trovare lo stato giusto invece di quello di prima.
+    alCambio: () => { risveglia(); regia?.rivaluta?.(); statoCambiato() }
   })
   /**
    * L'ANDATURA. E' la seconda cosa che si scopre: le pinne producono portanza
@@ -102,6 +109,7 @@ export function avviaDimostrazione () {
     sim.S.ridotto = e.matches
     sim.azzeraPicchi()
     if (e.matches) { fermaCiclo(); sveglia() } else avviaCiclo()
+    statoCambiato()   // vale per tutti i capitoli, non solo per questo
   })
 
   window.addEventListener('resize', () => { scena.ridimensiona(); if (sim.S.ridotto) sveglia() })

@@ -431,6 +431,71 @@ p{max-width:60ch}
    Parita', non un messaggio di scuse: nel prototipo il richiamo commerciale
    era display:none sotto 820px, cioe' irraggiungibile proprio dove passa
    meta' del pubblico.                                                        */
+/* ═══ IL SALONE — l'apertura che attraversa la linea ═══
+
+   E' la composizione del riferimento, misurata sui suoi fotogrammi: un
+   rettangolo appoggiato sul campo carta/acqua, che ATTRAVERSA la linea, con la
+   parte sotto tinta d'acqua e translucida. Nel video l'apertura sta dal 12%
+   all'86% dell'altezza e la linea le cade dentro all'81%; qui, con lo spacco al
+   50%, la stessa proporzione si ottiene alzandola del 72% della propria
+   altezza.
+
+   Perche' un'apertura e non una camera che entra: portare la camera della
+   dimostrazione al finestrino e' stato PROVATO e non funziona — a 19,5 unita'
+   il finestrino e' una fessura, e avvicinandosi l'inquadratura diventa un
+   panino di fasce orizzontali. Tre rendering, due parametri battuti, tutti da
+   buttare. Non era taratura: era la premessa. */
+.atto--salone{background:var(--spacco);min-height:auto;height:220svh}
+.palco--salone{position:sticky;top:0;height:100svh;overflow:hidden;background:var(--spacco)}
+
+.apertura{
+  position:absolute;left:50%;top:50%;
+  /* il 72% dell'altezza sta sopra la linea, il 28% sotto */
+  transform:translate(-50%,-72%);
+  width:min(62vw,840px);aspect-ratio:16/10;
+  background:#0b0e10;
+  /* la cornice e' un filo scuro, non un riquadro decorato: e' il bordo di una
+     fotografia appoggiata sul foglio */
+  box-shadow:0 0 0 1px rgba(11,14,16,.75), 0 24px 70px rgba(7,26,29,.22);
+}
+.apertura__scena{position:absolute;inset:0;overflow:hidden}
+.apertura__scena canvas{width:100%;height:100%;display:block}
+
+/* LA PARTE SOMMERSA — translucida, non opaca. Nel riferimento sotto il velo si
+   intravedono il piede del tavolo e le basi dei divani, ed e' proprio quello a
+   rendere l'immagine: l'apertura non finisce alla linea, ci passa sotto. */
+.apertura__sommerso{
+  position:absolute;left:0;right:0;bottom:0;height:28%;
+  background:linear-gradient(to bottom,
+    rgba(15,52,56,.62) 0%, rgba(7,26,29,.86) 100%);
+  pointer-events:none;
+}
+/* il pelo dell'acqua che taglia l'apertura: un filo chiaro, lo stesso della
+   linea del sito */
+.apertura__pelo{
+  position:absolute;left:0;right:0;top:72%;height:1px;
+  background:var(--aria);opacity:.5;pointer-events:none;
+}
+
+.salone__didascalia{
+  position:absolute;left:var(--u4);bottom:var(--u6);z-index:7;
+  max-width:38ch;pointer-events:none;
+}
+.salone__didascalia h3{color:var(--aria);margin:var(--u) 0 var(--u2);font-size:var(--sottotitolo)}
+.salone__didascalia p{color:var(--acqua-tenue);font-size:15px}
+.salone__spento{color:var(--carico)!important;margin-top:var(--u2);display:none}
+.interruttore--salone{margin-top:var(--u3);pointer-events:auto}
+.salone__didascalia{pointer-events:none}
+.palco--salone[data-spento="si"] .salone__spento{display:block}
+
+@media (max-width:820px){
+  .apertura{width:calc(100vw - var(--u4));transform:translate(-50%,-78%)}
+  .apertura__pelo{top:78%}
+  .apertura__sommerso{height:22%}
+  .salone__didascalia{left:var(--u2);right:var(--u2);bottom:var(--u3);max-width:none}
+  .salone__didascalia p{font-size:13px}
+}
+
 /* ═══ FINESTRE BASSE — il buco che non esisteva ═══
 
    In questo foglio c'erano DUE sole media query, `max-width: 820px` e

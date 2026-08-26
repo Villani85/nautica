@@ -6,6 +6,7 @@ import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
+import { avanza } from '../stato.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
@@ -198,12 +199,15 @@ export function creaScena (contenitore) {
     azimutTarget = MathUtils.clamp(azimutTarget + delta, -AZIMUT_MAX, AZIMUT_MAX)
   }
 
-  function disegna (sim) {
+  function disegna (sim, marca) {
     const dt = Math.min(orologio.getDelta(), 0.05)
     frame++
     if (!sim.S.ridotto) t += dt
 
-    sim.passo(dt, t)
+    // Il passo della simulazione non lo fa piu' questa scena: lo fa `stato.js`,
+    // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo
+    // fotogramma. Il `t` locale resta per le onde, che sono roba di scena.
+    avanza(dt, marca)
 
     // Non si seziona un oggetto in movimento: mentre il piano entra, il
     // rollio si acquieta. Non e' un vezzo — un disegno tecnico e' fermo, ed e'

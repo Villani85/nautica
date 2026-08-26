@@ -123,3 +123,32 @@ if (demo) {
   }, { rootMargin: '200% 0px' })
   carica.observe(demo)
 }
+
+/**
+ * IL CAPITOLO DEL SALONE, caricato con lo stesso schema.
+ *
+ * Un osservatore separato, e non un elenco generico di sezioni: i due capitoli
+ * falliscono in modi diversi e vanno trattati in modo diverso. Se il salone non
+ * parte, il salone sparisce e il resto del sito continua a funzionare — mentre
+ * se non parte la dimostrazione il sito ha bisogno di dirlo, perche' li' c'e' un
+ * ripiego da mostrare.
+ *
+ * Il margine e' piu' stretto di quello della dimostrazione (50% contro 200%):
+ * quella va precaricata presto perche' e' il primo impatto, questo puo'
+ * aspettare di essere vicino, e nel frattempo non contende la scheda grafica.
+ */
+const salone = document.querySelector('#salone')
+if (salone) {
+  const caricaSalone = new IntersectionObserver(async (voci, oss) => {
+    if (!voci.some(v => v.isIntersecting)) return
+    oss.disconnect()
+    try {
+      const m = await import('./salone-atto.js')
+      m.avviaSalone()
+    } catch (e) {
+      console.error("[nautica] il salone non e' partito", e)
+      salone.remove()
+    }
+  }, { rootMargin: '50% 0px' })
+  caricaSalone.observe(salone)
+}
