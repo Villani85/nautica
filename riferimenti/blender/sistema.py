@@ -131,35 +131,45 @@ def box(dim, pos, mat, smusso=0.006, ruota=None):
     return o
 
 
-# ═══ IL FASCIAME, che e' cio' che manca allo schema ════════════════════════
-# Un attuatore senza la lamiera a cui e' imbullonato non e' installato: e'
-# esposto. La piastra e il rinforzo dicono DOVE siamo — dentro una carena.
-fasciame = box((3.4, 0.02, 3.0), (0, 0, 0), MINIO, smusso=0.004)
-# e un pagliolo sotto: senza un piano d'appoggio si e' in un vuoto, non in un
-# locale macchine
-box((3.4, 0.02, 1.6), (0, -0.86, -0.80), MINIO, smusso=0.004, ruota=(math.radians(90), 0, 0))
+# ═══ IL FASCIAME, e gli assi che la prima stesura aveva sbagliati ══════════
+#
+# L'albero corre lungo X e ATTRAVERSA il fasciame: quindi il fasciame dev'essere
+# perpendicolare a X, cioe' sottile in X e steso su Y e Z. La prima stesura lo
+# stendeva LUNGO X: la pinna non passava attraverso niente e la fondazione
+# finiva davanti alla macchina invece che sotto. Si vedeva subito, e il conto lo
+# diceva prima ancora di renderizzare.
+#
+# Da qui in poi: X = fuori dallo scafo (la pinna e' a X positiva, la macchina a
+# X negativa) · Y = la lunghezza della nave · Z = l'alto.
+fasciame = box((0.022, 3.2, 2.6), (0, 0, 0), MINIO, smusso=0.004)
 # doppiatore attorno all'attraversamento: la lamiera si ispessisce dove e'
 # forata, altrimenti si strappa
-cil(0.46, 0.46, 0.035, (0, 0.012, 0), MINIO, asse='Y', ruota=(math.radians(90), 0, 0), smusso=0.006)
-# madieri: due profili a L che corrono lungo la murata
-for z in (-0.78, 0.78):
-    box((3.4, 0.24, 0.026), (0, -0.24, z), MINIO, smusso=0.004)
-    box((3.4, 0.026, 0.15), (0, -0.36, z), MINIO, smusso=0.004)
+cil(0.44, 0.44, 0.030, (-0.014, 0, 0), MINIO, smusso=0.006)
 
-# ═══ FONDAZIONE ═══════════════════════════════════════════════════════════
-# saldata ai madieri, non appoggiata: due fazzoletti e un piano
-box((0.86, 0.030, 0.46), (-0.62, -0.36, 0), MINIO, smusso=0.004)
-for z in (-0.20, 0.20):
-    box((0.80, 0.22, 0.022), (-0.62, -0.47, z), MINIO, smusso=0.004)
+# madieri: corrono in verticale lungo la murata, come le ordinate vere
+for y in (-0.92, 0.92):
+    box((0.24, 0.028, 2.6), (-0.13, y, 0), MINIO, smusso=0.004)
+    box((0.030, 0.16, 2.6), (-0.25, y, 0), MINIO, smusso=0.004)
+# corrente longitudinale
+box((0.20, 3.2, 0.026), (-0.11, 0, -0.62), MINIO, smusso=0.004)
+
+# pagliolo: senza un piano d'appoggio si e' in un vuoto, non in un locale
+# macchine
+box((2.2, 3.2, 0.024), (-1.15, 0, -0.86), MINIO, smusso=0.004)
+
+# ═══ FONDAZIONE: sotto la macchina, saldata al pagliolo ═══════════════════
+box((0.86, 0.52, 0.030), (-0.62, 0, -0.36), MINIO, smusso=0.004)
+for y in (-0.22, 0.22):
+    box((0.80, 0.024, 0.22), (-0.62, y, -0.47), MINIO, smusso=0.004)
 
 # ═══ IL CORPO DELL'ATTUATORE: un blocco solo ══════════════════════════════
 # E' questo a cambiare tutto. Nello schema erano motore, riduttore e culla
 # separati; qui sono UN getto, come nella realta'.
-corpo = box((0.62, 0.40, 0.40), (-0.56, -0.14, 0), GHISA, smusso=0.018)
+corpo = box((0.62, 0.42, 0.40), (-0.56, 0, -0.14), GHISA, smusso=0.018)
 # nervature di irrigidimento: un getto le ha sempre, e sono cio' che si legge
 # come "pezzo pesante"
-for z in (-0.14, 0.0, 0.14):
-    box((0.60, 0.34, 0.020), (-0.56, -0.14, z), GHISA, smusso=0.006)
+for y in (-0.15, 0.0, 0.15):
+    box((0.60, 0.020, 0.36), (-0.56, y, -0.14), GHISA, smusso=0.006)
 # flangia di accoppiamento fra corpo e attraversamento
 cil(0.24, 0.24, 0.05, (-0.22, 0, 0), GHISA, smusso=0.006)
 for b in range(8):
@@ -167,19 +177,19 @@ for b in range(8):
     cil(0.022, 0.022, 0.07, (-0.22, math.cos(a) * 0.185, math.sin(a) * 0.185), INOX, lati=6, smusso=0.002)
 
 # coperchio ispezione, con i suoi bulloni: dice che il pezzo si apre
-cil(0.13, 0.13, 0.022, (-0.56, 0.075, 0), GHISA, asse='Y', ruota=(math.radians(90), 0, 0), smusso=0.004)
+cil(0.13, 0.13, 0.022, (-0.56, 0, 0.075), GHISA, ruota=(0, 0, 0), smusso=0.004)
 for b in range(6):
     a = b / 6 * math.pi * 2
-    cil(0.014, 0.014, 0.03, (-0.56 + math.cos(a) * 0.10, 0.082, math.sin(a) * 0.10),
-        INOX, lati=6, asse='Y', ruota=(math.radians(90), 0, 0), smusso=0.002)
+    cil(0.014, 0.014, 0.03, (-0.56 + math.cos(a) * 0.10, math.sin(a) * 0.10, 0.082),
+        INOX, lati=6, ruota=(0, 0, 0), smusso=0.002)
 
 # motore elettrico: cilindrico, calettato in testa al corpo
-cil(0.145, 0.145, 0.30, (-1.02, -0.14, 0), GHISA, smusso=0.010)
+cil(0.145, 0.145, 0.30, (-1.02, 0, -0.14), GHISA, smusso=0.010)
 for a in range(9):
-    cil(0.168, 0.168, 0.010, (-1.13 + a * 0.026, -0.14, 0), GHISA, smusso=0.002)
-cil(0.10, 0.145, 0.07, (-1.19, -0.14, 0), GHISA, smusso=0.006)
+    cil(0.168, 0.168, 0.010, (-1.13 + a * 0.026, 0, -0.14), GHISA, smusso=0.002)
+cil(0.10, 0.145, 0.07, (-1.19, 0, -0.14), GHISA, smusso=0.006)
 # morsettiera: la scatola che ogni motore ha di fianco
-box((0.13, 0.09, 0.11), (-1.00, 0.03, 0.10), GHISA, smusso=0.008)
+box((0.13, 0.11, 0.09), (-1.00, 0.14, 0.02), GHISA, smusso=0.008)
 
 # ═══ ATTRAVERSAMENTO CARENA ═══════════════════════════════════════════════
 # flangia imbullonata al doppiatore — quota VINCOLATA
@@ -214,9 +224,9 @@ def tubo(punti, raggio, mat):
     return o
 
 
-tubo([(-1.00, 0.09, 0.12), (-0.80, 0.26, 0.22), (-0.30, 0.30, 0.30), (0.20, 0.26, 0.44)], 0.018, GOMMA)
-tubo([(-0.56, 0.06, -0.19), (-0.40, 0.20, -0.30), (0.10, 0.24, -0.42)], 0.014, GOMMA)
-tubo([(-0.30, -0.34, 0.16), (-0.05, -0.30, 0.34), (0.35, -0.24, 0.50)], 0.011, INOX)
+tubo([(-1.00, 0.16, 0.06), (-0.80, 0.42, 0.30), (-0.35, 0.52, 0.62), (-0.18, 0.54, 1.00)], 0.018, GOMMA)
+tubo([(-0.56, -0.20, 0.10), (-0.45, -0.46, 0.40), (-0.22, -0.52, 0.90)], 0.014, GOMMA)
+tubo([(-0.90, -0.16, -0.30), (-0.70, -0.40, -0.50), (-0.30, -0.48, -0.72)], 0.011, INOX)
 
 # ═══ PARTE ROTANTE — tutte quote VINCOLATE ════════════════════════════════
 def rot(o):
