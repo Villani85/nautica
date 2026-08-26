@@ -9,8 +9,41 @@ import { MeshStandardMaterial, DoubleSide, BackSide, FrontSide } from 'three'
  * e la linea di galleggiamento si vedrebbe come una cucitura.
  */
 export const materiali = {
+  /**
+   * ─── DOPPIA FACCIA, E NON E' UNA RESA: E' L'UNICA CHE DISEGNA LO SCAFO INTERO
+   *
+   * A faccia singola **la meta' poppiera del guscio non veniva disegnata**: si
+   * vedeva la faccia interna, quasi nera, e mezza nave leggeva come una chiatta
+   * con la stiva aperta. Il committente l'ha nominato in tre parole, «stiamo
+   * parlando di yacht».
+   *
+   * QUATTRO IPOTESI, QUATTRO MISURE, TUTTE SMENTITE. Non normali invertite
+   * (: 0 triangoli girati su 4464). Non un buco nella
+   * geometria (lo scafo arriva al trincarino da prua a poppa, verificato riga
+   * per riga). Non il piano di sezione (, e il piano sta a 8,4,
+   * fuori dallo scafo). Non z-fighting ( non l'ha tolta). Non una
+   * scala negativa (determinante della matrice mondo: 1,0000). E il contorno e'
+   * antiorario a TUTTE le ordinate, quindi l'avvolgimento e' uniforme.
+   *
+   * La prova che ha deciso: nascondendo la faccia interna, la poppa **sparisce**
+   * — si vede lo sfondo. Quindi le facce esistono e sono scartate. Mettendo la
+   * doppia faccia, lo scafo torna intero e grigio.
+   *
+   * NON SO ANCORA PERCHE'. Lo scrivo invece di inventare una spiegazione: la
+   * geometria dice una cosa e la scheda video ne fa un'altra, e finche' non
+   * capisco quale delle due mente, la cura e' quella che si vede funzionare.
+   *
+   *  resta, con il suo  che lo tiene dietro:
+   * dentro la sezione la cavita' deve restare scura, perche' dentro una carena
+   * e' buio.
+   *
+   * E LA LEZIONE SUL CANCELLO:  verifica l'algebra delle
+   * normali, non cio' che la scheda video scarta. Ha detto zero su un difetto
+   * enorme. Un cancello che misura una grandezza vicina a quella che conta non
+   * e' un cancello: va sostituito con uno che RENDERIZZA e guarda.
+   */
   scafo: new MeshStandardMaterial({
-    color: 0x707c82, metalness: 0.42, roughness: 0.44, side: FrontSide
+    color: 0x707c82, metalness: 0.42, roughness: 0.44, side: DoubleSide
   }),
   coperta: new MeshStandardMaterial({
     color: 0xcfc9bc, metalness: 0.05, roughness: 0.72
@@ -65,10 +98,16 @@ export const materiali = {
    * parole, «stiamo parlando di yacht». Nessuna texture e nessun ambiente
    * salvano una faccia che non dovrebbe vedersi.
    *
-   * `polygonOffset` spinge questa faccia indietro di un filo: coplanare non lo
-   * e' piu', e la contesa non c'e' piu'. Dentro la sezione resta visibile
-   * esattamente come prima, perche' li' la faccia esterna e' stata tagliata via
-   * e non c'e' nessuno con cui contendersi il pixel.
+   * IL VERSO DELLO SCOSTAMENTO SI E' ROVESCIATO, e la ragione e' cambiata.
+   * Prima lo spingeva INDIETRO, per fargli perdere la contesa con la faccia
+   * esterna. Ora lo scafo e' a DOPPIA faccia — e' l'unico modo in cui si
+   * disegna intero — quindi dentro la sezione la parete lontana verrebbe
+   * disegnata dal materiale dello scafo, grigio chiaro, e la cavita' leggerebbe
+   * come una scatola illuminata. Dentro una carena e' buio.
+   *
+   * Quindi lo scostamento e' NEGATIVO: questa faccia vince, e la cavita' resta
+   * scura. Fuori non cambia niente, perche' li' davanti c'e' la faccia esterna
+   * vera e propria.
    */
   interno: new MeshStandardMaterial({
     color: 0x1b2224, metalness: 0.05, roughness: 0.95, side: BackSide,
