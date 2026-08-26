@@ -18,6 +18,89 @@ Le regole che mi do nello scriverlo:
 
 ---
 
+## Il piano per finire — 26 agosto, sera
+
+### La cosa che vale più di tutto il resto
+
+**Nessuno può ancora aprire il sito.** Diciannove commit, quattromila righe, un
+salone che finalmente sembra uno yacht — e zero persone che l'hanno visto. Non è
+un dettaglio di rilascio: è la condizione di tutto. Nessuno dei tre premi si
+vince da un repository, si vincono da un indirizzo che qualcuno apre.
+
+E finché il sito non è pubblico non si possono nemmeno **misurare** le cose che
+mancano: LCP e INP veri, il telefono su un telefono vero, il tempo che una
+persona ci sta dentro. Sto ordinando lavoro su ipotesi invece che su misure, ed
+è esattamente ciò che questo progetto non fa.
+
+**Due clic, e sono solo tuoi:**
+
+1. **GitHub → Settings → Pages → Source: GitHub Actions.** Il workflow è già in
+   `.github/workflows/pubblica.yml` e i cancelli girano prima di pubblicare.
+2. **Il profilo Awwwards.** Non posso aprirlo io — creare account e inserire
+   password sono cose che non faccio. Conta dal giorno in cui esiste, non da
+   quando ce ne ricordiamo: serve il 6,5 **dagli utenti** già per l'Honorable
+   Mention, ed è il voto che matura solo col tempo.
+
+---
+
+### Dove siamo davvero
+
+| capitolo | stato |
+|---|---|
+| il salone | **finito.** Due clip sorelle, camera collaudata, posa che reagisce |
+| la dimostrazione | funziona, ma è la parte fredda: nave e meccanismo sono resa 3D |
+| `#fattura`, `#offerta` | colonne di testo con il 60% di schermo vuoto |
+| l'atto due | **non cominciato** |
+| il telefono | **mai provato su un telefono** |
+
+---
+
+### L'ordine, e perché questo
+
+**A · Il telefono.** È il primo perché la Usability pesa il 30%, è il criterio
+più debole dei vincitori (7,46 Messenger, 7,90 Lando Norris) e metà giuria apre
+dal telefono. E perché a quella larghezza il capitolo del salone **non si
+capisce**: l'apertura mostra solo il mare e le persone escono dall'inquadratura.
+Non è un difetto di impaginazione, è che la fotografia è composta per il largo.
+La cura probabile: a schermo stretto l'apertura inquadra la METÀ DESTRA — le
+persone — e il mare resta la fascia sopra la linea. Da misurare, non da
+assumere.
+
+**B · La linea ovunque.** Il sito ha un'idea sola — la linea a metà schermo — e
+la fa vedere nel titolo di apertura e basta. `#fattura` e `#offerta` sono
+colonne di testo in un mare di bianco. È il divario che separa un buon sito da
+un Site of the Day, ed è rifinitura: colmabile senza inventare niente.
+
+**C · `#offerta` operativa.** Oggi dice «il CAD del componente, semplificato o
+no». Un produttore la legge e non capisce se ho mai visto un suo file. Deve
+dire: quale formato (STEP, IGES, Parasolid, e cosa succede se arriva un nativo),
+quali grandezze servono per far girare la fisica, chi deve stare nel progetto
+dal lato regulatory, e in quanto tempo. **È l'unica cosa che un cliente vero
+avrebbe dato e che si può dare senza averlo.**
+
+**D · L'atto due.** È quello che separa un explainer da un Site of the Year, e
+non si fa in una notte: il passaggio di consegne, la catena causale
+(propulsione → velocità → `C(V)` → le pinne muoiono da sole), il finale in cui
+spegni lo stabilizzatore e il salone sopra di te si inclina. Il numero che
+serve al finale — `S.rollioNudo` — esiste già ed è collaudato.
+
+---
+
+### Cosa faccio mentre non ci sei
+
+Nell'ordine, e mi fermo a ogni pezzo finito con il suo commit:
+
+1. **il telefono**, che è la cosa più grossa e la più misurabile;
+2. **la linea in `#fattura` e `#offerta`**;
+3. **`#offerta` operativa**;
+4. l'aggiornamento di `docs/12` e delle skill con quello che ho imparato stasera
+   — che è tanto, e per ora sta solo nei commit.
+
+Quello che **non** comincio senza di te: l'atto due. È settimane, cambia la
+struttura del sito, e va deciso insieme.
+
+---
+
 ## Il bersaglio, e perché il piano è cambiato
 
 Il progetto punta al premio annuale, non al Site of the Day. La differenza non è
