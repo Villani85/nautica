@@ -332,6 +332,39 @@ export function creaSalone (contenitore) {
   fascia.lookAt(0, 0.6, 1)
   stanza.add(fascia)
 
+  /**
+   * DUE INTERRUTTORI DI PRODUZIONE, e restano in produzione come gli altri.
+   *
+   * Servono a far produrre alla scena stessa i due ingressi della pipeline
+   * fotografica, invece di ritagliarli a mano:
+   *
+   *   `?maschera=1`  — tutto nero tranne il mare: e' la maschera dei
+   *                    finestrini, e siccome esce dalla STESSA scena combacia
+   *                    al pixel con la sagoma. Ritagliata a mano non
+   *                    combacerebbe mai, e lo scarto si vedrebbe come un alone
+   *                    attorno ai montanti.
+   *   `?rollio=N`    — inchioda l'inclinazione a N gradi. La sagoma inclinata
+   *                    va catturata a un angolo SCELTO: aspettando un picco
+   *                    della simulazione si ottiene ogni volta un angolo
+   *                    diverso, e due foto da dissolvere devono venire da
+   *                    angoli noti.
+   *
+   * Costano cinque righe e tolgono di mezzo due lavori a mano che si
+   * sbaglierebbero in silenzio.
+   */
+  const parametri = new URLSearchParams(location.search)
+  const MASCHERA = parametri.has('maschera')
+  const ROLLIO_FISSO = parametri.has('rollio') ? Number(parametri.get('rollio')) : null
+
+  if (MASCHERA) {
+    scena.environment = null
+    stanza.traverse(o => {
+      if (o.isMesh) o.material = new MeshBasicMaterial({ color: 0x000000 })
+    })
+    mare.material = new MeshBasicMaterial({ color: 0xffffff })
+    for (const l of [...scena.children].filter(o => o.isLight)) scena.remove(l)
+  }
+
   const orologio = new Clock()
   let t = 0
   let frame = 0
@@ -363,7 +396,7 @@ export function creaSalone (contenitore) {
      * ondeggiare come una scatola su un perno, invece che salire e scendere da
      * un lato come fa un ponte vero. Sono due movimenti diversi e si vede.
      */
-    const rad = MathUtils.degToRad(sim.S.rollio)
+    const rad = MathUtils.degToRad(ROLLIO_FISSO ?? sim.S.rollio)
     stanza.rotation.z = rad
     /**
      * LA TRASLAZIONE E' PICCOLA, e la prima versione era sbagliata di molto.
@@ -426,8 +459,9 @@ export function creaSalone (contenitore) {
        * sei e' appoggiata. Sotto, torna sullo schienale — e ci mette piu' tempo
        * a tornare che ad andare, come fa una persona che non si fida ancora.
        */
-      const serve = Math.min(1, Math.max(0, (Math.abs(sim.S.rollio) - 3) / 3))
-      const vel = serve > u.appoggio ? 3.0 : 0.9
+      const gradi = Math.abs(ROLLIO_FISSO ?? sim.S.rollio)
+      const serve = Math.min(1, Math.max(0, (gradi - 3) / 3))
+      const vel = ROLLIO_FISSO !== null ? 60 : (serve > u.appoggio ? 3.0 : 0.9)
       u.appoggio += (serve - u.appoggio) * Math.min(1, dt * vel)
       u.spalla.rotation.x = -0.24 + u.appoggio * 0.62
       u.spalla.rotation.y = u.lato * u.appoggio * 0.42
