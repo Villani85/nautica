@@ -307,7 +307,12 @@ export function creaSalone (contenitore) {
   const filmato = document.createElement('video')
   filmato.src = import.meta.env.BASE_URL + 'filmati/mare-fuoribordo.mp4'
   filmato.loop = true; filmato.muted = true; filmato.playsInline = true
+  /* In modalita' maschera il filmato NON si applica: serve il bianco pieno.
+     Senza questa riga il gestore `loadeddata` sovrascriveva il materiale bianco
+     con la tessitura video, e la maschera usciva col mare dentro la finestra —
+     utilizzabile con una soglia, ma ambigua proprio dove deve essere netta. */
   filmato.addEventListener('loadeddata', () => {
+    if (MASCHERA) return
     const t = new VideoTexture(filmato)
     t.colorSpace = SRGBColorSpace
     mare.material.map = t

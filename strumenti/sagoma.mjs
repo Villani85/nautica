@@ -22,9 +22,10 @@ import { mkdirSync } from 'node:fs'
  *
  * Produce tre file in `riferimenti/sagome/`:
  *
- *   salone.png          la stanza calma, sistema acceso
- *   salone-inclinato.png  la stanza a 10 gradi, con la mano gia' sul tavolo
- *   salone-maschera.png   nero ovunque tranne i finestrini
+ *   salone.png                    la stanza calma, sistema acceso
+ *   salone-maschera.png           i suoi finestrini, bianco su nero
+ *   salone-inclinato.png          la stanza a 10 gradi, mano gia' sul tavolo
+ *   salone-inclinato-maschera.png i finestrini di QUELLA posa
  *
  * La maschera esce dalla STESSA scena, quindi combacia al pixel con le altre
  * due. Ritagliata a mano non combacerebbe mai, e lo scarto si vedrebbe come un
@@ -86,9 +87,19 @@ async function cattura (query, nome) {
   await pg.close()
 }
 
+/**
+ * UNA MASCHERA PER OGNI POSA, e non una sola.
+ *
+ * La maschera segue la geometria, e la geometria ruota con la stanza: quella
+ * della stanza calma non combacia con quella inclinata di dieci gradi. Usarne
+ * una sola lascerebbe scoperto un bordo di finestrino da un lato e ne
+ * coprirebbe uno dall'altro — cioe' proprio l'alone che questo metodo esiste
+ * per evitare.
+ */
 await cattura('', 'salone.png')
+await cattura('?maschera=1', 'salone-maschera.png')
 await cattura('?rollio=10', 'salone-inclinato.png')
-await cattura('?rollio=10&maschera=1', 'salone-maschera.png')
+await cattura('?rollio=10&maschera=1', 'salone-inclinato-maschera.png')
 
 await b.close()
 preview?.kill()
