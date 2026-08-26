@@ -5,11 +5,24 @@ import { creaSimulazione } from '../src/scena/simulazione.js'
  *
  *     node strumenti/collaudo-fantasma.mjs
  *
- * COS'E'. Accanto alla nave se ne disegna una seconda, fatta dello stesso
- * spigolo dello scafo, inclinata dell'angolo che la nave avrebbe **senza
- * stabilizzatore**. Non e' un elemento nuovo che compare: a sistema spento le
- * due corse sono identiche, quindi il fantasma sta li' dall'inizio,
- * perfettamente sovrapposto e invisibile. Quando si accende, la nave si divide.
+ * ATTENZIONE A COSA PROTEGGE, e la prima stesura lo diceva male.
+ *
+ * Il fantasma era una seconda nave disegnata in scena all'angolo che avrebbe
+ * senza stabilizzatore. **Non c'e' piu'**: e' stata tolta perche' non emoziona
+ * (commit ab605f1), e questo cancello ha continuato a passare verde su un
+ * disegno che nessuno fa piu'. Un revisore l'ha visto, e aveva ragione: lasciare
+ * verde un cancello che non guarda piu' niente insegna che verde non significa
+ * niente.
+ *
+ * Quello che protegge OGGI e' il NUMERO, non il disegno: `S.rollioNudo`, il
+ * rollio che la nave avrebbe senza pinne nello stesso istante e sullo stesso
+ * mare. Si calcolava gia' — la corsa nuda gira comunque, e' il metro della
+ * riduzione — e serve al finale dell'atto due, dove spegnere lo stabilizzatore
+ * fa inclinare il salone sopra di te.
+ *
+ * E puo' fallire, che e' la condizione perche' sia un cancello: fallisce se
+ * qualcuno scrive `rollioNudo` come una scalatura del rollio vivo invece che
+ * come la sua fisica. E' proprio la bugia che la prova 2 va a cercare.
  *
  * ─── COSA VERIFICA, e perche' la prima domanda non e' quella ovvia
  *

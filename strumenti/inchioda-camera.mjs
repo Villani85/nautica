@@ -101,8 +101,42 @@ function agitazione (xa, xb) {
   return s / n
 }
 const sx = agitazione(0, W / 2), dx = agitazione(W / 2, W)
-const [XA, XB] = sx <= dx ? [0, W / 2] : [W / 2, W]
-console.log(`  agitazione: sinistra ${sx.toFixed(1)} · destra ${dx.toFixed(1)} → misuro sulla ${XA === 0 ? 'SINISTRA' : 'DESTRA'}`)
+
+/**
+ * ─── E DEVE ANCHE AVERE QUALCOSA DA MISURARE
+ *
+ * «La meta' meno agitata» non basta, e l'ha scoperto il cancello da solo su una
+ * clip nuova. Nella posa puntellata il vetro viene ANNERITO prima di comprimere
+ * — quei pixel non si vedono mai, perche' la maschera li buca, e neri costano
+ * il 60% in meno. Una regione nera e' perfettamente immobile: vince come meno
+ * agitata, e non ha un solo bordo da inseguire. Il cancello si e' fermato
+ * dicendo «bordi persi in 120 fotogrammi su 120», che e' vero e inutile.
+ *
+ * La regola completa e': fra le meta' che hanno STRUTTURA, si prende la meno
+ * agitata. La struttura si misura come il bordo stabile piu' forte che quella
+ * meta' offre; sotto una soglia bassa, quella meta' non e' un riferimento, e'
+ * una parete.
+ */
+function struttura (xa, xb) {
+  const s = new Float64Array(H).fill(Infinity)
+  for (let k = 0; k < 5; k++) {
+    const q = gradiente(fotogramma(Math.floor(k * (N - 1) / 4)), xa, xb)
+    for (let y = 10; y < H - 10; y++) s[y] = Math.min(s[y], Math.abs(q[y]))
+  }
+  let m = 0
+  for (let y = 10; y < H - 10; y++) if (Number.isFinite(s[y]) && s[y] > m) m = s[y]
+  return m
+}
+/**
+ * Il punteggio pesa le due cose insieme: quanta struttura offre quella meta',
+ * diviso quanto si agita. Una soglia secca non bastava — il vetro annerito ha
+ * un bordo fortissimo al confine col legno, quindi passava qualunque soglia pur
+ * essendo **un bordo solo**, e un riferimento ne vuole due distanti.
+ */
+const strSx = struttura(0, W / 2), strDx = struttura(W / 2, W)
+const pSx = strSx / (1 + sx), pDx = strDx / (1 + dx)
+const [XA, XB] = pSx >= pDx ? [0, W / 2] : [W / 2, W]
+console.log(`  agitazione: sinistra ${sx.toFixed(1)} · destra ${dx.toFixed(1)} · punteggio ${pSx.toFixed(1)} e ${pDx.toFixed(1)} → misuro sulla ${XA === 0 ? 'SINISTRA' : 'DESTRA'}`)
 
 /** I due bordi piu' stabili nel tempo, non i piu' forti del primo fotogramma. */
 const stabile = new Float64Array(H).fill(Infinity)

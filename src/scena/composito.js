@@ -130,11 +130,12 @@ export function creaComposito (contenitore, base) {
    * stanza con UN finestrone solo e **nessuno davanti al vetro** rende quei
    * difetti impossibili invece che rari.
    */
-  const SORGENTE = 'filmati/salone-largo.mp4'
+  const CALMA = 'filmati/salone-largo.mp4'
+  const TESA = 'filmati/salone-teso.mp4'
 
-  const filmato = (classe) => {
+  const filmato = (classe, sorgente) => {
     const v = nuovo(classe, 'video')
-    v.src = base + SORGENTE
+    v.src = base + sorgente
     v.loop = true; v.muted = true; v.playsInline = true; v.preload = 'auto'
     v.setAttribute('aria-hidden', 'true')
     v.addEventListener('loadeddata', () => {
@@ -150,7 +151,7 @@ export function creaComposito (contenitore, base) {
    * traslazione calcolata, non a occhio — l'orizzonte sta al 45,9% dell'altezza,
    * quindi scalando di 1,35 attorno al centro sale dell'1,4%.
    */
-  const mare = filmato('composito__mare')
+  const mare = filmato('composito__mare', CALMA)
 
   /**
    * 2 · LA STANZA. Ruota col rollio vero, e la maschera le buca il vetro.
@@ -158,10 +159,35 @@ export function creaComposito (contenitore, base) {
    * NERO. Scritta nel verso intuitivo la stanza comparirebbe solo dentro il
    * finestrino — gia' successo una volta.
    */
-  const stanza = filmato('composito__stanza')
+  const stanza = filmato('composito__stanza', CALMA)
   const m = `url(${base}salone/finestrone.png)`
   stanza.style.webkitMaskImage = m
   stanza.style.maskImage = m
+
+  /**
+   * 3 · LA POSA PUNTELLATA. Stessa inquadratura, stessa maschera, e compare
+   * sopra la calma quando la stanza rolla davvero.
+   *
+   * E' l'ultimo pezzo che mancava al capitolo. Senza, le persone bevevano
+   * tranquille mentre la stanza sbandava: geometricamente corretto ed
+   * emotivamente falso, e per un SOTY e' il difetto che uccide — proprio quando
+   * dovrebbe crescere il disagio, la gente smette di reagire.
+   *
+   * DUE DIFETTI NOTI, scritti invece che sperati:
+   *
+   *   1. nella clip calma la donna tiene un TUMBLER, in questa un CALICE.
+   *      Alla dissolvenza il bicchiere cambia tipo. E' piccolo in campo e la
+   *      dissolvenza dura tre decimi, ma c'e'. Su sei generazioni nessuna ha
+   *      tenuto lo stesso bicchiere per dieci secondi;
+   *   2. la clip dura sei secondi contro i nove della calma. Si e' presa la
+   *      CODA dell'originale, perche' nei primi tre secondi il bicchiere si
+   *      trasformava. La posa puntellata deve TENERE, non trasformarsi: la coda
+   *      e' anche la parte giusta, non solo quella pulita.
+   */
+  const tesa = filmato('composito__stanza composito__stanza--tesa', TESA)
+  tesa.style.webkitMaskImage = m
+  tesa.style.maskImage = m
+  tesa.style.opacity = '0'
 
   /**
    * I due elementi puntano allo STESSO file: il browser lo scarica una volta
@@ -199,17 +225,44 @@ export function creaComposito (contenitore, base) {
   contenitore.setAttribute('aria-label',
     'The saloon of a large yacht in a force four sea. Through a single wide window the ocean is running with whitecaps under heavy cloud, and the horizon stays level. Inside, two people sit talking over drinks in warm lamplight.')
 
-  let ultimo = null
+  /**
+   * ─── LA POSA HA MEMORIA, e senza sarebbe una bugia psicologica.
+   *
+   * Scegliere la posa dall'angolo ISTANTANEO sembra ragionevole e non lo e',
+   * perche' una nave che rolla **attraversa lo zero due volte per ciclo**.
+   * Misurato sul capitolo vecchio, ventidue secondi a dieci gradi di ampiezza:
+   *
+   *     ---.....-TTTT-..TTTTT..TTTTT..TTTTT-..TTTTTT.
+   *
+   * Cinque volte le due persone tornavano completamente serene mentre la stanza
+   * sbandava, per irrigidirsi un secondo dopo. Nessuno si rilassa a meta' di
+   * un'onda: si resta all'erta finche' non si e' convinti che sia finita. E a
+   * schermo non si legge come sollievo, si legge come due clip che lampeggiano.
+   */
+  const ACCENDE = 5.0     // gradi: sopra questo, ci si irrigidisce
+  const CALMO = 2.0       // gradi: sotto questo si comincia a contare la calma
+  const CONVINCE = 1.6    // secondi di calma prima di rilassarsi davvero
+  const VELOCITA = 8      // ln10/8 = 0,29 s per passare: quanto ci mette un braccio
 
-  function aggiorna (gradi) {
-    stanza.style.transform = `rotate(${gradi.toFixed(2)}deg)`
-    const teso = Math.abs(gradi) > 4
-    if (teso !== ultimo) {
-      ultimo = teso
-      contenitore.dataset.stato = teso ? 'inclinato' : 'dritto'
-    }
+  let allerta = false
+  let calmaDa = 0
+  let q = 0
+
+  function aggiorna (gradi, dt = 1 / 60) {
+    const g = Math.abs(gradi)
+    if (g > ACCENDE) { allerta = true; calmaDa = 0 }
+    else if (g < CALMO) { calmaDa += dt; if (calmaDa > CONVINCE) allerta = false }
+    else calmaDa = 0
+
+    q += ((allerta ? 1 : 0) - q) * Math.min(1, dt * VELOCITA)
+
+    const r = `rotate(${gradi.toFixed(2)}deg)`
+    stanza.style.transform = r
+    tesa.style.transform = r
+    tesa.style.opacity = String(q)
+    contenitore.dataset.posa = q.toFixed(3)
   }
 
   aggiorna(0)
-  return { aggiorna, mare }
+  return { aggiorna, mare, posa: () => q }
 }

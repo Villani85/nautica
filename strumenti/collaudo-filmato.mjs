@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { readFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -65,10 +65,41 @@ import { join } from 'node:path'
  * persi invece di far finta di aver misurato.
  */
 
-const file = process.argv[2]
+/**
+ * SENZA ARGOMENTO COLLAUDA I FILMATI DEL SITO, invece di stampare l'uso.
+ *
+ * Chiedendo un argomento obbligatorio, questo cancello restava fuori dal giro
+ * automatico — e la regola «tutti i collaudi prima di ogni commit» diventava
+ * impossibile da rispettare alla lettera. Una regola che non si puo' rispettare
+ * si comincia a saltare, e poi si saltano anche le altre.
+ *
+ * Quindi senza argomento gira su tutto cio' che sta in `public/filmati/`: e'
+ * quello che il sito pubblica davvero. Con un argomento collauda quel file, e
+ * serve a provare una clip PRIMA di montarla.
+ */
+import { readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const RADICE = fileURLToPath(new URL('..', import.meta.url))
+let file = process.argv[2]
 if (!file) {
-  console.error('  uso: node strumenti/collaudo-filmato.mjs <file.mp4>')
-  process.exit(2)
+  const dir = RADICE + 'public/filmati'
+  let elenco = []
+  try { elenco = readdirSync(dir).filter(f => f.endsWith('.mp4')) } catch { /* cartella assente */ }
+  if (!elenco.length) {
+    console.error('  ROTTO  nessun filmato in public/filmati: il capitolo del salone non ha i suoi asset.')
+    process.exit(1)
+  }
+  let rotti = 0
+  for (const f of elenco) {
+    console.log(`  ──── ${f}`)
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), dir + '/' + f], { stdio: 'inherit' })
+    if (r.status !== 0) rotti++
+  }
+  console.log()
+  if (rotti) { console.error(`  ${rotti} filmato/i non passano.`); process.exit(1) }
+  console.log('  TUTTO A POSTO')
+  process.exit(0)
 }
 
 const SCALA = 0.005     // 0,5%: sotto questo la maschera dei finestrini regge
@@ -172,9 +203,43 @@ function agitazione (xa, xb) {
   }
   return s / n
 }
-const sinistra = agitazione(0, W / 2), destra = agitazione(W / 2, W)
-const [XA, XB] = sinistra <= destra ? [0, W / 2] : [W / 2, W]
-console.log(`  agitazione: meta' sinistra ${sinistra.toFixed(1)} · destra ${destra.toFixed(1)} → misuro sulla ${XA === 0 ? 'SINISTRA' : 'DESTRA'}`)
+const sx = agitazione(0, W / 2), dx = agitazione(W / 2, W)
+
+/**
+ * ─── E DEVE ANCHE AVERE QUALCOSA DA MISURARE
+ *
+ * «La meta' meno agitata» non basta, e l'ha scoperto il cancello da solo su una
+ * clip nuova. Nella posa puntellata il vetro viene ANNERITO prima di comprimere
+ * — quei pixel non si vedono mai, perche' la maschera li buca, e neri costano
+ * il 60% in meno. Una regione nera e' perfettamente immobile: vince come meno
+ * agitata, e non ha un solo bordo da inseguire. Il cancello si e' fermato
+ * dicendo «bordi persi in 120 fotogrammi su 120», che e' vero e inutile.
+ *
+ * La regola completa e': fra le meta' che hanno STRUTTURA, si prende la meno
+ * agitata. La struttura si misura come il bordo stabile piu' forte che quella
+ * meta' offre; sotto una soglia bassa, quella meta' non e' un riferimento, e'
+ * una parete.
+ */
+function struttura (xa, xb) {
+  const s = new Float64Array(H).fill(Infinity)
+  for (let k = 0; k < 5; k++) {
+    const q = gradiente(fotogramma(Math.floor(k * (N - 1) / 4)), xa, xb)
+    for (let y = 10; y < H - 10; y++) s[y] = Math.min(s[y], Math.abs(q[y]))
+  }
+  let m = 0
+  for (let y = 10; y < H - 10; y++) if (Number.isFinite(s[y]) && s[y] > m) m = s[y]
+  return m
+}
+/**
+ * Il punteggio pesa le due cose insieme: quanta struttura offre quella meta',
+ * diviso quanto si agita. Una soglia secca non bastava — il vetro annerito ha
+ * un bordo fortissimo al confine col legno, quindi passava qualunque soglia pur
+ * essendo **un bordo solo**, e un riferimento ne vuole due distanti.
+ */
+const strSx = struttura(0, W / 2), strDx = struttura(W / 2, W)
+const pSx = strSx / (1 + sx), pDx = strDx / (1 + dx)
+const [XA, XB] = pSx >= pDx ? [0, W / 2] : [W / 2, W]
+console.log(`  agitazione: sinistra ${sx.toFixed(1)} · destra ${dx.toFixed(1)} · punteggio ${pSx.toFixed(1)} e ${pDx.toFixed(1)} → misuro sulla ${XA === 0 ? 'SINISTRA' : 'DESTRA'}`)
 
 const CAMPIONI_STABILI = 8
 const stabile = new Float64Array(H).fill(Infinity)

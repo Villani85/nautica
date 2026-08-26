@@ -212,7 +212,17 @@ console.log(`  finestrone completo: ${(100 * area2 / (W * H)).toFixed(1)}%`)
  * non si vede — che un filo di stanza che finisce nel mare, dove si vedrebbe
  * ruotare.
  */
-const RITIRO = 3
+/**
+ * NESSUN RITIRO, e la prima stesura ne aveva tre pixel con una motivazione
+ * sbagliata: «meglio un filo di vetro che resta nella stanza, li' le due
+ * sorgenti sono la stessa clip quindi non si vede». **Non e' vero**: la copia
+ * del mare e' ingrandita del 35%, quindi un anello di vetro non scalato sopra
+ * il vetro scalato si vede eccome — a schermo era un filo chiaro lungo tutto il
+ * contorno del finestrone.
+ *
+ * Il bordo giusto e' quello misurato, senza aggiunte in nessuno dei due versi.
+ */
+const RITIRO = 0
 const finale = Buffer.alloc(W * H, 255)
 let buco = 0
 for (let y = RITIRO; y < H - RITIRO; y++) {
