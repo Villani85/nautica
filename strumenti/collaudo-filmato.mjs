@@ -149,11 +149,25 @@ function bordo (q, y0, raggio) {
  * generale, non una toppa per questa inquadratura: **la camera si misura su
  * cio' che non si muove da solo**.
  */
+/**
+ * ─── L'AGITAZIONE SI MISURA FRA FOTOGRAMMI VICINI, e la prima stesura li
+ * prendeva lontani.
+ *
+ * La regola e' giusta — la camera si misura su cio' che non si muove da solo —
+ * ma il confronto era sulla scala di tempo sbagliata. Una carrellata e' LENTA:
+ * su dieci secondi sposta l'interno piu' di quanto il mare sposti se stesso, e
+ * il conto sceglieva la meta' del MARE, prendendo l'orizzonte come riferimento
+ * di camera. Su una clip con carrellata forte l'ho visto stampare 15,8% di
+ * scala dopo la correzione, cioe' peggio di prima.
+ *
+ * Fra fotogrammi vicini le due cose si separano da sole: il mare cambia in un
+ * ventesimo di secondo, la camera no. Stessa regola, scala di tempo giusta.
+ */
 function agitazione (xa, xb) {
   let s = 0, n = 0
-  const a = fotogramma(0)
-  for (let k = 1; k < 6; k++) {
-    const b = fotogramma(Math.floor(k * (N - 1) / 5))
+  const passo = Math.max(1, Math.round(N / 40))
+  for (let k = passo; k < N; k += passo) {
+    const a = fotogramma(k - passo), b = fotogramma(k)
     for (let y = 0; y < H; y += 3) for (let x = xa; x < xb; x += 3) { s += Math.abs(a[y * W + x] - b[y * W + x]); n++ }
   }
   return s / n
