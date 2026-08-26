@@ -40,3 +40,49 @@ corroso, nella seconda tornito. La differenza fra le due è una riga, il nodo
 
 Smussi e rugosità **non** bastano da soli: il provino 1 li aveva e sembrava CAD.
 Servono insieme riflessi con una forma, anisotropia e variazione direzionale.
+
+
+---
+
+## Il sistema vero — `sistema.py`
+
+`cuoci.py` importa la geometria del sito e la rende. Alla misura di una
+fotografia si legge come **pezzi sparsi**, e la causa non è la resa: quella
+geometria è uno **schema**, distanziato apposta perché in sezione si capisca chi
+fa cosa. Un attuatore vero è un blocco compatto, imbullonato, con tubazioni e
+cavi.
+
+`sistema.py` costruisce la macchina vera **attorno alle quote vincolate**.
+
+### La regola che tiene onesto il sito
+
+**Le quote da cui dipende la fisica non si toccano**: raggio e lunghezza
+dell'albero, apertura e corda della pinna, braccio della leva, posizione della
+flangia e del premistoppa, punto di attacco sul ginocchio di carena. Sono quelle
+che `simulazione.js` usa per calcolare la riduzione. Se si cambiano per far
+sembrare il pezzo più bello, **il numero che il sito dichiara smette di riferirsi
+a ciò che mostra** — ed è la bugia peggiore possibile in un progetto la cui tesi
+è l'onestà tecnica.
+
+Nel file sono marcate `VINCOLATA`, una per una.
+
+### Cosa si aggiunge, e perché ognuna
+
+| pezzo | perché |
+|---|---|
+| **fasciame al minio** | un attuatore senza la lamiera a cui è imbullonato non è installato, è esposto. Dice *dove siamo* |
+| **doppiatore** attorno al foro | la lamiera si ispessisce dove è forata, altrimenti si strappa |
+| **madieri e pagliolo** | senza un piano d'appoggio si è in un vuoto, non in un locale macchine |
+| **corpo fuso in un pezzo** | nello schema erano motore, riduttore e culla separati. È questo a cambiare tutto |
+| **nervature** | un getto le ha sempre, ed è ciò che si legge come «pezzo pesante» |
+| **coperchio d'ispezione** | dice che il pezzo si apre, cioè che qualcuno ci mette le mani |
+| **tubazioni e cavi** | nessuna macchina a bordo è senza qualcosa che la raggiunge |
+
+### La luce
+
+Dentro una carena non entra la luce di un capannone. L'HDRI resta, **smorzato a
+0,30**: serve per i **riflessi**, non per illuminare. L'illuminazione la danno
+una plafoniera fredda in alto e un rimbalzo caldo dal basso.
+
+E la vernice vuole il rumore **isotropo**, al contrario del metallo: la vernice
+è colata, non tornita, quindi non ha un verso.
