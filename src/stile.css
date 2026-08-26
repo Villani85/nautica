@@ -471,28 +471,35 @@ p{max-width:60ch}
    che il capitolo racconta non compariva mai.
    Alzando il riquadro del 12% l'orizzonte scende al 38%, cioe' dentro i vetri.
    Sotto resta scoperto, ma sotto c'e' la fotografia della stanza, che e' opaca. */
-/* Il filmato del mare: fermo, e alzato quel tanto che serve perche' l'orizzonte
-   cada DENTRO la fascia dei finestrini invece che sul suo bordo inferiore.
+/* IL FILMATO DEL MARE: fermo, e a fotogramma intero.
 
-   Il conto, misurato e non stimato: la striscia e' 1024x142 con l'orizzonte al
-   57,7% dell'altezza; `object-fit: cover` la ingrandisce 3,7 volte per riempire
-   il palco (l'eccedenza e' tutta orizzontale, quindi `object-position` non ha
-   nessuna presa verticale — l'unico comando e' `top`). Con -12% l'orizzonte
-   cadeva a 240 px su un palco di 525, e la fascia dei vetri sta fra 120 e 244:
-   si vedeva solo cielo, mentre la didascalia diceva che l'orizzonte e' l'unica
-   cosa ferma. Un sito che dichiara di misurare non puo' contraddirsi
-   nell'immagine che sta accanto alla frase.
+   Prima era una striscia 1024x142 — l orizzonte messo a meta altezza ritagliando
+   via l 80% dell inquadratura — e  la ingrandiva **3,7 volte**
+   per riempire il palco. Il committente l ha detto in una riga: «il mare e poco
+   realistico». Non era il filmato: era mush ingrandito quattro volte.
 
-   Con -23% l'orizzonte scende a 182, cioe' al centro della fascia. L'altezza
-   resta 100%: cambiarla cambierebbe la scala di `cover` e quindi rimuoverebbe
-   l'orizzonte di nuovo. */
+   A fotogramma intero (1024x576) l ingrandimento scende a **1,26x**, e il
+   dettaglio delle creste torna. Costa 280 KB invece di 65, e li vale: e l unica
+   superficie del sito che deve sembrare vera senza discussione, perche e quella
+   contro cui si misura tutto il resto.
+
+   E adesso  ha di nuovo presa verticale — con la striscia non
+   ne aveva, perche l eccedenza di  era tutta orizzontale e l unico
+   comando restava . Quindi la posizione dell orizzonte si DICHIARA invece
+   di trovarla spostando il riquadro:
+
+     l orizzonte del ciclo sta al 43,3% dell altezza sorgente;
+      la porta a 726 px in un riquadro di 525, quindi 201 px di eccedenza;
+     il riquadro parte a -12% = -63 px, e la fascia dei vetri ha il centro a 182.
+
+     726 * 0,433 - 201 * Y = 182 + 63    ->   Y = 0,345
+
+   Se cambia il palco o il filmato, si rifa questo conto: e tre numeri misurabili,
+   non una taratura a occhio. */
 .composito__mare{
-  position:absolute;left:-12%;width:124%;top:-23%;height:100%;
-  object-fit:cover;pointer-events:none;
+  position:absolute;left:-12%;width:124%;top:-12%;height:100%;
+  object-fit:cover;object-position:50% 35%;pointer-events:none;
 }
-/* Le due pose sono piu' grandi del riquadro: ruotando, una fotografia grande
-   quanto la cornice scoprirebbe gli angoli. Il ritaglio se lo prende la
-   cornice, che ha `overflow:hidden`. */
 .composito__stanza{
   position:absolute;inset:-9%;width:118%;height:118%;
   background-size:cover;background-position:center;

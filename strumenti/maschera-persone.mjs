@@ -1,178 +1,311 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import { readFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /**
- * RICAVA LA MASCHERA DELLE PERSONE dal confronto fra le due pose.
+ * RICAVA IL RITAGLIO DELLE PERSONE, confrontando la posa calma con quella tesa.
  *
- *     node strumenti/maschera-persone.mjs calma.jpg tesa.jpg persone-maschera.png
+ *     node strumenti/maschera-persone.mjs <calma.mp4|calma.jpg> <tesa.jpg> <uscita.png>
  *
  * PERCHE' SERVE, ed e' un difetto che ha visto il committente prima di me.
  *
- * Le due fotografie sono generate una dall'altra, quindi in teoria differiscono
- * solo per la posa. **In pratica no.** Confrontandole pixel per pixel, oltre
- * alle due figure cambiano anche i cuscini e il bordo del tavolo: il modello
- * non ricopia, rigenera, e quello che rigenera non torna mai identico.
+ * Le due pose sono generate una dall'altra, quindi in teoria differiscono solo
+ * per le persone. **In pratica no.** Oltre alle due figure cambiano i cuscini e
+ * il bordo del tavolo: il modello non ricopia, rigenera, e cio' che rigenera non
+ * torna mai identico. Dissolvendo le due immagini INTERE i mobili si
+ * trasformavano — *«i cuscini sono diversi»*. Non era un difetto della
+ * dissolvenza: si stava dissolvendo troppo.
  *
- * Dissolvendo le due immagini INTERE, durante la transizione i cuscini si
- * trasformano — e a transizione finita la stanza ha mobili leggermente diversi.
- * Non e' un difetto della dissolvenza: e' che si stava dissolvendo troppo.
+ * Quindi la stanza viene sempre dalla posa calma, e solo le persone si
+ * scambiano. Questo file dice DOVE sono le persone.
  *
- * Quindi la stanza viene SEMPRE dalla posa calma, e solo le persone si
- * scambiano. La maschera che dice dove sono le persone si ricava dalla
- * **differenza** fra le due immagini: dove sono uguali non c'e' niente da
- * sostituire, dove differiscono c'e' un corpo che si e' mosso.
+ * ─── LA PRIMA VERSIONE ERA UN BOZZOLO, E IL MOTIVO NON ESISTE PIU'
  *
- * Si tengono solo le due macchie piu' grandi. Le differenze sparse — un cuscino
- * che cambia grana, un bordo che si sposta di due pixel — sono proprio quelle
- * che vanno buttate.
+ * Con due fotografie FERME il confronto ha un punto cieco severo: dove la
+ * camicia bianca della donna sta sul divano crema, la differenza e' di pochi
+ * punti — sotto qualunque soglia che non raccolga anche il rumore di
+ * rigenerazione di tutta la stanza. **Un ritaglio basato sulla differenza
+ * fallisce proprio dove chiaro sta su chiaro**, che nel salone di uno yacht e'
+ * quasi ovunque, e restava un buco dentro la sagoma della persona attraverso
+ * cui la si vedeva ancora.
+ *
+ * Per turare quei buchi dilatavo di 46 pixel e sfumavo di 14. Funzionava, e
+ * copriva il **20,7%** dell'immagine: un bozzolo che invadeva braccioli,
+ * pavimento e tavolo, e li congelava. Il committente l'ha visto: «poco precisa».
+ *
+ * Adesso la posa calma e' un FILMATO. Le stesse persone nello stesso posto, ma
+ * per nove secondi: quei pixel ciechi cambiano nel tempo. Campionando il
+ * filmato invece di guardare un fotogramma solo, la differenza li vede.
+ *
+ * ─── SOGLIA DOPPIA, non una
+ *
+ * Una soglia sola costringe a scegliere fra due mali: alta perde la camicia
+ * chiara, bassa raccoglie il rumore di mezza stanza. Due soglie non scelgono:
+ *
+ *   ALTA   dove la differenza e' fuori discussione — capelli, maglione scuro,
+ *          pantaloni. Sono i semi;
+ *   BASSA  dove la differenza c'e' ma e' debole. Si tiene **solo se e'
+ *          attaccata a un seme**.
+ *
+ * E' la stessa idea del rilevatore di bordi di Canny, e qui vale per la stessa
+ * ragione: un pixel debole in mezzo al nulla e' rumore, un pixel debole
+ * attaccato a una spalla e' la manica. Il ritaglio segue la sagoma invece di
+ * inscatolarla, la dilatazione torna a fare solo il bordo morbido, e la stanza
+ * congelata si riduce a quello che c'e' davvero sotto una persona.
  */
 
-const [aFile, bFile, uscita] = process.argv.slice(2)
-if (!aFile || !bFile || !uscita) {
-  console.error('  uso: node strumenti/maschera-persone.mjs <calma.jpg> <tesa.jpg> <maschera.png>')
+const [calmaFile, tesaFile, uscita, movimentoFile] = process.argv.slice(2)
+if (!calmaFile || !tesaFile || !uscita) {
+  console.error('  uso: node strumenti/maschera-persone.mjs <calma.jpg> <tesa.jpg> <uscita.png> [movimento.mp4]')
   process.exit(2)
 }
 
-const dim = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
-  '-show_entries', 'stream=width,height', '-of', 'csv=p=0:s=x', aFile]).toString().trim()
-const [W, H] = dim.split('x').map(Number)
+const misura = (f) => execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+  '-show_entries', 'stream=width,height', '-of', 'csv=p=0:s=x', f]).toString().trim().split('x').map(Number)
+const durata = (f) => Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
+  'format=duration', '-of', 'csv=p=0', f]).toString().trim())
 
-const grezzo = (f) => {
+const [W, H] = misura(tesaFile)
+
+/**
+ * DAL FILMATO SI PRENDONO PIU' FOTOGRAMMI, e la differenza si tiene al MASSIMO
+ * su tutti. Se una persona in un istante copre un pixel e in un altro no, quel
+ * pixel appartiene comunque alla regione: il ritaglio deve coprire l'UNIONE di
+ * tutte le posizioni che il corpo assume, altrimenti la posa tesa non riesce a
+ * cancellare quella calma nei fotogrammi in cui si e' spostata.
+ */
+const CAMPIONI = 16
+
+function fotogrammi (f) {
+  const [w, h] = misura(f)
+  const filmato = /\.(mp4|mov|webm|mkv)$/i.test(f)
   const o = join(tmpdir(), 'mp-' + Math.abs(f.length * 7919) + '-' + Date.now() + '.rgb')
-  execFileSync('ffmpeg', ['-loglevel', 'error', '-i', f, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-y', o])
-  const d = readFileSync(o); unlinkSync(o); return d
+  const args = ['-loglevel', 'error', '-i', f]
+  if (filmato) {
+    const passo = Math.max(1, Math.round(durata(f) * 24 / CAMPIONI))
+    args.push('-vf', `select=not(mod(n\\,${passo})),scale=${W}:${H}`, '-vsync', '0')
+  } else {
+    args.push('-vf', `scale=${W}:${H}`, '-frames:v', '1')
+  }
+  args.push('-f', 'rawvideo', '-pix_fmt', 'rgb24', '-y', o)
+  execFileSync('ffmpeg', args)
+  const d = readFileSync(o); unlinkSync(o)
+  if (w !== W || h !== H) console.log(`  (${f.split(/[\\/]/).pop()} era ${w}x${h}, riscalato a ${W}x${H})`)
+  return { d, n: Math.floor(d.length / (W * H * 3)) }
 }
-const A = grezzo(aFile), B = grezzo(bFile)
 
-const SOGLIA = 34   // differenza media per canale sopra cui si considera "cambiato"
+const calma = fotogrammi(calmaFile)
+const tesa = fotogrammi(tesaFile)
+console.log(`  posa calma: ${calma.n} fotogrammi · posa tesa: ${tesa.n}`)
 
-const cambiato = new Uint8Array(W * H)
-for (let y = 0; y < H; y++) {
-  for (let x = 0; x < W; x++) {
-    const i = (y * W + x) * 3
-    const d = (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2])) / 3
-    cambiato[y * W + x] = d > SOGLIA ? 1 : 0
+/** La differenza massima fra un qualunque fotogramma calmo e la posa tesa. */
+const diff = new Uint8Array(W * H)
+for (let k = 0; k < calma.n; k++) {
+  const off = k * W * H * 3
+  for (let p = 0; p < W * H; p++) {
+    const i = off + p * 3, j = p * 3
+    const v = (Math.abs(calma.d[i] - tesa.d[j]) +
+               Math.abs(calma.d[i + 1] - tesa.d[j + 1]) +
+               Math.abs(calma.d[i + 2] - tesa.d[j + 2])) / 3
+    if (v > diff[p]) diff[p] = Math.min(255, v)
   }
 }
 
 /**
- * NON LA DIFFERENZA PIXEL PER PIXEL: DUE REGIONI.
+ * ─── E SI UNISCE DOVE IL FILMATO SI MUOVE, che e' una regione diversa
  *
- * DUE TENTATIVI SBAGLIATI PRIMA DI CAPIRE, e il secondo era istruttivo.
+ * Il ritaglio dalle due fotografie copre dove le due POSE differiscono. Basta
+ * finche' la posa calma e' una fotografia. Con un filmato non basta piu': le
+ * persone respirano e gesticolano, e quel movimento esce dal ritaglio. A schermo
+ * si vedeva **un filo scuro ondulato sulla spalliera**, dietro la spalla
+ * dell uomo: era il suo braccio calmo, che nel filmato si sposta di qualche
+ * pixel e spunta da sotto il bordo.
  *
- * Primo: tenere le due macchie di differenza piu' grandi. A schermo comparivano
- * **quattro persone** — si prendevano le figure della posa tesa e si lasciavano
- * scoperte quelle della calma, che nella differenza sono macchie separate.
+ * Il primo tentativo e' stato costruire tutto il ritaglio dal filmato contro la
+ * posa tesa, e ha prodotto una maschera che seguiva **i montanti dei finestrini
+ * e il bordo del tavolo** invece dei corpi: filmato e posa tesa sono due
+ * generazioni diverse e non combaciano — nella fascia dei vetri c e l 1,5% di
+ * scala di scarto — e qualche pixel di disallineamento su un montante nero
+ * contro un vetro chiaro da' una differenza enorme, mentre una persona chiara su
+ * un divano chiaro ne da' una piccola. I semi finivano sull arredamento.
  *
- * Secondo: tenere tutte le macchie sopra una soglia. Ancora quattro persone. E
- * qui sta il motivo vero, che una soglia piu' bassa non risolve: dove la donna
- * calma siede, la sua **camicia bianca sta su un divano crema**. La differenza
- * fra i due e' di pochi punti — sotto qualunque soglia che non raccolga anche
- * il rumore di rigenerazione di tutta la stanza. Un ritaglio basato sulla
- * differenza **fallisce proprio dove chiaro sta su chiaro**, che nel salone di
- * uno yacht e' quasi ovunque.
+ * Il filmato pero' e' generato DALLA posa calma, e con quella combacia: il 90°
+ * percentile della differenza e' 9 contro 23. Quindi le due domande si fanno
+ * separatamente e si uniscono i risultati:
  *
- * Quindi non si insegue la sagoma: si prendono DUE REGIONI generose attorno
- * alle figure, coi bordi sfumati. Il divano dentro quelle regioni viene dalla
- * posa tesa invece che dalla calma, e va benissimo — e' lo stesso divano
- * fotografato due volte, e le piccole differenze di grana stanno dove c'e'
- * comunque una persona sopra. Fuori da li' la stanza non cambia mai di un
- * pixel, ed e' quello che il committente aveva chiesto vedendo i cuscini
- * diversi.
+ *   dove le due POSE differiscono      →  calma.jpg contro tesa.jpg
+ *   dove il FILMATO si muove           →  ogni fotogramma contro IL PRIMO
+ *                                         FOTOGRAMMA DELLO STESSO FILMATO
+ *
+ * Il secondo confronto e' interno: stessa sorgente, stessa codifica, stesso
+ * ricampionamento, quindi **nessun disallineamento possibile per costruzione**.
+ * Confrontarlo con calma.jpg sembrava innocuo — sono parenti stretti, il 90°
+ * percentile della differenza e' 9 contro 23 — e invece i montanti tornavano
+ * nella maschera lo stesso: il filmato e' 1024x576 riscalato a 1280x714, e il
+ * ricampionamento sposta di una frazione di pixel proprio i bordi ad altissimo
+ * contrasto. Un quarto di pixel su un montante nero contro un vetro chiaro vale
+ * piu' di una persona intera.
  */
+if (movimentoFile) {
+  const mov = fotogrammi(movimentoFile)
+  const base = mov.d   // il PRIMO FOTOGRAMMA DEL FILMATO, non la fotografia
+  for (let k = 1; k < mov.n; k++) {
+    const off = k * W * H * 3
+    for (let p = 0; p < W * H; p++) {
+      const i = off + p * 3, j = p * 3
+      const v = (Math.abs(mov.d[i] - base[j]) +
+                 Math.abs(mov.d[i + 1] - base[j + 1]) +
+                 Math.abs(mov.d[i + 2] - base[j + 2])) / 3
+      if (v > diff[p]) diff[p] = Math.min(255, v)
+    }
+  }
+  console.log(`  movimento: ${mov.n} fotogrammi confrontati col primo`)
+}
+
+const ALTA = 40         // differenza fuori discussione: sono i semi
+const BASSA = 14        // differenza debole: si tiene solo se attaccata a un seme
+const PROFONDITA = 40   // e solo entro questa distanza dal seme
+const SEME = 400        // px: un seme piu' piccolo di cosi non e un corpo
+const MINIMA = 1200     // px: la regione finita deve valere almeno questo
+
 /**
- * IL RIQUADRO SI PRENDE DALLA MACCHIA PIU' GRANDE DI OGNI LATO, non da tutti i
- * pixel cambiati. Prendendo tutti, il rumore sparso sui cuscini allargava i
- * riquadri fino a coprire il **71,5%** dell'immagine: cioe' si tornava a
- * scambiare quasi tutta la stanza, che e' il difetto da cui si era partiti.
+ * ─── E LA CRESCITA HA UN LIMITE DI DISTANZA, che la prima stesura non aveva
+ *
+ * Senza limite la crescita e dilagata: una regione sola da **175.842 px**, il
+ * 19% dell immagine, e la maschera finita copriva il 28,4% — peggio del bozzolo
+ * che doveva sostituire. Non era un offset globale fra filmato e fotografia: la
+ * mediana della differenza e **3**, la stanza combacia benissimo. Era che il
+ * 16% di pixel sopra la soglia bassa — rumore di compressione lungo tutti i
+ * bordi dell arredamento — forma una **ragnatela connessa**, e la crescita ci
+ * cammina sopra da una persona all altra attraversando tutta la stanza.
+ *
+ * Alzare la soglia bassa non risolve: a 30 resta il 7,6% dei pixel, comparabile
+ * con le persone stesse, e la ragnatela regge lo stesso. Quello che distingue
+ * un pixel debole utile da uno inutile non e quanto e forte, e **quanto e
+ * lontano dal seme**: la camicia chiara sul divano crema sta dentro la sagoma
+ * di una persona, quindi a poche decine di pixel dai capelli o dai pantaloni.
+ * Il rumore che collega due divani no.
  */
-const etichetta = new Int32Array(W * H).fill(-1)
-const aree = []
+const distanza = new Int16Array(W * H).fill(-1)
 const coda = new Int32Array(W * H)
-for (let p = 0; p < W * H; p++) {
-  if (!cambiato[p] || etichetta[p] >= 0) continue
-  const e = aree.length
+const dentro = new Uint8Array(W * H)
+
+/** Prima i semi: le macchie forti, e solo quelle di taglia credibile. */
+const visto = new Uint8Array(W * H)
+const semi = []
+for (let s = 0; s < W * H; s++) {
+  if (diff[s] <= ALTA || visto[s]) continue
   let testa = 0, fine = 0
-  coda[fine++] = p; etichetta[p] = e
-  let n = 0, x0 = W, x1 = 0, y0 = H, y1 = 0
+  const gruppo = []
+  coda[fine++] = s; visto[s] = 1
   while (testa < fine) {
-    const q = coda[testa++]; n++
+    const q = coda[testa++]; gruppo.push(q)
     const qx = q % W, qy = (q / W) | 0
-    if (qx < x0) x0 = qx; if (qx > x1) x1 = qx
-    if (qy < y0) y0 = qy; if (qy > y1) y1 = qy
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = qx + dx, ny = qy + dy
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
       const r = ny * W + nx
-      if (cambiato[r] && etichetta[r] < 0) { etichetta[r] = e; coda[fine++] = r }
+      if (!visto[r] && diff[r] > ALTA) { visto[r] = 1; coda[fine++] = r }
     }
   }
-  aree.push({ e, n, x0, x1, y0, y1, cx: (x0 + x1) / 2 })
+  if (gruppo.length >= SEME) semi.push(gruppo)
+}
+if (!semi.length) {
+  console.error(`  ROTTO  nessun seme sopra ${SEME} px: le due pose sono troppo simili, o ALTA e troppo alta.`)
+  process.exit(1)
+}
+console.log(`  ${semi.length} semi sopra ${SEME} px: ${semi.map(g => g.length).sort((a, b) => b - a).slice(0, 6).join(", ")}`)
+
+/** Poi la crescita, in ampiezza, con la distanza che si porta dietro. */
+let testa = 0, fine = 0
+for (const g of semi) for (const p of g) { distanza[p] = 0; dentro[p] = 1; coda[fine++] = p }
+while (testa < fine) {
+  const q = coda[testa++]
+  if (distanza[q] >= PROFONDITA) continue
+  const qx = q % W, qy = (q / W) | 0
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const nx = qx + dx, ny = qy + dy
+    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
+    const r = ny * W + nx
+    if (dentro[r] || diff[r] <= BASSA) continue
+    dentro[r] = 1; distanza[r] = distanza[q] + 1; coda[fine++] = r
+  }
 }
 
-/**
- * SI TENGONO LE MACCHIE DI TAGLIA UMANA E SI DILATANO FINO A SALDARSI.
- *
- * Il riquadro rettangolare era il tentativo precedente e prendeva sempre troppo:
- * basta che una macchia sia il bordo del tavolo perche' il rettangolo scenda
- * fino al pavimento — **50,9% dell'immagine**, cioe' di nuovo mezza stanza
- * scambiata. Un rettangolo non conosce la forma di quello che contiene.
- *
- * La dilatazione la conosce. Ogni macchia si allarga di un raggio ampio: le due
- * posizioni della stessa persona — quella calma piu' indietro, quella tesa piu'
- * avanti — si toccano e diventano una sola regione, e il resto della stanza non
- * viene toccato perche' li' non c'e' niente da dilatare.
- *
- * IL RAGGIO DEV'ESSERE AMPIO, e la ragione non e' cosmetica. Con raggio 22 si
- * vedevano ancora quattro persone: dove la camicia bianca della donna calma sta
- * sul divano crema **non c'e' differenza da dilatare**, quindi restava un buco
- * dentro la sua sagoma e attraverso quel buco la si vedeva. Il raggio serve a
- * scavalcare i buchi che la differenza non ha visto, non ad ammorbidire il bordo.
- *
- * La soglia di taglia separa due popolazioni misurate: le persone stanno fra
- * 2343 e 14111 px, il rumore di rigenerazione dei cuscini sotto 1200.
- */
-const UMANA = 2000
-const RAGGIO = 46
-const tenute = aree.filter(a => a.n >= UMANA)
-if (!tenute.length) { console.error('  ROTTO: nessuna macchia di taglia umana'); process.exit(1) }
-console.log(`  ${aree.length} macchie; tenute le ${tenute.length} sopra ${UMANA} px: ${tenute.map(a => a.n).sort((x, y) => y - x).join(', ')}`)
-
-const m = new Float32Array(W * H)
-for (let p = 0; p < W * H; p++) if (cambiato[p] && tenute.some(a => a.e === etichetta[p])) m[p] = 1
+/** Infine si buttano le regioni finite piccole. */
+const buone = new Uint8Array(W * H)
+const marca = new Uint8Array(W * H)
+let quante = 0
+for (let s = 0; s < W * H; s++) {
+  if (!dentro[s] || marca[s]) continue
+  let t2 = 0, f2 = 0
+  const gruppo = []
+  coda[f2++] = s; marca[s] = 1
+  while (t2 < f2) {
+    const q = coda[t2++]; gruppo.push(q)
+    const qx = q % W, qy = (q / W) | 0
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = qx + dx, ny = qy + dy
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue
+      const r = ny * W + nx
+      if (!marca[r] && dentro[r]) { marca[r] = 1; coda[f2++] = r }
+    }
+  }
+  if (gruppo.length >= MINIMA) { for (const p of gruppo) buone[p] = 1; quante++ }
+}
+console.log(`  ${quante} regioni tenute sopra ${MINIMA} px`)
 
 const sfoca = (src, r) => {
   const t = new Float32Array(W * H), o = new Float32Array(W * H)
   for (let y = 0; y < H; y++) {
     let s = 0
-    for (let x = 0; x < W; x++) {
-      s += src[y * W + x]
-      if (x > r * 2) s -= src[y * W + x - r * 2 - 1]
-      t[y * W + Math.max(0, x - r)] = s / (r * 2 + 1)
+    for (let x = 0; x < W + r; x++) {
+      if (x < W) s += src[y * W + x]
+      if (x >= r * 2 + 1) s -= src[y * W + x - r * 2 - 1]
+      if (x >= r) o[y * W + x - r] = s / (r * 2 + 1)
     }
   }
   for (let x = 0; x < W; x++) {
     let s = 0
-    for (let y = 0; y < H; y++) {
-      s += t[y * W + x]
-      if (y > r * 2) s -= t[(y - r * 2 - 1) * W + x]
-      o[Math.max(0, y - r) * W + x] = s / (r * 2 + 1)
+    for (let y = 0; y < H + r; y++) {
+      if (y < H) s += o[y * W + x]
+      if (y >= r * 2 + 1) s -= o[(y - r * 2 - 1) * W + x]
+      if (y >= r) t[(y - r) * W + x] = s / (r * 2 + 1)
     }
   }
-  return o
+  return t
 }
+
 /**
- * Dilatare = sfocare ampio e tagliare basso. Il taglio a 0,015 fa si' che
- * bastino pochi pixel di macchia nel raggio perche' il punto entri nella
- * regione: e' quello che scavalca i buchi.
+ * DILATAZIONE MEDIA, BORDO MORBIDO PICCOLO — ed e' il contrario di quello che
+ * viene istintivo.
+ *
+ * Prima erano 46 e 14, e servivano a scavalcare i buchi che la differenza non
+ * vedeva. Quei buchi non ci sono piu', ma 5 e 4 hanno prodotto un difetto
+ * nuovo che il committente ha visto subito: **un alone chiaro attorno ai
+ * volti**. Il bordo morbido passava DENTRO la faccia, e li' mescolava due
+ * facce diverse — quella della posa tesa e quella del filmato.
+ *
+ * Un bordo morbido e' la cosa giusta quando le due sorgenti sotto sono uguali,
+ * perche' nasconde il taglio. Dove sono diverse non lo nasconde: lo spalma. E
+ * su un volto lo spalmato si legge come un fantasma.
+ *
+ * Quindi il contorno si allarga fino a inglobare le teste — cosi' il bordo cade
+ * sul divano, dove le due sorgenti coincidono — e la sfumatura resta stretta,
+ * perche' li' non ha piu' niente da nascondere.
+ *
+ * La pelle non si puo' riconoscere per colore, provato: R-B fa 48-70 sui volti
+ * e 45-47 su divano e pavimento. Un punto di margine non e' un discriminante.
  */
-const largo = sfoca(m, RAGGIO)
+const CRESCITA = 14
+const MORBIDO = 0
+const f = new Float32Array(W * H)
+for (let p = 0; p < W * H; p++) f[p] = buone[p]
+const largo = sfoca(f, CRESCITA)
 const pieno = new Float32Array(W * H)
-for (let p = 0; p < W * H; p++) pieno[p] = largo[p] > 0.015 ? 1 : 0
-/** Poi il bordo si ammorbidisce: un contorno netto attorno a una persona si vede come un adesivo. */
-const morbido = sfoca(pieno, 14)
+for (let p = 0; p < W * H; p++) pieno[p] = largo[p] > 0.12 ? 1 : 0
+const morbido = MORBIDO ? sfoca(pieno, MORBIDO) : pieno
 
 const fuori = Buffer.alloc(W * H)
 let area = 0
@@ -184,24 +317,19 @@ for (let p = 0; p < W * H; p++) {
 console.log(`  la maschera copre il ${(100 * area / (W * H)).toFixed(1)}% dell'immagine`)
 
 /**
- * SI SCRIVE ANCHE IL COMPLEMENTO, e serve a un terzo strato.
- *
- * La stanza fuori dalla regione delle persone dev'essere sempre visibile e non
- * dissolversi mai. La si ottiene con la maschera girata, e la si genera qui
- * invece che nel CSS perche' `mask-composite: subtract` ha una sintassi diversa
- * fra standard e prefisso webkit: un file in piu' da 3 KB costa meno di un
- * ramo che funziona su un motore solo.
+ * SI SCRIVE ANCHE IL COMPLEMENTO, e serve al terzo strato: la stanza FUORI
+ * dalla regione delle persone, che non si dissolve mai. Lo si genera qui invece
+ * che nel CSS perche' `mask-composite: subtract` ha sintassi diversa fra
+ * standard e prefisso webkit — un file da pochi KB costa meno di un ramo che
+ * funziona su un motore solo.
  */
 const scrivi = (dati, dove) => {
-  const tmp = join(tmpdir(), 'mp-out-' + Math.abs(dove.length * 7919) + '-' + Date.now() + '.gray')
-  writeFileSync(tmp, dati)
   execFileSync('ffmpeg', ['-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'gray',
-    '-s', `${W}x${H}`, '-i', tmp, '-y', dove])
-  unlinkSync(tmp)
+    '-s', `${W}x${H}`, '-i', 'pipe:0', '-y', dove], { input: dati })
   console.log(`  scritta ${dove}`)
 }
 scrivi(fuori, uscita)
 
-const dentro = Buffer.alloc(W * H)
-for (let p = 0; p < W * H; p++) dentro[p] = 255 - fuori[p]
-scrivi(dentro, uscita.replace(/\.png$/, '-fuori.png'))
+const complemento = Buffer.alloc(W * H)
+for (let p = 0; p < W * H; p++) complemento[p] = 255 - fuori[p]
+scrivi(complemento, uscita.replace(/\.png$/, '-fuori.png'))
