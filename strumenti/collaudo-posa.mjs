@@ -46,6 +46,16 @@ const AMBIGUA = 0.12        // frazione di tempo tollerata con le due pose sovra
 const RITORNI = 1           // ritorni alla calma tollerati mentre la stanza rolla
 
 async function apriBrowser () {
+/**
+ * QUALE BROWSER, e si puo' forzare.
+ *
+ * Di norma si usa il Chrome di sistema, perche' `playwright-core` non scarica
+ * browser. Ma chi clona il progetto puo' avere solo il chromium di Playwright,
+ * e un cancello che e' verde su un browser e rosso sull'altro non vale niente.
+ * `CHROMIUM=1` forza quello interno, cosi' la differenza si puo' riprodurre
+ * invece che discutere.
+ */
+  if (process.env.CHROMIUM) return await chromium.launch({ headless: VISIBILE })
   try { return await chromium.launch({ channel: 'chrome', headless: VISIBILE }) }
   catch {
     try { return await chromium.launch({ headless: VISIBILE }) }
