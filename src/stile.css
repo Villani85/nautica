@@ -633,14 +633,7 @@ p{max-width:60ch}
 .salone__spento{color:var(--carico)!important;margin-top:var(--u2);display:none}
 .palco--salone[data-spento="si"] .salone__invito{display:none}
 .interruttore--salone{margin-top:var(--u3);pointer-events:auto}
-/* Se ne va insieme alla stanza. Restando, finirebbe sopra la carta con i
-   colori pensati per l'acqua — illeggibile — e soprattutto contraddirebbe il
-   gesto: si sta scendendo, e il testo di quella stanza non scende con noi. */
-.salone__didascalia{
-  opacity:var(--resta, 1);
-  transform:translateY(calc(var(--discesa, 0px) * -0.34));
-  will-change:opacity,transform;
-pointer-events:none}
+
 .palco--salone[data-spento="si"] .salone__spento{display:block}
 
 @media (max-width:820px){
@@ -658,14 +651,12 @@ pointer-events:none}
   .apertura{width:132vw;transform:translate(-61%, calc(-74% - var(--discesa, 0px))) scale(var(--avvicina, 1))}
   .apertura__pelo{top:78%}
   .apertura__sommerso{height:22%}
-  /* Se ne va insieme alla stanza. Restando, finirebbe sopra la carta con i
-   colori pensati per l'acqua — illeggibile — e soprattutto contraddirebbe il
-   gesto: si sta scendendo, e il testo di quella stanza non scende con noi. */
-.salone__didascalia{
-  opacity:var(--resta, 1);
-  transform:translateY(calc(var(--discesa, 0px) * -0.34));
-  will-change:opacity,transform;
-left:var(--u2);right:var(--u2);bottom:var(--u3);max-width:none}
+  /* Solo la posizione: opacita' e discesa stanno nella regola unica sopra, e
+     ripeterle qui le farebbe divergere alla prima modifica. Ci sono gia'
+     divergite una volta — una sostituzione automatica ha colpito tutte e tre
+     le occorrenze del selettore, e la copia dentro la media query aveva finito
+     per portarsi dietro la trasformazione. */
+  .salone__didascalia{left:var(--u2);right:var(--u2);bottom:var(--u3);max-width:none}
   .salone__didascalia p{font-size:13px}
 }
 

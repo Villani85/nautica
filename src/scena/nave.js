@@ -1,5 +1,5 @@
 import {
-  Group, Mesh, Shape, ShapeGeometry, ExtrudeGeometry, BoxGeometry, CylinderGeometry,
+  Group, Mesh, BoxGeometry,
   EdgesGeometry, LineSegments, LineBasicMaterial, MeshBasicMaterial, DoubleSide
 } from 'three'
 import { materiali } from './materiali.js'
@@ -9,16 +9,18 @@ import { costruisciAllestimento } from './allestimento.js'
 /** L'opacita' dello spigolo dello scafo: dice dove finisce il pezzo. */
 const OPACITA_SPIGOLO = 0.22
 
-/** Sezione maestra dello scafo, estrusa lungo Z — che e' l'asse di rollio. */
-function sezioneScafo () {
-  const p = new Shape()
-  p.moveTo(0, -0.86)
-  p.bezierCurveTo(0.72, -0.84, 1.24, -0.66, 1.52, -0.24)
-  p.lineTo(1.62, 0.06); p.lineTo(1.50, 0.92); p.lineTo(-1.50, 0.92)
-  p.lineTo(-1.62, 0.06); p.lineTo(-1.52, -0.24)
-  p.bezierCurveTo(-1.24, -0.66, -0.72, -0.84, 0, -0.86)
-  return p
-}
+/* QUI C'ERA `sezioneScafo()`, l'ordinata maestra da estrudere lungo Z.
+
+   Serviva quando lo scafo era un'estrusione. Da quando e' un loft fra nove
+   ordinate — `src/scafo/ordinate.js` — non la chiamava piu' nessuno, ma restava
+   nel file insieme a `Shape`, `ShapeGeometry`, `ExtrudeGeometry` e
+   `CylinderGeometry`, importati e mai usati.
+
+   Segnalato da una revisione esterna con la ragione giusta: non rompe niente,
+   **aumenta l'ambiguita' della fonte geometrica**. In un file che si regge
+   sulla regola «una sola implementazione della sezione», tenere in giro una
+   seconda sezione dello scafo e' esattamente il tipo di cosa che un domani
+   qualcuno riaccende per sbaglio. */
 
 /* ────────────────────────────────────────────────────────────────
    QUI C'ERA IL QUADRILATERO ARTICOLATO, E NON C'E' PIU'

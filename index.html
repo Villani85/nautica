@@ -193,9 +193,13 @@
     difference between an effect and a geometry.</p>
 
     <h3>The hull is a loft between stations</h3>
-    <p>Nine sections along the length, interpolated. No third-party model:
-    hull, deck, shafts, flanges, reduction gear, carriers and fins are curves
-    described in code. And the section cap at any station is <em>the same
+    <p>Nine sections along the length, interpolated. The hull, the deck and the
+    section cap are curves described in code. The mechanism and the two upper
+    decks are modelled in Blender by the scripts in this repository and shipped
+    as glTF — 280 KB, meshopt-compressed. Still no third-party model, and
+    still nothing downloaded that we did not author; but they are files now,
+    not curves, and the page said <em>zero bytes</em> for one night longer than
+    it was true. And the section cap at any station is <em>the same
     function</em> that generates the surface — not a second implementation that
     would silently drift apart. A test proves the two coincide to within
     7.2 × 10⁻⁸, the precision of a 32-bit float.</p>
@@ -234,7 +238,8 @@
       <div><dt>— of which JavaScript</dt><dd>1.6 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39.7 KB</dd></div>
       <div><dt>3D engine, loaded only on demand (gzip)</dt><dd>144.6 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>0 bytes</dd></div>
+      <div><dt>3D models downloaded</dt><dd>280 KB</dd></div>
+      <div><dt>— of which the mechanism</dt><dd>223 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
       <div><dt>Largest Contentful Paint, real 4G</dt><dd>—</dd></div>

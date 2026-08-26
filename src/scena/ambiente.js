@@ -14,7 +14,10 @@ import { CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, Vector
  *
  *   1. **il peso.** Un `.hdr` a 1k pesa 1-2 MB contro un budget di 500 KB per
  *      gli asset 3D (`docs/04-MISURE`), e smentirebbe la riga che il sito porta
- *      in pagina: *«3D models downloaded: 0 bytes»*;
+ *      in pagina. Quella riga oggi dice 280 KB — l'impianto e la
+ *      sovrastruttura sono file — ma il rapporto non cambia: un HDRI da solo
+ *      peserebbe quanto tutta la geometria del sito, per riflettere colori che
+ *      nel sito non esistono;
  *   2. **la tavolozza.** Una fotografia di un cielo vero porta con se' i SUOI
  *      colori. Lo scafo comincerebbe a riflettere un azzurro che nel sito non
  *      esiste, e la giunzione col fondo CSS — che e' l'unica idea meccanica del

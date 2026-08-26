@@ -37,7 +37,7 @@
  *
  * Non misura millisecondi. Misura il file.
  */
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync, statSync, readdirSync } from 'node:fs'
 
 const FILE = process.argv[2] ?? 'public/modelli/impianto.glb'
 
@@ -252,6 +252,73 @@ note.push(`PESO      ${kb} KB${compresso ? ' (meshopt)' : ' (non compresso)'}`)
 if (kb > TETTO_KB) {
   guasti.push(`${kb} KB sfondano l'obiettivo provvisorio di ${TETTO_KB} KB (§9). ` +
               'Non e\' un cancello definitivo, ma va deciso, non subito.')
+}
+
+/**
+ * ─── OGNI MODELLO HA UN CONTRATTO, NON SOLO L'IMPIANTO
+ *
+ * Segnalato da una revisione esterna, e vero: `sovrastruttura.glb` era entrata
+ * nel sito senza che nessun cancello le chiedesse niente. Le domande che
+ * valgono per QUALUNQUE modello di questo repo sono tre, e sono quelle che
+ * rompono il sito in silenzio:
+ *
+ *   l'unita'    la conversione 0,4 vale solo per un modello in metri;
+ *   i nomi      la compressione li cancella tutti se si scorda `-kn`;
+ *   il verso    una normale rivolta dentro non da' errore: da fuori la parete
+ *               sparisce e si vede attraverso la nave. Successo davvero, e a
+ *               schermo sembrava un pezzo modellato male.
+ *
+ * Le domande specifiche dell'impianto — orbita, apertura, area — restano dove
+ * sono: valgono per lui e per nessun altro.
+ */
+const ALTRI = ['public/modelli/sovrastruttura.glb']
+for (const altro of ALTRI) {
+  if (altro === FILE) continue
+  let b
+  try { b = readFileSync(altro) } catch { guasti.push(`manca ${altro}`); continue }
+  const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'))
+  const conNome = (j.nodes ?? []).filter(n => n.name).length
+  const ex2 = (j.nodes ?? []).find(n => n.extras)?.extras ?? null
+  const kb2 = Math.round(statSync(altro).size / 1024)
+  note.push(`ALTRO     ${altro.split('/').pop()}  ${kb2} KB, ${conNome} nodi con nome`)
+  if (!conNome) guasti.push(`${altro}: nessun nodo ha un nome — la compressione li ha cancellati`)
+  if (ex2?.authoringUnit !== 'meter') {
+    guasti.push(`${altro}: authoringUnit e' "${ex2?.authoringUnit}", non "meter"`)
+  }
+}
+
+/**
+ * ─── I NUMERI IN PAGINA DEVONO RESTARE VERI
+ *
+ * Il sito pubblica quanto pesa cio' che scarica. Per una notte ha dichiarato
+ * «3D models downloaded: 0 bytes» mentre ne scaricava 280: era vero quando
+ * tutta la geometria nasceva da curve in JavaScript, ed e' diventato falso nel
+ * commit che ha aggiunto il primo GLB. Nessuno l'ha visto, perche' un numero
+ * scritto a mano in una pagina non ha modo di accorgersi che il mondo e'
+ * cambiato sotto di lui.
+ *
+ * Su un sito che fonda la propria autorevolezza sulla misura, quella riga vale
+ * piu' di un difetto grafico: e' l'unica cosa che un giurato puo' verificare in
+ * dieci secondi. Da qui in poi non puo' piu' divergere senza fermare i
+ * cancelli.
+ */
+const modelli = readdirSync('public/modelli').filter(f => f.endsWith('.glb'))
+const totaleKB = Math.round(
+  modelli.reduce((s, f) => s + statSync(`public/modelli/${f}`).size, 0) / 1024)
+const pagina = readFileSync('index.html', 'utf8')
+const riga = pagina.match(/3D models downloaded<\/dt><dd>([^<]+)<\/dd>/)
+if (!riga) {
+  guasti.push('in `index.html` non trovo piu\' la riga «3D models downloaded»: ' +
+              'se e\' stata rinominata, questo controllo va aggiornato invece che perso')
+} else {
+  const dichiarato = parseFloat(riga[1].replace(',', '.'))
+  note.push(`PAGINA    dichiara ${riga[1].trim()}, sul disco ci sono ${totaleKB} KB in ${modelli.length} modelli`)
+  if (!(Math.abs(dichiarato - totaleKB) <= 3)) {
+    guasti.push(
+      `la pagina dichiara "${riga[1].trim()}" di modelli 3D, ma sul disco ce ne sono ` +
+      `${totaleKB} KB. Il sito misura tutto: se questo numero e' falso, non c'e' ` +
+      'ragione di credere agli altri.')
+  }
 }
 
 // ─── esito ────────────────────────────────────────────────────────────────
