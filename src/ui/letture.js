@@ -27,10 +27,14 @@ export function creaLetture (el) {
      * LA RIDUZIONE E' MISURATA, non stampata.
      *
      * Prima qui c'era `Math.round((1 - SMORZAMENTO) * 100)`, cioe' una costante
-     * scritta a mano che diceva sempre 89. Ora arriva da `S.riduzione`, che e'
-     * il rapporto fra i picchi di due simulazioni parallele — una con le pinne
-     * e una senza. Il numero se lo guadagna, e cambia con il mare e con la
-     * velocita' perche' nella realta' cambia.
+     * scritta a mano che diceva sempre 89. Ora arriva da `S.riduzione`: il
+     * rapporto fra le RMS a regime di due simulazioni parallele — una con le
+     * pinne e una senza — mediate su piu' realizzazioni del mare. Il numero se
+     * lo guadagna, e cambia con il mare e con la velocita' perche' nella
+     * realta' cambia.
+     *
+     * (Questo commento diceva "il rapporto fra i picchi". Era vero per una
+     * settimana e poi non piu': il picco su finestra finita non converge.)
      */
     const attiva = S.stab && AMPIEZZA_MARE[S.mare] > 0 && S.riduzione > 0.005
     el.riduzione.textContent = attiva ? String(Math.round(S.riduzione * 100)) : '0'

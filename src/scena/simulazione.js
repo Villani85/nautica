@@ -1,4 +1,17 @@
 import { MathUtils } from 'three'
+/**
+ * L'ATTRIBUTO `with { type: 'json' }` NON E' DECORATIVO.
+ *
+ * Vite lo digerisce anche senza; **Node no**, e da Node 22 in poi rifiuta
+ * l'import con «needs an import attribute of type: json». Siccome i collaudi
+ * importano questo stesso modulo girando in Node, senza l'attributo il sito
+ * compila e i cancelli muoiono — cioe' esattamente il modo peggiore di
+ * rompersi, perche' la cosa che avvisa e' la prima a tacere.
+ */
+import tabella from './riduzioni.json' with { type: 'json' }
+
+/** La tabella precalcolata: vedi `riduzioneVera` piu' sotto per il perche'. */
+const TABELLA = tabella.riduzione
 
 /**
  * IL ROLLIO — un sistema del secondo ordine integrato in tempo reale.
@@ -11,12 +24,23 @@ import { MathUtils } from 'three'
  *   α = −K·θ'   limitato meccanicamente, e in stallo oltre i 20°
  *
  * E LA COSA CHE CONTA PIU' DI TUTTE: girano DUE corse in parallelo, identiche
- * tranne che una ha `C = 0`. Il numero della riduzione a schermo e'
- * `1 − picco_stabilizzata / picco_nuda`, cioe' **misurato**, non dichiarato.
+ * tranne che una ha `C = 0`. Il numero della riduzione e'
+ * `1 − RMS_stabilizzata / RMS_nuda` **a regime**, cioe' misurato, non
+ * dichiarato.
+ *
+ * ATTENZIONE, QUESTA INTESTAZIONE DICEVA IL FALSO. Per giorni ha scritto
+ * "rapporto fra i due PICCHI", mentre duecentottanta righe piu' sotto lo stesso
+ * file spiegava perche' il picco non converge. Un commento non e' un decoro: e'
+ * la cosa che un'altra persona legge per prima, e mentiva.
+ *
+ * Il picco su finestra finita NON converge — le tre armoniche della forzante
+ * hanno periodi incommensurabili e non tornano mai in fase, quindi il massimo
+ * dipende da dove capiti dentro il battimento. Misurato: 5,60 punti di
+ * escursione fra caricamenti col picco, 0,19 con la RMS. Il ragionamento per
+ * esteso sta sopra `_riduzioneCruda`.
  *
  * Il modello precedente aveva `SMORZAMENTO = 0.11` scritto a mano e mostrava
- * "89%" senza averlo mai calcolato. Costa quindici righe eseguite due volte, e
- * rende il dato onesto per costruzione invece che per buona volonta'.
+ * "89%" senza averlo mai calcolato.
  */
 
 /** Ampiezza nominale di rollio a carena nuda, in gradi, per stato del mare. */
@@ -79,8 +103,35 @@ export function autorita (v) {
 }
 
 /** Il momento del mare: tre sinusoidi sfasate, fasi estratte a ogni partenza. */
-function creaMare () {
-  const fasi = [Math.random(), Math.random(), Math.random()].map(x => x * Math.PI * 2)
+/**
+ * GENERATORE CON SEME — mulberry32, quattro righe.
+ *
+ * Serve perche' la tabella delle riduzioni dev'essere un ARTEFATTO
+ * RIPRODUCIBILE: rigenerandola con lo stesso seme devono uscire gli stessi
+ * byte, altrimenti il cancello che la confronta non puo' esistere e si torna a
+ * misurare millisecondi.
+ *
+ * Non e' crittografia e non deve esserlo: deve solo dare sempre la stessa
+ * sequenza a partire dallo stesso numero.
+ */
+function estrattore (seme) {
+  let a = seme >>> 0
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * @param {number} [seme] senza seme le fasi sono davvero casuali — e' quello
+ *   che vuole il sito vivo, dove ogni visita e' una traversata diversa. Col
+ *   seme sono riproducibili, ed e' quello che vuole la tabella.
+ */
+function creaMare (seme) {
+  const dado = seme === undefined ? Math.random : estrattore(seme)
+  const fasi = [dado(), dado(), dado()].map(x => x * Math.PI * 2)
   return (t, mare) => AMPIEZZA_MARE[mare] * A1 * (
     1.00 * Math.sin(0.83 * W * t + fasi[0]) +
     0.55 * Math.sin(1.37 * W * t + fasi[1]) +
@@ -262,21 +313,19 @@ const PASSO = 1 / 25            // il modello regge da 20 a 120 Hz (collaudo)
  * ─── E UNA REALIZZAZIONE SOLA DEL MARE NON BASTA.
  *
  * Con la RMS il numero smette di dipendere dalle fasi quasi ovunque — sotto
- * 0,6 punti — ma non in stallo: a mare 3 e 8 nodi restavano 5,6 punti di
+ * 0,4 punti — ma non in stallo: a mare 3 e 8 nodi restavano 5,6 punti di
  * escursione fra un caricamento e l'altro. Li' non e' rumore dello stimatore,
  * e' fisica: il sistema e' fortemente non lineare, e quanto le pinne vengano
  * spinte in stallo dipende davvero da come cadono le fasi.
  *
  * E se e' fisica, la risposta non e' alzare la soglia: e' MEDIARE PIU' MARI,
  * che e' cio' che si fa per quotare una riduzione invece di raccontare una
- * traversata. Cinque realizzazioni portano il caso peggiore a 2,8 punti.
+ * traversata.
  *
- * Cinque a passo 1/25 costano 11,8 ms: dentro il fotogramma, che e' il vincolo
- * vero perche' il calcolo scatta quando l'utente muove il cursore
- * dell'andatura. Misurato su sei combinazioni, otto ripetizioni ciascuna.
+ * La media adesso la fa il GENERATORE (`strumenti/genera-riduzioni.mjs`), con
+ * otto realizzazioni invece di cinque, perche' li' il costo non si paga a
+ * schermo. Qui resta solo lo stimatore singolo, che serve ai collaudi.
  */
-const REALIZZAZIONI = 5
-
 /**
  * ─── E IL PICCO NON ANDAVA BENE NEMMENO A REGIME.
  *
@@ -308,7 +357,23 @@ export function _riduzioneCruda (mare, velocita, opz = {}) {
   const trans = opz.transitorio ?? TRANSITORIO
   const mis = opz.misura ?? MISURA
   const rms = opz.rms ?? true
-  const momento = creaMare()
+
+  /**
+   * DIFETTO PRESO DAL SUO STESSO CANCELLO, ed e' della famiglia peggiore.
+   *
+   * Il collaudo ricavava il passo dai metadati della tabella. Con un metadato
+   * di formato diverso `dt` diventava NaN, `passi` diventava NaN, il ciclo non
+   * girava nemmeno una volta e questa funzione restituiva **zero, in
+   * silenzio**: nessun errore, un numero plausibile, e un cancello che accusava
+   * il file invece del proprio calcolo.
+   *
+   * Uno strumento che non sa di essere rotto e' peggio del difetto che cerca.
+   */
+  if (!Number.isFinite(dt) || dt <= 0 || !Number.isFinite(trans) || !Number.isFinite(mis)) {
+    throw new Error(`_riduzioneCruda: parametri non validi (dt=${dt}, transitorio=${trans}, misura=${mis})`)
+  }
+
+  const momento = creaMare(opz.seme)
   const viva = creaCorsa(); const nuda = creaCorsa()
   const aut = autorita(velocita)
   let piccoViva = 0, piccoNuda = 0
@@ -331,15 +396,42 @@ export function _riduzioneCruda (mare, velocita, opz = {}) {
     ? MathUtils.clamp(1 - piccoViva / piccoNuda, 0, 1) : 0
 }
 
-const cacheRid = new Map()
+/**
+ * LA RIDUZIONE SI LEGGE, NON SI CALCOLA. E il calcolo non e' sparito: si e'
+ * spostato dove non fa male.
+ *
+ * Prima si integrava a runtime, in cache per (mare, velocita'). Sono 6 x 21 =
+ * 126 combinazioni, e ognuna costava una integrazione la prima volta che
+ * l'utente ci arrivava: **uno scatto di 20-50 ms ogni nodo che trascinava**.
+ * Venti scatti per attraversare il cursore dell'andatura.
+ *
+ * E il cancello che doveva impedirlo misurava millisecondi, quindi misurava il
+ * carico della macchina: lo stesso codice dava 11,4 ms a riposo e 52 sotto
+ * carico. Un tetto in millisecondi non e' un cancello, e' un bollettino meteo.
+ *
+ * Adesso `strumenti/genera-riduzioni.mjs` fa lo stesso calcolo una volta sola,
+ * offline, con lo stimatore CARO — passo 1/120 contro 1/25, finestre doppie,
+ * otto realizzazioni del mare invece di cinque — e scrive `riduzioni.json`.
+ * Il numero non e' meno misurato: e' misurato meglio.
+ *
+ * E ha guadagnato una cosa che non avevo previsto: **e' ispezionabile.** Prima
+ * era un numero che il visitatore doveva credere; adesso e' un file nel
+ * repository che chiunque puo' rigenerare con un comando e confrontare. Il sito
+ * dice "measured, not declared" — questa e' la versione forte di quella frase.
+ */
 export function riduzioneVera (mare, velocita) {
-  const chiave = `${mare}|${velocita.toFixed(2)}`
-  if (cacheRid.has(chiave)) return cacheRid.get(chiave)
-  let somma = 0
-  for (let i = 0; i < REALIZZAZIONI; i++) somma += _riduzioneCruda(mare, velocita)
-  const r = somma / REALIZZAZIONI
-  cacheRid.set(chiave, r)
-  return r
+  const riga = TABELLA[mare]
+  const v = Math.round(velocita)
+  /**
+   * Nessun ripiego silenzioso. La tabella copre tutti i valori che i comandi
+   * possono produrre (mare 0-5 dalla scala, andatura 0-20 intera dal cursore);
+   * se manca qualcosa e' cambiato un comando senza rigenerarla, e un calcolo di
+   * riserva nasconderebbe proprio il difetto che si vuole vedere.
+   */
+  if (!riga || riga[v] === undefined) {
+    throw new Error(`riduzioni.json non copre mare ${mare} a ${velocita} nodi: rigenera con "node strumenti/genera-riduzioni.mjs"`)
+  }
+  return riga[v]
 }
 
 export const _costanti = { W, ZETA, A1, K, C0, A_STALLO, A_MAX, RESIDUO }

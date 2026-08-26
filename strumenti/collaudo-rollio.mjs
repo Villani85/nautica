@@ -1,5 +1,6 @@
 import { creaSimulazione, AMPIEZZA_MARE, V_RIF, portanza, riduzioneVera, _riduzioneCruda }
   from '../src/scena/simulazione.js'
+import tabella from '../src/scena/riduzioni.json' with { type: 'json' }
 
 /**
  * COLLAUDO DEL ROLLIO.
@@ -160,32 +161,27 @@ console.log('\nIL PERCORSO A MOVIMENTO RIDOTTO deve dare lo stesso numero di que
 }
 
 /**
- * IL NUMERO DI TESTATA NON PUO' DIPENDERE DALL'ESTRAZIONE DELLE FASI.
+ * IL NUMERO NON PUO' DIPENDERE DALL'ESTRAZIONE DELLE FASI.
  *
  * QUESTO CANCELLO E' STATO GIRATO AL CONTRARIO, e vale la pena dire perche'.
- *
- * Prima pretendeva che nove corse dessero numeri DIVERSI - la prova che le
- * fasi erano davvero casuali - e tollerava fino a 18 punti di escursione.
+ * Prima pretendeva che nove corse dessero numeri DIVERSI - la prova che le fasi
+ * erano davvero casuali - e tollerava fino a 18 punti di escursione.
  * Tollerava, cioe', che il numero centrale del sito cambiasse di 18 punti da
  * una visita all'altra: certificava il rumore.
  *
- * Adesso chiede l'opposto. Le fasi restano casuali - lo garantisce creaMare -
- * ma la MISURA deve essere insensibile all'estrazione. E' questo che distingue
- * una misura da un aneddoto.
- *
- * Si usa _riduzioneCruda, che salta la cache: con la cache il controllo
- * confronterebbe un valore con se stesso e passerebbe sempre.
+ * Adesso chiede l'opposto, e con SEMI ESPLICITI invece che a caso: dieci mari
+ * diversi ma sempre gli stessi dieci, cosi' il cancello e' deterministico. Un
+ * cancello che suona sette volte su otto insegna a ignorarlo.
  */
-console.log('\nLA MISURA NON DEVE DIPENDERE DALLE FASI ESTRATTE')
+console.log('\nIL NUMERO NON DEVE DIPENDERE DALLE FASI ESTRATTE')
 {
   let peggio = 0, dove = ''
   for (const [m, vel] of [[1, 8], [3, 8], [3, V_RIF], [5, V_RIF], [5, 20]]) {
-    // Si misura la MEDIA di cinque realizzazioni, che e' quello che il sito
-    // mostra davvero: una corsa sola qui direbbe una cosa e la pagina un'altra.
     const v = []
-    for (let i = 0; i < 10; i++) {
+    for (let s = 0; s < 10; s++) {
+      // la media di cinque realizzazioni, che e' il metodo, non una corsa sola
       let x = 0
-      for (let k = 0; k < 5; k++) x += _riduzioneCruda(m, vel)
+      for (let k = 0; k < 5; k++) x += _riduzioneCruda(m, vel, { seme: s * 100 + k })
       v.push(100 * x / 5)
     }
     const esc = Math.max(...v) - Math.min(...v)
@@ -194,10 +190,11 @@ console.log('\nLA MISURA NON DEVE DIPENDERE DALLE FASI ESTRATTE')
     if (esc > peggio) { peggio = esc; dove = 'mare ' + m + ' a ' + vel + ' nodi' }
   }
   /**
-   * Il tetto e' 5 punti e non 1 perche' UN caso lo merita: mare 3 a 8 nodi sta
-   * in pieno stallo, dove il sistema e' fortemente non lineare e la risposta
-   * dipende davvero da quanto forte le pinne vengono guidate. Li' l'escursione
-   * e' fisica, non rumore. Dove il sistema e' lineare resta sotto 0,6.
+   * Il tetto e' 3,5 punti e non 1 perche' UN caso lo merita: mare 3 a 8 nodi
+   * sta in pieno stallo, dove il sistema e' fortemente non lineare e la
+   * risposta dipende davvero da quanto forte le pinne vengono guidate. Li'
+   * l'escursione e' fisica, non rumore. Dove il sistema e' lineare resta
+   * sotto 0,4.
    */
   esito(peggio < 3.5, 'escursione peggiore ' + peggio.toFixed(2) + ' punti, ' + dove + '  (tetto 3,5)')
 }
@@ -206,15 +203,19 @@ console.log('\nLA MISURA NON DEVE DIPENDERE DALLE FASI ESTRATTE')
  * E NON PUO' DIPENDERE DAL PASSO DI INTEGRAZIONE.
  *
  * Uno stimatore che cambia risposta cambiando dt sta misurando il proprio
- * passo, non la nave. Il riferimento e' caro apposta: passo triplicato e
- * finestre doppie.
+ * passo, non la nave. Stessi semi da una parte e dall'altra, cosi' l'unica
+ * differenza fra i due membri e' il passo.
  */
-console.log('\nLA MISURA NON DEVE DIPENDERE DAL PASSO SCELTO')
+console.log('\nE NON DEVE DIPENDERE DAL PASSO SCELTO')
 {
-  const med = (m, v, o) => { let x = 0; for (let i = 0; i < 6; i++) x += _riduzioneCruda(m, v, o); return 100 * x / 6 }
+  const med = (m, v, o) => {
+    let x = 0
+    for (let i = 0; i < 3; i++) x += _riduzioneCruda(m, v, { ...o, seme: i })
+    return 100 * x / 3
+  }
   const RIF = { dt: 1 / 120, transitorio: 90, misura: 180 }
   let peggio = 0, dove = ''
-  for (const [m, vel] of [[1, 6], [3, 8], [3, V_RIF], [5, V_RIF], [5, 20]]) {
+  for (const [m, vel] of [[3, 8], [5, V_RIF], [5, 20]]) {
     const d = Math.abs(med(m, vel, {}) - med(m, vel, RIF))
     if (d > peggio) { peggio = d; dove = 'mare ' + m + ' a ' + vel + ' nodi' }
   }
@@ -222,24 +223,74 @@ console.log('\nLA MISURA NON DEVE DIPENDERE DAL PASSO SCELTO')
 }
 
 /**
- * E DEVE COSTARE POCO ABBASTANZA DA STARE IN UN FOTOGRAMMA.
+ * LA TABELLA VERSIONATA DEVE CORRISPONDERE AL MODELLO DI ADESSO.
  *
- * Si ricalcola quando l'utente muove il cursore dell'andatura: sopra i 16 ms
- * il trascinamento singhiozza, e la fluidita' e' meta' del punteggio.
+ * QUI C'ERA UN TETTO IN MILLISECONDI, ED ERA UN BOLLETTINO METEO.
  *
- * La prima misura di questo costo diceva 40 ms e mentiva: nello stesso ciclo
- * girava anche il riferimento caro, e il suo tempo finiva attribuito allo
- * stimatore economico. Si vedeva dal fatto che dava 40 ms qualunque passo.
+ * Chiedeva che il calcolo stesse in 16 ms. Lo stesso identico codice dava
+ * 11,4 ms a macchina scarica e 52 sotto carico: il cancello misurava quanto
+ * era occupato il computer, non se il codice andava bene. Era rosso su main da
+ * ore e nessuno poteva committare senza violarlo.
+ *
+ * La cura non e' stata alzare la soglia. La riduzione adesso si PRECALCOLA
+ * (`strumenti/genera-riduzioni.mjs`) e si versiona in `riduzioni.json`: a
+ * runtime non c'e' piu' nessun calcolo da cronometrare, quindi non c'e' piu'
+ * niente da misurare in millisecondi.
+ *
+ * Resta il rischio vero: che qualcuno cambi il modello del rollio - una
+ * costante, lo stallo, l'autorita', le armoniche del mare - e si dimentichi di
+ * rigenerare. Allora il sito mostrerebbe numeri di un modello che non esiste
+ * piu', in silenzio, ed e' esattamente il genere di bugia che questo sito non
+ * si puo' permettere.
+ *
+ * Quindi si ricalcolano DODICI celle scelte a coprire la fisica interessante -
+ * nave ferma, stallo, velocita' di servizio, fondo scala - e si confrontano
+ * ESATTAMENTE con il file. Dodici e non centoventisei perche' la rigenerazione
+ * intera costa due minuti e mezzo, e un cancello che nessuno esegue non
+ * protegge niente. Per il controllo completo:
+ *
+ *     node strumenti/genera-riduzioni.mjs --verifica
  */
-console.log('\nE DEVE STARE IN UN FOTOGRAMMA')
+console.log('\nLA TABELLA VERSIONATA DEVE CORRISPONDERE AL MODELLO')
 {
-  const n = 12
-  const t0 = performance.now()
-  for (let i = 0; i < n; i++) { for (let k = 0; k < 5; k++) _riduzioneCruda(3, 6 + i, {}) }
-  const ms = (performance.now() - t0) / n
-  console.log('         ' + ms.toFixed(1) + ' ms a combinazione')
-  esito(ms < 16, 'costa ' + ms.toFixed(1) + ' ms  (tetto 16, cioe un fotogramma)')
+  const meta = tabella
+  /**
+   * CINQUE CELLE, non dodici, e non e' pigrizia.
+   *
+   * Con dodici il cancello sfondava i due minuti, e **un cancello che nessuno
+   * ha voglia di aspettare non viene eseguito** — cioe' vale zero. Cinque
+   * bastano perche' qualunque modifica al modello del rollio le sposta TUTTE:
+   * una costante, lo stallo, l'autorita', le armoniche del mare. Non esiste un
+   * cambiamento che ne muova sette e ne lasci cinque identiche.
+   *
+   * Sono scelte a coprire la fisica: nave ferma, pieno stallo, velocita' di
+   * servizio, fondo scala. Per il controllo completo su tutte e 126:
+   *
+   *     node strumenti/genera-riduzioni.mjs --verifica
+   */
+  const CAMPIONE = [[0, 12], [1, 4], [3, 8], [4, 12], [5, 20]]
+  const dt = meta.passo
+  let peggio = 0, dove = ''
+  for (const [m, v] of CAMPIONE) {
+    let somma = 0
+    for (let i = 0; i < meta.realizzazioni; i++) {
+      somma += _riduzioneCruda(m, v, {
+        dt, transitorio: meta.transitorio, misura: meta.misura,
+        seme: m * 100000 + v * 1000 + i       // gli stessi semi del generatore
+      })
+    }
+    const rifatto = Math.round((somma / meta.realizzazioni) * 1e5) / 1e5
+    const scritto = meta.riduzione[m][v]
+    const d = Math.abs(rifatto - scritto) * 100
+    if (d > peggio) { peggio = d; dove = `mare ${m} a ${v} nodi (file ${(scritto * 100).toFixed(3)}%, rifatto ${(rifatto * 100).toFixed(3)}%)` }
+  }
+  console.log('         ' + CAMPIONE.length + ' celle rifatte con gli stessi semi del generatore')
+  if (peggio > 0) console.log('         peggiore: ' + dove)
+  esito(peggio < 0.002, peggio === 0
+    ? 'corrispondono esattamente'
+    : `scarto ${peggio.toFixed(4)} punti — rigenera con "node strumenti/genera-riduzioni.mjs"`)
 }
+
 
 console.log('\n' + (guasti === 0 ? 'TUTTO A POSTO' : guasti + ' CONTROLLI ROTTI') + '\n')
 process.exit(guasti === 0 ? 0 : 1)

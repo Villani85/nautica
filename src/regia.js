@@ -44,7 +44,7 @@ export const BATTUTE = [
     id: 'calma',
     da: 0.44, a: 0.60,
     titolo: 'The ship settles',
-    testo: 'The reduction is not declared. Two simulations run in parallel, one with the fins and one without, and the number is the ratio between the two peaks.'
+    testo: 'The reduction is not declared. Two simulations run in parallel — one with the fins, one without — and the number is the ratio between their steady-state RMS.'
   },
   {
     id: 'taglio',

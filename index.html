@@ -47,25 +47,6 @@
   <p id="patto" class="patto">Illustrative model · Generic geometry · Normalised values</p>
   <p id="nota" class="nota">Drag, or use the arrow keys, to rotate</p>
 
-  <div class="pannello pannello--letture" id="lettura">
-    <div class="dato">
-      <span class="et">Roll</span>
-      <span class="cifra"><output id="v-rollio">0,0</output><u>°</u></span>
-    </div>
-    <div class="dato">
-      <span class="et">Peak, 10 s</span>
-      <span class="cifra"><output id="v-picco">0,0</output><u>°</u></span>
-    </div>
-    <div class="dato">
-      <span class="et">Speed</span>
-      <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
-    </div>
-    <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
-      <span class="et">Reduction, RMS</span>
-      <span class="cifra"><output id="v-riduzione">0</output><u>%</u></span>
-    </div>
-  </div>
-
   <div class="pannello pannello--energia" id="energia">
     <div class="barra" id="b-carico">
       <p class="riga"><span class="et">Draw</span>
@@ -97,11 +78,39 @@
 
   <button type="button" id="apri-chiusura" class="richiamo">For your product</button>
 
+  <!-- LA COLONNA DI SINISTRA — didascalia e letture nello STESSO FLUSSO.
+       Erano due blocchi assoluti che crescevano l'uno verso l'altro: la
+       didascalia in giu' dalla linea, le letture in su dal fondo. Su schermi
+       bassi si incontravano, e il cancello dell'impaginato ne ha contate
+       trentaquattro di sovrapposizioni — 113 px a 1280x720, e il telefono con
+       le letture sopra i comandi. Dentro un flex non possono piu' toccarsi,
+       perche' e' il layout a garantirlo invece di una soglia. -->
+  <div class="pila">
   <div id="battuta" class="battuta" data-spento="no" aria-live="polite">
     <p class="et"><span data-ruolo="numero">01</span> — The sequence</p>
     <h3 data-ruolo="titolo">The surface opens</h3>
     <p data-ruolo="testo">Forty metres of hull.</p>
     <p class="battuta__spento">The system is off. The ship keeps rolling.</p>
+  </div>
+
+  <div class="pannello pannello--letture" id="lettura">
+    <div class="dato">
+      <span class="et">Roll</span>
+      <span class="cifra"><output id="v-rollio">0,0</output><u>°</u></span>
+    </div>
+    <div class="dato">
+      <span class="et">Peak, 10 s</span>
+      <span class="cifra"><output id="v-picco">0,0</output><u>°</u></span>
+    </div>
+    <div class="dato">
+      <span class="et">Speed</span>
+      <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
+    </div>
+    <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
+      <span class="et">Reduction, RMS</span>
+      <span class="cifra"><output id="v-riduzione">0</output><u>%</u></span>
+    </div>
+  </div>
   </div>
 
   <p id="ripiego" class="ripiego" hidden>
@@ -118,11 +127,27 @@
     <p class="et">03 — How it is made</p>
     <h2 id="tit-fattura">The cut is not a picture.<br>It is a camera decision.</h2>
 
-    <p>The camera sits at height zero and looks at the horizon. Everything else
-    follows from that one choice: the waterline falls <em>always</em> at exactly
-    half the screen, whatever the proportions of the window. The page background
-    can therefore split at 50% with a hard stop and meet the real-time drawing
-    without anything being synchronised.</p>
+    <p>The camera never pitches. It looks dead level at the horizon, and that
+    single constraint is what puts the waterline at exactly half the screen,
+    whatever the proportions of the window. The page background can therefore
+    split at 50% with a hard stop and meet the real-time drawing without
+    anything being synchronised.</p>
+
+    <p>We had this wrong in writing for weeks, and the correction is worth more
+    than the original claim. Everywhere in our own notes it said <em>the camera
+    sits at height zero</em>, as though the height were the cause. It is not.
+    Point a camera level and the plane of the water projects onto the centre
+    line of the frame from <em>any</em> height — measured: at 1.28 units up, the
+    horizon lands 0.019 px off centre on a 900 px canvas. Drop the camera back
+    to zero and tilt it slightly, and the line leaves immediately.</p>
+
+    <p>The half-truth cost us a night. Believing the height was the invariant,
+    we never tried raising the camera; believing height alone was sufficient, we
+    then raised it and found the second half of the rule the hard way. The
+    geometry survives any height. The <em>tone</em> does not: lift the camera
+    and you start looking down onto a lit sea surface, the lower half stops
+    reading as deep water, and the split dies anyway — for a completely
+    different reason.</p>
 
     <p>No code keeps the two halves aligned, because none is needed. That is the
     difference between an effect and a geometry.</p>

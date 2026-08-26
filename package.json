@@ -6,12 +6,16 @@
     "dev": "vite --port 5180",
     "build": "vite build",
     "preview": "vite preview --port 5180",
-    "peso": "node strumenti/peso.mjs"
+    "peso": "node strumenti/peso.mjs",
+    "riduzioni": "node strumenti/genera-riduzioni.mjs",
+    "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs",
+    "collaudo:impaginato": "node strumenti/collaudo-impaginato.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "playwright-core": "^1.62.1",
     "vite": "^8.2.1"
   }
 }
