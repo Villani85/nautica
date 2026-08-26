@@ -146,12 +146,20 @@ def anello(r_est, r_int, h, pos, materiale, lati=64):
     return smussa(est)
 
 
-def bulloni(n, raggio, x, r_testa, h_testa, materiale, nodo):
+def bulloni(n, raggio, x, r_testa, h_testa, materiale, nodo, dove=None):
     """La bulloneria e' la prima cosa che un tecnico guarda. Esagonali, con la
-    rondella: un cilindro liscio non e' un bullone, e' un perno."""
+    rondella: un cilindro liscio non e' un bullone, e' un perno.
+
+    `dove` filtra le posizioni. Serve sul coperchio asportabile, che e' MEZZO
+    anello: senza filtro i dieci bulloni facevano cerchio intero e cinque
+    restavano sospesi nel vuoto dove il coperchio era stato tagliato via.
+    Difetto vero, trovato guardando l'ingombro del nodo — simmetrico su y e z
+    quando la meta' tagliata non poteva esserlo."""
     for i in range(n):
         a = i / n * math.pi * 2
         y, z = math.cos(a) * raggio, math.sin(a) * raggio
+        if dove and not dove(y, z):
+            continue
         reg(nodo, cil(r_testa, h_testa, (x, y, z), materiale, 6, smusso=0.0008))
         reg(nodo, cil(r_testa * 1.35, h_testa * 0.32, (x - h_testa * 0.55, y, z), materiale, 20, smusso=0.0006))
 
@@ -228,7 +236,9 @@ bpy.context.view_layer.objects.active = rem
 bpy.ops.object.modifier_apply(modifier='mezzo')
 bpy.data.objects.remove(t, do_unlink=True)
 reg('HOUSING_REMOVABLE', rem)
-bulloni(10, 0.322, -0.44, 0.009, 0.018, 'acciaio', 'HOUSING_REMOVABLE')
+# solo sulla meta' che esiste davvero: il taglio porta via y < -0,02
+bulloni(10, 0.322, -0.44, 0.009, 0.018, 'acciaio', 'HOUSING_REMOVABLE',
+        dove=lambda y, z: y > -0.02)
 
 # ═══ HOUSING_SECTION · l'anello di materia sul piano di taglio ═══════════
 reg('HOUSING_SECTION', anello(0.306, 0.300 - SPESSORE, 0.005, (-0.44, 0, 0), 'sezione'))

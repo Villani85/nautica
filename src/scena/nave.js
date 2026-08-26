@@ -21,54 +21,19 @@ function sezioneScafo () {
 }
 
 /* ────────────────────────────────────────────────────────────────
-   IL QUADRILATERO ARTICOLATO
+   QUI C'ERA IL QUADRILATERO ARTICOLATO, E NON C'E' PIU'
 
-   DIFETTO CORRETTO — prima la pinna ruotava con `perno.rotation.z`, cioe'
-   attorno all'asse longitudinale: sbatteva su e giu' come un'ala invece di
-   cambiare incidenza. E ruotava l'intero gruppo, corpo dell'attuatore
-   compreso, che nella realta' e' imbullonato alla culla e sta fermo. La
-   biella era decorativa: un braccio che girava di un fattore inventato (2,1)
-   senza toccare niente.
+   Serviva quando il meccanismo era ricostruito in JavaScript. Ora la
+   geometria arriva tutta dal GLB — una sola fonte, §2 di docs/14 — e la
+   cinematica del riduttore cicloidale sta in `impianto.js`.
 
-   Sono i due errori che l'unico pubblico capace di accorgersene — un tecnico
-   di un produttore di stabilizzatori — vede in due secondi.
-
-   Ora: rotazione attorno all'asse di APERTURA, corpo fisso separato dalla
-   parte rotante, e manovella risolta per intersezione di cerchi cosi' che la
-   biella resti rigida su tutta la corsa invece di allungarsi.
+   Erano rimaste `risolviManovella` e `orienta`: due funzioni che nessuno
+   chiamava, la prima delle quali leggeva quattro costanti (RC, LB, CY, CZ)
+   che non esistono piu' in questo file. Non davano errore, perche' il
+   codice morto non si esegue — ed e' proprio questo che le rendeva
+   pericolose: chi legge trova una manovella descritta con cura, e non ha
+   modo di sapere che il pezzo che descrive non c'e' piu'.
    ──────────────────────────────────────────────────────────────── */
-
-
-/**
- * Dato il punto della leva, trova il perno di manovella come intersezione fra
- * il cerchio della manovella (raggio RC attorno a C) e quello della biella
- * (raggio LB attorno a P). Il clamp sulla distanza e' una cintura: con questi
- * parametri non scatta mai — verificato su tutta la corsa — ma se domani
- * qualcuno cambia RL o CY senza rifare i conti, il meccanismo si deforma
- * invece di produrre NaN e sparire dalla scena.
- */
-function risolviManovella (py, pz) {
-  const dy = py - CY
-  const dz = pz - CZ
-  let d = Math.sqrt(dy * dy + dz * dz)
-  d = Math.max(Math.abs(RC - LB) + 1e-4, Math.min(RC + LB - 1e-4, d))
-  const a = (RC * RC - LB * LB + d * d) / (2 * d)
-  const h = Math.sqrt(Math.max(0, RC * RC - a * a))
-  const uy = dy / d
-  const uz = dz / d
-  return { y: CY + a * uy - h * uz, z: CZ + a * uz + h * uy }
-}
-
-/** Ruotando (0,1,0) attorno a X di φ si ottiene (0, cos φ, sin φ):
- *  quindi per collegare due punti del piano YZ basta φ = atan2(dz, dy). */
-function orienta (mesh, ay, az, by, bz) {
-  const dy = by - ay
-  const dz = bz - az
-  mesh.position.y = ay
-  mesh.position.z = az
-  mesh.rotation.x = Math.atan2(dz, dy)
-  mesh.scale.y = Math.sqrt(dy * dy + dz * dz)
-}
 
 /** Dove stanno gli stabilizzatori lungo la nave: poco a proravia di mezzo. */
 export const Z_PINNE = -1.2

@@ -50,6 +50,9 @@ const RICHIESTI = [
  * significa che cambiando il modello non resta un numero vecchio in un file JS
  * a raccontare un'altra macchina.
  */
+/** Quanto si sfila il coperchio, in metri del modello. Vedi `apri()`. */
+const CORSA_COPERCHIO = 0.45
+
 const RAPPORTO_DI_SCORTA = 29
 const ECCENTRICITA_DI_SCORTA = 0.012
 
@@ -179,11 +182,28 @@ export function creaImpianto (base) {
     nodi.RIG_CYCLO_B.rotation.x = uscita
   }
 
-  /** §4.2 — il coperchio si allontana lungo la normale del taglio. */
+  /**
+   * §4.2 — IL COPERCHIO SI ALLONTANA LUNGO LA NORMALE DEL TAGLIO, E LA NORMALE
+   * NON E' QUELLA CHE SEMBRA.
+   *
+   * Prima: `position.y`. Sbagliato, e in un modo che a schermo si legge male
+   * senza sapere perche' — il coperchio SCENDEVA attraverso la parte fissa
+   * invece di sfilarsi, come una saracinesca dentro il proprio telaio.
+   *
+   * Il taglio, in Blender, e' un piano Y: il parallelepipedo che scava la meta'
+   * sta in `(-0.44, -0.42, 0)` e porta via tutto cio' che ha y < -0,02. Ma
+   * l'esportatore glTF converte in Y-alto, quindi la Y di Blender diventa la
+   * **-Z di glTF**. Misurato invece che dedotto: il centroide della meta'
+   * tagliata sta a y = +0,161 in Blender e a z = -0,143 dopo l'esportazione.
+   *
+   * La corsa e' 0,45 m — poco piu' del raggio esterno del carter (0,306), cioe'
+   * quanto basta perche' il pezzo sia libero e si legga staccato. I 0,9 di
+   * prima lo mandavano tre diametri lontano, fuori da ogni inquadratura utile.
+   */
   function apri (quanto) {
     if (!pronto) return
     const q = MathUtils.clamp(quanto, 0, 1)
-    nodi.HOUSING_REMOVABLE.position.y = -q * 0.9
+    nodi.HOUSING_REMOVABLE.position.z = -q * CORSA_COPERCHIO
     nodi.HOUSING_REMOVABLE.visible = q < 0.999
   }
 
