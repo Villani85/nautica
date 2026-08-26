@@ -60,6 +60,8 @@ const LUCI = {
  * quindi un percorso assoluto scritto qui funzionerebbe in un posto solo.
  */
 export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
+  /** L'ultimo stato passato a `disegna`, per `?ispeziona=1`. */
+  let ultimoStato = null
   const scena = new Scene()
 
   /**
@@ -257,6 +259,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   }
 
   function disegna (sim, marca) {
+    ultimoStato = sim.S
     const dt = Math.min(orologio.getDelta(), 0.05)
     frame++
     if (!sim.S.ridotto) t += dt
@@ -337,6 +340,16 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     const raggio = new Raycaster()
     window.__nautica = {
       scena, camera, render, nave,
+      // Lo STATO, non solo la geometria. Senza, davanti a un meccanismo fermo
+      // si finisce a indovinare perche': ridotto? stabilizzatore spento? mare
+      // zero? Sono tre cause diverse e si distinguono solo leggendole.
+      // La simulazione arriva a `disegna` come parametro, quindi qui si legge
+      // l'ultima vista — scritta ogni fotogramma, non catturata alla nascita.
+      get stato () { return ultimoStato },
+      // I numeri dichiarati dal modello, per il collaudo cinematico.
+      get impiantoRapporto () { return impianti[0]?.rapporto ?? null },
+      get impiantoEccentricita () { return impianti[0]?.eccentricita ?? null },
+      get impiantoDati () { return impianti[0]?.dati ?? null },
       /** Chi c'e' a questo punto dello schermo? Coordinate 0-1. */
       chi (u, v) {
         raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)

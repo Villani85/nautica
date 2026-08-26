@@ -1,5 +1,6 @@
 import { Group, MathUtils } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 
 /**
  * L'IMPIANTO — il modello vero, comandato dalla simulazione.
@@ -52,15 +53,54 @@ const RICHIESTI = [
 const RAPPORTO_DI_SCORTA = 29
 const ECCENTRICITA_DI_SCORTA = 0.012
 
+/**
+ * ─── UN NUMERO CHE SI MISURA DA UNA COSA CHE NON LO CONTIENE
+ *
+ * Qui prima c'era una misura, e l'argomento sembrava buono: «l'eccentricita' e'
+ * lo spostamento del disco rispetto all'asse, il modello ce l'ha gia' dentro,
+ * copiarla a mano vuol dire vederla divergere un giorno». Giusto in generale,
+ * falso per questo pezzo.
+ *
+ * Il disco cicloidale e' modellato **centrato sull'asse**: i suoi 29 lobi
+ * girano intorno all'origine del proprio nodo. L'orbita da 12 mm non sta nella
+ * geometria — la impone questo file, a ogni fotogramma, muovendo il nodo. Il
+ * `boundingSphere` di quel disco non restituiva l'eccentricita': restituiva
+ * l'**asimmetria residua dei lobi**, 0,0005 m. Un numero plausibile, mai
+ * esattamente zero, quindi il ripiego `|| ECCENTRICITA` non e' mai scattato.
+ * Risultato: i dischi orbitavano di mezzo millimetro invece di dodici, cioe'
+ * il riduttore si vedeva come una scatola chiusa — e nessun cancello lo diceva,
+ * perche' il valore c'era ed era finito.
+ *
+ * E' la stessa famiglia di guasti gia' incontrata piu' volte: **uno strumento
+ * restituisce un numero e non avvisa che e' rotto.** La differenza qui e' che
+ * lo strumento ero io.
+ *
+ * Ora il numero viene da `extras`, come il rapporto, perche' e' una **proprieta'
+ * dichiarata della macchina** e non una conseguenza della sua forma. Il timore
+ * che divergesse resta valido, ed e' per questo che vive nel GLB accanto al
+ * raggio del disco: `collaudo-glb.mjs` li confronta e si arrabbia se l'orbita
+ * torna a essere troppo piccola per vedersi.
+ */
+
 export function creaImpianto (base) {
   const gruppo = new Group()
   const nodi = {}
   let rapporto = RAPPORTO_DI_SCORTA
+  let dati = {}
   let eccentricita = ECCENTRICITA_DI_SCORTA
   let pronto = false
 
   const caricato = new Promise((risolvi, rifiuta) => {
-    new GLTFLoader().load(base + 'modelli/impianto.glb', (glb) => {
+    /**
+     * MESHOPT — il modello viaggia compresso: 1686 KB diventano 223.
+     * Il decodificatore e' un modulo ES da 28 KB che entra nel pacchetto, non un
+     * file da servire a parte: e' la ragione per cui ha battuto Draco, che
+     * comprimeva quasi uguale ma chiedeva 251 KB di wasm serviti a mano.
+     * Le misure stanno in `strumenti/comprimi-modello.mjs`.
+     */
+    new GLTFLoader()
+      .setMeshoptDecoder(MeshoptDecoder)
+      .load(base + 'modelli/impianto.glb', (glb) => {
       const radice = glb.scene
       radice.updateMatrixWorld(true)
       radice.traverse(o => { if (o.name) nodi[o.name] = o })
@@ -74,6 +114,7 @@ export function creaImpianto (base) {
       }
 
       const extra = nodi.IMPIANTO?.userData ?? {}
+      dati = extra
       if (extra.authoringUnit && extra.authoringUnit !== 'meter') {
         rifiuta(new Error(
           `impianto.glb: authoringUnit e' "${extra.authoringUnit}", non "meter". ` +
@@ -82,18 +123,7 @@ export function creaImpianto (base) {
       }
       if (typeof extra.gearRatio === 'number') rapporto = extra.gearRatio
 
-      /**
-       * L'eccentricita' si MISURA dal modello invece di riscriverla: e' lo
-       * spostamento del disco rispetto all'asse, e il modello ce l'ha gia'
-       * dentro. Un numero copiato a mano da un file all'altro e' un numero che
-       * un giorno divergera' in silenzio.
-       */
-      const disco = nodi.RIG_CYCLO_A?.children?.[0]
-      if (disco) {
-        disco.geometry?.computeBoundingSphere?.()
-        const c = disco.geometry?.boundingSphere?.center
-        if (c) eccentricita = Math.hypot(c.y, c.z) || ECCENTRICITA_DI_SCORTA
-      }
+      if (typeof extra.eccentricityM === 'number') eccentricita = extra.eccentricityM
 
       /**
        * IL FASCIAME DEL MODELLO NON SI MOSTRA IN SCENA.
@@ -157,5 +187,17 @@ export function creaImpianto (base) {
     nodi.HOUSING_REMOVABLE.visible = q < 0.999
   }
 
-  return { gruppo, caricato, aggiorna, apri, get pronto () { return pronto } }
+  return {
+    gruppo,
+    caricato,
+    aggiorna,
+    apri,
+    get pronto () { return pronto },
+    // Esposti perche' `collaudo-cinematica.mjs` confronti il moto osservato
+    // con cio' che il GLB dichiara, invece di riscrivere qui i numeri: due
+    // copie dello stesso valore sono due valori che un giorno divergono.
+    get rapporto () { return rapporto },
+    get eccentricita () { return eccentricita },
+    get dati () { return dati }
+  }
 }
