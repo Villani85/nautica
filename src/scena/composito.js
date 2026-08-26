@@ -84,6 +84,8 @@ const CONVINCE = 1.6    // secondi di calma prima di rilassarsi davvero
  */
 const VELOCITA = 8
 
+const TRASF_MARE = 'scale(1.55)'
+
 export function creaComposito (contenitore, base) {
   const nuovo = (classe, tag = 'div') => {
     const e = document.createElement(tag)
@@ -150,6 +152,19 @@ export function creaComposito (contenitore, base) {
    * L'ingrandimento sposterebbe l'orizzonte in su': lo si riporta giu' con una
    * traslazione calcolata, non a occhio — l'orizzonte sta al 45,9% dell'altezza,
    * quindi scalando di 1,35 attorno al centro sale dell'1,4%.
+   */
+  /**
+   * IL MARE SI INGRANDISCE DI PIU' DI PRIMA, perche' adesso RUOTA.
+   *
+   * A 1,35 copriva lo scorrimento dell'apertura mentre la stanza si inclinava.
+   * Ora e' il mare a girare, e ruotando di 12 gradi un rettangolo scopre gli
+   * angoli: serve 1,55 perche' la diagonale resti coperta. Il conto, non una
+   * taratura — mezza diagonale su mezza larghezza, per un palco 2:1, fa 1,52.
+   *
+   * E il PIVOT sta sull'orizzonte, non al centro del video: se il mare ruotasse
+   * attorno al proprio centro, l'orizzonte si alzerebbe e abbasserebbe mentre
+   * gira. Attorno all'orizzonte, invece, la linea resta dov'e' e si limita a
+   * inclinarsi — che e' esattamente cio' che vede chi sta dentro.
    */
   const mare = filmato('composito__mare', CALMA)
 
@@ -256,9 +271,29 @@ export function creaComposito (contenitore, base) {
 
     q += ((allerta ? 1 : 0) - q) * Math.min(1, dt * VELOCITA)
 
-    const r = `rotate(${gradi.toFixed(2)}deg)`
-    stanza.style.transform = r
-    tesa.style.transform = r
+    /**
+     * ─── LA STANZA STA FERMA E IL MARE ROLLA, ed e' il contrario di prima.
+     *
+     * `docs/14` §5.1. Le due scene del sito hanno due riferimenti diversi, e non
+     * per gusto: per punto di vista.
+     *
+     *   **Scafo esterno** — camera solidale al MONDO. L'orizzonte resta
+     *   orizzontale e la nave rolla. E' osservazione: si guarda una nave.
+     *
+     *   **Salone** — camera solidale allo YACHT. La stanza resta ferma
+     *   nell'inquadratura e il mare ruota nel finestrino, in verso opposto. E'
+     *   esperienza: si e' dentro.
+     *
+     * Prima ruotavo la stanza e tenevo fermo il mare, che e' il riferimento
+     * dell'osservatore esterno applicato a chi sta dentro. Chi e' seduto in quel
+     * salone non vede la stanza inclinarsi: vede **l'orizzonte inclinarsi**, e
+     * il proprio corpo che corregge. La stanza, per lui, e' l'unica cosa ferma.
+     *
+     * Il verso e' OPPOSTO al rollio, e non e' un dettaglio: se la nave sbanda a
+     * dritta di 10 gradi, rispetto alla stanza l'orizzonte sale a sinistra.
+     */
+    const r = `rotate(${(-gradi).toFixed(2)}deg)`
+    mare.style.transform = `${TRASF_MARE} ${r}`
     tesa.style.opacity = String(q)
     contenitore.dataset.posa = q.toFixed(3)
   }
