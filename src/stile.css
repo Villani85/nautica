@@ -458,7 +458,35 @@ p{max-width:60ch}
      fotografia appoggiata sul foglio */
   box-shadow:0 0 0 1px rgba(11,14,16,.75), 0 24px 70px rgba(7,26,29,.22);
 }
-.apertura__scena{position:absolute;inset:0;overflow:hidden}
+.apertura__scena{position:absolute;inset:0;overflow:hidden;background:#0b0e10}
+
+/* ═══ IL COMPOSITO ═══
+   Tre strati, e l'ordine e' l'argomento: il mare in fondo NON ruota, la
+   fotografia della stanza sopra RUOTA, la cornice attorno non si muove mai. */
+/* L'ORIZZONTE DEL FILMATO DEVE CADERE DENTRO I FINESTRINI, e il conto si fa.
+   Il filmato e' una fascia 7,2:1 con l'orizzonte a meta' esatta. Con
+   `object-fit: cover` in un riquadro alto quanto l'apertura, quella meta' cade
+   al 50% dell'apertura — mentre la fascia dei vetri, nella fotografia, sta fra
+   il 27% e il 47%. Risultato: dai finestrini si vedeva solo CIELO, e il mare
+   che il capitolo racconta non compariva mai.
+   Alzando il riquadro del 12% l'orizzonte scende al 38%, cioe' dentro i vetri.
+   Sotto resta scoperto, ma sotto c'e' la fotografia della stanza, che e' opaca. */
+.composito__mare{
+  position:absolute;left:-12%;width:124%;top:-12%;height:100%;
+  object-fit:cover;pointer-events:none;
+}
+/* Le due pose sono piu' grandi del riquadro: ruotando, una fotografia grande
+   quanto la cornice scoprirebbe gli angoli. Il ritaglio se lo prende la
+   cornice, che ha `overflow:hidden`. */
+.composito__stanza{
+  position:absolute;inset:-9%;width:118%;height:118%;
+  background-size:cover;background-position:center;
+  -webkit-mask-size:cover;mask-size:cover;
+  -webkit-mask-position:center;mask-position:center;
+  -webkit-mask-mode:luminance;mask-mode:luminance;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  will-change:transform,opacity;pointer-events:none;
+}
 .apertura__scena canvas{width:100%;height:100%;display:block}
 
 /* LA PARTE SOMMERSA — translucida, non opaca. Nel riferimento sotto il velo si

@@ -1,5 +1,5 @@
-import { creaSalone } from './scena/salone.js'
-import { sim, alCambioDiStato, statoCambiato } from './stato.js'
+import { creaComposito } from './scena/composito.js'
+import { sim, alCambioDiStato, statoCambiato, avanza } from './stato.js'
 
 /**
  * IL CAPITOLO DEL SALONE — il controllore, tenuto volutamente magro.
@@ -15,22 +15,28 @@ import { sim, alCambioDiStato, statoCambiato } from './stato.js'
  * qui — ed e' obbligatorio che sia cosi': sopra e sotto la linea sono lo stesso
  * integratore, e se i due capitoli si contraddicessero cadrebbe l'argomento.
  */
-export function avviaSalone () {
+export async function avviaSalone () {
   const contenitore = document.querySelector('#scena-salone')
   const palco = document.querySelector('.palco--salone')
   if (!contenitore) return
 
-  const scena = creaSalone(contenitore)
-  if (!scena) {
-    /**
-     * Senza WebGL il capitolo non ha senso di esistere: e' fatto di una scena
-     * sola. Meglio toglierlo che lasciare un rettangolo nero — un buco
-     * dichiarato e' peggio di una sezione che non c'e'.
-     */
-    document.querySelector('#salone')?.remove()
-    return
-  }
-  scena.ridimensiona()
+  /**
+   * `?sagoma=1` apre la SCENA 3D invece del composito.
+   *
+   * Serve a `npm run sagome`: le fotografie si generano a partire da un
+   * fotogramma renderizzato, e quel fotogramma lo produce la scena. Resta in
+   * produzione come gli altri interruttori — il giorno che i mobili cambiano,
+   * si rigenera la sagoma e si rifanno le foto con la stessa struttura.
+   *
+   * E' anche la ragione per cui `scena/salone.js` non e' codice morto: e' la
+   * sorgente degli asset, non un capitolo abbandonato.
+   */
+  const scena = location.search.includes('sagoma=1')
+    ? (await import('./scena/salone.js')).creaSalone(contenitore)
+    : creaComposito(contenitore, import.meta.env.BASE_URL)
+
+  if (!scena) { document.querySelector('#salone')?.remove(); return }
+  scena.ridimensiona?.()
 
   /**
    * L'INTERRUTTORE DI QUESTO CAPITOLO — lo stesso stato, un secondo comando.
@@ -57,8 +63,26 @@ export function avviaSalone () {
   rifletti()
 
   let inCorso = false
+  /**
+   * IL TEMPO LO FA AVANZARE CHI DISEGNA, e vale anche qui.
+   *
+   * La riga stava dentro la scena 3D. Sostituendola col composito e' sparita, e
+   * il capitolo e' tornato immobile: la fotografia mostrava una stanza dritta
+   * mentre la didascalia diceva che rollava. **E' la seconda volta che questo
+   * difetto ricompare in un posto nuovo**, ed e' sempre lo stesso: chi legge
+   * uno stato deve anche farlo avanzare, se e' l'unico sveglio.
+   *
+   * La marca del fotogramma impedisce il doppio passo quando i due capitoli
+   * sono a schermo insieme.
+   */
+  let precedente = 0
   const passo = (marca) => {
-    scena.disegna(sim, marca)
+    const dt = precedente ? Math.min((marca - precedente) / 1000, 0.05) : 1 / 60
+    precedente = marca
+    avanza(dt, marca)
+
+    if (scena.disegna) scena.disegna(sim, marca)
+    else scena.aggiorna(sim.S.rollio)
     palco.dataset.spento = sim.S.stab ? 'no' : 'si'
     tasto?.setAttribute('aria-pressed', String(sim.S.stab))
     /**
@@ -83,12 +107,21 @@ export function avviaSalone () {
    * due sta disegnando qualcosa che nessuno guarda.
    */
   const oss = new IntersectionObserver(([v]) => {
+    /**
+     * Il composito non ha un renderer: si muove con un ciclo di fotogrammi
+     * normale. Il ciclo dorme quando il capitolo non e' a schermo — un video e
+     * due immagini che si dissolvono per nessuno costano comunque lavoro alla
+     * scheda grafica, e il mare continuerebbe a scorrere.
+     */
     if (v.isIntersecting && !inCorso) {
       inCorso = true
-      scena.render.setAnimationLoop(passo)
+      if (scena.render) scena.render.setAnimationLoop(passo)
+      else { const giro = (m) => { if (!inCorso) return; passo(m); requestAnimationFrame(giro) }; requestAnimationFrame(giro) }
+      scena.mare?.play?.().catch(() => {})
     } else if (!v.isIntersecting && inCorso) {
       inCorso = false
-      scena.render.setAnimationLoop(null)
+      scena.render?.setAnimationLoop?.(null)
+      scena.mare?.pause?.()
     }
   }, { rootMargin: '10% 0px' })
   oss.observe(document.querySelector('#salone'))
@@ -108,5 +141,5 @@ export function avviaSalone () {
   // deve trovare lo stato giusto invece di quello di prima.
   alCambioDiStato(() => { if (sim.S.ridotto || !inCorso) sveglia() })
 
-  addEventListener('resize', () => { scena.ridimensiona(); if (sim.S.ridotto) sveglia() })
+  addEventListener('resize', () => { scena.ridimensiona?.(); if (sim.S.ridotto) sveglia() })
 }
