@@ -44,8 +44,12 @@ allungava un sito che si legge. Al suo posto c'è `13-ATTO-DUE.md`.
 | F.1 | il copy che contraddiceva il metodo | **fatta** |
 | F.2 | `collaudo-impaginato.mjs`, e l'impaginato su cinque viewport | **fatta** |
 | F.2b | il telefono: da rotto a leggibile — ma **non ancora progettato** | **fatta, e resta dovuto** |
-| A | l'ambiente HDRI e la decisione sul tone mapping | da fare |
+| **Il salone** | il capitolo emotivo, fotografico e reattivo | **fatto** |
+| — | il sito si apre sul salone, non sulla dimostrazione | **fatto** |
+| — | il mare fuori dal finestrino, filmato | **fatto** |
+| A | l'ambiente HDRI e il tone mapping | **superata**: il salone e' fotografico, la dimostrazione resta disegno tecnico (D33) |
 | B | la nave che si divide | da fare |
+| **Il meccanismo** | far *sentire* che la macchina lavora — priorita' dichiarata | da fare |
 | atto due §2 | il passaggio di consegne | da fare |
 | atto due §4 | la catena causale | da fare |
 | atto due §5 | il finale, col salone | da fare |
@@ -327,6 +331,93 @@ Tolta anche una copia duplicata del font che poteva divergere in silenzio.
 
 ---
 
+## Il salone — come è fatto, per chi vuole rifarlo
+
+È il capitolo che si apre per primo, ed è la metà emotiva che mancava. Non è una
+scena in tempo reale: è **una fotografia che reagisce**.
+
+### Il metodo, ed è la parte che conta
+
+Non si chiede una scena a un modello generativo. Si chiede di **vestire una
+sagoma renderizzata dal sito**.
+
+    npm run sagome        produce le sagome dalla scena 3D
+    ?sagoma=1             apre la scena 3D invece del composito
+    ?rollio=N             inchioda l'inclinazione a N gradi
+    ?maschera=1           tutto nero tranne i finestrini
+
+Composizione, camera, posizione dei mobili, altezza dell'orizzonte nel
+finestrino e posa delle persone li decide **la scena**. Il modello mette
+materiali e facce. La differenza non è estetica: un asset generato da una sagoma
+versionata **si può rifare**, e chi lo rifà ottiene la stessa struttura. Senza,
+ogni asset è un colpo di fortuna che non si ripete.
+
+Sagome e fotografie stanno in `riferimenti/sagome/`, versionate.
+`src/scena/salone.js` non è codice morto: è la **sorgente degli asset**.
+
+### I tre strati, e fra due di essi c'è tutta la tesi
+
+| strato | cosa | ruota? |
+|---|---|---|
+| 1 | il mare, filmato | **no** |
+| 2 | la stanza, fotografia coi finestrini bucati | **sì**, col rollio vero |
+| 3 | la cornice dell'apertura | mai |
+
+Non c'è una riga che tenga fermo il mare: è fermo perché **nessuno lo tocca**. La
+stanza si inclina contro un orizzonte che non si inclina con lei.
+
+### Due pose, perché una sola sarebbe emotivamente falsa
+
+Una fotografia sola, ruotata, mostrerebbe due persone **serene mentre la stanza
+sbanda**. Le pose sono due — a riposo, e con la mano piatta sul tavolo — e si
+dissolvono seguendo l'angolo. La seconda è stata generata **a partire dalla
+prima**, così inquadratura, facce e materiali coincidono: un primo tentativo
+aveva l'inclinazione impressa nella fotografia, era più bello e **inservibile**,
+perché il modello aveva riquadrato e le due immagini non si allineavano più.
+
+### Cinque difetti, tutti visti guardando
+
+1. **La maschera presa dalla sagoma non combacia.** Il modello riquadra: nella
+   fotografia la fascia dei finestrini è più alta e i montanti sono altrove. Ora
+   si ricava dalla FOTO (`strumenti/maschera-finestrini.mjs`), con un
+   discriminante misurato — dentro il vetro `R−B` sta fra **−8 e −3**, dentro la
+   stanza fra **+36 e +48**, i montanti sono neutri ma scuri. E la pelle è calda
+   (`+66`), quindi le teste che coprono un vetro restano escluse da sole.
+2. **La maschera era del verso sbagliato.** Con `mask-mode: luminance` il bianco
+   MOSTRA: il buco va fatto in nero. Scritta nel verso intuitivo, la stanza
+   compariva solo dentro i finestrini e il mare copriva tutto il salone.
+3. **L'orizzonte del filmato cadeva sotto i vetri**, e si vedeva solo cielo. Il
+   conto: fascia 7,2:1 con orizzonte a metà, in un riquadro alto quanto
+   l'apertura cade al 50%, mentre i vetri stanno fra il 27% e il 47%. Alzando il
+   riquadro del 12% l'orizzonte scende al 38%.
+4. **La dissolvenza lineare lasciava un fantasma** — due teste sovrapposte a
+   sette gradi. Adesso è una banda stretta fra 2,5 e 6 gradi.
+5. **Il tempo non avanzava**, per la seconda volta e in un posto nuovo:
+   sostituendo la scena 3D col composito è sparita la riga che fa avanzare la
+   simulazione, e il capitolo mostrava una stanza dritta mentre la didascalia
+   diceva che rollava. *Chi legge uno stato deve anche farlo avanzare, se è
+   l'unico sveglio.*
+
+### E il primo mare era sbagliato anche se era bello
+
+Frangeva come un'onda su un fondale — shore break — invece di essere mare lungo
+che incontra una barca, e aveva una prua in basso che il prompt negativo
+escludeva. La cura non è stata insistere sul negativo: è stata **nominare la
+fisica invece dell'effetto** — *deep open ocean, hundreds of miles from any
+coast, long-period swell that lifts and passes, never curling*. Chiedere la
+causa, non il risultato.
+
+Il vincolo di `docs/09` è verificato invece che sperato: orizzonte misurato col
+gradiente verticale alla riga 312 di 720, ritagliata una fascia centrata, e
+**rimisurato dopo il ritaglio — 50,0% esatto**.
+
+### Peso
+
+Due fotografie 72 KB l'una, due maschere 3 KB, il filmato 64. **228 KB** contro
+un budget di 500 per gli asset 3D. JS totale 152,5 KB gzip contro 250.
+
+---
+
 ## Le decisioni prese, in breve
 
 Il registro completo sta in `03-DECISIONI.md`. Da scrivere lì, in coda a D53:
@@ -384,6 +475,13 @@ cura la causa — non si alza la soglia.
    del progetto** e matura nel tempo: serve 6,5 anche dagli utenti qualificati
    già per l'Honorable Mention, cioè per il *primo* anello. Ogni settimana in
    cui non esiste è persa e non si recupera costruendo meglio.
+
+**E la priorita' dichiarata, che viene prima di tutto il resto:**
+
+> **Far sentire che il meccanismo funziona.** E' la parte che si vende a
+> un'azienda e che cambia da azienda ad azienda. Oggi, alla battuta del
+> meccanismo, si vede un ammasso di scatole grigie: la cinematica c'e' e si
+> muove, ma non si legge come una macchina che lavora. E' il prossimo lavoro.
 
 **Dove un'altra AI può servire davvero:**
 
