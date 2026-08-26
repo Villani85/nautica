@@ -56,7 +56,7 @@ export const BATTUTE = [
     id: 'meccanismo',
     da: 0.80, a: 1.01,
     titolo: 'The part you never see',
-    testo: 'Shaft, hull penetration flange, gland, gearbox, connecting rod. It costs a fraction of the boat, and it decides whether anyone is comfortable on board.'
+    testo: 'Servomotor, cycloidal reduction, output carrier, shaft, gland, fin. It costs a fraction of the boat, and it decides whether anyone is comfortable on board.'
   }
 ]
 
