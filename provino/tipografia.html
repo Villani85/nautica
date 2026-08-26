@@ -2,16 +2,17 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Provino tipografico — Recursive contro la coppia attuale</title>
+<title>Provino tipografico — i due registri di Recursive</title>
 <style>
-@font-face{font-family:'Space Grotesk';font-weight:300;font-display:block;
-  src:url('/public/font/space-grotesk-300.woff2') format('woff2')}
-@font-face{font-family:'Space Grotesk';font-weight:700;font-display:block;
-  src:url('/public/font/space-grotesk-700.woff2') format('woff2')}
-@font-face{font-family:'JetBrains Mono';font-weight:400;font-display:block;
-  src:url('/public/font/jetbrains-mono-400.woff2') format('woff2')}
+/* IL CONFRONTO ORIGINALE NON SI PUO' PIU' RIPRODURRE, ed e' giusto cosi'.
+   Questo provino nasceva per mettere Space Grotesk + JetBrains contro
+   Recursive. Vinta la prova (D43/A04), quei due file sono stati CANCELLATI —
+   erano 67,2 KB contro 39,7. Il provino ha continuato a cercarli e mostrava
+   caratteri di sistema al loro posto: un confronto falso, che sembrava vero.
+   Adesso confronta le due cose che restano da decidere davvero: i due registri
+   dello stesso carattere, MONO 0 contro MONO 1. */
 @font-face{font-family:'Recursive';font-weight:300 900;font-display:block;
-  src:url('font/recursive-var.woff2') format('woff2-variations')}
+  src:url('../public/font/recursive-var.woff2') format('woff2-variations')}
 
 :root{
   --aria:#E9E5DD; --inchiostro:#15181B; --inchiostro-tenue:#5F6367;
@@ -21,8 +22,9 @@
 body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
 
 /* i due sistemi */
-.attuale{--display:'Space Grotesk',sans-serif; --dato:'JetBrains Mono',monospace;
-         --pesoDisplay:300; --varDisplay:normal; --varDato:normal}
+.attuale{--display:'Recursive',sans-serif;    --dato:'Recursive',monospace;
+         --pesoDisplay:300;
+         --varDisplay:"MONO" 0; --varDato:"MONO" 0}   /* tutto proporzionale */
 .nuovo  {--display:'Recursive',sans-serif;     --dato:'Recursive',monospace;
          --pesoDisplay:300;
          --varDisplay:"MONO" 0; --varDato:"MONO" 1}
@@ -82,7 +84,7 @@ body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
 
 <div class="colonne">
   <p class="etichetta">1 · il titolo sul taglio</p>
-  <div class="intestazione">Space Grotesk 300 / 700</div>
+  <div class="intestazione">Recursive · tutto MONO 0</div>
   <div class="intestazione">Recursive · MONO 0</div>
 
   <div class="titolo attuale"><h1>
@@ -95,7 +97,7 @@ body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
   </h1></div>
 
   <p class="etichetta">2 · le letture — cambiano sessanta volte al secondo</p>
-  <div class="intestazione">JetBrains Mono 400</div>
+  <div class="intestazione">Recursive · tutto MONO 0</div>
   <div class="intestazione">Recursive · MONO 1</div>
 
   <div class="letture attuale">
@@ -112,7 +114,7 @@ body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
   </div>
 
   <p class="etichetta">3 · la tabella dei numeri della sezione tecnica</p>
-  <div class="intestazione">Space Grotesk + JetBrains</div>
+  <div class="intestazione">Recursive · tutto MONO 0</div>
   <div class="intestazione">Recursive · MONO 0 + MONO 1</div>
 
   <div class="numeri attuale">
@@ -136,8 +138,8 @@ body{background:#1a1c1e;color:#aaa;font:14px/1.5 system-ui,sans-serif}
     </dl>
   </div>
 
-  <p class="etichetta">4 · la prova che decide — tavola navale o barra di stato?</p>
-  <div class="intestazione">JetBrains Mono</div>
+  <p class="etichetta">4 · la prova che decide — l'etichetta legge come una tavola navale o come una barra di stato?</p>
+  <div class="intestazione">Recursive · tutto MONO 0</div>
   <div class="intestazione">Recursive · MONO 1</div>
 
   <div class="prova attuale">

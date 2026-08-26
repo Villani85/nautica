@@ -1,10 +1,12 @@
 import { chromium } from 'playwright-core'
+import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 /**
  * COLLAUDO DELL'IMPAGINATO — i riquadri non si devono sovrapporre.
  *
  *     node strumenti/collaudo-impaginato.mjs
- *     URL=http://localhost:4174/nautica/ node strumenti/collaudo-impaginato.mjs
+ *     URL=http://localhost:5180/nautica/ node strumenti/collaudo-impaginato.mjs
  *
  * PERCHE' ESISTE.
  *
@@ -33,7 +35,26 @@ import { chromium } from 'playwright-core'
  *      allunga la didascalia ed e' li' che il difetto era peggiore.
  */
 
-const URL = process.env.URL || 'http://localhost:4174/nautica/'
+/**
+ * SI CHIAMA `INDIRIZZO` E NON `URL` PER UNA RAGIONE PAGATA.
+ *
+ * `const URL = ...` **oscura il costruttore globale `URL`**, e la riga che
+ * ricava la porta — `new URL(INDIRIZZO).port` — moriva con «URL is not a
+ * constructor». Il difetto stava proprio nel ramo che accende la preview da
+ * solo, cioe' quello che non avevo mai eseguito perche' una preview c'era
+ * sempre. Un revisore esterno mi ha detto che il cancello non gira su un clone
+ * pulito: aveva ragione, e questa era una delle due ragioni.
+ */
+const INDIRIZZO = process.env.URL || 'http://localhost:4174/nautica/'
+
+/**
+ * HEADLESS PER DIFETTO. Misurare un impaginato non ha bisogno di una finestra,
+ * e `headless: false` non parte su una macchina senza schermo — cioe' in
+ * integrazione continua, che e' proprio dove questo cancello deve girare.
+ * (Nota: in headless il 3D viene disegnato via software e quindi e' brutto. Per
+ * i RIQUADRI non cambia niente; per guardare la scena si usa `TESTA=1`.)
+ */
+const VISIBILE = process.env.TESTA ? false : true
 
 const VIEWPORT = [
   { nome: 'desktop grande', width: 1920, height: 1080 },
@@ -54,7 +75,79 @@ const esito = (ok, testo) => {
   if (!ok) guasti++
 }
 
-const b = await chromium.launch({ channel: 'chrome', headless: false })
+/**
+ * IL CANCELLO DEVE GIRARE DA SOLO, o non e' un cancello.
+ *
+ * La prima stesura dava per scontate due cose e non lo diceva: una preview
+ * gia' accesa, e Chrome installato. Chi ha clonato il repo si e' trovato uno
+ * stack trace di Playwright — `ERR_CONNECTION_REFUSED`, oppure «Executable
+ * doesn't exist» — e nessuna indicazione su cosa fare.
+ *
+ * `playwright-core` **non include nessun browser**, di progetto: e' scelto
+ * apposta per usare il Chrome di sistema invece di scaricarne 300 MB. Quindi
+ * `npx playwright install` NON risolve — serve `npx playwright install chrome`.
+ * Un messaggio che manda a fare la cosa sbagliata e' peggio di nessun
+ * messaggio.
+ */
+async function apriBrowser () {
+  try {
+    return await chromium.launch({ channel: 'chrome', headless: VISIBILE })
+  } catch (e) {
+    try {
+      return await chromium.launch({ headless: VISIBILE })
+    } catch (e2) {
+      console.error(`
+  ROTTO  nessun browser disponibile.
+
+         Questo collaudo usa playwright-core, che di proposito NON scarica
+         browser: si appoggia al Chrome di sistema. Una delle due:
+
+             npx playwright install chrome      (lo installa Playwright)
+             oppure installa Google Chrome
+
+         Attenzione: "npx playwright install" da solo NON basta.
+`)
+      process.exit(1)
+    }
+  }
+}
+
+/** C'e' gia' qualcosa che risponde su quell'indirizzo? */
+async function risponde (url) {
+  try {
+    const c = new AbortController()
+    const t = setTimeout(() => c.abort(), 3000)
+    const r = await fetch(url, { signal: c.signal })
+    clearTimeout(t)
+    return r.ok
+  } catch { return false }
+}
+
+/**
+ * Se la preview non c'e', la si accende — e la si spegne alla fine. Cosi'
+ * `npm run collaudo:impaginato` funziona da un clone appena fatto, con un
+ * comando solo, invece di richiedere un secondo terminale che nessuno ha
+ * documentato.
+ */
+let preview = null
+if (!(await risponde(INDIRIZZO))) {
+  const porta = new URL(INDIRIZZO).port || '4173'
+  console.log(`  la preview non risponde su ${INDIRIZZO} — la accendo io sulla ${porta}`)
+  preview = spawn('npx', ['vite', 'preview', '--port', porta, '--strictPort'],
+    { shell: true, stdio: 'ignore', cwd: fileURLToPath(new URL('..', import.meta.url)) })
+  for (let i = 0; i < 40 && !(await risponde(INDIRIZZO)); i++) await new Promise(r => setTimeout(r, 500))
+  if (!(await risponde(INDIRIZZO))) {
+    console.error(`
+  ROTTO  non riesco ad accendere la preview su ${INDIRIZZO}.
+         Compila prima con "npm run build", oppure accendila a mano:
+             npm run preview
+`)
+    preview.kill()
+    process.exit(1)
+  }
+}
+
+const b = await apriBrowser()
 const collisioni = []
 const traboccamenti = []
 let overflow = []
@@ -69,7 +162,7 @@ for (const vp of VIEWPORT) {
    * c'entrava niente con l'impaginato. Si aspetta una CONDIZIONE VERA — la tela
    * che esiste — non un tempo morto.
    */
-  await pg.goto(URL, { waitUntil: 'domcontentloaded' })
+  await pg.goto(INDIRIZZO, { waitUntil: 'domcontentloaded' })
   await pg.evaluate(() => document.querySelector('#dimostrazione').scrollIntoView())
   await pg.waitForFunction(() => !!document.querySelector('#scena canvas'), null, { timeout: 20000 })
   await pg.waitForTimeout(1800)
@@ -189,6 +282,8 @@ esito(traboccamenti.length === 0, `${traboccamenti.length} elementi con contenut
 console.log('\nNIENTE OVERFLOW ORIZZONTALE')
 overflow.forEach(o => console.log('         ' + o))
 esito(overflow.length === 0, `${overflow.length} viewport con scorrimento laterale`)
+
+preview?.kill()
 
 console.log('\n' + (guasti === 0 ? 'TUTTO A POSTO' : guasti + ' CONTROLLI ROTTI') + '\n')
 process.exit(guasti === 0 ? 0 : 1)

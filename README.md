@@ -53,6 +53,63 @@ fisica mentirebbe.
 È la sezione 2 delle cinque previste, e va rifatta a moduli ES: oggi porta con
 sé 589 KB di bundle three.js inline che non servono.
 
+## Come si esegue, e i cancelli
+
+```bash
+npm install
+npm run build
+npm run collaudo              # rollio, scafo, mare — solo Node, nessun browser
+npm run collaudo:impaginato   # apre un browser e misura l'impaginato
+npm run peso                  # il percorso critico contro i tetti del brief
+```
+
+**Nessun cancello avvisa: escono con errore.** Un guasto deve gridare, o si
+impara a ignorarlo.
+
+| comando | cosa impedisce |
+|---|---|
+| `collaudo-rollio` | che il modello del rollio si sposti in silenzio; che la misura dipenda dalle fasi estratte o dal passo di integrazione; che `riduzioni.json` non corrisponda piu' al modello |
+| `collaudo-scafo` | che il tappo di sezione si scolli dalla superficie; sezioni degeneri; normali rivolte all'interno |
+| `collaudo-mare` | che le creste dell'onda tornino a sommergere l'obiettivo — e l'opposto, che il raggio calmo si mangi il mare attorno allo scafo |
+| `collaudo-impaginato` | che due riquadri si sovrappongano, che il testo esca dal suo riquadro, o che compaia scorrimento laterale — su 5 viewport x 6 battute x 2 stati |
+
+### Il collaudo dell'impaginato ha bisogno di un browser
+
+Usa **`playwright-core`**, che di proposito **non scarica nessun browser**: si
+appoggia al Chrome di sistema invece di tirare giu' 300 MB. Quindi:
+
+```bash
+npx playwright install chrome     # NON basta "npx playwright install"
+```
+
+oppure basta avere Google Chrome installato. Se manca, il collaudo lo dice e
+spiega cosa lanciare, invece di sputare uno stack trace.
+
+**La preview se la accende da solo** se non ne trova una, e la spegne alla
+fine — quindi non serve un secondo terminale. Per puntarlo altrove:
+
+```bash
+URL=http://localhost:5180/nautica/ npm run collaudo:impaginato
+```
+
+### La tabella delle riduzioni si rigenera
+
+`src/scena/riduzioni.json` non si modifica a mano. Contiene **le condizioni
+scritte dentro** — passo di integrazione, transitorio, finestra di misura,
+numero di realizzazioni del mare — ed e' riproducibile byte per byte perche' le
+fasi si estraggono con un seme.
+
+```bash
+npm run riduzioni                 # rigenera (circa due minuti)
+npm run riduzioni -- --verifica   # rigenera e confronta, senza scrivere
+```
+
+Va rieseguita ogni volta che cambia il modello del rollio: costanti, stallo,
+autorita' delle pinne, armoniche del mare. `collaudo-rollio` se ne accorge da
+solo ricalcolando cinque celle e confrontandole.
+
+---
+
 ## Vincoli tecnici
 
 - **Stack:** Vite + three.js a moduli ES. Niente framework se non serve.

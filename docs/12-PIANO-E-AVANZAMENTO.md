@@ -275,6 +275,56 @@ la Usability vale il 30%, meta' giuria prova dal telefono, e un'esperienza
 sovrapposizioni, zero scorrimento laterale, tutti i comandi raggiungibili — non
 fa il progetto.
 
+### 11 · Il cancello nuovo non girava su un clone pulito
+
+Segnalato da una revisione esterna, e **aveva ragione** — anche se da me girava
+verde. Tre cause distinte, tutte mie:
+
+1. **`const URL = process.env.URL` oscurava il costruttore globale `URL`.** La
+   riga che ricava la porta moriva con «URL is not a constructor». Stava proprio
+   nel ramo che accende la preview da solo, cioe' **quello che non avevo mai
+   eseguito**, perche' una preview c'era sempre. Rinominata in `INDIRIZZO`.
+2. **`headless: false`** non parte su una macchina senza schermo — cioe' in
+   integrazione continua, che e' esattamente dove il cancello deve girare. Ora
+   e' headless per difetto, con `TESTA=1` per guardare.
+3. **`playwright-core` non scarica nessun browser**, di proposito: si appoggia
+   al Chrome di sistema. Il rimedio suggerito, `npx playwright install`, **non
+   avrebbe funzionato**: serve `npx playwright install chrome`. Adesso il
+   cancello prova il Chrome di sistema, ripiega sul chromium incluso, e se non
+   c'e' ne' l'uno ne' l'altro **dice quale comando lanciare** invece di sputare
+   uno stack trace.
+
+E la preview se la accende da sola se non ne trova una, spegnendola alla fine:
+`npm run collaudo:impaginato` funziona da un clone appena fatto, con un comando.
+I prerequisiti stanno nel README.
+
+### 12 · I cancelli non fermavano la pubblicazione
+
+Il workflow di GitHub eseguiva **solo build e peso**. I collaudi esistevano nel
+repository e non fermavano niente: li chiamavamo cancelli mentre una regressione
+poteva arrivare in produzione lo stesso. Adesso `npm run collaudo` e
+`npm run collaudo:impaginato` girano prima di pubblicare.
+
+### 13 · Il sito dichiarava numeri vecchi, ed e' il difetto peggiore della lista
+
+La pagina diceva **67,2 KB di font** (Recursive ne pesa 39,7), **7,6 KB di
+percorso critico** (sono 10,2), **145,9 KB di motore 3D** (144,6) e **otto
+sezioni dello scafo** — mentre `ORDINATE` ne contiene **nove**, contate.
+
+Su un sito la cui tesi e' *«measured, not declared»*, e che dedica un paragrafo
+a spiegare che le voci col trattino restano col trattino finche' non sono
+misurate, **sbagliare il numero piu' facile da verificare smonta tutto il
+resto**. Corretti tutti, presi da `npm run peso` e dal file delle ordinate.
+
+### 14 · Il provino tipografico mostrava un confronto falso
+
+Confrontava Space Grotesk + JetBrains contro Recursive. Vinta la prova (D43),
+quei due file sono stati **cancellati** — erano 67,2 KB contro 39,7 — e il
+provino ha continuato a cercarli mostrando **caratteri di sistema al loro
+posto**: un confronto che sembrava vero e non lo era. Adesso confronta le due
+cose che restano da decidere davvero, i due registri dello stesso carattere.
+Tolta anche una copia duplicata del font che poteva divergere in silenzio.
+
 ---
 
 ## Le decisioni prese, in breve

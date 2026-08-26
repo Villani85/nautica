@@ -25,6 +25,25 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+
+      # I CANCELLI GIRANO PRIMA DI PUBBLICARE, o non sono cancelli.
+      #
+      # Fino a oggi qui c'erano solo build e peso: i collaudi esistevano nel
+      # repository e non fermavano niente. Li chiamavamo cancelli mentre una
+      # regressione poteva arrivare in produzione lo stesso — segnalato da una
+      # revisione esterna, e aveva ragione.
+      - name: Collaudi del modello e della geometria
+        run: npm run collaudo
+
+      # L'impaginato ha bisogno di un browser. `playwright-core` non ne scarica
+      # nessuno di proposito, quindi qui se ne installa uno; in locale si usa il
+      # Chrome di sistema. Il collaudo gira headless e si accende la preview da
+      # solo.
+      - name: Collaudo dell'impaginato
+        run: |
+          npx playwright install --with-deps chromium
+          npm run collaudo:impaginato
+
       # Il peso si misura a ogni pubblicazione e finisce nel registro della
       # corsa: se un giorno cresce, si vede quando e' successo e per cosa.
       - run: npm run peso
