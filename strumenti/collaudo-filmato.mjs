@@ -119,10 +119,57 @@ function bordo (q, y0, raggio) {
   return { y: dove + Math.max(-1, Math.min(1, sub)), forza: b }
 }
 
-/** I due bordi orizzontali piu' forti del primo fotogramma, ben distanti fra loro. */
-const q0 = gradiente(fotogramma(0), 0, W)
+/**
+ * ─── I BORDI DI RIFERIMENTO SI SCELGONO STABILI, NON SOLO FORTI
+ *
+ * La prima versione prendeva i due bordi piu' forti del PRIMO fotogramma. Va
+ * bene finche' l'inquadratura e' tutta arredamento. Con un salone che ha meta'
+ * schermo di finestrone, i bordi piu' forti sono **l'orizzonte e le creste
+ * delle onde** — e quelli si spostano a ogni fotogramma. Il cancello li
+ * inseguiva, li perdeva in 130 fotogrammi su 240, e si fermava dicendo «non
+ * misurabile». Non era il filmato a essere sbagliato: era il riferimento.
+ *
+ * La cura: si guarda il gradiente su piu' fotogrammi e si tiene, per ogni riga,
+ * il **minimo**. Un bordo di falegnameria c'e' in tutti i fotogrammi, quindi il
+ * suo minimo resta alto; un'onda c'e' in uno e non nell'altro, quindi il suo
+ * minimo crolla. Sceglie da solo l'arredamento e scarta il mare, senza che
+ * nessuno debba dirgli dove guardare.
+ */
+/**
+ * ─── E PRIMA ANCORA: SI SCEGLIE LA META' DEL FOTOGRAMMA CHE NON CAMBIA DA SOLA
+ *
+ * Scegliere i bordi stabili non bastava, e il motivo e' che il profilo per
+ * righe si calcola sulla LARGHEZZA INTERA: con meta' schermo di finestrone il
+ * mare domina la media e cancella le righe della falegnameria. Il cancello
+ * continuava a puntare l'orizzonte.
+ *
+ * Quindi si misura quanto ogni meta' del fotogramma cambia nel tempo, e si
+ * lavora su quella piu' ferma. In un salone col finestrone e' l'interno; in una
+ * stanza chiusa sono equivalenti e la scelta non cambia niente. La regola e'
+ * generale, non una toppa per questa inquadratura: **la camera si misura su
+ * cio' che non si muove da solo**.
+ */
+function agitazione (xa, xb) {
+  let s = 0, n = 0
+  const a = fotogramma(0)
+  for (let k = 1; k < 6; k++) {
+    const b = fotogramma(Math.floor(k * (N - 1) / 5))
+    for (let y = 0; y < H; y += 3) for (let x = xa; x < xb; x += 3) { s += Math.abs(a[y * W + x] - b[y * W + x]); n++ }
+  }
+  return s / n
+}
+const sinistra = agitazione(0, W / 2), destra = agitazione(W / 2, W)
+const [XA, XB] = sinistra <= destra ? [0, W / 2] : [W / 2, W]
+console.log(`  agitazione: meta' sinistra ${sinistra.toFixed(1)} · destra ${destra.toFixed(1)} → misuro sulla ${XA === 0 ? 'SINISTRA' : 'DESTRA'}`)
+
+const CAMPIONI_STABILI = 8
+const stabile = new Float64Array(H).fill(Infinity)
+for (let k = 0; k < CAMPIONI_STABILI; k++) {
+  const q = gradiente(fotogramma(Math.floor(k * (N - 1) / (CAMPIONI_STABILI - 1))), XA, XB)
+  for (let y = 0; y < H; y++) stabile[y] = Math.min(stabile[y], Math.abs(q[y]))
+}
 const candidati = []
-for (let y = 20; y < H - 20; y++) candidati.push({ y, f: Math.abs(q0[y]) })
+for (let y = 20; y < H - 20; y++) candidati.push({ y, f: stabile[y] })
 candidati.sort((a, b) => b.f - a.f)
 const primo = candidati[0]
 const secondo = candidati.find(c => Math.abs(c.y - primo.y) > H * 0.25)
@@ -138,7 +185,7 @@ if (!secondo) {
 }
 const yA = Math.min(primo.y, secondo.y), yB = Math.max(primo.y, secondo.y)
 const base = yB - yA
-console.log(`  bordi di riferimento alle righe ${yA} e ${yB} — distanza ${base} su ${H}`)
+console.log(`  bordi di riferimento alle righe ${yA} e ${yB} — distanza ${base} su ${H}, scelti fra i piu' stabili su ${CAMPIONI_STABILI} fotogrammi`)
 console.log(`  RISOLVENZA  mezzo pixel su ${base} righe = ${(100 * 0.5 / base).toFixed(3)}% di scala, contro un tetto di ${(100 * SCALA).toFixed(1)}%`)
 
 const RAGGIO = 26
@@ -146,16 +193,16 @@ const misure = []
 let persi = 0
 for (let n = 0; n < N; n++) {
   const g = fotogramma(n)
-  const tot = gradiente(g, 0, W)
+  const tot = gradiente(g, XA, XB)
   const a = bordo(tot, yA, RAGGIO), b = bordo(tot, yB, RAGGIO)
-  const aSx = bordo(gradiente(g, 0, W / 2), yA, RAGGIO)
-  const aDx = bordo(gradiente(g, W / 2, W), yA, RAGGIO)
+  const aSx = bordo(gradiente(g, XA, (XA + XB) / 2), yA, RAGGIO)
+  const aDx = bordo(gradiente(g, (XA + XB) / 2, XB), yA, RAGGIO)
   if (!a || !b || !aSx || !aDx) { persi++; continue }
   misure.push({
     n,
     s: (b.y - a.y) / base,
     t: (a.y + b.y) / 2 - (yA + yB) / 2,
-    gradi: Math.atan2(aDx.y - aSx.y, W / 2) * 180 / Math.PI
+    gradi: Math.atan2(aDx.y - aSx.y, (XB - XA) / 2) * 180 / Math.PI
   })
 }
 if (misure.length < N * 0.6) {

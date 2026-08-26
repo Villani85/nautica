@@ -127,14 +127,35 @@ await browser.close()
 preview?.kill()
 
 /** Un campione non letto e' un cancello che passa per sbaglio: si controlla. */
-if (traccia.some(c => !Number.isFinite(c.q) || !Number.isFinite(c.r))) {
-  console.error('  ROTTO  la posa o il rollio non arrivano nel dataset del palco.')
+if (traccia.some(c => !Number.isFinite(c.r))) {
+  console.error('  ROTTO  il rollio non arriva nel dataset del palco.')
   process.exit(1)
 }
+
+/**
+ * ─── LA SECONDA POSA PUO' NON ESSERCI ANCORA, e va detto invece di far finta
+ *
+ * Il capitolo e' passato a UNA clip sola, disegnata due volte: il mare fermo e
+ * la stanza che ruota. Finche' la clip della posa puntellata non esiste non c'e'
+ * nessuna dissolvenza da misurare — quindi il pezzo che conta i fotogrammi
+ * ambigui resta fermo, e il cancello lo DICHIARA.
+ *
+ * Quello che continua a verificare, e che deve valere comunque: che la stanza
+ * rolli davvero. Un capitolo che dichiara di inclinarsi e sta fermo e' il
+ * difetto peggiore, ed e' gia' successo due volte.
+ */
+const conPosa = traccia.every(c => Number.isFinite(c.q))
 const ampiezza = Math.max(...traccia.map(c => Math.abs(c.r)))
 if (ampiezza < 4) {
   console.error(`  ROTTO  la stanza non rolla (massimo ${ampiezza.toFixed(1)}°): non c'e' niente da misurare.`)
   process.exit(1)
+}
+
+if (!conPosa) {
+  console.log('  la seconda posa non e ancora montata: niente dissolvenza da misurare.')
+  console.log('  (il conto dei fotogrammi ambigui torna vivo da solo quando ci sara.)')
+  console.log('  rollio in ordine.')
+  process.exit(0)
 }
 
 const ambigui = traccia.filter(c => c.q > 0.2 && c.q < 0.8).length

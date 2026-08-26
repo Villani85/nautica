@@ -93,162 +93,93 @@ export function creaComposito (contenitore, base) {
   }
 
   /**
-   * 1 · IL MARE. Sta in fondo e non ruota mai. Non c'e' una riga che lo tenga
-   * fermo: e' fermo perche' nessuno lo tocca, ed e' esattamente il punto.
+   * ─── UNA CLIP SOLA, DISEGNATA DUE VOLTE
+   *
+   * E' la forma piu' semplice che questo capitolo abbia mai avuto, e ci siamo
+   * arrivati buttando via tutto il resto.
+   *
+   *   sotto   la stessa clip, FERMA: e' il mare, e non si inclina mai;
+   *   sopra   la stessa clip, RUOTATA col rollio vero e col vetro bucato:
+   *           e' la stanza.
+   *
+   * L'apertura scorre e si inclina sopra un orizzonte che non si muove. Non c'e'
+   * nessuna riga che tenga fermo il mare: e' fermo perche' nessuno lo tocca.
+   *
+   * E siccome le due sorgenti sono LO STESSO FILE, al bordo del vetro grana,
+   * colore e compressione combaciano al pixel. Non e' una taratura riuscita: e'
+   * una proprieta' di costruzione.
+   *
+   * ─── COSA E' SPARITO, e vale la pena saperlo
+   *
+   * Prima c'erano tre maschere — finestrini, persone, complemento — piu' due
+   * fotografie e un filmato di mare a parte. Le tre maschere si combattevano:
+   * quella dei finestrini bucava anche il ritaglio delle persone, perche' le
+   * teste erano appoggiate ai vetri. Da li' nascevano **le quattro persone a
+   * schermo** e **l'alone attorno ai volti**, e nessuna taratura li chiudeva.
+   *
+   * La cura non e' stata tarare meglio: e' stata cambiare la fotografia. Una
+   * stanza con UN finestrone solo e **nessuno davanti al vetro** rende quei
+   * difetti impossibili invece che rari.
    */
-  const mare = nuovo('composito__mare', 'video')
-  mare.src = base + 'filmati/mare-fuoribordo.mp4'
-  mare.loop = true; mare.muted = true; mare.playsInline = true
-  mare.setAttribute('aria-hidden', 'true')
-  mare.addEventListener('loadeddata', () => {
-    mare.play().catch(() => { /* rifiutata: resta il fondo chiaro, e si vede il cielo */ })
+  const SORGENTE = 'filmati/salone-largo.mp4'
+
+  const filmato = (classe) => {
+    const v = nuovo(classe, 'video')
+    v.src = base + SORGENTE
+    v.loop = true; v.muted = true; v.playsInline = true; v.preload = 'auto'
+    v.setAttribute('aria-hidden', 'true')
+    v.addEventListener('loadeddata', () => {
+      v.play().catch(() => { /* rifiutata: resta il primo fotogramma, che e' la posa giusta */ })
+    }, { once: true })
+    return v
+  }
+
+  /**
+   * 1 · IL MARE. Ingrandito, perche' quando la stanza si inclina l'apertura
+   * scorre e dietro deve trovare acqua anche dove nella clip c'e' la paratia.
+   * L'ingrandimento sposterebbe l'orizzonte in su': lo si riporta giu' con una
+   * traslazione calcolata, non a occhio — l'orizzonte sta al 45,9% dell'altezza,
+   * quindi scalando di 1,35 attorno al centro sale dell'1,4%.
+   */
+  const mare = filmato('composito__mare')
+
+  /**
+   * 2 · LA STANZA. Ruota col rollio vero, e la maschera le buca il vetro.
+   * `mask-mode: luminance`: il bianco mostra, quindi il vetro nella maschera e'
+   * NERO. Scritta nel verso intuitivo la stanza comparirebbe solo dentro il
+   * finestrino — gia' successo una volta.
+   */
+  const stanza = filmato('composito__stanza')
+  const m = `url(${base}salone/finestrone.png)`
+  stanza.style.webkitMaskImage = m
+  stanza.style.maskImage = m
+
+  /**
+   * I due elementi puntano allo STESSO file: il browser lo scarica una volta
+   * sola. Ma sono due decodifiche indipendenti, che partono a istanti diversi —
+   * e attraverso il vetro si vedrebbe un mare sfasato di qualche fotogramma
+   * rispetto a quello della clip. Sul mare non si nota, ma allinearli costa una
+   * riga e toglie il dubbio.
+   */
+  stanza.addEventListener('loadeddata', () => {
+    try { mare.currentTime = stanza.currentTime } catch { /* non ancora pronto */ }
   }, { once: true })
 
-  /**
-   * 2 · LE DUE POSE. Ogni fotografia porta la propria maschera, ricavata da
-   * lei stessa — non dalla sagoma, che dopo la generazione non combacia piu'.
-   * `mask-mode: luminance`: il bianco della maschera lascia passare il mare.
-   */
-  /**
-   * ─── UNO STRATO PUO' ESSERE UNA FOTOGRAFIA O UN FILMATO, E IL RESTO NON CAMBIA
-   *
-   * E' la forma ibrida decisa col committente: **il filmato da' la vita**
-   * — respiro, capelli, il vino che trema, la mano che va a puntellarsi — e
-   * **la simulazione da' l'inclinazione**. Sono due mestieri separati e non si
-   * devono sovrapporre: se il filmato sbandasse per conto suo, il suo
-   * sbandamento e quello calcolato si sommerebbero a caso, e soprattutto
-   * l'orizzonte dentro i vetri si inclinerebbe insieme alla stanza — che e'
-   * esattamente cio' che succede quando lo stabilizzatore NON c'e'.
-   *
-   * Quindi al filmato si chiede una cosa sola e severa: **camera bloccata,
-   * stanza diritta**. Le richieste e le misure stanno in
-   * `riferimenti/prompt/salone-filmati.md`, e il cancello che le verifica e'
-   * `strumenti/collaudo-filmato.mjs`.
-   *
-   * Finche' una clip non passa il cancello lo strato resta una fotografia:
-   * cambiare `video: false` in `video: true` e' tutto quello che serve, perche'
-   * maschera, rotazione e dissolvenza non sanno e non devono sapere che cosa
-   * stanno mostrando.
-   */
-  const SORGENTE = {
-    calma: { file: 'filmati/salone-calma.mp4', video: true },
-    tesa: { file: 'salone/tesa.jpg', video: false }
-  }
-
-  const posa = (nome, maschere) => {
-    const src = SORGENTE[nome]
-    const e = nuovo('composito__stanza', src.video ? 'video' : 'div')
-    if (src.video) {
-      e.src = base + src.file
-      e.loop = true; e.muted = true; e.playsInline = true
-      e.setAttribute('aria-hidden', 'true')
-      e.addEventListener('loadeddata', () => {
-        e.play().catch(() => { /* rifiutata: resta il primo fotogramma, che e' la posa giusta */ })
-      }, { once: true })
-    } else {
-      e.style.backgroundImage = `url(${base}${src.file})`
-    }
-    const m = maschere.map(x => `url(${base}salone/${x}.png)`).join(', ')
-    e.style.webkitMaskImage = m
-    e.style.maskImage = m
-    if (maschere.length > 1) {
-      // due maschere si INTERSECANO: passa solo cio' che e' bianco in entrambe
-      e.style.webkitMaskComposite = 'source-in'
-      e.style.maskComposite = 'intersect'
-    }
-    return e
-  }
-
-  /**
-   * ─── TRE STRATI DI STANZA, E IL TERZO E' NATO DA UN DIFETTO PRECISO.
-   *
-   * Il difetto lo ha visto il committente: **i cuscini sono diversi**.
-   * Dissolvendo le due fotografie INTERE, durante la transizione i mobili si
-   * trasformavano, e a transizione finita la stanza aveva cuscini diversi. Il
-   * modello non ricopia, rigenera: oltre alle due figure cambiano i cuscini e
-   * il bordo del tavolo. Non era un difetto della dissolvenza — si stava
-   * dissolvendo troppo.
-   *
-   * ─── LA CURA SBAGLIATA, e mi e' costata quattro giri
-   *
-   * Ritagliare la posa tesa sulle sole persone e sovrapporla alla calma. A
-   * schermo comparivano **quattro persone**, e ho dato la colpa al ritaglio: le
-   * due macchie piu' grandi, poi tutte quelle sopra una soglia, poi due
-   * riquadri, poi le macchie dilatate. Quattro volte, quattro persone.
-   *
-   * La causa era altrove, e si vede solo scrivendola: **le due maschere si
-   * combattono.** Le figure calme siedono con la testa appoggiata ai vetri. Li'
-   * `tesa-maschera` e' NERA — deve esserlo, e' il buco del finestrino — quindi
-   * buca anche il ritaglio delle persone, e la posa tesa **non puo' disegnare
-   * sopra la testa calma**. Il ritaglio era gia' giusto dal terzo tentativo:
-   * componendo la stessa maschera fuori dal sito, con la posa tesa piena,
-   * uscivano due persone pulite. Aggiungendo l'intersezione col finestrino ne
-   * uscivano quattro — cioe' esattamente quello che si vedeva.
-   *
-   * *Quando un difetto non si sposta pur cambiando la cosa che lo causa, la
-   * cosa che lo causa e' un'altra.*
-   *
-   * ─── LA FORMA CHE REGGE
-   *
-   *   stanza la stanza FUORI dalla regione delle persone. Non si dissolve mai,
-   *          quindi i cuscini non cambiano: e' la richiesta del committente,
-   *          ed e' soddisfatta per costruzione e non per taratura;
-   *   A      la posa calma DENTRO la regione, opacita' 1-q;
-   *   B      la posa tesa DENTRO la regione, opacita' q.
-   *
-   * Dentro la regione si dissolvono solo le persone, e dove la posa tesa ha un
-   * finestrino al posto di una testa compare il mare — che e' cio' che c'e'
-   * davvero dietro quella testa quando la persona si e' spostata.
-   */
-  const stanza = posa('calma', ['calma-maschera', 'persone-maschera-fuori'])
-  const calma = posa('calma', ['calma-maschera', 'persone-maschera'])
-  const tesa = posa('tesa', ['tesa-maschera', 'persone-maschera'])
-  tesa.style.opacity = '0'
-
-  /**
-   * Chi naviga con lo schermo non deve trovare tre riquadri vuoti. La
-   * descrizione cambia con lo stato, perche' e' lo stato la cosa da raccontare.
-   */
   contenitore.setAttribute('role', 'img')
+  contenitore.setAttribute('aria-label',
+    'The saloon of a large yacht in a force four sea. Through a single wide window the ocean is running with whitecaps under heavy cloud, and the horizon stays level. Inside, two people sit talking over drinks in warm lamplight.')
 
   let ultimo = null
-  let allerta = false      // lo STATO: ci si sente al sicuro o no
-  let calmaDa = 0          // da quanti secondi la stanza sta ferma
-  let q = 0                // la posa a schermo, che insegue lo stato
 
-  function aggiorna (gradi, dt = 1 / 60) {
-    const g = Math.abs(gradi)
-
-    if (g > ACCENDE) { allerta = true; calmaDa = 0 }
-    else if (g < CALMO) {
-      calmaDa += dt
-      if (calmaDa > CONVINCE) allerta = false
-    } else {
-      // nella terra di mezzo non si decide niente, ma il conto della calma si
-      // azzera: un'oscillazione a quattro gradi non e' calma
-      calmaDa = 0
-    }
-
-    const bersaglio = allerta ? 1 : 0
-    q += (bersaglio - q) * Math.min(1, dt * VELOCITA)
-    const r = `rotate(${gradi.toFixed(2)}deg)`
-    stanza.style.transform = calma.style.transform = tesa.style.transform = r
-    /**
-     * Dentro la regione delle persone le due pose si scambiano. Lo strato della
-     * stanza non si tocca: la stanza non cambia mai.
-     */
-    calma.style.opacity = String(1 - q)
-    tesa.style.opacity = String(q)
-
-    const teso = q > 0.5
+  function aggiorna (gradi) {
+    stanza.style.transform = `rotate(${gradi.toFixed(2)}deg)`
+    const teso = Math.abs(gradi) > 4
     if (teso !== ultimo) {
       ultimo = teso
-      contenitore.setAttribute('aria-label', teso
-        ? 'The saloon of a yacht, heeled over. The two people are bracing themselves against the table and the backrest. The wine glasses are still upright, and through the window the sea horizon stays level.'
-        : 'The saloon of a yacht, level and calm. Two people sit talking, two glasses of wine stand on the table between them. Through the window the open sea is rough.')
+      contenitore.dataset.stato = teso ? 'inclinato' : 'dritto'
     }
   }
 
   aggiorna(0)
-  return { aggiorna, mare, posa: () => q }
+  return { aggiorna, mare }
 }
