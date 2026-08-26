@@ -15,6 +15,7 @@ const $ = (s) => document.querySelector(s)
  * non stanno piu' fra l'utente e il primo disegno.
  */
 export function avviaDimostrazione () {
+  const sezione = document.querySelector('#dimostrazione')
   const contenitore = $('#scena')
   const scena = creaScena(contenitore)
 
@@ -73,7 +74,27 @@ export function avviaDimostrazione () {
   }
   const risveglia = () => { if (sim.S.ridotto) sveglia(); else avviaCiclo() }
 
-  const palco = document.querySelector('.palco')
+  /**
+   * ─── IL PALCO E' QUELLO DELLA DIMOSTRAZIONE, NON IL PRIMO CHE CAPITA
+   *
+   * Qui c'era `document.querySelector('.palco')`. Nel documento il salone viene
+   * PRIMA della dimostrazione, e il suo contenitore porta `class="palco
+   * palco--salone"`: il selettore restituiva quello. Da allora la regia della
+   * dimostrazione scriveva `data-battuta` sul palco del salone.
+   *
+   * Il guasto non si vedeva come un errore, si vedeva come una cosa che non
+   * succedeva mai. Tutte le regole `·palco[data-battuta="taglio"] .comandi`,
+   * `[data-battuta="emerge"] .pannello--letture` e compagnia puntano a
+   * discendenti di un palco che quei discendenti non li ha: nessun selettore
+   * corrispondeva, nessun errore veniva sollevato, e i pannelli restavano
+   * accesi in ogni battuta — compresa quella in cui coprono il meccanismo che
+   * il taglio serve a mostrare.
+   *
+   * Trovato interrogando il DOM invece di leggere il codice: elencando i due
+   * `.palco` e chiedendo a ciascuno la propria `data-battuta`, uno rispondeva
+   * «calma» e l'altro niente. Il codice, letto, sembrava giusto.
+   */
+  const palco = sezione.querySelector('.palco')
   const regia = creaRegia({
     scena, sim, palco,
     didascalia: $('#battuta'),
@@ -120,7 +141,6 @@ export function avviaDimostrazione () {
    * disegna affatto: e' meta' della batteria di un telefono, e non costa
    * niente in leggibilita'.
    */
-  const sezione = $('#dimostrazione')
   const osservatore = new IntersectionObserver((voci) => {
     for (const v of voci) v.isIntersecting ? risveglia() : fermaCiclo()
   }, { threshold: 0.05 })
@@ -157,6 +177,24 @@ export function avviaDimostrazione () {
     if (corsa <= 0) return
     const p = Math.min(1, Math.max(0, -r.top / corsa))
     regia(p)
+
+    /**
+     * ─── IL CAPITOLO NON SE NE VA CON I PANNELLI ACCESI
+     *
+     * Oltre `p = 1` il palco si stacca e sale per un altro schermo. In quel
+     * tratto le letture, i comandi e la didascalia salivano **accese** e
+     * finivano sotto l'intestazione, che e' fissa e non ha fondo: due testi
+     * sovrapposti, illeggibili tutti e due. Si vedeva nel provino a cavallo
+     * del bordo — «fraction of the boat» stampato sopra «TECHNICAL STUDY».
+     *
+     * `--uscita` va da 0 (ancora incollato) a 1 (uno schermo oltre). Non e'
+     * una soglia in pixel: e' quanto manca alla sezione per uscire, misurata
+     * sul rect vero come tutto il resto qui.
+     */
+    const oltre = corsa > 0 ? Math.max(0, -r.top - corsa) : 0
+    palco.style.setProperty('--uscita',
+      Math.min(1, oltre / (window.innerHeight * 0.45)).toFixed(3))
+
     if (sim.S.ridotto) sveglia()
   }
 

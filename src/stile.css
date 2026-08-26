@@ -265,6 +265,11 @@ p{max-width:60ch}
   background:transparent;
 }
 .scena{position:absolute;inset:0}
+
+/* Tutto cio' che e' SOPRA la scena si spegne mentre il capitolo esce: vedi
+   `--uscita` in `demo.js`. La tela no — la nave che scorre via e' il
+   movimento giusto, ed e' il pannello che le sta sopra a essere di troppo. */
+.palco > :not(.scena){opacity:calc(1 - var(--uscita, 0))}
 /* La tela WebGL e' trasparente sopra la linea — verificato leggendo l'alpha
    dal browser: 0 a tutte e sette le battute — e il fondo del .palco traspare.
    PROVATO E BOCCIATO: dare lo STESSO fondo anche alla tela non serve a niente.
