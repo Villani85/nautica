@@ -42,91 +42,65 @@ nella materia.
 
 ---
 
-### 1 · La nave alla qualità del salone `[~]` — **strada scelta e misurata**
+### 1 · L'IMPIANTO IN 3D, MUOVIBILE DAL SITO `[~]`
 
-Il committente ha posto la barra: fotorealismo, e se il tempo reale non ci
-arriva si cambia strada anche buttando il lavoro fatto. Quindi ho smesso di
-tarare il WebGL e ho **misurato** se la strada offline regge, invece di
-discuterne.
+**Cosa deve essere**, deciso col committente: non fotogrammi cotti, ma **il
+modello vero che si gira e si muove dal sito** — l'impianto intero, tutto uno di
+seguito all'altro:
 
-**Verdetto: regge.** Blender gira headless da riga di comando — nessun MCP di
-mezzo, che con la connessione lenta è l'unica via praticabile — a **35 secondi
-per fotogramma** su 760×470 con 130 campioni. Una sequenza di 40 fotogrammi
-costa venti minuti.
+    quadro → cavo → motore → riduttore → giunto → supporto → albero
+           → attraversamento carena → radice → pinna
 
-**E la ricetta del metallo è trovata**, in quattro provini che si sono smentiti
-a vicenda: Principled liscio dà CAD pulito · aggiungere rugosità e graffi dà
-metallo *corroso* · meno intensità non basta · la stessa variazione **stirata
-nel verso della lavorazione** dà acciaio tornito. Sta in
-`riferimenti/blender/`, con le due immagini a confronto.
+L'occhio segue la catena della causa dal comando fino all'acqua senza saltare, e
+non è una scelta di composizione: **è la tesi del sito resa geometria.** Il pezzo
+che vale sta sotto, e ci si arriva seguendo il filo.
 
-*Un rumore isotropo su un metallo si legge sempre come sporco. Lo stesso rumore,
-stessa intensità, allungato nel verso della lavorazione si legge come superficie
-lavorata.* Non è questione di quanto, è di che forma.
+#### La regola che non si negozia
 
-**La forma che ne discende**, ed è la grammatica del salone applicata alla nave:
+**Le quote da cui dipende la fisica non si toccano**: raggio dell'albero,
+apertura e corda della pinna, braccio della leva, posizione di flangia e
+premistoppa, attacco sul ginocchio di carena. Sono quelle che `simulazione.js`
+usa per calcolare la riduzione. Cambiarle per far sembrare il pezzo più bello
+vorrebbe dire che **il numero dichiarato non si riferisce più a ciò che si
+mostra** — la bugia peggiore possibile in un sito la cui tesi è l'onestà
+tecnica. Nei file sono marcate `VINCOLATA`, una per una.
 
-- **fuori si fotografa.** Le battute in cui la nave si *guarda* diventano
-  immagini generate da una sagoma renderizzata dal sito, così composizione,
-  camera e orizzonte restano nostri;
-- **dentro si renderizza.** Il meccanismo non può essere una fotografia, perché
-  deve muoversi con la fisica. Diventa una **sequenza cotta in Blender indicizzata
-  dall'angolo della pinna**: fotorealistica e comunque guidata dalla simulazione,
-  perché è l'angolo a scegliere il fotogramma. Non è tempo reale — è *reattivo*,
-  che è ciò che serve;
-- **il taglio resta un disegno**, e lì va bene: il sito lo dichiara, *«The cut is
-  not a picture»*.
+#### I passi, in ordine, con il criterio che li chiude
 
-Fatto: `[x]` provini di fattibilità e ricetta del metallo · `[x]` ambiente sui
-soli materiali della nave (`scene.environment` raggiungeva anche l'acqua e
-rompeva la giunzione) · `[x]` acqua che si schiarisce nel taglio.
+- `[~]` **1.1 · il modello completo in Blender.** Tutti i pezzi della catena,
+  con bulloneria, nervature, pressacavi, tubi. *Chiuso quando:* un render a
+  1400 px si legge come una fotografia di un impianto, non come un modello.
+- `[ ]` **1.2 · le mappe cotte.** Occlusione ambientale, rugosità e normali
+  cotte nelle texture. È il passo che porta il tempo reale vicino al render:
+  l'ombra fra le nervature e dentro i fori non si calcola dal vivo, **è già
+  dipinta**. *Chiuso quando:* il modello in three.js con le mappe è
+  indistinguibile dallo stesso modello in Cycles a camera ferma.
+- `[ ]` **1.3 · esportazione glTF compressa.** Meshopt o Draco, texture in
+  KTX2. *Chiuso quando:* sta sotto i 900 KB — il sito porta in pagina la riga
+  «3D models downloaded: 0 bytes» e quella riga andrà cambiata, non nascosta.
+- `[ ]` **1.4 · il caricamento in three.js** con ambiente PMREM e tone mapping.
+  *Chiuso quando:* la giunzione fra fondo CSS e canvas resta a 0 px — è l'unica
+  idea meccanica del sito e nessun modello la può rompere.
+- `[ ]` **1.5 · il movimento lo comanda la simulazione.** `S.pinna` guida
+  albero, leva e pinna con la cinematica vera, non un'animazione registrata.
+  *Chiuso quando:* nessuna riga forza una posa — l'angolo viene dalla fisica, e
+  un cancello lo verifica come già fa `collaudo-fantasma` per il rollio nudo.
+- `[ ]` **1.6 · si gira col trascinamento**, e da telefono con lo stesso esito
+  anche se non con lo stesso gesto.
 
-**La catena funziona da capo a fondo**, e questo era il pezzo incerto:
+#### Cosa il tempo reale non darà, detto prima
 
-    node strumenti/esporta-meccanismo.mjs meccanismo.json
-    blender -b -P riferimenti/blender/cuoci.py -- meccanismo.json <cartella>
+Illuminazione globale e profondità di campo restano di Cycles. Su un meccanismo
+scuro su fondo scuro il divario è **piccolo**, perché il metallo è quasi tutto
+riflessi e quelli l'ambiente li dà bene. Su una scena intera no. È il motivo per
+cui la nave *fuori* resta fotografica e il meccanismo *dentro* diventa modello.
 
-`[x]` la geometria si esporta **dalla pagina viva** — 73 pezzi, 4891 triangoli —
-quindi c'è **una sorgente di verità sola**. La prima stesura riscriveva il
-meccanismo in Python dalle quote di `nave.js`: funzionava, e alla prima modifica
-delle ordinate le due sarebbero divergute in silenzio. `GLTFExporter` non serve
-e non funziona: importa `three` con un nome nudo, e nel bundle three è inglobato
-nei chunk. Serializzare a mano costa venti righe e non dipende da niente.
+#### Quello che è già in mano
 
-`[x]` Blender la ricostruisce con la ricetta del metallo e rende in 12–14 s.
-
-`[x]` **l'ambiente c'è, ed era la cosa che mancava.** Con `metalness: 1` un
-metallo mostra *soltanto* ciò che riflette: contro un gradiente piatto riflette
-una tinta, e usciva verde acqua. Con un HDRI d'officina il materiale diventa
-fotografico — acciaio vero, ottone vero, riflessi con una forma.
-
-*Avevo escluso gli HDRI per una ragione giusta applicata al posto sbagliato:*
-pesano 1–2 MB contro un budget di 500 KB. Vero **per il web**. Qui non si
-spedisce l'ambiente, si spediscono i **fotogrammi cotti**: l'HDRI resta sul disco
-e la pagina non cambia di un byte.
-
-**Ma il divario vero non era il materiale: è la geometria.** Alla misura giusta
-i pezzi si leggono *separati* — motore staccato dal riduttore, albero che
-galleggia, manovella su un tavolino a parte. Non è un difetto di resa: **quella
-geometria è uno schema, non una macchina.** È distanziata apposta perché in
-sezione si capisca chi fa cosa. Un attuatore vero è un blocco compatto,
-imbullonato, con tubazioni e cablaggi.
-
-Quindi la conclusione, ora misurata invece che supposta, è la stessa della nave:
-dove il meccanismo si **guarda** serve una fotografia generata dalla sagoma;
-dove si **taglia**, lo schema è giusto — il sito lo dichiara, *«The cut is not a
-picture»*.
-
-`[ ]` cuocere la sequenza indicizzata dall'angolo · `[ ]` montarla al posto della
-scena in tempo reale nelle battute del meccanismo.
-
-**Un difetto chiuso a metà, e va detto.** Metà scafo era nera perché le due mesh
-— faccia esterna e faccia interna — disegnano *gli stessi triangoli*: con la
-doppia faccia sono la stessa superficie, quindi vince l'una o l'altra, mai
-entrambe. Non è tarabile, è una contraddizione di progetto. Per ora la doppia
-faccia tiene lo scafo intero e la cavità della sezione resta chiara: difetto
-minore di mezza nave nera. Sparisce del tutto quando il meccanismo passa alla
-sequenza cotta.
+`[x]` Blender headless, 2 minuti a fotogramma · `[x]` la ricetta del metallo,
+misurata in quattro provini · `[x]` l'esportatore che prende la geometria **dalla
+pagina viva**, una sorgente di verità sola · `[x]` gli assi della carena, che la
+prima stesura aveva sbagliati.
 
 ### 2 · Il telefono, progettato come versione diversa `[ ]`
 
