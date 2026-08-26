@@ -166,3 +166,111 @@ export function applicaAmbiente (mappa) {
     materiali[nome].needsUpdate = true
   }
 }
+
+/**
+ * ─── LE FINESTRE E LA FASCIA DI GALLEGGIAMENTO, DIPINTE NEL MATERIALE
+ *
+ * Il fianco dello scafo era una lastra chiara alta due metri e mezzo su
+ * quaranta di lunghezza, senza niente sopra. Su una barca vera quella
+ * superficie e' rotta da tre cose, e sono le tre che il cervello usa per
+ * darle una scala: **le finestre di murata**, la **fascia scura al
+ * galleggiamento** e il bordo del ponte. Senza, resta un pontone: e' cosi' che
+ * si leggeva, e nessun materiale piu' lucido lo salvava.
+ *
+ * ─── PERCHE' NEL MATERIALE E NON IN GEOMETRIA
+ *
+ * Le alternative erano due, e tutte e due peggiori:
+ *
+ *   una texture     vorrebbe le UV, e le UV su questo scafo non ci sono
+ *                   ancora: arrivano con la cottura delle mappe, che e' un
+ *                   altro pezzo di lavoro. Sarebbe stato metterlo in coda a
+ *                   qualcosa che non e' cominciato;
+ *   dei riquadri    andrebbero appoggiati sulla superficie, e la superficie e'
+ *   di geometria    un loft curvo: servirebbe interrogarla punto per punto e
+ *                   scostarli di un pelo. Ho gia' pagato una volta il prezzo
+ *                   di due pezzi che devono restare allineati fra loro — il
+ *                   tappo di sezione — e la regola scritta in `ordinate.js` e'
+ *                   che la seconda implementazione non da' errore, diverge in
+ *                   silenzio.
+ *
+ * Qui invece la fonte resta UNA: la posizione nello spazio oggetto dello
+ * scafo. Le finestre non possono scollarsi dalla superficie perche' **sono**
+ * la superficie.
+ *
+ * ─── LE QUOTE, E DA DOVE VENGONO
+ *
+ * `ordinate.js` mette il trincarino fra 0,890 e 1,360 e il ginocchio fra
+ * -0,18 e -0,30. Il fianco utile sta quindi fra circa 0 e 0,9. Una finestra di
+ * murata su un quaranta metri sta a un metro e mezzo dal mare e non arriva
+ * mai al trincarino: 0,60 di quota (1,5 m) e 0,17 di altezza (42 cm).
+ *
+ * La fascia al galleggiamento e' alta 14 cm — sotto e' antivegetativa, sopra
+ * e' smalto — e non e' decorazione: e' l'unica cosa che dice **dove pesca la
+ * barca**, e senza di lei lo scafo galleggia a un'altezza qualsiasi.
+ */
+const FINESTRE = {
+  quota: 0.60,        // centro della fascia, in unita' di scena
+  altezza: 0.17,
+  daPoppa: 3.10,      // la prima finestra
+  aProra: -3.90,      // l'ultima
+  passo: 1.40,        // interasse
+  larghezza: 0.92     // quanto e' lunga ciascuna
+}
+const GALLEGGIAMENTO = { alto: 0.058, spessore: 0.052 }
+
+/**
+ * Si scrive dentro lo shader dello Standard invece di sostituirlo: cosi'
+ * l'illuminazione, l'ambiente e il piano di sezione restano quelli di three, e
+ * l'unica cosa che cambia e' il colore di partenza. Un materiale scritto da
+ * zero avrebbe voluto rifare tutto il resto per riguadagnare le stesse cose.
+ */
+materiali.scafo.onBeforeCompile = (s) => {
+  s.vertexShader = s.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vLocale;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLocale = transformed;')
+
+  s.fragmentShader = s.fragmentShader
+    .replace('#include <common>', `#include <common>
+varying vec3 vLocale;
+// Quanto vetro c'e' su questo pixel. Vive fuori dal blocco perche' serve DUE
+// volte, in due punti diversi dello shader: per il colore subito, e per la
+// rugosita' piu' avanti. La variabile della rugosita' a quel punto non esiste
+// ancora, e il primo tentativo si e' fermato li' con undeclared identifier.
+float vetroFin = 0.0;
+// una fascia morbida: 1 dentro, 0 fuori, coi bordi sfumati di m
+float fascia (float v, float centro, float mezza, float m) {
+  return 1.0 - smoothstep(mezza - m, mezza + m, abs(v - centro));
+}`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+{
+  // LA FASCIA AL GALLEGGIAMENTO — dice dove pesca la barca
+  float boot = fascia(vLocale.y, ${GALLEGGIAMENTO.alto.toFixed(3)},
+                      ${(GALLEGGIAMENTO.spessore / 2).toFixed(3)}, 0.006);
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.30, boot);
+
+  // LE FINESTRE DI MURATA — ripetute lungo z, ma NON con un fract():
+  // un fract() le farebbe correre fino alla prua e alla poppa, dove lo scafo
+  // e' pieno. Si contano, e si fermano dove devono fermarsi.
+  float y = fascia(vLocale.y, ${FINESTRE.quota.toFixed(3)},
+                   ${(FINESTRE.altezza / 2).toFixed(3)}, 0.010);
+  if (y > 0.001) {
+    for (int i = 0; i < 6; i++) {
+      float z = ${FINESTRE.daPoppa.toFixed(2)} - float(i) * ${FINESTRE.passo.toFixed(2)};
+      if (z < ${FINESTRE.aProra.toFixed(2)}) break;
+      vetroFin = max(vetroFin, fascia(vLocale.z, z,
+                                      ${(FINESTRE.larghezza / 2).toFixed(3)}, 0.018));
+    }
+    vetroFin *= y;
+  }
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.020, 0.028, 0.032), vetroFin);
+}`)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+// Un vetro e' piu' liscio della vernice: senza questo la finestra resterebbe
+// una macchia scura invece di una superficie che riflette. Sta QUI e non
+// insieme al colore perche' la variabile della rugosita' nasce in questa riga:
+// scriverla prima da undeclared identifier, ed e' dove si e' fermato il primo
+// tentativo.
+roughnessFactor = mix(roughnessFactor, 0.045, vetroFin);`)
+}
+/** Cambiando lo shader a mano, three va avvisato di ricompilare. */
+materiali.scafo.customProgramCacheKey = () => 'scafo-finestre-1'
