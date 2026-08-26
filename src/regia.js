@@ -126,6 +126,26 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
     // 6 - 7 · il taglio entra e il meccanismo si scopre
     scena.impostaSpaccato(dolce(fra(p, 0.60, 1.00)))
 
+    /**
+     * ─── L'AVVICINAMENTO, ed e' la richiesta piu' esplicita che il sito abbia
+     *
+     * «voglio il modello 3d che e' possibile far muovere dal sito», «devi far
+     * vedere come si muove tutto, come e' fatto». Fino a qui il capitolo si
+     * fermava a 7,2 unita': su una nave lunga 16 unita', il meccanismo occupa
+     * meno di mezza unita'. Si sapeva che c'era, non lo si vedeva.
+     *
+     * L'ultima battuta ci porta dentro. E' una fase a se' e non un
+     * allungamento della precedente: prima si vede la nave APRIRSI — e serve
+     * distanza, o non si capisce che il taglio corre lungo tutto lo scafo —
+     * poi si va sul pezzo. Due cose diverse chiedono due inquadrature diverse.
+     *
+     * La quota della camera resta zero anche qui: e' quello che tiene la linea
+     * di galleggiamento a meta' schermo. Il meccanismo sta a y = -0,34, quindi
+     * entrando si abbassa da solo nella meta' d'acqua — che e' esattamente la
+     * tesi, non un ripiego di inquadratura.
+     */
+    scena.impostaAvvicinamento(dolce(fra(p, 0.82, 1.00)))
+
     const { indice, b } = battutaA(p)
 
     /**

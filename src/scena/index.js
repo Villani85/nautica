@@ -15,6 +15,8 @@ import { avanza } from '../stato.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
+/** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
+const RAGGIO_MECCANISMO = 2.6
 const AZIMUT_MAX = 0.92
 
 /** Dove sta il meccanismo: e' li' che la camera va a finire. */
@@ -256,6 +258,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let azimutTarget = 0.34
   let spaccato = 0
   let emersione = 0
+  let avvicinamento = 0
 
   /**
    * L'EMERSIONE — il principio che regge tutta la sequenza (D39).
@@ -287,6 +290,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * meccanismo sta a y = -0,34, cioe' compare appena SOTTO la linea — che e'
    * esattamente la tesi: la parte che vale sta sotto.
    */
+  /** §L'ultima battuta porta la camera sul pezzo. Vedi `regia.js`. */
+  function impostaAvvicinamento (v) {
+    avvicinamento = MathUtils.clamp(v, 0, 1)
+  }
+
   function impostaSpaccato (p) {
     spaccato = MathUtils.clamp(p, 0, 1)
     pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
@@ -366,7 +374,16 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     fuoribordo.impostaMare(sim.S.mare)
 
     azimut += (azimutTarget - azimut) * Math.min(1, dt * 5)
-    const raggio = MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato)
+    /**
+     * Due avvicinamenti in fila, e non uno solo piu' lungo: il primo serve a
+     * mostrare che il taglio corre lungo TUTTO lo scafo, e per quello ci vuole
+     * distanza; il secondo porta sul pezzo. Interpolare in una volta sola da
+     * 19,5 a 2,6 farebbe passare la fase del taglio troppo vicino per
+     * leggerla.
+     */
+    const raggio = MathUtils.lerp(
+      MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato),
+      RAGGIO_MECCANISMO, avvicinamento)
     const miraX = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
     // La camera insegue la sezione anche IN LUNGHEZZA: da mezzanave al
     // meccanismo. La quota resta zero — e' quello che tiene la linea a meta'
@@ -437,5 +454,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   impostaEmersione(1)
 
-  return { render, camera, ridimensiona, ruota, disegna, impostaSpaccato, impostaEmersione, tela: render.domElement }
+  return {
+    render, camera, ridimensiona, ruota, disegna,
+    impostaSpaccato, impostaEmersione, impostaAvvicinamento,
+    tela: render.domElement
+  }
 }

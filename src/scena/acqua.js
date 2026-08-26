@@ -64,7 +64,12 @@ export function costruisciAcqua () {
  * Resta acqua: colore, pelo e riflessi non cambiano. Cambia solo quanto pesa.
  */
 const FONDA = 0.72      // a nave intera: il sotto e' un altro mondo
-const CHIARA = 0.25     // dentro il taglio: l'acqua e' una quota
+/* Dentro il taglio l'acqua e' una QUOTA, non un ambiente: piu' si entra, meno
+   deve pesare. A 0,25 il meccanismo restava sotto una patina verde e i suoi
+   materiali — che ora hanno un ambiente vero da riflettere — non arrivavano.
+   Misurato guardando il provino a 2,3 unita': il motore leggeva come una
+   sagoma, non come un pezzo. */
+const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
 
   const materialeVolume = new MeshBasicMaterial({
     color: 0x061518, transparent: true, opacity: FONDA, depthWrite: false
