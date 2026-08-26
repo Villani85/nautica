@@ -42,8 +42,26 @@ export const materiali = {
    * enorme. Un cancello che misura una grandezza vicina a quella che conta non
    * e' un cancello: va sostituito con uno che RENDERIZZA e guarda.
    */
+  /**
+   * LO SCAFO E' VERNICIATO, NON GREZZO.
+   *
+   * Qui c'era `metalness: 0.42, roughness: 0.44`: la ricetta di una lamiera
+   * d'acciaio non trattata. E' il motivo per cui la nave leggeva come una
+   * chiatta grigia anche dopo che la sovrastruttura era diventata uno yacht —
+   * un fianco opaco e semimetallico non lo produce nessuna barca finita.
+   *
+   * Un fianco verniciato ha `metalness: 0` (la vernice non e' un conduttore:
+   * un valore intermedio non descrive nessuna materia reale, e' un cursore
+   * spinto a meta') e una rugosita' bassa, perche' un fianco di yacht e' quasi
+   * uno specchio. La conseguenza e' migliore di quanto mi aspettassi: uno
+   * scafo lucido **riflette la linea dell'orizzonte su se stesso**, ed e' la
+   * tesi del sito applicata alla carena invece che alla pagina.
+   *
+   * Il colore non cambia: la tavolozza e' una decisione presa, e questa e' una
+   * correzione sulla materia, non sul progetto.
+   */
   scafo: new MeshStandardMaterial({
-    color: 0x707c82, metalness: 0.42, roughness: 0.44, side: DoubleSide
+    color: 0x707c82, metalness: 0.0, roughness: 0.13, side: DoubleSide
   }),
   coperta: new MeshStandardMaterial({
     color: 0xcfc9bc, metalness: 0.05, roughness: 0.72

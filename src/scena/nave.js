@@ -38,6 +38,18 @@ function sezioneScafo () {
 /** Dove stanno gli stabilizzatori lungo la nave: poco a proravia di mezzo. */
 export const Z_PINNE = -1.2
 
+/**
+ * LA TUGA, in unita' di scena — ed e' esportata perche' serve FUORI da qui.
+ *
+ * I livelli superiori della sovrastruttura si costruiscono in Blender e devono
+ * appoggiare sul tetto di questa. Riscrivere 0,6 / 6,2 / 0,72 nello script
+ * Python sarebbe stata la seconda copia di tre numeri: non darebbe errore, e la
+ * tuga superiore galleggerebbe o si interrerebbe di qualche centimetro. Da qui
+ * passano a `strumenti/esporta-coperta.mjs`, che li scrive nel file che Blender
+ * legge.
+ */
+export const TUGA = { z: 0.6, lung: 6.2, alt: 0.72, fattoreLarghezza: 1.16 }
+
 export function costruisciNave () {
   const nave = new Group()
   // Il guscio e' cio' che il piano di sezione taglia via; il meccanismo no —
@@ -126,7 +138,7 @@ export function costruisciNave () {
    * estremita'. Se domani le ordinate cambiano, o la tuga si allunga verso
    * prua, si riappoggia da sola invece di scollarsi in silenzio.
    */
-  const TUGA_Z = 0.6, TUGA_LUNG = 6.2, TUGA_ALT = 0.72
+  const { z: TUGA_Z, lung: TUGA_LUNG, alt: TUGA_ALT } = TUGA
   const zProra = TUGA_Z - TUGA_LUNG / 2
   const zPoppa = TUGA_Z + TUGA_LUNG / 2
   const pontePro = sezioneA(tDaZ(zProra)).ponteY

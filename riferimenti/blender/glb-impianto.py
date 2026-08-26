@@ -106,7 +106,14 @@ def cil(r, h, pos, materiale, lati=32, asse='X', smusso=0.0018):
         o.rotation_euler = (0, math.radians(90), 0)
     elif asse == 'Y':
         o.rotation_euler = (math.radians(90), 0, 0)
-    bpy.ops.object.transform_apply(rotation=True)
+    # `transform_apply(rotation=True)` applica ANCHE posizione e scala: i tre
+    # argomenti hanno tutti il default a True, e nominarne uno non spegne gli
+    # altri. La posizione finiva cotta dentro la mesh, l'oggetto restava a
+    # (0,0,0), e qualunque rotazione assegnata dopo girava il pezzo attorno
+    # all'ORIGINE DELLA SCENA invece che attorno a se'. Le draglie della
+    # battagliola sono finite 18 metri sotto la linea d'acqua. Nessun errore:
+    # solo un ingombro assurdo, che si vede solo se lo si misura.
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
     o.data.materials.append(MAT[materiale])
     bpy.ops.object.shade_smooth()
     if smusso:
@@ -119,7 +126,14 @@ def cono(r1, r2, h, pos, materiale, lati=32, asse='X'):
     o = bpy.context.object
     if asse == 'X':
         o.rotation_euler = (0, math.radians(90), 0)
-    bpy.ops.object.transform_apply(rotation=True)
+    # `transform_apply(rotation=True)` applica ANCHE posizione e scala: i tre
+    # argomenti hanno tutti il default a True, e nominarne uno non spegne gli
+    # altri. La posizione finiva cotta dentro la mesh, l'oggetto restava a
+    # (0,0,0), e qualunque rotazione assegnata dopo girava il pezzo attorno
+    # all'ORIGINE DELLA SCENA invece che attorno a se'. Le draglie della
+    # battagliola sono finite 18 metri sotto la linea d'acqua. Nessun errore:
+    # solo un ingombro assurdo, che si vede solo se lo si misura.
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
     o.data.materials.append(MAT[materiale])
     bpy.ops.object.shade_smooth()
     return smussa(o)

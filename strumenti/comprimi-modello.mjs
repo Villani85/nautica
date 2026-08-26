@@ -44,15 +44,19 @@ if (!ingresso || !uscita) {
   process.exit(2)
 }
 
-/** §2.1 di docs/14 — i nomi sono un'API e non si rinominano. */
-const NODI = [
-  'STATIC_FOUNDATION', 'STATIC_HULL_PLATE', 'STATIC_SEAL', 'STATIC_MOTOR',
-  'HOUSING_FIXED', 'HOUSING_REMOVABLE', 'HOUSING_SECTION',
-  'RIG_INPUT', 'RIG_ECCENTRIC', 'RIG_CYCLO_A', 'RIG_CYCLO_B',
-  'RIG_OUTPUT', 'RIG_SHAFT', 'RIG_FIN'
-]
-/** Gli extras che il sito legge davvero. Se ne aggiungi uno la', aggiungilo qui. */
-const EXTRAS = ['authoringUnit', 'sceneMetersPerUnit', 'gearRatio', 'eccentricityM']
+/**
+ * IL CONTRATTO SI RICAVA DALL'INGRESSO, NON SI SCRIVE QUI.
+ *
+ * La prima versione elencava a mano i quattordici nodi dell'impianto e i suoi
+ * quattro extras. Ha funzionato finche' il solo modello era quello: al secondo
+ * — la sovrastruttura — quell'elenco sarebbe diventato una bugia da aggiornare
+ * a ogni modello nuovo, e chi lo dimentica non ottiene un errore, ottiene un
+ * controllo che non controlla piu' niente.
+ *
+ * La regola giusta e' piu' semplice e piu' forte: **niente di cio' che c'era
+ * puo' sparire.** Ogni nome e ogni extra del file d'ingresso deve ritrovarsi
+ * identico nell'uscita. Non serve sapere a cosa servono.
+ */
 
 function apri (percorso) {
   const b = readFileSync(percorso)
@@ -66,6 +70,8 @@ function apri (percorso) {
 }
 
 const prima = apri(ingresso)
+const NODI = [...prima.nomi]
+const EXTRAS = Object.keys(prima.extras ?? {})
 
 execFileSync('npx', ['gltfpack', '-i', ingresso, '-o', uscita, '-cc', '-kn', '-ke'],
              { stdio: 'inherit', shell: process.platform === 'win32' })

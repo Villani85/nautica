@@ -7,6 +7,7 @@ import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
+import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaAmbiente } from './ambiente.js'
 import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
@@ -162,6 +163,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
   for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
+
+  /**
+   * I DUE PONTI SOPRA LA TUGA arrivano da Blender, e arrivano DOPO — come
+   * l'impianto, per la stessa ragione: 58 KB non stanno nel percorso critico
+   * della prima schermata. Chi guarda i primi istanti vede la nave a un solo
+   * livello, che e' preferibile a una schermata che aspetta.
+   *
+   * Il piano di sezione e l'ambiente si passano al caricatore invece di essere
+   * applicati qui: i materiali del GLB non stanno nell'elenco per nome di
+   * `materiali.js`, e senza il piano la sovrastruttura resterebbe intera mentre
+   * lo scafo si apre — una nave tagliata a meta' con la tuga intatta sopra.
+   */
+  const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
+  nave.add(sovra.gruppo)
+  sovra.caricato.catch(e => console.error('[nautica] sovrastruttura non caricata', e))
   /**
    * IL FUORIBORDO sta in coordinate MONDO — non e' figlio della nave — ma
    * fisicamente dentro la tuga, cosi' si vede solo attraverso il finestrino.
