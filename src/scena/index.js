@@ -1,10 +1,13 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3
+  PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3,
+  PMREMGenerator
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
+import { creaAmbiente } from './ambiente.js'
+import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
 import { avanza } from '../stato.js'
 
@@ -80,6 +83,30 @@ export function creaScena (contenitore) {
   // stile, o la giunzione fra fondo CSS e canvas si vede.
   render.toneMapping = NoToneMapping
   contenitore.appendChild(render.domElement)
+
+  /**
+   * ─── L'AMBIENTE, e perche' non c'era
+   *
+   * In tutta la scena non esisteva nessun `scene.environment`, mentre
+   * `materiali.js` arriva a `metalness: 0.85`. **Un metallo senza ambiente non
+   * ha niente da riflettere**: viene fuori plastica grigia, e nessuna taratura
+   * delle luci lo salva. E' il salto visivo piu' grande disponibile su questa
+   * scena, ed era li' da prendere: `ambiente.js` esisteva gia' e completo, ma
+   * era collegato solo alla scena del salone — che nel frattempo ha cambiato
+   * mestiere ed e' diventata la sorgente delle sagome. Il capitolo che si vede
+   * ne era rimasto scoperto.
+   *
+   * Non e' un HDRI scaricato, e la ragione e' scritta per esteso in
+   * `ambiente.js`: pesa 1-2 MB contro un budget di 500 KB, e porterebbe con se'
+   * i colori di un cielo vero — lo scafo comincerebbe a riflettere un azzurro
+   * che nel sito non esiste. L'ambiente qui e' disegnato coi colori del foglio
+   * di stile, carta sopra la linea e acqua sotto: **lo scafo riflette la linea
+   * del sito su se stesso**, che non e' un ripiego ma la tesi applicata alla
+   * luce.
+   */
+  if (!location.search.includes('senzaAmbiente')) {
+    applicaAmbiente(creaAmbiente(render, PMREMGenerator, 1.0))
+  }
 
   scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, LUCI.emisfero))
   const sole = new DirectionalLight(0xfff6e4, LUCI.sole)
@@ -224,6 +251,12 @@ export function creaScena (contenitore) {
     // fotogramma su un raggio di 5,5 unita' non si vede — la camera si sposta
     // di millesimi per giro.
     if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z)
+    // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
+    // taglio serve a mostrare: la nota sta in acqua.js
+    acqua.chiarisci(spaccato)
+    // e nel taglio si schiarisce, altrimenti copre il pezzo che il taglio serve
+    // a mostrare: vedi la nota in acqua.js
+    acqua.chiarisci(spaccato)
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)

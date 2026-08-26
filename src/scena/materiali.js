@@ -57,3 +57,29 @@ export const materiali = {
     color: 0x0b2226, metalness: 0.85, roughness: 0.12
   })
 }
+
+/**
+ * ─── L'AMBIENTE SI DA' AI MATERIALI, NON ALLA SCENA
+ *
+ * `scene.environment` sembra la strada giusta e qui e' sbagliata, per una
+ * ragione misurata e non prevista: raggiunge **anche l'acqua**, e la meta' sotto
+ * la linea diventa grigio pallido invece del verde del foglio di stile. Il
+ * fondo CSS si ferma netto al 50% e incontra il canvas: se il canvas cambia
+ * colore li', la giunzione si vede — ed e' l'unica idea meccanica del sito.
+ *
+ * `envMapIntensity: 0` sul materiale dell'acqua NON basta. L'ho scritto
+ * aspettandomi che bastasse, e misurando e' rimasto pallido lo stesso;
+ * sostituendo il materiale dell'acqua con uno non illuminato il verde tornava,
+ * con l'ambiente ancora acceso. Quindi la strada non e' spegnere l'ambiente
+ * dove non deve arrivare: e' **non accenderlo li'**.
+ *
+ * Cosi' l'ambiente raggiunge esattamente cio' che deve riflettere — scafo,
+ * acciaio, bronzo, accento, vetro — e l'acqua resta quello che e': non una
+ * superficie da rendere, ma il fondo della pagina prolungato dentro il canvas.
+ */
+export function applicaAmbiente (mappa) {
+  for (const nome of ['scafo', 'coperta', 'acciaio', 'bronzo', 'accento', 'vetro']) {
+    materiali[nome].envMap = mappa
+    materiali[nome].needsUpdate = true
+  }
+}

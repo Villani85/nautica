@@ -20,16 +20,56 @@ export function costruisciAcqua () {
   const superficie = new PlaneGeometry(LARG, PROF, 76, 76)
   superficie.rotateX(-Math.PI / 2)
 
+/**
+ * ─── L'ACQUA NON PRENDE L'AMBIENTE, e non e' un dettaglio di resa.
+ *
+ * Collegando `scene.environment` alla scena della nave, il pelo dell'acqua —
+ * che e' un materiale metallico a 0,32 — ha cominciato a riflettere il cielo
+ * chiaro dell'ambiente, e la meta' sotto la linea e' diventata **grigio
+ * pallido** invece del verde scuro del foglio di stile. Il fondo CSS si ferma
+ * netto al 50% e incontra il canvas: se il canvas cambia colore li', la
+ * giunzione si vede, e la giunzione a zero pixel e' l'unica idea meccanica del
+ * sito.
+ *
+ * Quindi l'ambiente vale per i metalli della nave — che senza non hanno niente
+ * da riflettere ed escono plastica — e **non** per l'acqua, che non e' una
+ * superficie da rendere: e' il fondo della pagina, prolungato dentro il canvas.
+ */
   const pelo = new Mesh(superficie, new MeshStandardMaterial({
     color: 0x14454a, metalness: 0.32, roughness: 0.14,
-    transparent: true, opacity: 0.88, side: DoubleSide
+    transparent: true, opacity: 0.88, side: DoubleSide,
+    envMapIntensity: 0
   }))
   gruppo.add(pelo)
 
-  const volume = new Mesh(
-    new BoxGeometry(LARG, 13, PROF),
-    new MeshBasicMaterial({ color: 0x061518, transparent: true, opacity: 0.72, depthWrite: false })
-  )
+/**
+ * ─── QUANTO E' FONDA L'ACQUA, e perche' durante la sezione si fa da parte
+ *
+ * Il volume sommerso e' una scatola scura sopra tutto cio' che sta sotto la
+ * linea. Al 72% di opacita' l'acqua **si mangiava il soggetto**: nella battuta
+ * del meccanismo si vedeva una macchia scura dentro una macchia scura, mentre
+ * la didascalia diceva «the part you never see... it decides whether anyone is
+ * comfortable on board». Il capitolo nascondeva davvero la cosa che dichiarava
+ * di mostrare, ed e' il difetto peggiore che possa avere: non un errore di
+ * resa, una contraddizione fra quello che dice e quello che fa vedere.
+ *
+ * Isolato in un colpo con la diagnostica senzaAcqua: senza, si leggono
+ * attuatore, soffietti, flangia, albero e pinna; con, spariscono.
+ *
+ * Quindi durante la sezione l'acqua si schiarisce. Non e' un espediente: e' la
+ * stessa regola che ferma il rollio quando il piano entra — un disegno tecnico
+ * e' fermo — applicata al mezzo invece che al moto. Dentro il taglio si e' in
+ * registro tecnico, e li' l'acqua e' una quota, non un oceano.
+ *
+ * Resta acqua: colore, pelo e riflessi non cambiano. Cambia solo quanto pesa.
+ */
+const FONDA = 0.72      // a nave intera: il sotto e' un altro mondo
+const CHIARA = 0.25     // dentro il taglio: l'acqua e' una quota
+
+  const materialeVolume = new MeshBasicMaterial({
+    color: 0x061518, transparent: true, opacity: FONDA, depthWrite: false
+  })
+  const volume = new Mesh(new BoxGeometry(LARG, 13, PROF), materialeVolume)
   volume.position.set(0, -6.5, 0)
   gruppo.add(volume)
 
@@ -95,5 +135,10 @@ export function costruisciAcqua () {
     if (frame % 2 === 0) superficie.computeVertexNormals()
   }
 
-  return { gruppo, anima }
+  /** Il taglio schiarisce l'acqua: q va da 0 (nave intera) a 1 (sezione). */
+  function chiarisci (q) {
+    materialeVolume.opacity = FONDA + (CHIARA - FONDA) * Math.max(0, Math.min(1, q))
+  }
+
+  return { gruppo, anima, chiarisci }
 }
