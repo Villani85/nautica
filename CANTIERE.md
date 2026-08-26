@@ -95,10 +95,27 @@ nei chunk. Serializzare a mano costa venti righe e non dipende da niente.
 
 `[x]` Blender la ricostruisce con la ricetta del metallo e rende in 12–14 s.
 
-`[ ]` **manca l'ambiente.** Con `metalness: 1` il metallo mostra solo ciò che
-riflette: contro il mondo verde acqua del sito esce verde acqua. È fisicamente
-giusto e fotograficamente sbagliato — serve un ambiente con zone chiare e scure,
-non una tinta piatta. È il prossimo giro, ed è art direction, non ingegneria.
+`[x]` **l'ambiente c'è, ed era la cosa che mancava.** Con `metalness: 1` un
+metallo mostra *soltanto* ciò che riflette: contro un gradiente piatto riflette
+una tinta, e usciva verde acqua. Con un HDRI d'officina il materiale diventa
+fotografico — acciaio vero, ottone vero, riflessi con una forma.
+
+*Avevo escluso gli HDRI per una ragione giusta applicata al posto sbagliato:*
+pesano 1–2 MB contro un budget di 500 KB. Vero **per il web**. Qui non si
+spedisce l'ambiente, si spediscono i **fotogrammi cotti**: l'HDRI resta sul disco
+e la pagina non cambia di un byte.
+
+**Ma il divario vero non era il materiale: è la geometria.** Alla misura giusta
+i pezzi si leggono *separati* — motore staccato dal riduttore, albero che
+galleggia, manovella su un tavolino a parte. Non è un difetto di resa: **quella
+geometria è uno schema, non una macchina.** È distanziata apposta perché in
+sezione si capisca chi fa cosa. Un attuatore vero è un blocco compatto,
+imbullonato, con tubazioni e cablaggi.
+
+Quindi la conclusione, ora misurata invece che supposta, è la stessa della nave:
+dove il meccanismo si **guarda** serve una fotografia generata dalla sagoma;
+dove si **taglia**, lo schema è giusto — il sito lo dichiara, *«The cut is not a
+picture»*.
 
 `[ ]` cuocere la sequenza indicizzata dall'angolo · `[ ]` montarla al posto della
 scena in tempo reale nelle battute del meccanismo.

@@ -130,9 +130,16 @@ for k, p in enumerate(pezzi):
 
 # SI INQUADRA UN GRUPPO SOLO. L'ingombro comprende dritta e sinistra, e una
 # camera che li tiene entrambi e' una camera che non guarda niente.
+# SI INQUADRA IL GRUPPO DI DRITTA, non tutti e due. L'ingombro totale comprende
+# dritta e sinistra piu' le pinne: una camera che li tiene tutti e' una camera
+# che non guarda niente, e infatti il pezzo usciva minuscolo in mezzo al vuoto.
+# Il gruppo di dritta sta fra il riduttore (x minimo positivo) e l'estremita'
+# della pinna: si prende quello e basta.
+xs = [v for v in (minimo[0], massimo[0])]
 centro = (minimo + massimo) / 2
-centro[0] = massimo[0] * 0.62
-misura = (massimo[2] - minimo[2]) * 2.2
+centro[0] = massimo[0] * 0.55
+centro[2] = (minimo[2] + massimo[2]) / 2
+misura = massimo[0] * 0.95
 print('PEZZI %d di %d · ingombro %.2f · centro %.2f %.2f %.2f'
       % (tenuti, len(pezzi), misura, centro[0], centro[1], centro[2]))
 if not tenuti:
@@ -152,24 +159,61 @@ softbox((centro[0] + d, centro[1] - d * 1.4, centro[2] + d * 1.1),
 softbox((centro[0] - d * 1.3, centro[1] + d, centro[2] + d * 0.5),
         (math.radians(74), 0, math.radians(-126)), 45 * d * d, d * 1.4, 0.30)
 
+"""
+─── L'AMBIENTE E' UN HDRI VERO, e prima l'avevo escluso per una ragione giusta
+    applicata al posto sbagliato.
+
+Nel sito un HDRI non si usa: pesa 1-2 MB contro un budget di 500 KB per gli
+asset, e porterebbe colori che nella tavolozza non esistono. Vero PER IL WEB.
+Qui non si spedisce l'ambiente: si spediscono i FOTOGRAMMI COTTI. L'HDRI resta
+sul disco e la pagina non cambia di un byte.
+
+E senza, il pezzo non puo' funzionare. Con `metalness: 1` un metallo mostra
+SOLTANTO cio' che riflette: contro un gradiente piatto riflette una tinta —
+usciva verde acqua, il colore del mondo. Contro un'officina vera riflette una
+stanza, ed e' quello che l'occhio legge come fotografia. Non e' una rifinitura:
+e' la differenza fra un render e una foto.
+"""
 sc.world = bpy.data.worlds.new('m'); sc.world.use_nodes = True
 wn = sc.world.node_tree
 sf = wn.nodes['Background']
-gr = wn.nodes.new('ShaderNodeTexGradient'); gr.gradient_type = 'EASING'
-cc = wn.nodes.new('ShaderNodeTexCoord')
-mpp = wn.nodes.new('ShaderNodeMapping')
-mpp.inputs['Rotation'].default_value = (math.radians(90), 0, 0)
-wn.links.new(cc.outputs['Generated'], mpp.inputs['Vector'])
-wn.links.new(mpp.outputs['Vector'], gr.inputs['Vector'])
-ra = wn.nodes.new('ShaderNodeValToRGB')
-# i colori del sito sotto la linea: acqua profonda e acqua viva
-# il mondo resta nei colori del sito ma va ALZATO: un metallo senza niente da
-# riflettere e' nero, e sotto la linea il fondo del sito e' quasi nero
-ra.color_ramp.elements[0].color = (0.05, 0.13, 0.14, 1)
-ra.color_ramp.elements[1].color = (0.30, 0.52, 0.55, 1)
-wn.links.new(gr.outputs['Fac'], ra.inputs['Fac'])
-wn.links.new(ra.outputs['Color'], sf.inputs[0])
-sf.inputs[1].default_value = 1.6
+AMBIENTE = os.path.join(os.path.dirname(SORGENTE), 'hdri', 'ambiente.hdr')
+if os.path.exists(AMBIENTE):
+    env = wn.nodes.new('ShaderNodeTexEnvironment')
+    env.image = bpy.data.images.load(AMBIENTE)
+    rot = wn.nodes.new('ShaderNodeMapping')
+    rot.inputs['Rotation'].default_value = (0, 0, math.radians(-55))
+    cc = wn.nodes.new('ShaderNodeTexCoord')
+    wn.links.new(cc.outputs['Generated'], rot.inputs['Vector'])
+    wn.links.new(rot.outputs['Vector'], env.inputs['Vector'])
+    wn.links.new(env.outputs['Color'], sf.inputs[0])
+    sf.inputs[1].default_value = 1.0
+    print('AMBIENTE officina')
+else:
+    gr = wn.nodes.new('ShaderNodeTexGradient'); gr.gradient_type = 'EASING'
+    cc = wn.nodes.new('ShaderNodeTexCoord')
+    mpp = wn.nodes.new('ShaderNodeMapping')
+    mpp.inputs['Rotation'].default_value = (math.radians(90), 0, 0)
+    wn.links.new(cc.outputs['Generated'], mpp.inputs['Vector'])
+    wn.links.new(mpp.outputs['Vector'], gr.inputs['Vector'])
+    ra = wn.nodes.new('ShaderNodeValToRGB')
+    ra.color_ramp.elements[0].color = (0.05, 0.13, 0.14, 1)
+    ra.color_ramp.elements[1].color = (0.30, 0.52, 0.55, 1)
+    wn.links.new(gr.outputs['Fac'], ra.inputs['Fac'])
+    wn.links.new(ra.outputs['Color'], sf.inputs[0])
+    sf.inputs[1].default_value = 1.6
+    print('AMBIENTE gradiente (nessun hdri)')
+
+# UN PIANO D'APPOGGIO. I pezzi galleggiavano nel nulla: una fotografia di
+# macchinario e' sempre DA QUALCHE PARTE, e l'ombra di contatto e' cio' che fa
+# appoggiare un oggetto invece di farlo levitare.
+bpy.ops.mesh.primitive_plane_add(size=misura * 8, location=(centro[0], centro[1], minimo[2] - 0.02))
+piano = bpy.context.object
+mp = bpy.data.materials.new('piano'); mp.use_nodes = True
+pb = mp.node_tree.nodes['Principled BSDF']
+pb.inputs['Base Color'].default_value = (0.055, 0.06, 0.065, 1)
+pb.inputs['Roughness'].default_value = 0.38
+piano.data.materials.append(mp)
 
 bpy.ops.object.camera_add(location=(centro[0] + d * 0.35, centro[1] - d * 2.1, centro[2] + d * 0.30))
 cam = bpy.context.object
@@ -194,7 +238,7 @@ sc.cycles.use_denoising = True
 sc.cycles.samples = 140
 sc.render.resolution_x = 1000
 sc.render.resolution_y = 620
-sc.render.film_transparent = True
+sc.render.film_transparent = False
 sc.render.image_settings.file_format = 'PNG'
 sc.render.image_settings.color_mode = 'RGBA'
 sc.view_settings.view_transform = 'AgX'
