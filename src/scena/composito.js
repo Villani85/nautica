@@ -106,8 +106,17 @@ export function creaComposito (contenitore, base) {
    * nessuna riga che tenga fermo il mare: e' fermo perche' nessuno lo tocca.
    *
    * E siccome le due sorgenti sono LO STESSO FILE, al bordo del vetro grana,
-   * colore e compressione combaciano al pixel. Non e' una taratura riuscita: e'
-   * una proprieta' di costruzione.
+   * colore e compressione sono gli stessi. Non e' una taratura riuscita: e' una
+   * proprieta' di costruzione.
+   *
+   * ATTENZIONE A COSA SI PUO' DIRE, e nel commit precedente l'avevo scritto
+   * troppo forte. «Combacia al pixel» **non e' vero**: la copia del mare e'
+   * ingrandita del 35% per coprire quel che l'apertura scopre inclinandosi,
+   * quindi la geometria delle onde e' diversa. Cio' che combacia e' la
+   * TAVOLOZZA — grana, colore, contrasto, artefatti di compressione — che e'
+   * esattamente cio' che tradisce un fotomontaggio. La geometria non serve che
+   * combaci, perche' attraverso il vetro si vede solo il mare: non c'e' niente
+   * accanto con cui confrontarlo.
    *
    * ─── COSA E' SPARITO, e vale la pena saperlo
    *
@@ -161,9 +170,30 @@ export function creaComposito (contenitore, base) {
    * rispetto a quello della clip. Sul mare non si nota, ma allinearli costa una
    * riga e toglie il dubbio.
    */
-  stanza.addEventListener('loadeddata', () => {
-    try { mare.currentTime = stanza.currentTime } catch { /* non ancora pronto */ }
-  }, { once: true })
+  /**
+   * E SI RIALLINEANO OGNI TANTO, non solo all'avvio.
+   *
+   * Allinearli una volta sola non basta: sono due decodifiche indipendenti e
+   * derivano. Misurato mentre il capitolo gira, lo sfasamento cresce da 0,041 a
+   * **0,100 secondi** in una quindicina di secondi, cioe' due fotogrammi e
+   * mezzo. Sul mare non si vede — l'onda attraverso il vetro e' semplicemente
+   * l'onda di un istante vicino — ma e' un numero che cresce, e i numeri che
+   * crescono vanno fermati prima di scoprire dove arrivano.
+   *
+   * Si corregge solo quando lo scarto supera un fotogramma pieno: riscrivere
+   * `currentTime` a ogni giro farebbe scattare la decodifica invece di lasciarla
+   * scorrere.
+   */
+  const RIALLINEA = 1 / 24
+  const sincronizza = () => {
+    if (mare.readyState < 2 || stanza.readyState < 2) return
+    if (Math.abs(mare.currentTime - stanza.currentTime) > RIALLINEA) {
+      try { mare.currentTime = stanza.currentTime } catch { /* non ancora pronto */ }
+    }
+  }
+  stanza.addEventListener('loadeddata', sincronizza, { once: true })
+  const orologio = setInterval(sincronizza, 2000)
+  contenitore.addEventListener('nautica:chiudi', () => clearInterval(orologio), { once: true })
 
   contenitore.setAttribute('role', 'img')
   contenitore.setAttribute('aria-label',
