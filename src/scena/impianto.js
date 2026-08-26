@@ -50,6 +50,9 @@ const RICHIESTI = [
  * significa che cambiando il modello non resta un numero vecchio in un file JS
  * a raccontare un'altra macchina.
  */
+/** Quanto riflette la macchina: sta in sentina, non in coperta. Vedi il traverse. */
+const INTENSITA_AMBIENTE = 0.55
+
 /** Quanto si sfila il coperchio, in metri del modello. Vedi `apri()`. */
 const CORSA_COPERCHIO = 0.45
 
@@ -85,7 +88,7 @@ const ECCENTRICITA_DI_SCORTA = 0.012
  * torna a essere troppo piccola per vedersi.
  */
 
-export function creaImpianto (base) {
+export function creaImpianto (base, ambiente = null) {
   const gruppo = new Group()
   const nodi = {}
   let rapporto = RAPPORTO_DI_SCORTA
@@ -143,6 +146,40 @@ export function creaImpianto (base) {
        * del salone e' rimasta come sorgente delle sagome.
        */
       nodi.STATIC_HULL_PLATE.visible = false
+
+      /**
+       * ─── L'AMBIENTE VA DATO A QUESTI MATERIALI, UNO PER UNO
+       *
+       * `applicaAmbiente` in `materiali.js` serve i materiali del sito per
+       * nome. I materiali del GLB non sono fra quelli: arrivano dal file, si
+       * chiamano carena, carter, acciaio, lucido, motore, tenuta, gomma, cavo.
+       * Senza mappa, un `metalness: 1` non ha NIENTE da riflettere e viene
+       * fuori plastica grigia — che e' esattamente come si vedeva il
+       * meccanismo piu' dettagliato del sito, mentre lo scafo intorno
+       * rifletteva.
+       *
+       * NON si usa `scena.environment`: il §12 lo vieta su questa scena,
+       * perche' illuminerebbe anche l'acqua e il fondo, che hanno il loro
+       * colore e non devono prenderlo da altrove. Per materiale e' la strada
+       * sanzionata, ed e' anche l'unica che permette di dosare l'intensita'
+       * pezzo per pezzo.
+       *
+       * L'intensita' e' meno di uno perche' questa roba sta DENTRO uno scafo:
+       * un riduttore in sentina non riflette il cielo come una prua. Il valore
+       * pieno l'ho guardato e legge come cromatura da concessionaria.
+       */
+      if (ambiente) {
+        radice.traverse(o => {
+          const m = o.material
+          if (!m) return
+          for (const mat of Array.isArray(m) ? m : [m]) {
+            if (!('envMap' in mat)) continue
+            mat.envMap = ambiente
+            mat.envMapIntensity = INTENSITA_AMBIENTE
+            mat.needsUpdate = true
+          }
+        })
+      }
 
       radice.scale.setScalar(UNITA_PER_METRO)
       gruppo.add(radice)

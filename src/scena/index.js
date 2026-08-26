@@ -112,8 +112,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * del sito su se stesso**, che non e' un ripiego ma la tesi applicata alla
    * luce.
    */
+  // La mappa serve DUE VOLTE: ai materiali del sito per nome, e ai materiali
+  // che arrivano dentro il GLB, che nessun elenco per nome puo' conoscere.
+  let ambiente = null
   if (!location.search.includes('senzaAmbiente')) {
-    applicaAmbiente(creaAmbiente(render, PMREMGenerator, 1.0))
+    ambiente = creaAmbiente(render, PMREMGenerator, 1.0)
+    applicaAmbiente(ambiente)
   }
 
   scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, LUCI.emisfero))
@@ -140,7 +144,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * pinne. E' preferibile a una schermata che aspetta.
    */
   const impianti = agganci.map(a => {
-    const i = creaImpianto(base)
+    const i = creaImpianto(base, ambiente)
     i.gruppo.position.set(...a.posizione)
     // la fiancata opposta NON si ottiene con una scala negativa: rovescerebbe
     // le normali e la pinna di sinistra si illuminerebbe al contrario
