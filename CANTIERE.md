@@ -42,26 +42,56 @@ nella materia.
 
 ---
 
-### 1 · La nave alla qualità del salone `[~]`
+### 1 · La nave alla qualità del salone `[~]` — **strada scelta e misurata**
 
-Il divario è in quest'ordine di peso, misurato guardando:
+Il committente ha posto la barra: fotorealismo, e se il tempo reale non ci
+arriva si cambia strada anche buttando il lavoro fatto. Quindi ho smesso di
+tarare il WebGL e ho **misurato** se la strada offline regge, invece di
+discuterne.
 
-- [ ] **smussi.** Gli spigoli sono matematicamente netti. Un millimetro di
-      smusso che raccoglie una luce è la maggior parte di ciò che si legge come
-      «pezzo lavorato a macchina»;
-- [ ] **rugosità che varia.** Ogni materiale è un colore piatto. Il metallo vero
-      non è mai uniforme;
-- [ ] **ombre di contatto.** Niente proietta: è quello che fa *appoggiare* un
-      oggetto invece di farlo galleggiare;
-- [ ] **la macchia scura sul fianco.** Rimane non spiegata: non sono normali
-      invertite (misurate: 0 su 4464), non è un buco nella geometria (lo scafo
-      arriva al trincarino da prua a poppa), non è il piano di sezione
-      (`spaccato = 0`), non è z-fighting (`polygonOffset` non l'ha tolta). Il
-      prossimo passo è `?ispeziona=1` e un raggio dalla camera su quel pixel.
+**Verdetto: regge.** Blender gira headless da riga di comando — nessun MCP di
+mezzo, che con la connessione lenta è l'unica via praticabile — a **35 secondi
+per fotogramma** su 760×470 con 130 campioni. Una sequenza di 40 fotogrammi
+costa venti minuti.
 
-Fatto finora: l'ambiente c'è (`applicaAmbiente`, solo sui materiali della nave,
-non sull'acqua — `scene.environment` raggiungeva anche il mare e rompeva la
-giunzione), e l'acqua si schiarisce nel taglio.
+**E la ricetta del metallo è trovata**, in quattro provini che si sono smentiti
+a vicenda: Principled liscio dà CAD pulito · aggiungere rugosità e graffi dà
+metallo *corroso* · meno intensità non basta · la stessa variazione **stirata
+nel verso della lavorazione** dà acciaio tornito. Sta in
+`riferimenti/blender/`, con le due immagini a confronto.
+
+*Un rumore isotropo su un metallo si legge sempre come sporco. Lo stesso rumore,
+stessa intensità, allungato nel verso della lavorazione si legge come superficie
+lavorata.* Non è questione di quanto, è di che forma.
+
+**La forma che ne discende**, ed è la grammatica del salone applicata alla nave:
+
+- **fuori si fotografa.** Le battute in cui la nave si *guarda* diventano
+  immagini generate da una sagoma renderizzata dal sito, così composizione,
+  camera e orizzonte restano nostri;
+- **dentro si renderizza.** Il meccanismo non può essere una fotografia, perché
+  deve muoversi con la fisica. Diventa una **sequenza cotta in Blender indicizzata
+  dall'angolo della pinna**: fotorealistica e comunque guidata dalla simulazione,
+  perché è l'angolo a scegliere il fotogramma. Non è tempo reale — è *reattivo*,
+  che è ciò che serve;
+- **il taglio resta un disegno**, e lì va bene: il sito lo dichiara, *«The cut is
+  not a picture»*.
+
+Fatto: `[x]` provini di fattibilità e ricetta del metallo · `[x]` ambiente sui
+soli materiali della nave (`scene.environment` raggiungeva anche l'acqua e
+rompeva la giunzione) · `[x]` acqua che si schiarisce nel taglio.
+
+Da fare: `[ ]` ricostruire il meccanismo in Blender dalle quote di `nave.js` ·
+`[ ]` cuocere la sequenza indicizzata dall'angolo · `[ ]` montarla al posto della
+scena in tempo reale nelle battute del meccanismo.
+
+**Un difetto chiuso a metà, e va detto.** Metà scafo era nera perché le due mesh
+— faccia esterna e faccia interna — disegnano *gli stessi triangoli*: con la
+doppia faccia sono la stessa superficie, quindi vince l'una o l'altra, mai
+entrambe. Non è tarabile, è una contraddizione di progetto. Per ora la doppia
+faccia tiene lo scafo intero e la cavità della sezione resta chiara: difetto
+minore di mezza nave nera. Sparisce del tutto quando il meccanismo passa alla
+sequenza cotta.
 
 ### 2 · Il telefono, progettato come versione diversa `[ ]`
 
