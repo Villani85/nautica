@@ -6,6 +6,7 @@ import {
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAcqua } from './acqua.js'
+import { creaImpianto } from './impianto.js'
 import { creaAmbiente } from './ambiente.js'
 import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
@@ -53,7 +54,12 @@ const LUCI = {
   fondale: 3.2
 }
 
-export function creaScena (contenitore) {
+/**
+ * `base` e' l'indirizzo da cui pendono gli asset. Arriva da fuori, come nel
+ * salone: il sito vive sotto /nautica/ su GitHub Pages e alla radice in locale,
+ * quindi un percorso assoluto scritto qui funzionerebbe in un posto solo.
+ */
+export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const scena = new Scene()
 
   /**
@@ -116,8 +122,32 @@ export function creaScena (contenitore) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
-  const { nave, pinne, guscio, tappo, spostaTappo } = costruisciNave()
+  const { nave, agganci, guscio, tappo, spostaTappo } = costruisciNave()
   scena.add(nave)
+
+  /**
+   * ─── L'IMPIANTO ARRIVA DA UN FILE, non si costruisce qui
+   *
+   * `docs/14` §2: una sola fonte geometrica. Questo codice carica, scala,
+   * aggancia e comanda — non ricostruisce niente.
+   *
+   * Il caricamento e' ASINCRONO e non blocca: la scena parte senza, e i due
+   * gruppi compaiono quando il file arriva. Il §9 lo richiede — «nessun modello
+   * nel percorso critico della prima schermata» — e ha una conseguenza che vale
+   * la pena dire: chi guarda il capitolo nei primi istanti vede lo scafo senza
+   * pinne. E' preferibile a una schermata che aspetta.
+   */
+  const impianti = agganci.map(a => {
+    const i = creaImpianto(base)
+    i.gruppo.position.set(...a.posizione)
+    // la fiancata opposta NON si ottiene con una scala negativa: rovescerebbe
+    // le normali e la pinna di sinistra si illuminerebbe al contrario
+    if (a.lato < 0) i.gruppo.rotation.y = Math.PI
+    i.lato = a.lato
+    nave.add(i.gruppo)
+    i.caricato.catch(e => console.error('[impianto]', e.message))
+    return i
+  })
 
   /**
    * Il piano tiene i punti con `normale · p + costante > 0`. Con normale
@@ -243,7 +273,11 @@ export function creaScena (contenitore) {
 
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
-    for (const p of pinne) p.aggiorna(sim.S.pinna * p.lato)
+    for (const i of impianti) {
+      i.aggiorna({ pinna: sim.S.pinna * i.lato })
+      // §4.2 · il coperchio si stacca quando il taglio arriva al carter
+      i.apri(MathUtils.clamp((spaccato - 0.55) / 0.35, 0, 1))
+    }
 
     // L'onda si spegne DOVE STA L'OBIETTIVO, quindi la posizione della camera
     // le va passata: e' calcolata poche righe piu' sotto, per questo si anima

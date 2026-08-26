@@ -337,18 +337,27 @@ export function costruisciNave () {
   // Nasce con corda in X e apertura in Z; la ruoto una volta sola alla
   // creazione, cosi' l'apertura va fuoribordo e la corda resta longitudinale.
   // Da qui in poi l'unica rotazione che la pinna subisce e' l'incidenza.
-  const geoPinna = new ExtrudeGeometry(profiloPinna(), {
-    depth: 1.04, bevelEnabled: true, bevelThickness: 0.012,
-    bevelSize: 0.016, bevelSegments: 2, curveSegments: 20
-  })
-  geoPinna.rotateY(Math.PI / 2)
-
-  const pinne = []
-  for (const lato of [-1, 1]) {
-    const p = costruisciGruppoPinna(lato, geoPinna)
-    nave.add(p.gruppo)
-    pinne.push(p)
-  }
+  /**
+   * ─── IL GRUPPO PINNA NON SI COSTRUISCE PIU' QUI
+   *
+   * `docs/14-FOTOREALISMO.md` §2: «`impianto.glb` sostituisce completamente il
+   * gruppo procedurale». Il quadrilatero manovella-biella-leva e' eliminato: non
+   * e' come funziona un attuatore elettrico per pinne, e un tecnico di un
+   * costruttore non lo riconoscerebbe. Al suo posto un attuatore elettrico
+   * generico con riduttore cicloidale dentro un carter sezionabile.
+   *
+   * Qui resta soltanto **dove** va agganciato — il ginocchio di carena alla
+   * quota delle pinne, interrogando lo scafo invece di scegliere due coordinate
+   * a occhio. Se domani le ordinate cambiano, l'aggancio si sposta da solo.
+   *
+   * Non si mantengono due modelli con un collaudo che tenta di allinearli: e'
+   * per questo che il codice se ne va nello stesso commit in cui entra il GLB.
+   */
+  const sez = sezioneA(tDaZ(Z_PINNE))
+  const agganci = [-1, 1].map(lato => ({
+    lato,
+    posizione: [lato * sez.spigoloX, sez.spigoloY, Z_PINNE]
+  }))
 
   /**
    * LA FACCIA DI SEZIONE, ricalcolata alla quota del piano.
@@ -377,5 +386,5 @@ export function costruisciNave () {
     tappo.geometry = tappoA(dentro)
   }
 
-  return { nave, pinne, guscio, tappo, spostaTappo }
+  return { nave, agganci, guscio, tappo, spostaTappo }
 }
