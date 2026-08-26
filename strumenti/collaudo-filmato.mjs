@@ -168,13 +168,28 @@ if (misure.length < N * 0.6) {
 
 const scala = Math.max(...misure.map(m => Math.abs(m.s - 1)))
 const deriva = Math.max(...misure.map(m => Math.abs(m.t)))
-const rot = Math.max(...misure.map(m => Math.abs(m.gradi)))
+/**
+ * LA ROTAZIONE SI MISURA RISPETTO AL PRIMO FOTOGRAMMA, NON IN ASSOLUTO.
+ *
+ * Un altro metro rotto, e questo stava per bocciare la clip buona. Il conto
+ * dava 0,47 gradi costanti per dieci secondi, con una variazione di 0,03: non
+ * era la stanza che ruotava, era un valore fisso. Misurato sulla fotografia di
+ * riferimento,  da sola da' 0,43 gradi — la fascia dei vetri non e'
+ * simmetrica rispetto all asse della camera, e quel mezzo grado e' una
+ * proprieta della SCENA.
+ *
+ * La domanda giusta non e mai stata «quanto e storta la stanza»: quella
+ * inclinazione e cotta anche nella fotografia da cui viene la maschera, quindi
+ * combacia. La domanda e **di quanto ruota durante la clip**, perche e li che
+ * si sommerebbe all angolo della simulazione.
+ */
+const rot = Math.max(...misure.map(m => m.gradi)) - Math.min(...misure.map(m => m.gradi))
 
 console.log(`  ${file}`)
 console.log(`  ${misure.length} fotogrammi misurati su ${N}${persi ? ` — ${persi} scartati` : ''}`)
 console.log(`  CARRELLATA  ${(100 * scala).toFixed(2)}%   tetto ${(100 * SCALA).toFixed(1)}%`)
 console.log(`  DERIVA      ${deriva.toFixed(1)} px   tetto ${DERIVA}`)
-console.log(`  ROTAZIONE   ${rot.toFixed(2)} gradi   tetto ${ROTAZIONE}`)
+console.log(`  ROTAZIONE   ${rot.toFixed(2)} gradi di escursione   tetto ${ROTAZIONE}`)
 
 let rotto = false
 if (scala > SCALA) {

@@ -131,7 +131,7 @@ export function creaComposito (contenitore, base) {
    * stanno mostrando.
    */
   const SORGENTE = {
-    calma: { file: 'salone/calma.jpg', video: false },
+    calma: { file: 'filmati/salone-calma.mp4', video: true },
     tesa: { file: 'salone/tesa.jpg', video: false }
   }
 
