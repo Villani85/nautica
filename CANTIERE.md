@@ -81,7 +81,25 @@ Fatto: `[x]` provini di fattibilità e ricetta del metallo · `[x]` ambiente sui
 soli materiali della nave (`scene.environment` raggiungeva anche l'acqua e
 rompeva la giunzione) · `[x]` acqua che si schiarisce nel taglio.
 
-Da fare: `[ ]` ricostruire il meccanismo in Blender dalle quote di `nave.js` ·
+**La catena funziona da capo a fondo**, e questo era il pezzo incerto:
+
+    node strumenti/esporta-meccanismo.mjs meccanismo.json
+    blender -b -P riferimenti/blender/cuoci.py -- meccanismo.json <cartella>
+
+`[x]` la geometria si esporta **dalla pagina viva** — 73 pezzi, 4891 triangoli —
+quindi c'è **una sorgente di verità sola**. La prima stesura riscriveva il
+meccanismo in Python dalle quote di `nave.js`: funzionava, e alla prima modifica
+delle ordinate le due sarebbero divergute in silenzio. `GLTFExporter` non serve
+e non funziona: importa `three` con un nome nudo, e nel bundle three è inglobato
+nei chunk. Serializzare a mano costa venti righe e non dipende da niente.
+
+`[x]` Blender la ricostruisce con la ricetta del metallo e rende in 12–14 s.
+
+`[ ]` **manca l'ambiente.** Con `metalness: 1` il metallo mostra solo ciò che
+riflette: contro il mondo verde acqua del sito esce verde acqua. È fisicamente
+giusto e fotograficamente sbagliato — serve un ambiente con zone chiare e scure,
+non una tinta piatta. È il prossimo giro, ed è art direction, non ingegneria.
+
 `[ ]` cuocere la sequenza indicizzata dall'angolo · `[ ]` montarla al posto della
 scena in tempo reale nelle battute del meccanismo.
 
