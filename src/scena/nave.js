@@ -6,6 +6,9 @@ import { materiali } from './materiali.js'
 import { costruisciGuscio, costruisciPonte, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAllestimento } from './allestimento.js'
 
+/** L'opacita' dello spigolo dello scafo: dice dove finisce il pezzo. */
+const OPACITA_SPIGOLO = 0.22
+
 /** Sezione maestra dello scafo, estrusa lungo Z — che e' l'asse di rollio. */
 function sezioneScafo () {
   const p = new Shape()
@@ -232,11 +235,40 @@ export function costruisciNave () {
 
   // Lo spigolo chiaro e' la stessa idea del taglio applicata al volume:
   // dice dove finisce il pezzo senza aggiungere una luce.
+  const geoSpigoli = new EdgesGeometry(geoScafo, 42)
   const spigoli = new LineSegments(
-    new EdgesGeometry(geoScafo, 42),
-    new LineBasicMaterial({ color: 0xe9e5dd, transparent: true, opacity: 0.22 })
+    geoSpigoli,
+    new LineBasicMaterial({ color: 0xe9e5dd, transparent: true, opacity: OPACITA_SPIGOLO })
   )
   nave.add(spigoli); guscio.push(spigoli)
+
+  /**
+   * ─── QUI C'ERA IL FANTASMA, e l'ha bocciato il committente in una riga:
+   * «non mi piace perche' non porta emozioni». Aveva ragione.
+   *
+   * Era la stessa nave disegnata una seconda volta all'angolo che avrebbe senza
+   * pinne: tecnicamente giusto, verificato a zero esatto quando le due corse
+   * coincidono, e completamente freddo. **Un fantasma e' un CONFRONTO, e un
+   * confronto parla alla testa.** Si guarda una nave da fuori, piccola nel
+   * fotogramma: nessuno ha mai avuto il mal di mare guardando una barca dalla
+   * riva.
+   *
+   * E l'errore vero e' stato nella scelta, non nell'esecuzione: ho preso la
+   * mossa successiva per ordine del piano invece che per la priorita' dichiarata
+   * — prima emozionare, il tecnico dopo.
+   *
+   * Cosa resta, perche' non era tutto da buttare: S.rollioNudo e
+   * strumenti/collaudo-fantasma.mjs. Il numero e' quello che serve al finale
+   * dell'atto due, e costa zero perche' la corsa nuda gira comunque.
+   *
+   * E la versione EMOTIVA della stessa idea esiste, ma non puo' stare qui: e'
+   * portare la camera A BORDO, cosi' che a rollare sia il mondo di chi guarda e
+   * non un oggetto davanti a lui. Qui e' vietata dalla giunzione — l'orizzonte
+   * del canvas deve restare a meta' schermo e orizzontale, altrimenti si stacca
+   * dallo sfondo CSS, che e' l'unica idea meccanica del sito. Va sotto la linea,
+   * dove D28 dice che il vincolo decade perche' non c'e' piu' giunzione da
+   * proteggere.
+   */
 
   /**
    * SOVRASTRUTTURA — appoggiata al ponte, non a una quota scelta a occhio.

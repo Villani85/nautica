@@ -188,8 +188,16 @@ function creaCorsa () {
   return { c, passo, azzera }
 }
 
-export function creaSimulazione ({ ridotto = false } = {}) {
-  const momento = creaMare()
+export function creaSimulazione ({ ridotto = false, seme } = {}) {
+  /**
+   * IL SEME E' OPZIONALE, e in pagina non si passa: le fasi del mare sono
+   * casuali, cosi' due visite non danno la stessa onda. Ma un cancello non puo'
+   * verificare che il fantasma sia davvero l'altra nave se le due simulazioni
+   * incontrano due mari diversi — quindi il seme esiste, ed e' il modo in cui
+   *  fa girare la corsa nuda una seconda volta, da sola,
+   * e confronta.
+   */
+  const momento = creaMare(seme)
   const viva = creaCorsa()    // con le pinne
   const nuda = creaCorsa()    // identica, ma autorita' zero: e' il metro
 
@@ -198,6 +206,17 @@ export function creaSimulazione ({ ridotto = false } = {}) {
     stab: false,
     velocita: V_RIF,
     rollio: 0,
+    /**
+     * IL ROLLIO CHE LA NAVE AVREBBE SENZA PINNE, nello stesso istante e sullo
+     * stesso mare. Si calcolava gia' — `nuda` gira a ogni passo perche' e' il
+     * metro della riduzione — e finiva nel cestino.
+     *
+     * Esposto, diventa la cosa che si vede: a sistema spento le due corse sono
+     * IDENTICHE, quindi il fantasma sta li' dall'inizio perfettamente
+     * sovrapposto e non si nota. Quando si accende, la nave **si divide in due
+     * destini**. Nessun evento di interfaccia: solo la fisica che diverge.
+     */
+    rollioNudo: 0,
     pinna: 0,
     pinnaVel: 0,
     picco: 0,
@@ -222,6 +241,7 @@ export function creaSimulazione ({ ridotto = false } = {}) {
       const nudo = AMPIEZZA_MARE[S.mare]
       const rid = aut > 0 ? riduzioneVera(S.mare, S.velocita) : 0
       S.rollio = nudo * (1 - rid)
+      S.rollioNudo = nudo
       S.picco = Math.abs(S.rollio)
       S.riduzione = rid
       S.pinna = 0; S.carico = 0; S.recupero = 0
@@ -233,6 +253,7 @@ export function creaSimulazione ({ ridotto = false } = {}) {
     nuda.passo(dt, t, S.mare, 0, momento)
 
     S.rollio = MathUtils.radToDeg(viva.c.theta)
+    S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)
     S.picco = MathUtils.radToDeg(viva.c.picco)
     S.pinna = viva.c.alfa
     S.pinnaVel = dt > 0 ? (viva.c.alfa - viva.c.alfaPrec) / dt : 0

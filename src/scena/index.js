@@ -213,6 +213,7 @@ export function creaScena (contenitore) {
     // rollio si acquieta. Non e' un vezzo — un disegno tecnico e' fermo, ed e'
     // il registro in cui il taglio riporta il pezzo.
     nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - spaccato)
+
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
     for (const p of pinne) p.aggiorna(sim.S.pinna * p.lato)
