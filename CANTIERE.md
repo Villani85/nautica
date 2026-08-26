@@ -70,22 +70,27 @@ tecnica. Nei file sono marcate `VINCOLATA`, una per una.
 - `[~]` **1.1 · il modello completo in Blender.** Tutti i pezzi della catena,
   con bulloneria, nervature, pressacavi, tubi. *Chiuso quando:* un render a
   1400 px si legge come una fotografia di un impianto, non come un modello.
-- `[ ]` **1.2 · le mappe cotte.** Occlusione ambientale, rugosità e normali
+- `[ ]` **1.2 · il peso, misurato PRIMA di costruire le mappe.** Il budget è
+  500 KB per tutto il 3D, e la pagina porta in riga «3D models downloaded:
+  0 bytes». Due giri fa avevo scartato gli HDRI perché pesano — poi ho deciso di
+  cuocere i fotogrammi, e l'argomento del peso è caduto; ora che si spedisce un
+  modello vero **è tornato valido**. Va misurato prima, non scoperto dopo.
+- `[ ]` **1.3 · le mappe cotte.** Occlusione ambientale, rugosità e normali
   cotte nelle texture. È il passo che porta il tempo reale vicino al render:
   l'ombra fra le nervature e dentro i fori non si calcola dal vivo, **è già
   dipinta**. *Chiuso quando:* il modello in three.js con le mappe è
   indistinguibile dallo stesso modello in Cycles a camera ferma.
-- `[ ]` **1.3 · esportazione glTF compressa.** Meshopt o Draco, texture in
+- `[ ]` **1.4 · esportazione glTF compressa.** Meshopt o Draco, texture in
   KTX2. *Chiuso quando:* sta sotto i 900 KB — il sito porta in pagina la riga
   «3D models downloaded: 0 bytes» e quella riga andrà cambiata, non nascosta.
-- `[ ]` **1.4 · il caricamento in three.js** con ambiente PMREM e tone mapping.
+- `[ ]` **1.5 · il caricamento in three.js** con ambiente PMREM e tone mapping.
   *Chiuso quando:* la giunzione fra fondo CSS e canvas resta a 0 px — è l'unica
   idea meccanica del sito e nessun modello la può rompere.
-- `[ ]` **1.5 · il movimento lo comanda la simulazione.** `S.pinna` guida
+- `[ ]` **1.6 · il movimento lo comanda la simulazione.** `S.pinna` guida
   albero, leva e pinna con la cinematica vera, non un'animazione registrata.
   *Chiuso quando:* nessuna riga forza una posa — l'angolo viene dalla fisica, e
   un cancello lo verifica come già fa `collaudo-fantasma` per il rollio nudo.
-- `[ ]` **1.6 · si gira col trascinamento**, e da telefono con lo stesso esito
+- `[ ]` **1.7 · si gira col trascinamento**, e da telefono con lo stesso esito
   anche se non con lo stesso gesto.
 
 #### Cosa il tempo reale non darà, detto prima
@@ -94,6 +99,22 @@ Illuminazione globale e profondità di campo restano di Cycles. Su un meccanismo
 scuro su fondo scuro il divario è **piccolo**, perché il metallo è quasi tutto
 riflessi e quelli l'ambiente li dà bene. Su una scena intera no. È il motivo per
 cui la nave *fuori* resta fotografica e il meccanismo *dentro* diventa modello.
+
+#### E il vincolo `VINCOLATA` ora ha un cancello
+
+`[x]` `strumenti/collaudo-quote.mjs` legge le quote dalle **due** sorgenti — il
+sito e i file Blender — e le confronta. Se divergono, rosso, con scritto *«la
+riduzione che il sito dichiara è calcolata con X, il modello mostra una macchina
+con Y: sono due macchine diverse»*.
+
+Lo ha trovato una revisione esterna, ed era il rilievo migliore ricevuto finora:
+**`VINCOLATA` era un commento, e un commento non è un cancello.** Il difetto non
+darebbe errore da nessuna parte — il quadrilatero continuerebbe a funzionare, il
+render uscirebbe più bello, e la riduzione dichiarata si riferirebbe a una
+macchina diversa da quella disegnata. Nessun collaudo esistente lo prendeva.
+
+Rotto apposta prima di fidarsene: `RL` da 0,22 a 0,26 → uscita 1. Ripristinato →
+uscita 0.
 
 #### Quello che è già in mano
 
