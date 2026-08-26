@@ -95,6 +95,22 @@ export function creaImpianto (base) {
         if (c) eccentricita = Math.hypot(c.y, c.z) || ECCENTRICITA_DI_SCORTA
       }
 
+      /**
+       * IL FASCIAME DEL MODELLO NON SI MOSTRA IN SCENA.
+       *
+       * `STATIC_HULL_PLATE` e' una lastra 2,6 x 2,2 m: serve quando il GLB si
+       * rende da solo, per dire dove sta la macchina e per dare al taglio
+       * qualcosa da attraversare. Nel sito lo scafo c'e' gia', ed e' quello
+       * vero, con le sue ordinate — quindi qui la lastra e' un doppione che
+       * copre mezza inquadratura. Visto succedere: sembrava che il meccanismo
+       * fosse a mezz'aria sopra la coperta.
+       *
+       * Resta nel file invece di sparire, perche' il modello deve poter essere
+       * guardato anche fuori dal sito: e' la stessa ragione per cui la scena 3D
+       * del salone e' rimasta come sorgente delle sagome.
+       */
+      nodi.STATIC_HULL_PLATE.visible = false
+
       radice.scale.setScalar(UNITA_PER_METRO)
       gruppo.add(radice)
       pronto = true
