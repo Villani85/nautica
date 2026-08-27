@@ -29,13 +29,26 @@
  *
  * ─── LA DIREZIONE È QUELLA DELL'ASSE, E NON È UN DETTAGLIO
  *
- * Un pezzo tornito porta i segni dell'utensile **attorno** all'asse, non lungo:
- * le striature girano. Sull'impianto l'asse è la X — è l'asse dell'albero, del
- * riduttore, del motore. Quindi il disturbo va allungato lungo X e stretto sul
- * piano YZ, che è esattamente la ricetta `(0.06, 9, 9)` di `docs/14 §7`.
+ * Un pezzo tornito porta i segni dell'utensile **attorno** all'asse: sono
+ * solchi elicoidali che girano intorno al pezzo, ripetuti **lungo** l'asse.
+ * Quindi camminando LUNGO l'asse se ne attraversano tanti — variazione rapida —
+ * e girando intorno alla circonferenza si resta dentro lo stesso — variazione
+ * lenta.
  *
- * Sbagliare verso non dà errore: dà un metallo che sembra sabbiato invece che
- * tornito, e nessuno sa dire perché non convince.
+ * ─── L'AVEVO SCRITTO GIUSTO E FATTO AL CONTRARIO
+ *
+ * La prima stesura moltiplicava X per 0,073 e Y/Z per 11: lento lungo l'asse,
+ * rapido intorno. Cioe' striature LONGITUDINALI, che sono la firma di un pezzo
+ * spazzolato o estruso, non tornito. L'ho scritto in questo stesso commento —
+ * «sbagliare verso da' un metallo che sembra sabbiato» — e l'ho sbagliato lo
+ * stesso, copiando una terna di numeri invece di ragionare sulla forma dei
+ * solchi. L'ha vista una revisione esterna leggendo il codice contro la frase.
+ *
+ * Adesso e' rapido lungo X e lento sul piano YZ. Resta una modulazione della
+ * sola rugosita' scalare: **non e' anisotropia vera**, che vorrebbe una BRDF
+ * con una direzione. Regge la media distanza e il primo piano di questo
+ * capitolo; il passo successivo e' la cottura delle mappe, non un altro
+ * disturbo.
  */
 
 /**
@@ -59,9 +72,10 @@ float disturbo (vec3 p) {
  * @param {object} opzioni
  * @param {number} opzioni.scala      quanto è fitta la lavorazione
  * @param {number} opzioni.forza      di quanto oscilla la rugosità
- * @param {number} opzioni.direzione  quanto è allungata lungo l'asse
+ * @param {number} opzioni.direzione  quanto e' piu' fitta LUNGO l'asse che
+ *                                  attorno. 1 = nessuna direzione (verniciato)
  */
-export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 150 } = {}) {
+export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 15 } = {}) {
   if (!m || !('roughness' in m)) return m
 
   m.onBeforeCompile = (s) => {
@@ -78,9 +92,10 @@ export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 150 } = {
        */
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 {
-  // stretto sul piano YZ, lunghissimo lungo X: le striature GIRANO attorno
-  // all'asse, come le lascia un utensile, invece di correre lungo il pezzo
-  vec3 p = vec3(vPezzo.x * ${(scala / direzione).toFixed(5)},
+  // FITTO lungo X e largo sul piano YZ: i solchi girano attorno all'asse e si
+  // ripetono lungo di esso, quindi e' camminando lungo l'asse che se ne
+  // attraversano tanti
+  vec3 p = vec3(vPezzo.x * ${(scala * direzione / 10).toFixed(3)},
                 vPezzo.y * ${scala.toFixed(2)},
                 vPezzo.z * ${scala.toFixed(2)});
   float d = disturbo(p);
@@ -107,10 +122,10 @@ export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 150 } = {
  * sta curando: un pezzo unico invece di un assieme di pezzi diversi.
  */
 export const LAVORAZIONI = {
-  acciaio: { scala: 11, forza: 0.11, direzione: 150 },   // albero, bulloni: tornito
-  lucido:  { scala: 14, forza: 0.06, direzione: 150 },   // rettificato: più fine, meno profondo
-  sezione: { scala: 13, forza: 0.09, direzione: 150 },   // il taglio: fresato
-  tenuta:  { scala: 10, forza: 0.10, direzione: 120 },
+  acciaio: { scala: 11, forza: 0.11, direzione: 15 },   // albero, bulloni: tornito
+  lucido:  { scala: 14, forza: 0.06, direzione: 15 },   // rettificato: più fine, meno profondo
+  sezione: { scala: 13, forza: 0.09, direzione: 15 },   // il taglio: fresato
+  tenuta:  { scala: 10, forza: 0.10, direzione: 12 },
   // verniciati: nessuna direzione, e una variazione piccolissima — è la
   // buccia d'arancia dello spruzzo, non una lavorazione
   carter:  { scala: 26, forza: 0.045, direzione: 1 },

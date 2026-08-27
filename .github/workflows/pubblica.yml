@@ -26,26 +26,43 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # IL BROWSER SI INSTALLA PRIMA DI QUALUNQUE COLLAUDO.
+      #
+      # Difetto che ho introdotto io e che ha tenuto la CI rossa per undici
+      # commit: `npm run collaudo` ha smesso di essere solo aritmetica quando
+      # ci e' entrato `collaudo-continuita`, che apre una pagina vera. Ma
+      # l'installazione di Chromium stava nello step SUCCESSIVO, e uno step che
+      # viene dopo uno fallito non viene mai raggiunto.
+      #
+      # In locale non si vedeva, perche' in locale c'e' il Chrome di sistema:
+      # e' il caso classico in cui l'ambiente di sviluppo nasconde il guasto
+      # proprio a chi lo ha creato. `playwright-core` non scarica browser di
+      # proposito — e' quello che tiene `npm ci` leggero — quindi qui va detto.
+      - name: Un browser per i collaudi
+        run: npx playwright install --with-deps chromium
+
       # I CANCELLI GIRANO PRIMA DI PUBBLICARE, o non sono cancelli.
       #
-      # Fino a oggi qui c'erano solo build e peso: i collaudi esistevano nel
+      # Fino a poco fa qui c'erano solo build e peso: i collaudi esistevano nel
       # repository e non fermavano niente. Li chiamavamo cancelli mentre una
       # regressione poteva arrivare in produzione lo stesso — segnalato da una
       # revisione esterna, e aveva ragione.
-      - name: Collaudi del modello e della geometria
+      - name: Collaudi del modello, della geometria e della continuita'
         run: npm run collaudo
+        env:
+          # In CI non c'e' nessun Chrome di sistema: si usa quello di
+          # Playwright, e lo si dice invece di lasciarlo scoprire per tentativi.
+          CHROMIUM: '1'
 
-      # L'impaginato ha bisogno di un browser. `playwright-core` non ne scarica
-      # nessuno di proposito, quindi qui se ne installa uno; in locale si usa il
-      # Chrome di sistema. Il collaudo gira headless e si accende la preview da
-      # solo.
       - name: Collaudo dell'impaginato
-        run: |
-          npx playwright install --with-deps chromium
-          npm run collaudo:impaginato
+        run: npm run collaudo:impaginato
+        env:
+          CHROMIUM: '1'
 
       # Il peso si misura a ogni pubblicazione e finisce nel registro della
       # corsa: se un giorno cresce, si vede quando e' successo e per cosa.
+      # Gira anche dentro `npm run collaudo`: qui resta perche' la sua uscita
+      # e' il registro, e un registro si vuole leggere anche quando tutto passa.
       - run: npm run peso
       - uses: actions/upload-pages-artifact@v3
         with:
