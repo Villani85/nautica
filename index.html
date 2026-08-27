@@ -211,7 +211,7 @@
     <p>Nine sections along the length, interpolated. The hull, the deck and the
     section cap are curves described in code. The mechanism and the two upper
     decks are modelled in Blender by the scripts in this repository and shipped
-    as glTF — 367 KB, meshopt-compressed. Still no third-party model, and
+    as glTF — 436 KB, meshopt-compressed. Still no third-party model, and
     still nothing downloaded that we did not author; but they are files now,
     not curves, and the page said <em>zero bytes</em> for one night longer than
     it was true. And the section cap at any station is <em>the same
@@ -249,7 +249,7 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>15,7 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>15,8 KB</dd></div>
       <div><dt>— of which JavaScript</dt><dd>2,9 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
       <!--
@@ -266,14 +266,14 @@
         utile, quindi il motore parte da solo a scorrimento fermo. Il numero
         era giusto, l'aggettivo no.
       -->
-      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>187,3 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>367 KB</dd></div>
+      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>187,4 KB</dd></div>
+      <div><dt>3D models downloaded</dt><dd>436 KB</dd></div>
       <!--
         E il totale, che e' la riga che un giurato verifica in dieci secondi.
         Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
         cose diverse e la differenza e' 134 volte.
       -->
-      <div><dt>Total before the first rendered frame</dt><dd>1,97 MB</dd></div>
+      <div><dt>Total before the first rendered frame</dt><dd>2,04 MB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
@@ -281,7 +281,7 @@
       <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
     </dl>
 
-    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">187,3 KB</b>
+    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">187,4 KB</b>
     compressed and is not on the critical path:
     it is requested only when the demonstration comes near. That is the real
     reason the code was moved to ES modules — <em>not</em> the total weight,

@@ -487,9 +487,134 @@ print('INGOMBRO        %.2f larg x %.2f lung x %.2f alt m' % (mx[0]-mn[0], mx[1]
 print('LIVELLI SOPRA LA TUGA  %d  (%.2f + %.2f m); la tuga resta nel sito, ha un buco vero'
       % (len(LIVELLI), H_SUPERIORE, H_FLY))
 
+"""
+--- L'OCCLUSIONE AMBIENTALE, COTTA, E IL NUMERO CHE L'HA CHIESTA
+
+Confrontando la stessa nave dalla stessa camera -- cotta in Cycles e disegnata
+dal sito -- la coperta AL RIPARO sotto la sovrastruttura misura:
+
+    Cycles   142,0 al riparo contro 171,9 scoperta   rapporto 0,83
+    sito     160,7 al riparo contro 156,9 scoperta   rapporto 1,02
+
+Nel sito la coperta sotto la tuga e' luminosa **quanto quella all'aperto**. La
+luce arriva da ogni parte uguale, e per questo niente sembra stare DENTRO a
+niente: e' l'indizio per cui un render si legge come incollato.
+
+--- PERCHE' UNA TEXTURE E NON I COLORI DEI VERTICI
+
+I colori dei vertici sarebbero gratis: tre byte per vertice, nessuna UV,
+nessun file in piu'. Non funzionano QUI: la sovrastruttura e' fatta di pannelli
+grandi, e otto spigoli non possono descrivere una sfumatura che attraversa un
+pannello. Servirebbe suddividere -- la coperta da 324 triangoli ne farebbe
+83.000 a quattro livelli -- e si pagherebbe in triangoli molto piu' di quanto
+costi una mappa.
+
+--- PERCHE' UN CANALE SOLO
+
+L'occlusione e' una quantita' scalare: moltiplica la luce ambientale e basta.
+Spedirla a colori vorrebbe dire tre canali identici.
+"""
+CUOCI_AO = os.environ.get('SENZA_AO') != '1'
+if CUOCI_AO:
+    LATO_AO = int(os.environ.get('LATO_AO', '1024'))
+    bpy.ops.object.select_all(action='DESELECT')
+    mesh = [o for o in bpy.data.objects if o.type == 'MESH']
+    for o in mesh:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = mesh[0]
+
+    # Un atlante solo per tutta la sovrastruttura: uno per pezzo farebbe una
+    # dozzina di file per una quantita' che vale zero byte di dettaglio.
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.008)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # L'impacchettamento automatico normalizza per OGGETTO e non per area:
+    # senza questa riga un candeliere e un ponte da 60 m ricevono la stessa
+    # area di atlante. E' la stessa trappola gia' pagata sulle UV dell'impianto.
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(margin=0.008, shape_method='CONVEX')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    img = bpy.data.images.new('ao', LATO_AO, LATO_AO)
+    for o in mesh:
+        for slot in o.material_slots:
+            m = slot.material
+            if not m or not m.use_nodes:
+                continue
+            n = m.node_tree.nodes.new('ShaderNodeTexImage')
+            n.image = img
+            n.select = True
+            m.node_tree.nodes.active = n
+
+    sc = bpy.context.scene
+    sc.render.engine = 'CYCLES'
+    sc.cycles.device = 'CPU'
+    sc.cycles.samples = int(os.environ.get('AO_CAMPIONI', '64'))
+    sc.render.bake.use_selected_to_active = False
+    sc.render.bake.margin = 8
+    bpy.ops.object.bake(type='AO')
+
+    ao = os.path.join(FUORI, 'sovrastruttura-ao.png')
+    img.filepath_raw = ao
+    img.file_format = 'PNG'
+    img.save()
+    print('AO cotta in %s (%d px)' % (ao, LATO_AO))
+
+    """
+    --- L'AO VA DENTRO IL GLB, E NON E' UNA COMODITA'
+
+    Primo tentativo: mappa cotta a parte, UV nel GLB, texture caricata dal
+    sito. Il GLB usciva con **POSITION e NORMAL soltanto**: gltfpack aveva
+    cancellato le UV, perche' nessun materiale usava una texture e quindi
+    erano un attributo inutile. Nessun avviso -- e' la stessa specie di
+    difetto gia' pagata coi nomi dei nodi, cancellati in silenzio.
+
+    Non si cura con un flag: si cura rendendo VERE le UV. L'occlusione entra
+    nel glTF come `occlusionTexture`, quindi le coordinate servono davvero e
+    nessuno le puo' considerare morte. In piu' `GLTFLoader` la collega da solo
+    ad `aoMap` col canale UV giusto: una cosa in meno da tenere allineata a
+    mano fra due file.
+
+    Il ponte fra Blender e glTF e' un gruppo di nodi che DEVE chiamarsi
+    "glTF Material Output" con un ingresso "Occlusion": non e' una convenzione
+    nostra, e' quella che l'esportatore cerca per nome.
+    """
+    img.scale(512, 512)   # l'occlusione e' a bassa frequenza: 512 bastano, e
+                          # costano 25 KB in webp contro 73 a 1024
+
+    ponte = bpy.data.node_groups.get('glTF Material Output')
+    if ponte is None:
+        ponte = bpy.data.node_groups.new('glTF Material Output', 'ShaderNodeTree')
+        ponte.interface.new_socket('Occlusion', in_out='INPUT',
+                                   socket_type='NodeSocketFloat')
+
+    collegati = 0
+    for o in mesh:
+        for slot in o.material_slots:
+            m = slot.material
+            if not m or not m.use_nodes:
+                continue
+            tex = next((x for x in m.node_tree.nodes
+                        if x.type == 'TEX_IMAGE' and x.image == img), None)
+            if not tex:
+                continue
+            g = m.node_tree.nodes.new('ShaderNodeGroup')
+            g.node_tree = ponte
+            m.node_tree.links.new(tex.outputs['Color'], g.inputs['Occlusion'])
+            collegati += 1
+    print('AO collegata a %d materiali' % collegati)
+    if not collegati:
+        raise SystemExit('AO cotta ma non collegata a nessun materiale: '
+                         'il GLB uscirebbe senza occlusione e senza UV.')
+
 bpy.ops.object.select_all(action='SELECT')
 percorso = os.path.join(FUORI, 'sovrastruttura.glb')
 bpy.ops.export_scene.gltf(filepath=percorso, export_format='GLB',
                           use_selection=True, export_apply=True,
-                          export_yup=True, export_extras=True)
+                          export_yup=True, export_extras=True,
+                          export_image_format='WEBP', export_image_quality=82)
 print('GLB %.0f KB' % (os.path.getsize(percorso) / 1024))

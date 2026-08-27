@@ -651,6 +651,20 @@ dirv = Vector(centro) - cam.location
 cam.rotation_euler = dirv.to_track_quat('-Z', 'Y').to_euler()
 sc.camera = cam
 
+# --- LA CAMERA, DETTA NELLE COORDINATE DEL SITO
+#
+# Serve per l'unico confronto che dice davvero dove il tempo reale perde: la
+# STESSA nave dalla STESSA camera, cotta e disegnata. Senza questa riga il
+# paragone e' fra due inquadrature diverse, e ogni differenza si puo'
+# attribuire alla posa invece che al render.
+#
+# `GIRA` manda (x,y,z) del sito in (x,-z,y) di Blender; la strada inversa e'
+# (bx, bz, -by).
+def al_sito(v):
+    return (v[0], v[2], -v[1])
+print('CAMERA_SITO pos %.4f %.4f %.4f  mira %.4f %.4f %.4f  fuoco %d'
+      % (al_sito(cam.location) + al_sito(centro) + (fuoco,)))
+
 sc.render.engine = 'CYCLES'
 
 # ─── OPTIX si VERIFICA, non si spera. Qui prima c'era un try/except che non
