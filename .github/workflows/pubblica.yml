@@ -97,12 +97,14 @@ jobs:
         run: |
           set -o pipefail
           npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt || {
-            {
-              echo '### Impaginato — caduto'
-              echo '```'
-              tail -80 /tmp/imp.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
+            # Il RIEPILOGO non e' esposto dall'API pubblica — provato, torna
+            # vuoto. Le ANNOTAZIONI si': `::error::` finisce in
+            # `/check-runs/{id}/annotations`, che si legge senza token. E'
+            # l'unico canale per cui il referto di una CI rossa arriva a chi
+            # non ha le chiavi del repository.
+            grep -E '^\s*(ROTTO|·|[A-Z]{4,})' /tmp/imp.txt | tail -12 | while IFS= read -r r; do
+              echo "::error::${r}"
+            done
             exit 1
           }
         env:

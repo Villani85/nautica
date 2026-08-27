@@ -147,6 +147,35 @@ for (const vp of VIEWPORT) {
    * che esiste — non un tempo morto.
    */
   await pg.goto(INDIRIZZO, { waitUntil: 'domcontentloaded' })
+
+  /**
+   * ─── SI ASPETTANO I FONT, O SI MISURA UN'ALTRA PAGINA
+   *
+   * Questo cancello misura riquadri di testo. Finche' il font non e' arrivato
+   * il browser usa un ripiego di sistema, con metriche diverse: la stessa
+   * frase occupa un numero di righe diverso, e un paragrafo che sta puo'
+   * traboccare — o il contrario.
+   *
+   * Su questa macchina il font e' in cache e arriva prima che il collaudo
+   * guardi; su un runner di CI, a freddo e senza scheda grafica, no. Il
+   * cancello passava qui e cadeva li', e il referto parlava di traboccamento
+   * invece che di font mancante: la specie di bugia piu' costosa, perche'
+   * manda a correggere l'impaginazione di una pagina che in realta' e' a
+   * posto.
+   *
+   * `document.fonts.ready` risolve quando tutti i font usati sono pronti. Con
+   * un tetto: se non arrivano, e' meglio saperlo che aspettare per sempre.
+   */
+  await pg.evaluate(() => Promise.race([
+    document.fonts.ready,
+    new Promise(r => setTimeout(r, 8000))
+  ]))
+  const fontPronti = await pg.evaluate(() => document.fonts.status === 'loaded')
+  if (!fontPronti) {
+    console.error('  ROTTO  i font non sono arrivati entro otto secondi: ' +
+                  'le misure sarebbero fatte sul ripiego di sistema')
+    process.exit(1)
+  }
   await pg.evaluate(() => document.querySelector('#dimostrazione').scrollIntoView())
   await pg.waitForFunction(() => !!document.querySelector('#scena canvas'), null, { timeout: 20000 })
   await pg.waitForTimeout(1800)
