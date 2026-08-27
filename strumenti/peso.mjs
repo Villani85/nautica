@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
 import { join } from 'node:path'
 
@@ -85,6 +85,8 @@ const ATTESI = [
 ]
 
 const TOLLERANZA = 0.3
+const SCRIVI = process.argv.includes('--scrivi')
+let paginaNuova = pagina
 const scarti = []
 console.log('\nI NUMERI IN PAGINA')
 for (const [etichetta, byte] of ATTESI) {
@@ -104,15 +106,47 @@ for (const [etichetta, byte] of ATTESI) {
   }
   const dichiarato = parseFloat(m[1].replace(',', '.'))
   const ok = Math.abs(dichiarato - misurato) <= TOLLERANZA
+  /**
+   * Con `--scrivi` si riscrive SEMPRE, non solo quando il cancello e' rosso.
+   * Riscrivere solo fuori tolleranza lascerebbe accumulare lo scarto fin
+   * sotto il pelo: ogni volta dentro di un soffio, e dopo cinque modifiche la
+   * riga e' falsa senza che nessun passaggio l'abbia mai fatta diventare tale.
+   */
+  if (SCRIVI) {
+    const nuovo = misurato.toFixed(1) + ' KB'
+    if (nuovo !== m[1].trim()) {
+      paginaNuova = paginaNuova.replace(ancora + m[1] + '</dd>', ancora + nuovo + '</dd>')
+    }
+  }
   console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${etichetta.padEnd(42)} ` +
               `dichiara ${m[1].trim().padStart(9)}, misura ${kb(byte).padStart(9)}`)
   if (!ok) {
-    scarti.push(`«${etichetta}» dichiara ${m[1].trim()} ma la build ne misura ${kb(byte)}`)
+    /**
+     * `--scrivi` riporta i numeri misurati dentro la pagina.
+     *
+     * Non e' una scorciatoia per far tacere il cancello: e' il verso giusto in
+     * cui deve scorrere l'informazione. Una riga che dice «measured on the
+     * production build» non ha ragione di essere scritta a mano — la scrive la
+     * build. A mano restano solo le righe che una misura non puo' produrre:
+     * l'LCP su rete vera e i fotogrammi su un telefono vero, che infatti sono
+     * ancora due trattini.
+     *
+     * Il cancello resta, e serve a chi si dimentica di rigenerare.
+     */
+    if (!SCRIVI) {
+      scarti.push(`«${etichetta}» dichiara ${m[1].trim()} ma la build ne misura ${kb(byte)}`)
+    }
   }
+}
+
+if (SCRIVI && paginaNuova !== pagina) {
+  writeFileSync('index.html', paginaNuova)
+  console.log('\n  index.html riscritto coi numeri misurati')
 }
 
 if (scarti.length) {
   console.error('\nI NUMERI PUBBLICATI NON DESCRIVONO PIU\' LA BUILD')
   for (const s of scarti) console.error('  · ' + s)
+  console.error('\n  npm run numeri li riporta dentro la pagina.')
   process.exit(1)
 }
