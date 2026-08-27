@@ -54,7 +54,24 @@ const INDIRIZZO = process.env.URL || 'http://localhost:4174/nautica/'
  * (Nota: in headless il 3D viene disegnato via software e quindi e' brutto. Per
  * i RIQUADRI non cambia niente; per guardare la scena si usa `TESTA=1`.)
  */
-const VISIBILE = process.env.TESTA ? false : true
+/**
+ * ─── UN NOME CHE MENTE COSTA UNA CI ROSSA
+ *
+ * Questa costante si chiamava `VISIBILE` e veniva passata come
+ * `headless: VISIBILE`: valeva `true` per dire «SENZA finestra». Il nome
+ * diceva l'opposto del valore.
+ *
+ * Finche' e' rimasta dentro questo file nessuno se n'e' accorto, perche' chi
+ * la scriveva e chi la leggeva erano la stessa riga. Unificando l'apertura del
+ * browser in `browser.mjs` — che prende `visibile` e ne fa `headless =
+ * !visibile` — ho preso il nome per buono, e il cancello ha provato ad aprire
+ * una FINESTRA su un runner che non ha schermo. Una esecuzione rossa per un
+ * nome.
+ *
+ * Adesso si chiama come si comporta. `TESTA=1` apre una finestra vera, per
+ * guardare.
+ */
+const SENZA_FINESTRA = !process.env.TESTA
 
 const VIEWPORT = [
   { nome: 'desktop grande', width: 1920, height: 1080 },
@@ -131,7 +148,7 @@ if (!(await risponde(INDIRIZZO))) {
   }
 }
 
-const b = await apriBrowser({ visibile: VISIBILE })
+const b = await apriBrowser({ visibile: !SENZA_FINESTRA })
 const collisioni = []
 const traboccamenti = []
 let overflow = []
