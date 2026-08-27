@@ -110,8 +110,7 @@ jobs:
           set -o pipefail
           if ! npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt; then
             tail -25 /tmp/imp.txt | while IFS= read -r r; do
-              printf '::error::%s
-' "$r"
+              echo "::error::$r"
             done
             exit 1
           fi
