@@ -156,10 +156,33 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * produce righe (acne) o stacca l'ombra dal piede dell'oggetto. Il bias
    * lungo la normale non ha quel compromesso.
    */
-  render.shadowMap.enabled = true
+  /**
+   * ─── LA MAPPA NON E' LA STESSA PER TUTTI
+   *
+   * 2048x2048 in virgola mobile e' un quarto di schermo in piu' da riempire a
+   * ogni fotogramma, e su un telefono di fascia media si paga in batteria e in
+   * temperatura prima che in fotogrammi. Segnalato da una revisione come
+   * rischio non misurato, ed e' vero: un Android vero non ce l'ho.
+   *
+   * Quello che si puo' fare senza misurare e' non pretendere. Il livello si
+   * sceglie da due indizi che il browser da' senza mentire troppo: quanti
+   * nuclei dichiara la macchina, e quanto e' piccolo il lato corto dello
+   * schermo. Non e' una diagnosi — e' una prudenza, e sotto ai 1024 texel su
+   * uno schermo da telefono l'ombra si legge lo stesso, perche' e' piu'
+   * piccola in pixel.
+   *
+   * `?ombre=0|1024|2048` la forza, per poterla guardare invece di discuterla.
+   */
+  const forzata = new URLSearchParams(location.search).get('ombre')
+  const nuclei = navigator.hardwareConcurrency || 4
+  const latoCorto = Math.min(screen.width, screen.height)
+  const auto = (nuclei <= 4 || latoCorto < 700) ? 1024 : 2048
+  const TESSITURA_OMBRA = forzata !== null ? Number(forzata) : auto
+
+  render.shadowMap.enabled = TESSITURA_OMBRA > 0
   render.shadowMap.type = PCFSoftShadowMap
-  sole.castShadow = true
-  sole.shadow.mapSize.set(2048, 2048)
+  sole.castShadow = TESSITURA_OMBRA > 0
+  if (TESSITURA_OMBRA > 0) sole.shadow.mapSize.set(TESSITURA_OMBRA, TESSITURA_OMBRA)
   const c = sole.shadow.camera
   c.left = -11; c.right = 11; c.top = 8; c.bottom = -8
   c.near = 0.5; c.far = 34
