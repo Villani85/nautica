@@ -39,9 +39,15 @@
   /* LO SPACCO: meta' aria e meta' acqua, con lo stacco secco al 50%. E' l'unica
      idea meccanica del sito, e da qui in poi vive in una riga sola — cosi' il
      fondo della sezione e quello della tela non possono scollarsi. */
+  /* LA QUOTA DEL PELO. Era 50% scritto due volte -- qui e in `.linea` -- e
+     due volte vuol dire che possono scollarsi. Adesso e' una variabile, e
+     serve anche all'ENTRATA: la pagina comincia con il pelo a 100%, cioe'
+     tutta carta, e l'acqua sale fino a fermarsi a meta'. Il caricamento
+     diventa il taglio che si forma, invece di un fermo immagine che aspetta. */
+  --pelo:50%;
   --spacco:linear-gradient(to bottom,
-    var(--aria) 0%,var(--aria) 50%,
-    var(--acqua-viva) 50%,var(--acqua) 100%);
+    var(--aria) 0%,var(--aria) var(--pelo),
+    var(--acqua-viva) var(--pelo),var(--acqua) 100%);
   --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua */
   /* l'unico accento saturo, e sta sotto la linea */
   --recupero:#4FE0C4;
@@ -237,7 +243,7 @@ p{max-width:60ch}
   background:transparent;
 }
 .linea{
-  position:absolute;left:0;right:0;top:50%;height:1px;
+  position:absolute;left:0;right:0;top:var(--pelo);height:1px;
   background:var(--inchiostro);opacity:.55;z-index:5;pointer-events:none;
 }
 .linea::after{

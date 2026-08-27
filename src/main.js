@@ -51,6 +51,76 @@ addEventListener('resize', tagliaTitoli)
 document.fonts?.ready.then(tagliaTitoli)
 
 /**
+ * ─── L'ENTRATA: IL CARICAMENTO E' IL TAGLIO CHE SI FORMA
+ *
+ * L'apertura era un fermo immagine: il titolo gia' tagliato, in attesa che
+ * qualcuno scorresse. Ma il taglio e' l'unica idea meccanica del sito, e
+ * mostrarlo gia' fatto e' come cominciare un film dall'ultima inquadratura.
+ *
+ * Qui la pagina comincia TUTTA CARTA — pelo al 100%, cioe' il mare fuori dallo
+ * schermo — e l'acqua sale fino a fermarsi a meta'. Il titolo si sommerge da
+ * solo: `tagliaTitoli` misura la quota della linea VERA a ogni fotogramma,
+ * quindi la seconda riga passa da inchiostro su carta a chiaro sull'acqua
+ * mentre il livello la supera. Non c'e' una seconda animazione da tenere
+ * allineata alla prima: ce n'e' una sola, ed e' il pelo.
+ *
+ * ─── LA FINE E' LA REGOLA, NON L'ULTIMO FOTOGRAMMA
+ *
+ * Alla fine la variabile si TOGLIE invece di essere posata su «50%». Cosi'
+ * l'invariante torna a essere quello dichiarato nel foglio di stile, e non il
+ * risultato di un'interpolazione arrotondata a tre decimali. Un'entrata che
+ * finisce a 49,998% romperebbe la giunzione a zero pixel — cioe' proprio la
+ * cosa che sta mostrando.
+ *
+ * ─── E NON E' UNA BARRA DI CARICAMENTO
+ *
+ * Il percorso critico di questo sito pesa 7,6 KB: quando il primo fotogramma
+ * esiste, non c'e' piu' niente da aspettare, e il motore 3D arriva molto dopo,
+ * all'avvicinamento. Una barra che finge di misurare un caricamento che non
+ * c'e' sarebbe una bugia — e questo sito ne ha vietate di piu' piccole. Questa
+ * e' un'ENTRATA: dura un tempo dichiarato e non finge di sapere niente.
+ */
+const ENTRATA_MS = 1100
+
+function entrata () {
+  const R = document.documentElement
+  // Con la preferenza attiva non si anima l'apertura: chi la chiede sta
+  // chiedendo di non essere mosso mentre legge, e qui c'e' un titolo da
+  // leggere. Il resto del sito RIDUCE invece di spegnere, perche' li' il
+  // movimento e' l'informazione; qui non lo e'.
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const t0 = performance.now()
+  R.dataset.entrata = 'in corso'
+  const passo = (t) => {
+    const k = Math.min(1, (t - t0) / ENTRATA_MS)
+    /* Parte decisa e si posa: e' come si assesta un livello, non come si
+       muove un cursore. Cubica in uscita, niente rimbalzo — un pelo d'acqua
+       che rimbalza e' un'animazione, non un mare. */
+    const e = 1 - Math.pow(1 - k, 3)
+    R.style.setProperty('--pelo', `${(100 - 50 * e).toFixed(3)}%`)
+    tagliaTitoli()
+    if (k < 1) requestAnimationFrame(passo)
+    else {
+      R.style.removeProperty('--pelo')
+      R.dataset.entrata = 'fatta'
+      tagliaTitoli()
+    }
+  }
+  R.style.setProperty('--pelo', '100%')
+  tagliaTitoli()
+  requestAnimationFrame(passo)
+}
+
+// Si aspettano i font: il titolo va a capo diversamente prima e dopo, e la
+// quota del taglio si misura sui nodi. Partire prima farebbe saltare la
+// seconda riga a meta' entrata. Con un tetto, perche' un font che non arriva
+// non deve togliere l'apertura a nessuno.
+Promise.race([
+  document.fonts?.ready ?? Promise.resolve(),
+  new Promise(r => setTimeout(r, 1200))
+]).then(entrata)
+
+/**
  * Il motore 3D si carica quando la dimostrazione si avvicina, non prima.
  * `rootMargin` generoso perche' arrivi gia' pronto invece di comparire a scatto.
  */
