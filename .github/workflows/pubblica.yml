@@ -47,12 +47,31 @@ jobs:
       # repository e non fermavano niente. Li chiamavamo cancelli mentre una
       # regressione poteva arrivare in produzione lo stesso — segnalato da una
       # revisione esterna, e aveva ragione.
-      - name: Collaudi del modello, della geometria e della continuita'
-        run: npm run collaudo
-        env:
-          # In CI non c'e' nessun Chrome di sistema: si usa quello di
-          # Playwright, e lo si dice invece di lasciarlo scoprire per tentativi.
-          CHROMIUM: '1'
+      # ─── UN CANCELLO, UNO STEP, E NON E' PEDANTERIA
+      #
+      # `npm run collaudo` incatena dieci controlli con `&&`. Quando la catena
+      # cade, GitHub dice «lo step e' fallito» e basta: per sapere QUALE dei
+      # dieci bisogna aprire il registro, e il registro non e' leggibile senza
+      # autenticazione. Ho passato tre esecuzioni a indovinare.
+      #
+      # Separati, il nome dello step E' la diagnosi. Costa qualche secondo di
+      # avvio in piu' e ripaga alla prima riga rossa.
+      #
+      # `CHROMIUM=1` vale per tutti: in CI non c'e' nessun Chrome di sistema, e
+      # dirlo e' meglio che lasciarlo scoprire per tentativi.
+      - { name: 'Cancello · rollio',       run: node strumenti/collaudo-rollio.mjs }
+      - { name: 'Cancello · scafo',        run: node strumenti/collaudo-scafo.mjs }
+      - { name: 'Cancello · mare',         run: node strumenti/collaudo-mare.mjs }
+      - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs }
+      - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
+      - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
+      - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
+      - name: 'Cancello · continuita della scena'
+        run: node strumenti/collaudo-continuita.mjs
+        env: { CHROMIUM: '1' }
+      - name: 'Cancello · cinematica del meccanismo'
+        run: node strumenti/collaudo-cinematica.mjs
+        env: { CHROMIUM: '1' }
 
       - name: Collaudo dell'impaginato
         run: npm run collaudo:impaginato
