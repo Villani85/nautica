@@ -248,6 +248,59 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const impianti = agganci.map(a => {
     const i = creaImpianto(base, ambiente)
     i.gruppo.position.set(...a.posizione)
+    /**
+     * --- PERCHE' IL MECCANISMO E' SCURO, E PERCHE' NON L'HO ANCORA CURATO
+     *
+     * Alla battuta che dice «The part you never see» il pezzo e' una sagoma:
+     * misurato sul provino, gamma 23 su 255 sotto la linea. E' il momento
+     * della tesi del sito, ed e' il difetto piu' grosso che ho trovato
+     * stanotte.
+     *
+     * TRE CAUSE CERCATE E SCARTATE, ognuna con un numero:
+     *   · non e' l'ambiente -- `envMapIntensity` da 0,55 a 3 sposta la media
+     *     da 45,6 a 48,5, cioe' niente;
+     *   · non e' il velo dell'acqua -- misurato per nome, scende da 0,72 a
+     *     0,12 e a quella battuta e' gia' al minimo;
+     *   · non e' il tone mapping -- con e senza ACES nello stesso istante la
+     *     gamma passa da 217 a 213.
+     *
+     *   · e **non e' nemmeno l'ombra dello scafo**, che era la mia ipotesi
+     *     migliore: togliendo il meccanismo dai riceventi -- 58 mesh,
+     *     `receiveShadow = false` -- cambia lo **0,02% dei pixel**, massimo 10
+     *     livelli. L'avevo gia' scritta qui come causa accertata prima di
+     *     provarla, ed era falsa.
+     *
+     * QUINDI LA CAUSA NON LA SO ANCORA, e questo commento serve a non farla
+     * ricercare da capo nei quattro posti dove non e'. Il sospetto che resta:
+     * materiali metallici scuri con un ambiente che sotto la linea e' quasi
+     * nero -- un metallo mostra solo cio' che riflette, e li' non c'e' niente.
+     * Ma `envMapIntensity` a 3 non lo smentisce e non lo conferma, perche'
+     * sposta di tre livelli.
+     *
+     * UNA LUCE DI CHIAVE NON HA FUNZIONATO, e le tre strade provate stanno
+     * qui perche' chi riprova non le ripaghi:
+     *
+     *   1. luce sul livello 1, meshes sul livello 1. **Non funziona: in three
+     *      i livelli di una luce si confrontano con la CAMERA, non con gli
+     *      oggetti.** Non esiste luce per-oggetto. Intensita' 0, 6, 12 e 20
+     *      davano lo stesso identico numero;
+     *   2. luce puntiforme locale: illumina il pezzo (gamma 23 -> 101) ma
+     *      accende anche la faccia di taglio dello scafo -- una colonna bianca
+     *      che sbianca le etichette DRAW e RECOVERY. Un'interfaccia
+     *      illeggibile e' peggio del difetto che stavo curando;
+     *   3. faretto puntato sull'ingombro misurato: nessun effetto a 6, 20 e
+     *      60 di intensita'. Non ho capito perche' e non l'ho spacciato per
+     *      capito;
+     *   4. accorciando la portata la colonna sparisce e il pezzo torna al
+     *      buio: **soggetto e superficie molesta stanno alla stessa distanza**,
+     *      quindi la luce raggiunge tutti e due o nessuno.
+     *
+     * Da provare, e non stanotte: dare al meccanismo un ambiente PROPRIO --
+     * una piccola mappa chiara che valga solo per lui -- invece di una luce.
+     * E' la strada che ha funzionato nel render Cycles, dove il pezzo e'
+     * diventato leggibile quando ha avuto un'officina da riflettere e non un
+     * gradiente.
+     */
     // la fiancata opposta NON si ottiene con una scala negativa: rovescerebbe
     // le normali e la pinna di sinistra si illuminerebbe al contrario
     if (a.lato < 0) i.gruppo.rotation.y = Math.PI

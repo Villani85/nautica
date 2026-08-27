@@ -556,6 +556,9 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
   const materialeVolume = new MeshBasicMaterial({
     color: 0x061518, transparent: true, opacity: FONDA, depthWrite: false
   })
+  // Terzo materiale anonimo che mi fa perdere tempo stanotte: senza nome,
+  // una sonda che cerca 'il velo' pesca il primo trasparente che passa.
+  materialeVolume.name = 'velo'
   /**
    * ─── LA SCATOLA NON HA COPERCHIO, e per mesi non si e' visto perche'
    *     nessuno guardava il mare dall'alto.
