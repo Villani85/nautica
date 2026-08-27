@@ -83,8 +83,28 @@ jobs:
         run: node strumenti/collaudo-cinematica.mjs
         env: { CHROMIUM: '1' }
 
+      # ─── IL REFERTO VA DOVE SI LEGGE
+      #
+      # I registri di GitHub Actions non sono scaricabili senza autenticazione,
+      # e questo mi ha tenuto cieco per quattro esecuzioni. Il RIEPILOGO del
+      # lavoro invece si legge dall'API pubblica: se un cancello cade, il suo
+      # referto finisce li' invece che in un registro chiuso.
+      #
+      # Vale la pena solo per i cancelli che possono fallire per ragioni
+      # d'ambiente — impaginazione, font, browser — cioe' quelli che in locale
+      # passano e in CI no.
       - name: Collaudo dell'impaginato
-        run: npm run collaudo:impaginato
+        run: |
+          set -o pipefail
+          npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt || {
+            {
+              echo '### Impaginato — caduto'
+              echo '```'
+              tail -80 /tmp/imp.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
         env:
           CHROMIUM: '1'
 
