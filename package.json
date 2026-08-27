@@ -12,7 +12,8 @@
     "collaudo:impaginato": "node strumenti/collaudo-impaginato.mjs",
     "collaudo:posa": "node strumenti/collaudo-posa.mjs",
     "sagome": "node strumenti/sagoma.mjs",
-    "modello": "node strumenti/collaudo-glb.mjs"
+    "modello": "node strumenti/collaudo-glb.mjs",
+    "collaudo:continuita": "node strumenti/collaudo-continuita.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"
