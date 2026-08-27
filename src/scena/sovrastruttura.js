@@ -53,6 +53,7 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
           for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
             if (!m) continue
             if (m.name === 'sovra_teak') fughe(m)
+            if (m.name === 'sovra_guscio') vernice(m)
             if (pianoSezione) m.clippingPlanes = [pianoSezione]
             if (ambiente && 'envMap' in m) {
               m.envMap = ambiente
@@ -126,5 +127,37 @@ function fughe (m) {
 }`)
   }
   m.customProgramCacheKey = () => 'teak-fughe-1'
+  m.needsUpdate = true
+}
+
+
+/**
+ * ─── LA VERNICE DELLA SOVRASTRUTTURA
+ *
+ * Stessa ragione dello scafo, stesso rimedio: una superficie bianca con
+ * rugosita' costante non e' vernice, e' plastica. Su una tuga la si nota
+ * ancora di piu' che sul fianco, perche' e' la parte piu' chiara del
+ * fotogramma e riflette il cielo per intero.
+ *
+ * Piu' fine e piu' leggera che sullo scafo: la sovrastruttura si guarda da
+ * meno lontano, e lassu' la verniciatura e' migliore — meno superficie, piu'
+ * cura, nessuna curvatura da inseguire.
+ */
+function vernice (m) {
+  m.onBeforeCompile = (s) => {
+    s.vertexShader = s.vertexShader
+      .replace('#include <common>', ['#include <common>', 'varying vec3 vTuga;'].join('\n'))
+      .replace('#include <begin_vertex>', ['#include <begin_vertex>', '  vTuga = transformed;'].join('\n'))
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', ['#include <common>', 'varying vec3 vTuga;'].join('\n'))
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+{
+  vec3 b = vTuga * 19.0;
+  float o = sin(b.x + sin(b.y * 0.8) * 1.6) * sin(b.y * 1.2 + sin(b.z) * 1.1)
+          * sin(b.z * 0.85 + b.x * 0.4);
+  roughnessFactor = clamp(roughnessFactor + o * 0.035, 0.02, 1.0);
+}`)
+  }
+  m.customProgramCacheKey = () => 'tuga-vernice-1'
   m.needsUpdate = true
 }
