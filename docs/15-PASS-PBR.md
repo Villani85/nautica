@@ -133,51 +133,115 @@ mare 4, e `stato.js` lo dichiara. *Lo stato non si suppone, si legge.*
 
 ---
 
-## 0-bis · Il salone deve potersi attraversare `[~]`
+## 0-bis · Il mare dal finestrone e' quello della scena `[x]`
 
-**Messo in testa dopo una frase del committente**, e la frase è l'argomento
-intero: *«questi devono avere la possibilità di muoversi, altrimenti avrei
-fatto un filmato»*.
+Il committente ha chiuso la questione in due frasi: *«cioe' sono io che regolo
+il mare»* e *«deve far vedere qualcosa che non vedrebbe mai, come il
+funzionamento»*. Dal vetro si vedeva una clip: un mare girato non risponde a
+chi guarda, e quindi non e' il mare di nessuno.
 
-Ha ragione, e smonta quello che avevo scritto qui sotto tre righe più giù —
-che il salone «resta due piani» e che dargli volume «è un lavoro diverso». Non
-è un lavoro diverso: **è la ragione per cui il salone sta dentro una scena 3D
-invece che dentro un `<video>`.** Un piano fotografico è un filmato con dei
-passi in più. Se la camera non ci si può muovere dentro, tanto valeva montarlo.
+Adesso il vetro e' un **buco** — lo apre `alphaMap` — e dietro c'e' l'acqua
+della scena, la stessa che si vede da fuori, mossa dallo stesso stato.
 
-### Cosa NON si fa
+### La parte bella: la rotazione l'ha fatta la fisica
 
-Non si modella il salone. La fotografia è l'asset più forte del sito — legno,
-lampada accesa, due persone vere — e sostituirla con mobili costruiti a mano
-significherebbe buttare l'unica cosa che oggi *non* sembra CG.
+La regola di `docs/09` e' sempre stata **la stanza rolla, l'orizzonte no**, e
+finora era ottenuta con due rotazioni scritte a mano: una contro-rotazione che
+teneva il gruppo livellato, e una rotazione della texture del mare. Sono uscite
+tutte e due, e la regola resta vera da sola:
 
-### Cosa si fa: la fotografia proiettata su un volume
+- la camera del sito e' **livellata** — e' l'invariante di tutto il sito —
+  quindi il mare del mondo disegna sempre un orizzonte orizzontale;
+- il gruppo del salone e' **figlio della nave**, quindi lasciandolo stare rolla
+  insieme a lei.
 
-Si costruisce il guscio grezzo della stanza — pavimento, soffitto, le due
-murate, la paratia di fondo, il vano del finestrone — e ci si **proietta sopra
-la clip dalla posizione della camera che l'ha ripresa**. Da quel punto di vista
-l'immagine è identica a oggi, pixel per pixel. Spostandosi, ogni superficie si
-comporta come la superficie che è: il montante del finestrone copre il divano,
-il mare scorre dietro il vano, il pavimento fugge.
+Stanza inclinata, orizzonte piatto, zero righe che lo impongano. Il codice che
+c'era non descriveva la scena: la simulava a mano.
 
-È la stessa idea del resto del sito, applicata a un'immagine invece che a una
-carena: **cio' che è fotografia si guarda, ma deve stare dove starebbe.**
+### E una cosa che copriva il mare
 
-### Il punto difficile, e come si verifica
+Attraverso il buco si vedeva **la nave stessa**: un piano orizzontale a quota
+1,54, cioe' il ponte sopra la tuga, a 0,47 unita' dalla camera contro 1,35 del
+salone. Nascondere la sola `COPERTA` bastava finche' dal vetro c'era un
+filmato, perche' la clip copriva tutto quello che stava dietro. Trovato
+chiedendo alla scena *chi* fosse in quel punto con `?ispeziona=1`, non
+deducendolo dalla forma della macchia.
 
-La proiezione vale solo se la camera che proietta è nella stessa posa di quella
-che ha ripreso. Sbagliarla di poco si vede subito: i bordi del finestrone
-proiettato non cadono su quelli modellati.
+### Quanto e' forte, misurato
 
-Quindi **si tara sulle linee della fotografia** — gli spigoli del vano, la
-fuga del soffitto, il bordo del pavimento — e il collaudo confronta i due
-bordi: quelli dipinti e quelli costruiti. Se scostano più di qualche pixel, la
-posa è sbagliata e il volume non regge.
+Fra mare 1 e mare 5, dentro il vano: **1,95 livelli su 255 di differenza
+media**, con l'8,5% dei pixel che cambia di piu' di 3 livelli. **Risponde, ma
+poco.** L'acqua a quella distanza e con quell'angolo rende meno di quanto
+dovrebbe, ed e' il prossimo lavoro su questo capitolo — non un dettaglio da
+lasciare implicito.
 
-E c'è un secondo cancello, che è quello vero: **muovendo la camera di mezza
-unità, le occlusioni devono cambiare.** Un billboard non cambia. Questo si
-misura contando i pixel che cambiano fra due pose vicine in una regione dove
-un oggetto vicino passa davanti a uno lontano.
+---
+
+## 0-ter · La ripresa nuova del salone `[~]` — bloccata su un cancello
+
+Il committente ha fornito una ripresa molto migliore: stesso salone ma piu'
+vicina, con il finestrone che passa dal 27% al 55% della larghezza del quadro.
+
+Lo strumento `strumenti/salone-da-filmato.py` ne ricava la maschera del vano
+misurandola invece di ritagliarla a occhio — colore sulla mediana temporale per
+trovare la regione, poi tre rette adattate al bordo, errore medio **1,37 px**.
+
+**Non e' spedita**, perche' `collaudo-filmato.mjs` la boccia: **0,34 gradi di
+rotazione contro un tetto di 0,30**, con una carrellata dello 0,48% contro
+0,50. Il tetto non e' negoziabile e la sua ragione vale oggi piu' di ieri: la
+maschera del vano e' ferma, quindi se la camera ruota il vano scivola sotto la
+maschera, e adesso che dietro c'e' il mare vero lo scarto si vede come una
+scheggia di legno sopra l'acqua. A 0,34 gradi sono circa 2 px.
+
+### Quattro tentativi di stabilizzazione, tutti peggiori del non fare niente
+
+| cosa | rotazione | carrellata |
+|---|---|---|
+| ripresa grezza | 0,34° | 0,48% |
+| `vidstab` su tutto il quadro, `smoothing=30` | 0,39° | 0,48% |
+| `vidstab` su tutto il quadro, `smoothing=0` | 0,57° | 4,92% |
+| `vidstab` rilevato sul solo lato stanza | 7,33° | 8,20% |
+| stimatore mio, sul montante | **10,26°** | 9,31% |
+
+Tre cause distinte, e vale la pena tenerle scritte perche' sono tre modi
+diversi di sbagliare la stessa cosa:
+
+1. **rilevare su tutto il quadro** stima il moto del *contenuto* — meta' quadro
+   e' acqua che scorre, l'altra meta' ha due persone che gesticolano — e lo
+   attribuisce alla camera;
+2. **rilevare su un ritaglio e applicare al quadro intero** ruota attorno al
+   centro sbagliato: 0,3 gradi diventano 7;
+3. **il mio stimatore sul montante misurava 2,04 gradi dove la verita' e'
+   0,34**, quindi ha iniettato tremolio invece di toglierlo. Ancora una volta
+   due metri in disaccordo di sei volte, e ancora una volta lo ha detto il
+   cancello, non la mia fiducia nel mio codice.
+
+### Le due strade, e nessuna e' mia da scegliere
+
+- **rigenerare la clip** con una camera davvero bloccata. Le tre riprese nate
+  dalla richiesta «telecamera fissa» si muovono PIU' delle altre — 14,6, 15,5 e
+  17,5 gradi di escursione dell'orizzonte — quindi chiederlo a parole non
+  basta;
+- **far seguire la maschera alla ripresa** invece di tenerla ferma. E' la
+  risposta di principio: se la camera si muove, a muoversi dev'essere anche il
+  ritaglio. Costa una misura per fotogramma di cui, per ora, non ho una
+  versione che regga.
+
+### Cosa e' emerso misurando la ripresa nuova, e serve comunque
+
+- **non ci sono tagli**: il salto massimo fra fotogrammi adiacenti e' 6 volte
+  il tipico (uno spruzzo); un attacco darebbe 20-50 volte;
+- **ma il contenuto torna indietro**: la coppia di fotogrammi piu' simili in
+  assoluto e' 0,0 s ↔ 9,5 s per il mare e 0,5 s ↔ 9,8 s per la stanza. Il
+  generatore ha prodotto ~9,6 s di materiale, ripetuto tre volte con
+  variazioni: e' il ciclo che si nota guardando;
+- **a 4,7-5,4 s un gesto sbagliato**: l'uomo alza il braccio con la mano aperta
+  senza motivo. In un ciclo lo si vede ogni volta;
+- **per rimescolare, la sorpresa e' rovesciata**: la stanza ha **2364** salti
+  che costano meno del doppio di un fotogramma adiacente, da 117 fotogrammi
+  diversi; il mare ne ha **12**, da 5. Le onde non combaciano mai. Ma l'acqua
+  si puo' dissolvere senza che si veda e le persone no — quindi il
+  rimescolamento e' un lavoro sul lato STANZA, non sul mare.
 
 ---
 
@@ -281,4 +345,6 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | 27 ago, 07:40 | — | piano scritto e versionato |
 | 27 ago, 07:50 | 0-bis | il salone entra nel pass, **in testa**: «altrimenti avrei fatto un filmato» |
 | 27 ago, 09:20 | 0 | **i comandi non si spengono più sul meccanismo.** Una riga di CSS teneva la mano fuori dal primo piano; `collaudo-manopola.mjs` la vieta |
-| 27 ago, 09:20 | 0-bis | deciso col committente: dal finestrone si vedrà **il mare 3D della scena**, non una clip — così la manopola comanda anche lì |
+| 27 ago, 09:20 | 0-bis | deciso col committente: dal finestrone si vedrà **il mare 3D della scena**, non una clip |
+| 27 ago, 10:30 | 0-bis | **fatto.** Le due rotazioni scritte a mano sono uscite: la fisica le produce da sola. Misurato: risponde alla manopola, ma debolmente (1,95/255) |
+| 27 ago, 11:10 | 0-ter | ripresa nuova misurata e maschera estratta (1,37 px). **Non spedita**: fuori dal cancello di 0,04 gradi, e quattro stabilizzazioni su quattro l'hanno peggiorata |

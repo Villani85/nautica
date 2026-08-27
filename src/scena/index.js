@@ -476,11 +476,25 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // vede DENTRO il finestrino, ed e' l'unico posto del sito in cui si
       // guardano delle persone. Si spegne solo quando la nave e' lontana.
       salone.mostra(1 - MathUtils.clamp((uscita - 0.62) / 0.30, 0, 1))
-      // la stanza NON rolla: chi e' seduto dentro ha il proprio salotto come
-      // riferimento, e a inclinarsi e' l'orizzonte. La contro-rotazione
-      // annulla quella della nave, di cui il gruppo e' figlio per seguirne la
-      // quota. Vedi `composito.js` §5.1: e' la stessa correzione, in 3D.
-      salone.gruppo.rotation.z = -nave.rotation.z
+      /**
+       * ─── E QUI C'ERA UNA CONTRO-ROTAZIONE, CIOE' UNA SIMULAZIONE A MANO
+       *
+       * `salone.gruppo.rotation.z = -nave.rotation.z` teneva la stanza
+       * livellata annullando il rollio della nave, e il mare -- che allora era
+       * un filmato dietro il vetro -- veniva inclinato ruotandone la texture.
+       * Due rotazioni scritte a mano per ottenere quello che la scena sa gia'.
+       *
+       * Adesso il vetro e' un buco sull'acqua vera, e la regola di `docs/09`
+       * -- "la stanza rolla, l'orizzonte no" -- esce da sola:
+       *
+       *   la camera e' LIVELLATA, quindi il mare del mondo disegna sempre un
+       *   orizzonte orizzontale;
+       *   il gruppo e' figlio della nave, quindi lasciandolo stare rolla
+       *   insieme a lei.
+       *
+       * Non c'e' piu' niente da imporre. E' la stessa regola del resto del
+       * sito: nessuna conseguenza cablata a mano.
+       */
     }
 
     for (const i of impianti) {
@@ -661,7 +675,6 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * cresce — quindi non puo' piu' sfondare le murate.
        */
       salone.gruppo.getWorldPosition(dovEilSalone)
-      salone.profondita(camera.position.distanceTo(dovEilSalone))
       // le pareti della tuga sono la faccia ESTERNA del salone: mentre si e'
       // dentro non ci sono, e tornano proprio quando la stanza diventa finestra
       // Tornano PRESTO — appena la camera ha varcato il piano del finestrino.
@@ -670,6 +683,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // stesso istante in cui si e' fuori.
       const fuori = uscita > 0.20
       for (const m of tuga.pareti) m.visible = fuori
+      /**
+       * ─── E LA SOVRASTRUTTURA INTERA, NON SOLO LA COPERTA
+       *
+       * Nascondere la sola COPERTA bastava finche' dal finestrone si vedeva un
+       * filmato: qualunque cosa ci fosse dietro era coperta dalla clip. Ora il
+       * vetro e' un buco sulla scena vera, e attraverso il buco si vedeva la
+       * NAVE STESSA -- un piano orizzontale a quota 1,54, cioe' il ponte
+       * sopra la tuga, a 0,47 unita' dalla camera contro 1,35 del salone.
+       *
+       * Trovato con `?ispeziona=1` chiedendo alla scena chi ci fosse in quel
+       * punto, invece di dedurlo dalla forma della macchia: e' la stessa
+       * lezione di quella volta che ho passato mezza sessione a indovinare
+       * l'identita' di un'ombra sul fianco.
+       *
+       * Da dentro non serve niente di cio' che sta sopra: si e' sotto.
+       */
+      sovra.gruppo.visible = fuori
     }
 
     /**
