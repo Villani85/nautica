@@ -190,17 +190,50 @@ export function creaSalone3D (base, tuga) {
    * derivano, e una pausa le sfasa. Attraverso il vetro si vedrebbe un mare
    * di qualche fotogramma diverso da quello della clip.
    */
-  setInterval(() => {
-    if (vCalma.readyState > 1 && Math.abs(vCalma.currentTime - vTesa.currentTime % (vTesa.duration || 1)) > RIALLINEA) {
-      try { vTesa.currentTime = vCalma.currentTime % (vTesa.duration || 1) } catch {}
-    }
-  }, OGNI_MS)
+  let sincro = 0
 
   function riproduci () {
     vCalma.play().catch(() => {})
     vTesa.play().catch(() => {})
+    if (!sincro) {
+      sincro = setInterval(() => {
+        if (vCalma.readyState > 1 &&
+            Math.abs(vCalma.currentTime - vTesa.currentTime % (vTesa.duration || 1)) > RIALLINEA) {
+          try { vTesa.currentTime = vCalma.currentTime % (vTesa.duration || 1) } catch {}
+        }
+      }, OGNI_MS)
+    }
   }
-  function ferma () { vCalma.pause(); vTesa.pause() }
+
+  /**
+   * ─── FERMARE IL CICLO DI DISEGNO NON FERMA I DECODIFICATORI
+   *
+   * Segnalato da una revisione, ed e' vero e concreto: due video 1280x720 che
+   * continuano a decodificare fuori schermo costano batteria, memoria e
+   * temperatura su un telefono — e il ciclo di disegno che si spegne quando la
+   * sezione esce di campo non li tocca. `riproduci` c'era e `ferma` non veniva
+   * chiamato da nessuno; l'intervallo di riallineamento non veniva mai fermato.
+   *
+   * Anche l'intervallo va spento: un `setInterval` su un video in pausa scrive
+   * `currentTime` all'infinito su qualcosa che non avanza.
+   */
+  function ferma () {
+    vCalma.pause()
+    vTesa.pause()
+    if (sincro) { clearInterval(sincro); sincro = 0 }
+  }
+
+  /** Rilascia tutto: texture, video, sorgenti. Per chi smonta la scena. */
+  function smonta () {
+    ferma()
+    for (const m of [mare, stanza, tesa]) {
+      m.material.map?.dispose()
+      m.material.alphaMap?.dispose()
+      m.material.dispose()
+      m.geometry.dispose()
+    }
+    for (const v of [vCalma, vTesa]) { v.removeAttribute('src'); v.load(); v.remove() }
+  }
 
   /**
    * @param {number} gradi  il rollio VERO, dallo stesso integratore della nave
@@ -230,7 +263,7 @@ export function creaSalone3D (base, tuga) {
   }
 
   return {
-    gruppo, aggiorna, mostra, riproduci, ferma,
+    gruppo, aggiorna, mostra, riproduci, ferma, smonta,
     /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
     largo: larg,
     alto: alt,

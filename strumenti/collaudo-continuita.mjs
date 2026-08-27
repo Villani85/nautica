@@ -85,7 +85,29 @@ const pagina = await browser.newPage({
   reducedMotion: 'no-preference'
 })
 
-await pagina.goto(BASE + '?ispeziona=1' + (UNICA ? '&unica=1' : ''), { waitUntil: 'load' })
+/**
+ * GLI ERRORI DI SHADER NON FERMANO LA COMPILAZIONE. Il pacchettizzatore vede
+ * una stringa; il compilatore GLSL sta nel browser. Un `undeclared identifier`
+ * nello shader dello scafo passa `npm run build` e si vede solo aprendo la
+ * pagina — e' successo, due volte in una notte. Qui la pagina si apre davvero,
+ * quindi tanto vale ascoltarla.
+ */
+const errori = []
+pagina.on('pageerror', e => errori.push('eccezione: ' + String(e).slice(0, 200)))
+pagina.on('console', m => {
+  if (m.type() !== 'error') return
+  const t = m.text()
+  // le risorse mancanti hanno il loro cancello altrove; qui interessa il codice
+  if (/Failed to load resource/i.test(t)) return
+  errori.push(t.slice(0, 200))
+})
+
+/**
+ * `--doppia` apre la vecchia architettura a due scene. Serve a una cosa sola:
+ * dimostrare che questo cancello la boccia. Un cancello che nessuno ha visto
+ * fallire non e' un cancello.
+ */
+await pagina.goto(BASE + '?ispeziona=1' + (UNICA ? '' : '&doppia=1'), { waitUntil: 'load' })
 await pagina.waitForTimeout(1500)
 // il motore e' a import differito: si aspetta che la scena esista davvero
 await pagina.evaluate(() => {
@@ -94,6 +116,25 @@ await pagina.evaluate(() => {
 })
 await pagina.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 await pagina.waitForTimeout(1200)
+
+/**
+ * ─── L'IDENTITA', NON IL CONTEGGIO
+ *
+ * Contare le tele non basta, e una revisione l'ha detto con precisione: una
+ * pagina che distrugge il proprio canvas e ne crea un altro identico continua
+ * a contarne uno. Quello che deve restare lo stesso e' **l'oggetto**, e in
+ * JavaScript si chiede con `===`.
+ *
+ * Si prendono i riferimenti al primo campione e si confrontano a ogni passo:
+ * la tela, la scena, la camera e il renderer. Se uno solo cambia, l'atto e'
+ * stato rimontato — che e' esattamente la cosa che questo cancello vieta.
+ */
+await pagina.evaluate(() => {
+  const n = window.__nautica
+  window.__rif = {
+    tela: n.render.domElement, scena: n.scena, camera: n.camera, render: n.render
+  }
+})
 
 const campioni = []
 for (let i = 0; i <= PASSI; i++) {
@@ -147,11 +188,30 @@ for (let i = 0; i <= PASSI; i++) {
       fermi = d < 1e-4 ? fermi + 1 : 0
       if (k >= 4 && fermi >= 3) break
     }
+    const r = window.__rif
+    /**
+     * Un secondo mondo non e' per forza un secondo canvas: puo' essere fatto di
+     * `<video>` appoggiati sulla pagina, ed e' com'era fatto il salone fino a
+     * stanotte. Quindi si contano i video VISIBILI — quelli che occupano spazio
+     * a schermo. I due che alimentano le texture stanno fuori dal flusso e non
+     * ne occupano.
+     */
+    const videoVisibili = [...document.querySelectorAll('video')].filter(v => {
+      const b = v.getBoundingClientRect()
+      return b.width > 2 && b.height > 2 && getComputedStyle(v).opacity !== '0'
+    }).length
+
     return {
       pos: c.position.toArray(),
       quat: c.quaternion.toArray(),
       tele: document.querySelectorAll('#dimostrazione canvas').length,
-      teleTotali: document.querySelectorAll('canvas').length
+      teleTotali: document.querySelectorAll('canvas').length,
+      videoVisibili,
+      stessaTela: n.render.domElement === r.tela,
+      stessaScena: n.scena === r.scena,
+      stessaCamera: c === r.camera,
+      stessoRender: n.render === r.render,
+      mare: n.stato ? n.stato.mare : null
     }
   }))
 }
@@ -214,6 +274,34 @@ if (picco > SALTO_MAX) {
     `fra i campioni ${dovePicco} e ${dovePicco + 1} la camera fa un passo ${picco.toFixed(1)} volte ` +
     'i suoi vicini: un taglio, non un movimento. Una scena unica ha una camera ' +
     'che si muove; due scene cucite hanno una camera che si sposta.')
+}
+
+// ─── l'identita' ──────────────────────────────────────────────────────────
+const cambiati = []
+for (const [k, etichetta] of [['stessaTela', 'la tela'], ['stessaScena', 'la scena'],
+                              ['stessaCamera', 'la camera'], ['stessoRender', 'il renderer']]) {
+  if (buoni.some(c => !c[k])) cambiati.push(etichetta)
+}
+note.push(`IDENTITA'   ${cambiati.length ? 'CAMBIA: ' + cambiati.join(', ') : 'tela, scena, camera e renderer sono sempre gli stessi oggetti'}`)
+if (cambiati.length) {
+  guasti.push(`durante l'atto cambia ${cambiati.join(' e ')}: l'atto viene rimontato. ` +
+              'Contare non basta — una pagina che distrugge il canvas e ne crea uno ' +
+              'identico continua a contarne uno.')
+}
+
+const videoMax = Math.max(...buoni.map(c => c.videoVisibili))
+note.push(`VIDEO       ${videoMax} visibili a schermo (le texture non contano: stanno fuori dal flusso)`)
+if (videoMax > 0) {
+  guasti.push(`ci sono ${videoMax} elementi <video> visibili a schermo. ` +
+              'Un secondo mondo non richiede un secondo canvas: puo essere fatto ' +
+              'di video appoggiati sulla pagina, ed era cosi che funzionava il salone.')
+}
+
+const mari = [...new Set(buoni.map(c => c.mare).filter(v => v !== null))]
+note.push(`MARE        stato ${mari.join('/')} lungo tutto l'atto`)
+
+if (errori.length) {
+  guasti.push(`la pagina ha sollevato ${errori.length} errori: ${errori.slice(0, 2).join(' | ')}`)
 }
 
 // ─── le tele ──────────────────────────────────────────────────────────────

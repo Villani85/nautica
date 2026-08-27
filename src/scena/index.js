@@ -259,7 +259,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * mobili in mezzo al fotogramma.
    */
   if (LA_SCENA_E_UNA) allestimento.visible = false
-  if (salone) { nave.add(salone.gruppo); salone.riproduci() }
+  // NON si avvia qui: i decodificatori partirebbero al caricamento della scena
+  // e continuerebbero fuori schermo. Li accende e li spegne `demo.js` insieme
+  // al ciclo di disegno — vedi `ferma()` in `salone3d.js`.
+  if (salone) nave.add(salone.gruppo)
   const saloneLargo = salone ? salone.largo : 1
   const saloneAlto = salone ? salone.alto : 1
 
@@ -671,6 +674,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   return {
     render, camera, ridimensiona, ruota, disegna,
     impostaSpaccato, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    /** Il capitolo si accende e si spegne: i video non decodificano fuori schermo. */
+    accendi: () => salone?.riproduci(),
+    spegni: () => salone?.ferma(),
     tela: render.domElement
   }
 }

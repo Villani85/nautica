@@ -61,10 +61,18 @@ export function avviaDimostrazione () {
     if (inCorso || sim.S.ridotto) return
     inCorso = true
     scena.render.setAnimationLoop(passo)
+    scena.accendi?.()
   }
   function fermaCiclo () {
     inCorso = false
     scena.render.setAnimationLoop(null)
+    /**
+     * FERMARE IL CICLO DI DISEGNO NON FERMA I DECODIFICATORI. Sono due cose
+     * diverse, e la seconda costa batteria e temperatura su un telefono anche
+     * quando la sezione e' uscita di campo da un pezzo. Segnalato da una
+     * revisione, e misurabile: due sorgenti 1280x720.
+     */
+    scena.spegni?.()
   }
   /** Con movimento ridotto si disegna solo quando qualcosa cambia. */
   function sveglia () {
