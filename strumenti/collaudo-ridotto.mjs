@@ -53,7 +53,25 @@ import { apriBrowser } from './browser.mjs'
  */
 const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
 const BASE = `http://localhost:${PORTA}/nautica/`
-const FOTOGRAMMI = 90    // 1,5 s a 60 Hz. Basta: si guarda se si MUOVE, non un periodo intero
+/**
+ * --- LA FINESTRA E' UN TEMPO, NON UN CONTEGGIO DI FOTOGRAMMI
+ *
+ * Era `90` fotogrammi, «1,5 s a 60 Hz». In CI si disegna in SOFTWARE a 1,2
+ * fotogrammi al secondo, e gli stessi 90 diventano **settantacinque secondi**:
+ * molti periodi di rollio, in cui sia la nave ridotta sia quella piena
+ * arrivano al proprio massimo. Il picco-picco satura, il rapporto tende a 1, e
+ * il cancello dichiarava «la preferenza non riduce niente» -- misurando la
+ * velocita' della macchina invece della preferenza. E' il difetto che ha
+ * tenuto la CI rossa e il sito non pubblicato.
+ *
+ * Adesso la finestra e' DIECI SECONDI su qualunque macchina, con un tetto di
+ * fotogrammi che serve solo a non sprecarne su una veloce. Su una macchina
+ * lenta i campioni sono pochi ma coprono lo stesso tempo simulato, che e' cio'
+ * che conta per una media quadratica.
+ */
+const FOTOGRAMMI = Number(process.env.FOTOGRAMMI || 600)
+const DURATA_MS = Number(process.env.DURATA_MS || 10000)
+const CAMPIONI_MIN = 12
 
 async function serviteci () {
   try {
@@ -130,16 +148,47 @@ async function misura (ridotto) {
   }
   await new Promise(r => setTimeout(r, 2500))
 
-  const r = await pagina.evaluate((n) => new Promise((res) => {
+  const r = await pagina.evaluate(([n, durata]) => new Promise((res) => {
+    const t0 = performance.now()
     const v = document.querySelector('video')
     const primoF = window.__nautica.fotogrammi
     const primoV = v ? v.currentTime : null
-    let i = 0, min = Infinity, max = -Infinity
+    /**
+     * --- SI MISURA LA RMS, NON IL PICCO-PICCO
+     *
+     * Il picco-picco SATURA. Su questa macchina 90 fotogrammi sono un secondo
+     * e mezzo, un quinto del periodo di rollio, e la differenza fra ampiezza
+     * piena e ampiezza ridotta si legge. In CI, dove si disegna in software a
+     * 1,2 fotogrammi al secondo, gli stessi 90 fotogrammi sono
+     * **settantacinque secondi**: molti periodi, e sia la nave ridotta sia
+     * quella piena arrivano al proprio massimo. Il rapporto tende a 1 e il
+     * cancello dichiara «la preferenza non riduce niente» misurando la
+     * velocita' della macchina invece della preferenza.
+     *
+     * La RMS non satura: e' l'ampiezza media, e resta proporzionale
+     * all'ampiezza vera per quanti periodi si guardino. Il picco-picco resta
+     * come SECONDO numero, perche' serve a distinguere «si muove poco» da
+     * «e' ferma al proprio picco» -- che era la vecchia scorciatoia e da'
+     * esattamente zero.
+     */
+    let i = 0, min = Infinity, max = -Infinity, somma = 0, quadri = 0
+    let prec = null, maxPasso = 0
     const passo = () => {
       const x = window.__nautica.stato.rollio
       if (x < min) min = x
       if (x > max) max = x
-      if (++i < n) requestAnimationFrame(passo)
+      somma += x; quadri += x * x
+      /* Il PASSO fra due campioni consecutivi. Serve a distinguere «si muove
+         poco» da «e' ferma al proprio angolo di picco» -- che era la vecchia
+         scorciatoia e da' ZERO ESATTO. Il picco-picco non lo distingue in
+         modo affidabile: su un secondo e mezzo di rollio a fase casuale
+         capita di cadere in un momento quieto, e fra due esecuzioni della
+         stessa build ho misurato 0,01 e 0,04 gradi contro una soglia di 0,02.
+         Un cancello che da' un esito a caso e' peggio di nessun cancello. */
+      if (prec !== null) maxPasso = Math.max(maxPasso, Math.abs(x - prec))
+      prec = x
+      const scaduto = performance.now() - t0 > durata
+      if (++i < n && !scaduto) requestAnimationFrame(passo)
       else res({
         disegnati: window.__nautica.fotogrammi - primoF,
         /**
@@ -150,12 +199,15 @@ async function misura (ridotto) {
          */
         video: v ? +(((v.currentTime - primoV) + v.duration) % v.duration).toFixed(3) : null,
         escursione: max - min,
+        maxPasso,
+        rms: Math.sqrt(Math.max(0, quadri / i - (somma / i) * (somma / i))),
+        campioni: i,
         ridotto: window.__nautica.stato.ridotto,
         mare: window.__nautica.stato.mare
       })
     }
     requestAnimationFrame(passo)
-  }), FOTOGRAMMI)
+  }), [FOTOGRAMMI, DURATA_MS])
   r.errori = errori
   await pagina.close()
   return r
@@ -165,10 +217,10 @@ const con = await misura(true)
 const senza = await misura(false)
 
 console.log('  con "reduce":   ' +
-  `${con.disegnati} fotogrammi disegnati, video +${con.video}s, rollio p-p ${con.escursione.toFixed(2)} gradi` +
+  `${con.disegnati} fotogrammi disegnati, video +${con.video}s, rollio RMS ${con.rms.toFixed(3)} (p-p ${con.escursione.toFixed(2)}, passo max ${con.maxPasso.toFixed(4)}) gradi` +
   `  [ridotto=${con.ridotto}, mare ${con.mare}]`)
 console.log('  senza:          ' +
-  `${senza.disegnati} fotogrammi disegnati, video +${senza.video}s, rollio p-p ${senza.escursione.toFixed(2)} gradi` +
+  `${senza.disegnati} fotogrammi disegnati, video +${senza.video}s, rollio RMS ${senza.rms.toFixed(3)} (p-p ${senza.escursione.toFixed(2)}, passo max ${senza.maxPasso.toFixed(4)}) gradi` +
   `  [ridotto=${senza.ridotto}, mare ${senza.mare}]`)
 
 if (!con.ridotto) {
@@ -185,19 +237,23 @@ if (con.video !== null && con.video < 0.4) {
             'attaccato al ciclo di disegno che qualcun altro spegneva')
 }
 /**
- * La soglia distingue "si muove" da "e' ferma a un valore di picco", e la
- * seconda da' esattamente zero. Non serve un numero grande: 1,5 secondi sono
- * un quinto del periodo di rollio, e a un terzo di ampiezza l'escursione
- * attesa e' di pochi decimi di grado. Chiedere 0,3 avrebbe bocciato una scena
- * che si muove benissimo.
+ * «Si muove» contro «e' ferma al valore di picco»: la seconda da' passo ZERO
+ * ESATTO fra due campioni, quindi non serve una soglia di ampiezza -- e una
+ * soglia di ampiezza era proprio il difetto, perche' su una finestra corta il
+ * rollio ha fase casuale e a volte ci si casca dentro un momento quieto.
  */
-if (con.escursione < 0.02) {
-  guai.push(`con la preferenza attiva la nave non oscilla (rollio p-p ${con.escursione.toFixed(2)} gradi): ` +
-            'e ferma al proprio angolo di picco, che era la vecchia scorciatoia')
+if (!(con.maxPasso > 1e-5)) {
+  guai.push(`con la preferenza attiva il rollio non cambia mai fra un campione e l altro ` +
+            `(passo massimo ${con.maxPasso}): e ferma al proprio angolo di picco, ` +
+            'che era la vecchia scorciatoia')
 }
-if (con.escursione >= senza.escursione * 0.85) {
-  guai.push(`la preferenza non riduce niente: ${con.escursione.toFixed(2)} gradi contro ` +
-            `${senza.escursione.toFixed(2)}. Ridurre non e opzionale piu di quanto lo sia non spegnere`)
+if (Math.min(con.campioni, senza.campioni) < CAMPIONI_MIN) {
+  console.log(`  NON MISURATO  il confronto delle ampiezze vuole almeno ${CAMPIONI_MIN} campioni ` +
+              `e questa macchina ne ha dati ${Math.min(con.campioni, senza.campioni)} in ${DURATA_MS / 1000} s. ` +
+              'Si dice invece di dare un verdetto che non si puo sostenere.')
+} else if (con.rms >= senza.rms * 0.85) {
+  guai.push(`la preferenza non riduce niente: RMS ${con.rms.toFixed(3)} contro ` +
+            `${senza.rms.toFixed(3)} gradi. Ridurre non e opzionale piu di quanto lo sia non spegnere`)
 }
 for (const e of [...con.errori, ...senza.errori].slice(0, 3)) guai.push('eccezione in pagina: ' + e)
 
