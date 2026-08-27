@@ -548,7 +548,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // il mare con quella del fotogramma precedente. Uno sfasamento di un
     // fotogramma su un raggio di 5,5 unita' non si vede — la camera si sposta
     // di millesimi per giro.
-    acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z)
+    acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z, sim.S.velocita)
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
     acqua.chiarisci(spaccato)

@@ -110,6 +110,7 @@ uniform mat4  uNaveInv;
 uniform vec3  uNaveSemi;
 uniform vec3  uNaveCol;
 uniform float uNaveForza;
+uniform float uNaveVel;
 varying vec3 vMondo;
 
 /* Niente sin() qui dentro: la precisione di fract(sin(x)*k) crolla quando x
@@ -259,6 +260,36 @@ const INNESTO_CAMPO = /* glsl */`
     acqSchiuma = acqCreste * smoothstep(0.26, 0.74, acqGrana)
                * smoothstep(1.2, 4.0, uMare) * acqVicino * acqTaglio;
     diffuseColor.rgb = mix(diffuseColor.rgb, uColSchiuma, acqSchiuma * 0.90);
+
+    /* --- LA SCIA ALLO SCAFO
+       Il sito dichiara dodici nodi e lo scafo tocca l'acqua con una linea
+       netta: e' il segnale piu' forte di sintetico alla galleggiamento. Una
+       carena che avanza spinge l'acqua e la ARIA, e quella schiuma sta
+       attaccata allo scafo -- nel sistema della nave, che e' anche quello
+       della camera.
+       La distanza dalla sagoma e' gia' pagata: lo stesso ellissoide del
+       riflesso, valutato sul punto invece che sul raggio. Fuori
+       dall'ellissoide length(p/semi) e' maggiore di 1, e quanto vale in piu'
+       dice quanto si e' lontani.
+       Si spegne a nave ferma, perche' a zero nodi la scia non c'e' e il
+       cursore della velocita' deve continuare a dire la verita'. */
+    if (uNaveForza > 0.0 && uNaveVel > 0.0) {
+      /* IN PIANTA, non nello spazio. Il primo tentativo usava lo stesso
+         ellissoide del riflesso, che comprende anche l'altezza della
+         sovrastruttura: la sua superficie non passa nemmeno vicino alla linea
+         di galleggiamento, e la scia non compariva. La scia e' un fatto della
+         PIANTA -- si guarda da quanto e' lontano il punto dal profilo dello
+         scafo visto dall'alto, e l'altezza non c'entra. */
+      vec3 q3 = (uNaveInv * vec4(vMondo, 1.0)).xyz / uNaveSemi;
+      float fuori = length(q3.xz) - 1.0;
+      float vicino = 1.0 - smoothstep(0.0, 0.42, max(fuori, 0.0));
+      float grana = acqCella(acqP * 5.2 + vec2(mod(uTempo * 0.37, 512.0))).x;
+      /* La grana rompe la fascia: una banda pulita legge come un contorno
+         disegnato, non come acqua aerata. E' la stessa cella della schiuma
+         delle creste, piu' fitta e piu' veloce. */
+      float baffo = vicino * smoothstep(0.10, 0.70, grana) * uNaveVel * acqTaglio;
+      diffuseColor.rgb = mix(diffuseColor.rgb, uColSchiuma, baffo * 0.85);
+    }
   }
 `
 
@@ -470,7 +501,8 @@ export function costruisciAcqua (opzioni = {}) {
     uNaveInv: { value: new Matrix4() },
     uNaveSemi: { value: new Vector3(1, 1, 1) },
     uNaveCol: { value: new Color(0x2a3338) },
-    uNaveForza: { value: 0 }
+    uNaveForza: { value: 0 },
+    uNaveVel: { value: 0 }
   }
 
   if (dettaglio) {
@@ -595,7 +627,7 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
   const AFFONDO = 0.10     // e quanto la superficie sta sotto l'obiettivo
 
   /** Onde: tre seni sfasati. Le normali si ricalcolano a fotogrammi alterni. */
-  function anima (t, mare, frame, camX = 0, camZ = 0) {
+  function anima (t, mare, frame, camX = 0, camZ = 0, nodi = 0) {
     uni.uTempo.value = t
     uni.uMare.value = mare
     const pos = superficie.attributes.position.array
@@ -624,6 +656,10 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
     if (nave) {
       uni.uNaveInv.value.copy(nave.matrixWorld).invert()
       uni.uNaveForza.value = forzaNave
+      /* La scia cresce con l'andatura e si SATURA: fra dodici e venti nodi un
+         baffo non raddoppia. A zero nodi vale zero, cosi' il cursore della
+         velocita' continua a dire la verita' anche sull'acqua. */
+      uni.uNaveVel.value = Math.min(1, Math.max(0, nodi) / 9)
     }
   }
 
