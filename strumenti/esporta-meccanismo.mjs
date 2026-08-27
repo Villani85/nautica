@@ -91,6 +91,20 @@ const pezzi = await pg.evaluate(() => {
     const tri = g.index ? g.index.count / 3 : g.attributes.position.count / 3
     if (tri > 3000) return
     out.push({
+      /**
+       * IL NOME DEL MATERIALE, e non solo il colore.
+       *
+       * `cuoci.py` sceglieva i pezzi da cuocere con una tabella di COLORI --
+       * tre voci, ereditate da quando il meccanismo era costruito a mano nel
+       * codice. Adesso arriva da un GLB con i suoi materiali, e di quei tre
+       * colori ne sopravvive uno: il render fotorealistico teneva **10 pezzi
+       * su 73**, cioe' 240 vertici su 45.000, e produceva un PNG lo stesso.
+       *
+       * Il colore e' una chiave sbagliata due volte: cambia quando cambia la
+       * tinta, e due materiali diversi possono averlo uguale. Il nome no.
+       */
+      nome: o.material.name || '',
+      nodo: o.name || '',
       col: o.material.color ? o.material.color.getHexString() : '888888',
       met: o.material.metalness ?? 0.5,
       rug: o.material.roughness ?? 0.5,
