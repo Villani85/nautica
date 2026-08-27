@@ -55,7 +55,29 @@ const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`
  *   speculari escono dal bianco e senza una curva **tagliano di netto**.
  *   Va misurata, non scelta a occhio — vedi `strumenti/collaudo-ambiente.mjs`.
  */
-export function telaAmbiente (intensitaSole = 1.0) {
+/**
+ * @param {number} intensitaSole quanto e' luminoso il disco del sole.
+ * @param {number} sotto  0 = la tavolozza della pagina. Sopra 0, la META'
+ *   BASSA si schiarisce verso la carta di quel tanto.
+ *
+ * --- PERCHE' ESISTE `sotto`, E PERCHE' NON E' UN CAPRICCIO
+ *
+ * Isolando i pixel del meccanismo con `strumenti/maschera-soggetto.mjs`, alla
+ * battuta della tesi il pezzo misura media 53,6 e gamma 19 su 255: scuro e
+ * piatto. Provate e scartate col numero l'ombra dello scafo (0,02% dei pixel),
+ * il velo dell'acqua (-1 livello) e tre forme di luce di chiave. **L'unica
+ * leva che lo muove e' l'ambiente**: a intensita' 10 la media sale a 65,2.
+ *
+ * E ha senso fisico. `--acqua` e' il colore dell'acqua PROFONDA, scelto per il
+ * fondo della pagina; ma la pinna sta un metro sotto la linea, dove l'acqua e'
+ * chiara e piena di luce. Riflettere l'abisso su un pezzo che sta appena sotto
+ * il pelo e' l'errore, non la correzione.
+ *
+ * La pagina non cambia: questa tela serve a un ambiente SEPARATO, dato per
+ * materiale solo all'impianto. In three l'ambiente per materiale esiste --
+ * a differenza della luce per oggetto, che non esiste e mi e' costata un'ora.
+ */
+export function telaAmbiente (intensitaSole = 1.0, sotto = 0) {
   const L = 512, H = 256
   const c = document.createElement('canvas')
   c.width = L; c.height = H
@@ -82,10 +104,13 @@ export function telaAmbiente (intensitaSole = 1.0) {
    * Scura, e piu' viva vicino all'orizzonte. E' la stessa coppia
    * `--acqua-viva` / `--acqua` del fondo CSS, nello stesso ordine.
    */
+  const s = Math.max(0, Math.min(1, sotto))
+  const viva = misto(ACQUA_VIVA, ARIA, s * 0.75)
+  const fonda = misto(ACQUA, ARIA, s * 0.55)
   const mare = x.createLinearGradient(0, H / 2, 0, H)
-  mare.addColorStop(0.00, rgb(ACQUA_VIVA))
-  mare.addColorStop(0.35, rgb(misto(ACQUA_VIVA, ACQUA, 0.7)))
-  mare.addColorStop(1.00, rgb(ACQUA))
+  mare.addColorStop(0.00, rgb(viva))
+  mare.addColorStop(0.35, rgb(misto(viva, fonda, 0.7)))
+  mare.addColorStop(1.00, rgb(fonda))
   x.fillStyle = mare
   x.fillRect(0, H / 2, L, H / 2)
 
@@ -125,8 +150,8 @@ export function telaAmbiente (intensitaSole = 1.0) {
  * tiene una catena di render target e non serve piu' una volta prodotta la
  * mappa. La tela sorgente si smaltisce anche lei.
  */
-export function creaAmbiente (render, PMREMGenerator, intensitaSole) {
-  const tela = telaAmbiente(intensitaSole)
+export function creaAmbiente (render, PMREMGenerator, intensitaSole, sotto = 0) {
+  const tela = telaAmbiente(intensitaSole, sotto)
   const pmrem = new PMREMGenerator(render)
   pmrem.compileEquirectangularShader()
   const bersaglio = pmrem.fromEquirectangular(tela)

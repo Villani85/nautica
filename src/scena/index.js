@@ -147,9 +147,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   // La mappa serve DUE VOLTE: ai materiali del sito per nome, e ai materiali
   // che arrivano dentro il GLB, che nessun elenco per nome puo' conoscere.
   let ambiente = null
+  let ambienteSotto = null
   if (!location.search.includes('senzaAmbiente')) {
     ambiente = creaAmbiente(render, PMREMGenerator, 1.0)
     applicaAmbiente(ambiente)
+    /**
+     * L'IMPIANTO HA UN AMBIENTE SUO, PIU' CHIARO SOTTO LA LINEA.
+     *
+     * Misurato con `strumenti/maschera-soggetto.mjs`: il meccanismo e'
+     * l'unica cosa in scena che l'ambiente muove, e la tavolozza della pagina
+     * gli fa riflettere l'ACQUA PROFONDA mentre lui sta un metro sotto il
+     * pelo. La pagina non cambia: questo ambiente vale solo per i suoi
+     * materiali.
+     */
+    ambienteSotto = creaAmbiente(render, PMREMGenerator, 1.0,
+      Number(new URLSearchParams(location.search).get('sotto') ?? 0.55))
   }
 
   scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, LUCI.emisfero))
@@ -246,7 +258,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * pinne. E' preferibile a una schermata che aspetta.
    */
   const impianti = agganci.map(a => {
-    const i = creaImpianto(base, ambiente)
+    const i = creaImpianto(base, ambienteSotto || ambiente)
     i.gruppo.position.set(...a.posizione)
     /**
      * --- PERCHE' IL MECCANISMO E' SCURO, E PERCHE' NON L'HO ANCORA CURATO
@@ -419,6 +431,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   if (!new URLSearchParams(location.search).has('senzaRiflesso')) {
     nave.updateMatrixWorld(true)
+    /* I varchi nel pelo: uno per impianto, misurati sul loro ingombro appena
+       il modello e' caricato. */
+    Promise.all(impianti.map(i => i.caricato.catch(() => null))).then(() => {
+      nave.updateMatrixWorld(true)
+      acqua.seguiVarchi(impianti.map(i => i.gruppo))
+    })
     // I due parametri della sagoma si possono spostare da URL: servono al banco
     // che li sceglie misurando, e costano una riga.
     const q = new URLSearchParams(location.search)

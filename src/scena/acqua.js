@@ -1,6 +1,6 @@
 import {
   Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial,
-  DoubleSide, Group, Color, Vector3, Matrix4, Box3
+  DoubleSide, Group, Color, Vector3, Vector4, Matrix4, Box3
 } from 'three'
 
 const LARG = 46
@@ -111,6 +111,13 @@ uniform vec3  uNaveSemi;
 uniform vec3  uNaveCol;
 uniform float uNaveForza;
 uniform float uNaveVel;
+uniform float uSpaccato;
+/* I VARCHI: dove il pelo si apre. Ognuno e' centro (xyz) e raggio (w) in
+   coordinate del mondo. Sono i meccanismi, non la nave: aprire su tutta la
+   pianta dello scafo schiariva mezzo fotogramma e rendeva illeggibile la
+   didascalia -- il rimedio diventava un difetto piu' grande. */
+uniform vec4 uVarchi[2];
+uniform float uQuantiVarchi;
 varying vec3 vMondo;
 
 /* Niente sin() qui dentro: la precisione di fract(sin(x)*k) crolla quando x
@@ -184,6 +191,53 @@ vec4 acqCampo (vec2 p, float fp) {
 /** Il campo, la schiuma. Va dopo `map_fragment`: da li' in giu' le variabili
  *  restano visibili a tutti gli innesti successivi. */
 const INNESTO_CAMPO = /* glsl */`
+  /* --- IL VARCO NEL PELO, SOPRA LA NAVE
+     Misurato con la maschera del soggetto: un materiale che emette BIANCO
+     PURO legge 68 su 255 nei pixel del meccanismo, e 212 abbassando
+     l'opacita' del pelo a 0,1. La superficie del mare assorbe il 70% di cio'
+     che sta sotto, e ne comprime il contrasto nella stessa proporzione: ecco
+     perche' nessuna luce cambiava niente -- gamma 16 qualunque cosa facessi,
+     perche' la gamma vera arrivava attenuata a un terzo.
+     E' fisica giusta: la camera sta a quota ZERO, sul pelo, e da li' l'acqua
+     riflette quasi tutto. Ma la tesi del sito e' «la parte che non vedi mai»,
+     e l'invariante della camera la rendeva letteralmente invisibile.
+     La funzione chiarisci gia' apriva il VOLUME col taglio e non il pelo.
+     Adesso apre anche questo, e solo SOPRA LA NAVE: un mare che diventa
+     trasparente dappertutto non e' una sezione, e' un vetro.
+     STA QUI E NON PIU' IN BASSO: il primo tentativo era dentro
+     INNESTO_SCINTILLE, che comincia con `+'`'+`if (acqTaglio > 0.002)` +'`'+` --
+     e acqTaglio vale ZERO proprio quando la camera e' a quota zero, cioe'
+     esattamente alla battuta che dovevo curare. Il codice non veniva mai
+     eseguito, e la misura diceva 68,1 identico a prima. */
+  if (uSpaccato > 0.001) {
+    /* IL VARCO STA DOVE SI GUARDA ATTRAVERSO, NON SOPRA IL PEZZO.
+       Primo tentativo: apertura centrata sulla verticale del meccanismo.
+       Sbagliato di geometria -- la camera del sito sta quasi a filo d'acqua,
+       quindi il raggio che raggiunge il meccanismo attraversa il pelo molto
+       piu' vicino all'osservatore, e apriva dove non serviva. Misurato: gamma
+       16, cioe' come non averlo.
+       Qui si prende il raggio DALLA CAMERA a questo punto d'acqua, lo si
+       prolunga, e si chiede se incontra la sfera del meccanismo. Se la
+       incontra, e' un pixel attraverso cui si guarda il pezzo, e si apre. */
+    vec3 acqDir = normalize(vMondo - cameraPosition);
+    float acqApri = 0.0;
+    for (int k = 0; k < 2; k++) {
+      if (float(k) >= uQuantiVarchi) break;
+      vec3 oc = vMondo - uVarchi[k].xyz;
+      float bq = dot(oc, acqDir);
+      float cq = dot(oc, oc) - uVarchi[k].w * uVarchi[k].w;
+      float disc = bq * bq - cq;
+      if (disc > 0.0) {
+        /* quanto il raggio passa VICINO al centro: al centro pieno, al bordo
+           sfumato. Senza sfumatura il varco disegna un cerchio netto sul mare,
+           che si legge come un buco e non come acqua chiara. */
+        float vicino = sqrt(disc) / uVarchi[k].w;
+        acqApri = max(acqApri, clamp(vicino * 1.3, 0.0, 1.0));
+      }
+    }
+    diffuseColor.a *= mix(1.0, 0.15, acqApri * uSpaccato);
+  }
+
   vec2  acqP   = vMondo.xz;
   float acqFp  = acqPasso(acqP);
   float acqDist = length(vMondo - cameraPosition);
@@ -502,7 +556,10 @@ export function costruisciAcqua (opzioni = {}) {
     uNaveSemi: { value: new Vector3(1, 1, 1) },
     uNaveCol: { value: new Color(0x2a3338) },
     uNaveForza: { value: 0 },
-    uNaveVel: { value: 0 }
+    uNaveVel: { value: 0 },
+    uSpaccato: { value: 0 },
+    uVarchi: { value: [new Vector4(), new Vector4()] },
+    uQuantiVarchi: { value: 0 }
   }
 
   if (dettaglio) {
@@ -692,7 +749,11 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
 
   /** Il taglio schiarisce l'acqua: q va da 0 (nave intera) a 1 (sezione). */
   function chiarisci (q) {
-    materialeVolume.opacity = FONDA + (CHIARA - FONDA) * Math.max(0, Math.min(1, q))
+    const v = Math.max(0, Math.min(1, q))
+    materialeVolume.opacity = FONDA + (CHIARA - FONDA) * v
+    /* Il taglio apre anche il PELO, sopra la nave: senza, la sezione mostra
+       l'interno dello scafo attraverso una superficie che ne assorbe il 70%. */
+    uni.uSpaccato.value = v
   }
 
   /**
@@ -702,5 +763,27 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
    * meno. Con le uniformi in mano un banco cambia SOLO la grandezza che sta
    * studiando e disegna due volte lo stesso istante.
    */
-  return { gruppo, anima, chiarisci, seguiNave, uni }
+  /**
+   * Dove il pelo si apre quando il taglio e' aperto. Si passano gli oggetti --
+   * i due impianti -- e il centro e il raggio si MISURANO sul loro ingombro:
+   * se il meccanismo cambia, il varco lo segue.
+   */
+  function seguiVarchi (oggetti) {
+    const v = uni.uVarchi.value
+    let n = 0
+    for (const o of oggetti) {
+      if (!o || n >= v.length) continue
+      const b = new Box3().setFromObject(o)
+      const c = b.getCenter(new Vector3())
+      const d = b.getSize(new Vector3())
+      // centro e raggio della SFERA del pezzo: il varco e' un test di raggio,
+      // quindi serve il centro vero in tre dimensioni, non la sua pianta
+      v[n].set(c.x, c.y, c.z, Math.max(d.x, d.y, d.z) * 0.62)
+      n++
+    }
+    uni.uQuantiVarchi.value = n
+    return n
+  }
+
+  return { gruppo, anima, chiarisci, seguiNave, seguiVarchi, uni }
 }
