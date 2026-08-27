@@ -161,6 +161,31 @@ dimostrare di funzionare: `collaudo-continuita --doppia` **fallisce**.
 colore di ciò che sta davanti. Nessuna si sarebbe trovata rileggendo il
 codice — due le avevo già rilette senza vederle.
 
+### La CI era rossa da undici commit, e la colpa era mia
+
+Il sito non si pubblicava. La catena `npm run collaudo` ha smesso di essere
+solo aritmetica quando ci è entrato il primo cancello che apre un browser, e
+il workflow installava Chromium **nello step successivo** — che non viene mai
+raggiunto quando quello prima fallisce.
+
+Da lì una catena di guasti che si nascondevano a vicenda, e ognuno insegna
+qualcosa che vale oltre questo repo:
+
+| guasto | perché non si vedeva |
+|---|---|
+| browser installato dopo i collaudi | in locale c'è il Chrome di sistema |
+| WebGL spento senza GPU | da Chrome 138 SwiftShader va chiesto con `--enable-unsafe-swiftshader`; qui la GPU c'è |
+| ffmpeg non c'è più sui runner | l'errore diceva «file inesistente» e quel file era il **programma** |
+| i font non erano arrivati | il cancello misurava il ripiego di sistema e chiamava traboccamento un problema di caricamento |
+
+**Tre di questi quattro dicevano la conseguenza invece della causa.** È il
+motivo per cui adesso ogni cancello è uno step con il suo nome — il nome È la
+diagnosi — e per cui i referti escono come annotazioni: il riepilogo del
+lavoro non è esposto dall'API pubblica, le annotazioni sì, e senza token
+quello è l'unico canale.
+
+---
+
 ### La domanda aperta che va decisa a mente fresca
 
 **In che verso si attraversa.** Oggi la camera parte dal salone ed **esce**:
