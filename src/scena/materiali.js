@@ -142,6 +142,21 @@ export const materiali = {
 }
 
 /**
+ * --- OGNI MATERIALE PORTA IL SUO NOME, E LO PRENDE DALLA CHIAVE
+ *
+ * Nessuno di questi aveva un `name`. Dal browser non si vede: three.js non ne
+ * ha bisogno. Si vede da FUORI -- l'esportatore che porta la scena in Blender
+ * riceveva ventiquattro materiali chiamati `anonimo_0 ... anonimo_23`, e senza
+ * un nome non si puo' decidere niente su di loro: ne' escluderli, ne' dargli
+ * una ricetta, ne' accorgersi che ne manca uno.
+ *
+ * Si scrive qui e non a mano voce per voce, cosi' un materiale aggiunto domani
+ * nasce gia' col nome giusto invece di aspettare che qualcuno se ne ricordi.
+ * Costa una riga e vale ogni volta che qualcosa esce da questa pagina.
+ */
+for (const [chiave, m] of Object.entries(materiali)) m.name = chiave
+
+/**
  * ─── L'AMBIENTE SI DA' AI MATERIALI, NON ALLA SCENA
  *
  * `scene.environment` sembra la strada giusta e qui e' sbagliata, per una

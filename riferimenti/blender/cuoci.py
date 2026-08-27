@@ -123,6 +123,37 @@ MAT = {
 # una decisione, non un incidente.
 OSPITE = {'carena', 'coperta', 'scafo'}
 
+
+def dal_sito(nome, col, met, rug):
+    '''Un materiale che la tabella non conosce, costruito con i numeri che il
+    SITO gli da davvero -- colore, metalness, roughness, come sono arrivati
+    dall esportatore.
+
+    La tabella qui sopra e' scritta a mano perche' il meccanismo e' il
+    soggetto: nove ricette tarate. La nave ha decine di materiali, e
+    inventarli a mano vorrebbe dire dipingere una nave diversa da quella che
+    si vede sul sito -- che e' il contrario di cio' che serve, perche' il
+    render deve dire dove il tempo reale perde, non dove ha un altro colore.
+
+    Non e' un ripiego silenzioso: ogni materiale costruito cosi viene STAMPATO
+    con i suoi numeri, quindi resta una decisione leggibile nel log.'''
+    m = bpy.data.materials.new(nome)
+    m.use_nodes = True
+    b = m.node_tree.nodes['Principled BSDF']
+    r = int(col[0:2], 16) / 255.0
+    g = int(col[2:4], 16) / 255.0
+    bl = int(col[4:6], 16) / 255.0
+    # il sito manda sRGB; Cycles vuole lineare
+    def lin(u):
+        return u / 12.92 if u <= 0.04045 else ((u + 0.055) / 1.055) ** 2.4
+    b.inputs['Base Color'].default_value = (lin(r), lin(g), lin(bl), 1)
+    b.inputs['Metallic'].default_value = met
+    b.inputs['Roughness'].default_value = max(rug, 0.04)
+    if 'Coat Weight' in b.inputs and met < 0.2:
+        b.inputs['Coat Weight'].default_value = 0.2
+        b.inputs['Coat Roughness'].default_value = 0.1
+    return m
+
 # --- SI SCEGLIE PER NOME, E UN NOME SCONOSCIUTO E' UN ERRORE
 #
 # Qui c'era `MECCANISMO = {'49555a': 'acciaio', '6e6350': 'bronzo',
@@ -251,6 +282,7 @@ else:
     print('SEZIONE  ASSENTE: il fasciame non viene tagliato. Riesporta con la')
     print('         versione nuova di esporta-meccanismo.mjs.')
 
+SOGGETTO = os.environ.get('SOGGETTO', 'meccanismo')
 LATO = os.environ.get('LATO', 'dritta')
 segno = 1.0 if LATO == 'dritta' else -1.0
 
@@ -270,6 +302,10 @@ if seme_lo[0] > seme_hi[0]:
 
 
 def dentro(lo, hi):
+    # SOGGETTO=nave: entra tutto. Il volume del meccanismo serve a isolare un
+    # primo piano; per il ritratto della nave non c'e' niente da isolare.
+    if SOGGETTO == 'nave':
+        return True
     return all(seme_lo[a] <= (lo[a] + hi[a]) / 2 <= seme_hi[a] for a in range(3))
 
 
@@ -285,10 +321,24 @@ for k, (q, (vs, lo, hi)) in enumerate(zip(pezzi, misure)):
     if not dentro(lo, hi):
         fuori_volume += 1
         continue
-    nome = q.get('nome') or ''
-    if nome not in MAT:
-        sconosciuti.add(nome or '(pezzo senza materiale)')
+    nome = q.get('nome') or ('anonimo_%d' % k)
+    # `interno` nel sito ha `side: BackSide`: e' la faccia INTERNA della
+    # cavita', disegnata solo da dentro. Blender non ha quel concetto e la
+    # renderebbe da fuori, annerendo lo scafo -- ed e' esattamente cio' che si
+    # vedeva nel primo ritratto: una nave con la carena nera invece che
+    # #707c82. Fuori dalla nave quella faccia non esiste, quindi non si rende.
+    if SOGGETTO == 'nave' and nome == 'interno':
+        fuori_volume += 1
         continue
+    if nome not in MAT:
+        if SOGGETTO == 'nave':
+            MAT[nome] = dal_sito(nome, q.get('col', '888888'),
+                                 float(q.get('met', 0.5)), float(q.get('rug', 0.5)))
+            print('  materiale dal sito: %-18s #%s met %.2f rug %.2f'
+                  % (nome, q.get('col', '888888'), q.get('met', 0.5), q.get('rug', 0.5)))
+        else:
+            sconosciuti.add(nome or '(pezzo senza materiale)')
+            continue
     if nome in OSPITE:
         ospiti.append(nome)
     idx = q['idx']
@@ -370,7 +420,13 @@ for q, (vs, lo, hi) in zip(pezzi, misure):
         att_lo[a] = min(att_lo[a], lo[a])
         att_hi[a] = max(att_hi[a], hi[a])
 
-if att_lo[0] > att_hi[0]:
+if SOGGETTO == 'nave':
+    # Per il ritratto si mira all'ingombro intero: non c'e' un sotto-gruppo da
+    # isolare, la nave E' il soggetto.
+    centro = (minimo + massimo) / 2
+    misura = max(massimo[a] - minimo[a] for a in range(3))
+    print('MIRA  nave intera - ingombro %.2f' % misura)
+elif att_lo[0] > att_hi[0]:
     print('MIRA  nessun pezzo di attuatore: si mira allingombro complessivo')
     centro = (minimo + massimo) / 2
     misura = max(massimo[a] - minimo[a] for a in range(3))
@@ -463,6 +519,13 @@ _dove = [os.environ.get('AMBIENTE_HDR') or '',
          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hdri', 'ambiente.hdr'),
          os.path.join(os.path.dirname(os.path.abspath(SORGENTE)), 'hdri', 'ambiente.hdr')]
 AMBIENTE = next((x for x in _dove if x and os.path.exists(x)), _dove[1])
+# Un'officina non e' il mondo di una nave: riflettere pareti e macchine su uno
+# scafo sarebbe piu' sbagliato di una sfumatura. Per il ritratto si usa la
+# tavolozza del sito -- carta sopra la linea, acqua sotto -- che e' anche cio'
+# che il tempo reale riflette, quindi il confronto misura il RENDER e non due
+# mondi diversi. Con AMBIENTE_HDR si forza comunque.
+if SOGGETTO == 'nave' and not os.environ.get('AMBIENTE_HDR'):
+    AMBIENTE = ''
 if os.path.exists(AMBIENTE):
     env = wn.nodes.new('ShaderNodeTexEnvironment')
     env.image = bpy.data.images.load(AMBIENTE)
@@ -482,11 +545,23 @@ else:
     wn.links.new(cc.outputs['Generated'], mpp.inputs['Vector'])
     wn.links.new(mpp.outputs['Vector'], gr.inputs['Vector'])
     ra = wn.nodes.new('ShaderNodeValToRGB')
-    ra.color_ramp.elements[0].color = (0.05, 0.13, 0.14, 1)
-    ra.color_ramp.elements[1].color = (0.30, 0.52, 0.55, 1)
+    # LA TAVOLOZZA DEL SITO, NON UN MARE DAPPERTUTTO.
+    #
+    # Questi due colori erano entrambi acqua, e la nave riflette il mondo: con
+    # un mondo tutto verde-acqua lo scafo bianco usciva verde e il cielo pure.
+    # Il sito ha la carta sopra la linea e l'acqua sotto, ed e' quello che
+    # riflette anche in tempo reale -- quindi il confronto misura il render, non
+    # due mondi diversi. --aria #E8E4DC, --acqua-viva #0F3438, in lineare.
+    # L'ordine della rampa segue il verso della coordinata, non l'intuizione:
+    # provato, il primo elemento finisce in BASSO. Misurato guardando il
+    # fotogramma, non deducendolo -- la carta era uscita nell'acqua.
+    ra.color_ramp.elements[0].position = 0.48
+    ra.color_ramp.elements[0].color = (0.807, 0.783, 0.723, 1)
+    ra.color_ramp.elements[1].position = 0.52
+    ra.color_ramp.elements[1].color = (0.006, 0.033, 0.038, 1)
     wn.links.new(gr.outputs['Fac'], ra.inputs['Fac'])
     wn.links.new(ra.outputs['Color'], sf.inputs[0])
-    sf.inputs[1].default_value = 1.6
+    sf.inputs[1].default_value = 1.0
     print('AMBIENTE gradiente (nessun hdri). Cercato in: ' + ' | '.join(x for x in _dove if x))
 
 # Era `misura * 8` e il BORDO del piano cadeva dentro l'inquadratura: una riga
@@ -495,12 +570,23 @@ else:
 # UN PIANO D'APPOGGIO. I pezzi galleggiavano nel nulla: una fotografia di
 # macchinario e' sempre DA QUALCHE PARTE, e l'ombra di contatto e' cio' che fa
 # appoggiare un oggetto invece di farlo levitare.
-bpy.ops.mesh.primitive_plane_add(size=misura * 60, location=(centro[0], centro[1], minimo[2] - 0.02))
+_z_piano = 0.0 if SOGGETTO == 'nave' else (minimo[2] - 0.02)
+bpy.ops.mesh.primitive_plane_add(size=misura * 60, location=(centro[0], centro[1], _z_piano))
 piano = bpy.context.object
 mp = bpy.data.materials.new('piano'); mp.use_nodes = True
 pb = mp.node_tree.nodes['Principled BSDF']
-pb.inputs['Base Color'].default_value = (0.055, 0.06, 0.065, 1)
-pb.inputs['Roughness'].default_value = 0.38
+if SOGGETTO == 'nave':
+    # L'acqua sta a quota ZERO, che e' dove la galleggia la nave: metterla sotto
+    # il punto piu' basso dello scafo la farebbe volare. E' acqua, quindi
+    # riflette: e' meta' di cio' che fa sembrare vera una nave in una foto.
+    # --acqua-viva #0F3438 in lineare. Con un colore quasi nero e uno specchio
+    # perfetto il mare rifletteva solo la carta e usciva GRIGIO: giusto in
+    # fisica, sbagliato per il confronto, perche' il tempo reale li' e' verde.
+    pb.inputs['Base Color'].default_value = (0.0056, 0.0331, 0.0382, 1)
+    pb.inputs['Roughness'].default_value = 0.16
+else:
+    pb.inputs['Base Color'].default_value = (0.055, 0.06, 0.065, 1)
+    pb.inputs['Roughness'].default_value = 0.38
 piano.data.materials.append(mp)
 
 # VERSO IL CENTRO NAVE, non verso il mare aperto: la x dell'attuatore e' piu'
@@ -508,12 +594,56 @@ piano.data.materials.append(mp)
 # davanti invece che dietro il telaio.
 VERSO = -1.0 if os.environ.get('LATO', 'dritta') == 'dritta' else 1.0
 DISTANZA = float(os.environ.get('DISTANZA', '1.25'))
-bpy.ops.object.camera_add(location=(centro[0] + VERSO * d * 1.15 * DISTANZA,
-                                    centro[1] - d * 1.70 * DISTANZA,
-                                    centro[2] + d * 0.42 * DISTANZA))
+
+if SOGGETTO == 'nave':
+    # TRE QUARTI DI PRUA, DA POCO SOPRA L'ACQUA.
+    #
+    # Non e' gusto: una nave inquadrata di fianco legge come un disegno
+    # tecnico, e dall'alto come un modellino sul tavolo. L'altezza d'occhio di
+    # chi sta su un'altra barca e' cio' che restituisce la scala, ed e' il
+    # motivo per cui le foto di navi si fanno da un tender.
+    #
+    # Ottantacinque millimetri e niente sfocato: la profondita' di campo e'
+    # linguaggio da primo piano di macchinario. Su una nave intera direbbe
+    # "modellino" -- e' l'effetto miniatura, ed e' esattamente l'opposto.
+    fuoco = 85
+    sfocato = False
+    # LA DISTANZA SI CALCOLA, NON SI SCEGLIE.
+    #
+    # Il primo ritratto era tagliato: avevo messo la camera a poco meno di un
+    # ingombro di distanza con un 85 mm, e un 85 mm su un sensore da 36 vede
+    # 24 gradi. Il conto e' di trigonometria, non di gusto: per far stare una
+    # lunghezza L a fuoco f serve una distanza L/2 diviso la tangente del
+    # semiangolo, piu' un margine.
+    MARGINE = float(os.environ.get('MARGINE', '1.18'))
+    semiangolo = math.atan(18.0 / fuoco)
+    distanza = (misura / 2.0) / math.tan(semiangolo) * MARGINE
+    # tre quarti di prua: 0,62 di traverso e 0,95 in avanti, normalizzati
+    # L'ALTEZZA D'OCCHIO E' ASSOLUTA, NON RELATIVA ALL'INGOMBRO.
+    #
+    # Mettendola a una frazione dell'ingombro la camera saliva a sei metri e
+    # guardava la nave DALL'ALTO: e' l'effetto miniatura, quello che fa leggere
+    # una nave come un modellino sul tavolo, ed e' esattamente cio' che questo
+    # ritratto deve evitare. Chi fotografa una nave sta su un tender, a due o
+    # tre metri sull'acqua, e guarda quasi in piano.
+    OCCHIO = float(os.environ.get('OCCHIO', '3.0'))
+    dirs = Vector((0.62, -0.95, 0.0)).normalized()
+    posa_cam = tuple(Vector((centro[0], centro[1], 0.0)) + dirs * distanza
+                     + Vector((0, 0, OCCHIO)))
+    # e si guarda a mezza altezza di nave, non al centro geometrico
+    centro = Vector((centro[0], centro[1], min(centro[2], OCCHIO * 0.9)))
+    print('CAMERA  %d mm - distanza %.1f per un ingombro di %.1f' % (fuoco, distanza, misura))
+else:
+    posa_cam = (centro[0] + VERSO * d * 1.15 * DISTANZA,
+                centro[1] - d * 1.70 * DISTANZA,
+                centro[2] + d * 0.42 * DISTANZA)
+    fuoco = 60
+    sfocato = True
+
+bpy.ops.object.camera_add(location=posa_cam)
 cam = bpy.context.object
-cam.data.lens = 60
-cam.data.dof.use_dof = True
+cam.data.lens = fuoco
+cam.data.dof.use_dof = sfocato
 cam.data.dof.focus_distance = (Vector(centro) - cam.location).length
 cam.data.dof.aperture_fstop = 5.6
 # la camera guarda il centro dell'ingombro: non si sceglie a occhio
