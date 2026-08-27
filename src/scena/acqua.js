@@ -378,6 +378,9 @@ export function costruisciAcqua (opzioni = {}) {
     transparent: true, opacity: 0.88, side: DoubleSide,
     envMapIntensity: 0
   })
+  // Un materiale senza nome non si puo' interrogare da fuori: e' la stessa
+  // lezione dei ventiquattro materiali anonimi di materiali.js.
+  materialePelo.name = 'pelo'
 
   /**
    * Le uniformi vivono qui e non dentro `onBeforeCompile`: `anima` le aggiorna
