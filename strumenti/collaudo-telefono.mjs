@@ -311,7 +311,7 @@ const ASSESTAMENTO_FOTOGRAMMI = 8
 const FOTOGRAMMI_MINIMI = 2
 
 /** WCAG 2.2 SC 2.5.8 «Target Size (Minimum)», livello AA. */
-const BERSAGLIO_MIN = 48
+const BERSAGLIO_MIN = 24
 
 /**
  * Le posizioni di scorrimento in cui si guarda l'impaginato. Sono le stesse

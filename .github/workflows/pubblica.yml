@@ -99,6 +99,14 @@ jobs:
         run: node strumenti/collaudo-ridotto.mjs
         env: { CHROMIUM: '1' }
 
+      # Layout, bersagli e raggiungibilita' su tre viewport da telefono. I
+      # fotogrammi al secondo NON sono una misura qui (niente GPU): il
+      # collaudo lo stampa in testa e in coda, e fallisce solo su cio' che sa
+      # giudicare.
+      - name: 'Cancello · il sito su schermi da telefono'
+        run: node strumenti/collaudo-telefono.mjs
+        env: { CHROMIUM: '1' }
+
       # ─── IL REFERTO VA DOVE SI LEGGE
       #
       # I registri di GitHub Actions non sono scaricabili senza autenticazione,
