@@ -49,7 +49,91 @@ il file più leggero, non più pesante.** Meno geometria, più dettaglio.
 
 ---
 
-## 0 · Il salone deve potersi attraversare `[~]`
+## 0 · La mano non si toglie mai `[x]`
+
+Questo passo non c'era, e non l'ho trovato io. È arrivato in tre frasi:
+
+> *«questi devono avere la possibilità di muoversi, altrimenti avrei fatto un
+> filmato»* · *«cioè sono io che regolo il mare — il meccanismo sotto in base
+> alla manopola si muove»* · *«deve in sostanza far vedere qualcosa che non
+> vedrebbe mai, come il funzionamento»*
+
+L'ultima è la tesi del sito in una riga, ed è il metro con cui va giudicato
+tutto il resto di questo documento: **la cosa che nessuno vede mai è un
+meccanismo che lavora dentro uno scafo, e mostrarla non serve a niente se non
+risponde a chi guarda.**
+
+### Il difetto
+
+`stile.css` mandava `.comandi` — stato del mare, andatura, interruttore — a
+`opacity:0;pointer-events:none` sulle due battute del primo piano. La catena
+fisica era **intatta e giusta**:
+
+```
+manopola → stato del mare → integratore → rollio → il controllore
+calcola l'angolo di pinna → albero, riduttore cicloidale, dischi
+```
+
+Non mancava la fisica: **mancava la mano.** Arrivavi davanti all'unica cosa che
+il sito ha da dimostrare, e in quel momento esatto ti veniva tolta la manopola.
+Da lì in giù il sito era, letteralmente, un filmato.
+
+E aveva già disattivato un capitolo intero senza che nessuno se ne accorgesse:
+il finale previsto dal piano — *«con la lama ferma sul meccanismo, e lo
+spegni»* — non era eseguibile, perché non si spegne un interruttore a
+`pointer-events:none`.
+
+### Perché nessun cancello l'aveva preso, ed è la parte che vale
+
+Perché **non c'era niente di rotto**. Nessuna eccezione, nessun errore di
+shader, nessun numero fuori tolleranza, e un'inquadratura anzi più pulita.
+
+> **Una decisione di regia presa per pulire un'inquadratura può cancellare
+> l'interattività senza rompere niente.** Nessuna misura la trova, perché tutto
+> funziona — solo, non lo tocca nessuno.
+
+Si trova in un modo solo: **provando a usare il sito da dentro la battuta.**
+
+### Il cancello
+
+`strumenti/collaudo-manopola.mjs` va al primo piano, verifica che i comandi
+siano colpibili, e poi li usa:
+
+| | misurato |
+|---|---|
+| stab. spento, mare 5 | albero d'ingresso **0,000 rad** p-p |
+| stab. acceso, mare 5 | **15,358 rad** p-p |
+| stab. acceso, mare 2 | **6,393 rad** p-p |
+| girando la manopola da 2 a 5 | il meccanismo lavora **2,40 volte di più** |
+
+Rimettendo la regola CSS, il cancello diventa rosso e dice perché. Provato.
+
+### Tre errori della prima stesura, che valgono più del cancello
+
+1. **Cercava la battuta e trovava il nome della battuta.** `data-battuta` resta
+   a `meccanismo` dal 36% di scorrimento fino al 100%, ma il palco è `sticky` e
+   dal 44% scivola via: al 60% stava a `top=-2028`, fuori dallo schermo. Stavo
+   misurando una scena che non era in pagina.
+2. **Il testimone di vitalità stava dalla parte sbagliata.** Sapevo già che
+   «fermo» e «non disegnato» si leggono identici, e il controllo c'era: solo,
+   guardava il **rollio**. Ma la simulazione continua a girare anche quando la
+   scena non viene più aggiornata, quindi giurava che tutto fosse vivo mentre
+   l'albero stava a zero. **Il testimone deve stare dalla parte della cosa
+   misurata**: si misura ciò che viene disegnato, quindi a dire che si disegna
+   dev'essere il contatore dei fotogrammi. Da qui `__nautica.fotogrammi`.
+3. **Cliccava con `pagina.click`, che porta l'elemento in vista** — e un clic ha
+   spostato lo scorrimento da 9798 a 4505: il cancello si muoveva da solo fra un
+   campione e l'altro. Ora verifica che il bersaglio sia in quadro e poi clicca
+   col mouse alle sue coordinate, che è anche quello che fa una mano.
+
+E un quarto, dello stesso ceppo dei tre: **dava per scontato che
+l'interruttore fosse spento**, l'ha cliccato, e lo ha *spento* — poi si è
+lamentato che il meccanismo non si muoveva. Il sito si apre stabilizzato e a
+mare 4, e `stato.js` lo dichiara. *Lo stato non si suppone, si legge.*
+
+---
+
+## 0-bis · Il salone deve potersi attraversare `[~]`
 
 **Messo in testa dopo una frase del committente**, e la frase è l'argomento
 intero: *«questi devono avere la possibilità di muoversi, altrimenti avrei
@@ -195,4 +279,6 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | quando | passo | cosa è successo |
 |---|---|---|
 | 27 ago, 07:40 | — | piano scritto e versionato |
-| 27 ago, 07:50 | 0 | il salone entra nel pass, **in testa**: «altrimenti avrei fatto un filmato» |
+| 27 ago, 07:50 | 0-bis | il salone entra nel pass, **in testa**: «altrimenti avrei fatto un filmato» |
+| 27 ago, 09:20 | 0 | **i comandi non si spengono più sul meccanismo.** Una riga di CSS teneva la mano fuori dal primo piano; `collaudo-manopola.mjs` la vieta |
+| 27 ago, 09:20 | 0-bis | deciso col committente: dal finestrone si vedrà **il mare 3D della scena**, non una clip — così la manopola comanda anche lì |

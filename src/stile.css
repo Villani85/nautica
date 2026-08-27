@@ -491,13 +491,42 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    sta addosso alle persone nella prima battuta. */
 .palco[data-battuta="salotto"] .richiamo{opacity:0}
 
-/* battute 6-7: la sezione. I comandi si ritirano, le letture restano */
-.palco[data-battuta="taglio"] .comandi,
+/* --- I COMANDI NON SI RITIRANO SUL MECCANISMO. MAI.
+
+   Qui c'era scritto "battute 6-7: la sezione. I comandi si ritirano, le letture
+   restano", e i comandi -- stato del mare, andatura, interruttore -- andavano a
+   `opacity:0;pointer-events:none` proprio nelle due battute del primo piano.
+
+   E' il difetto peggiore che il sito abbia avuto, e non si vedeva perche' non
+   sbagliava niente: nessun cancello rosso, nessun errore, un'inquadratura piu'
+   pulita. Il committente l'ha detto in due frasi: "questi devono avere la
+   possibilita' di muoversi, altrimenti avrei fatto un filmato" e "cioe' sono io
+   che regolo il mare -- il meccanismo sotto in base alla manopola si muove".
+
+   La catena c'era gia' tutta e funzionava: manopola -> stato del mare ->
+   integratore -> rollio -> il controllore calcola l'angolo di pinna ->
+   `impianto.aggiorna` gira albero, riduttore e dischi. Non mancava la fisica:
+   mancava LA MANO. Arrivavi davanti all'unica cosa che il sito ha da
+   dimostrare e in quel momento esatto ti veniva tolta la manopola. Da li' in
+   giu' il sito era, letteralmente, un filmato.
+
+   E contraddiceva il finale che il piano si era gia' dato -- "con la lama ferma
+   sul meccanismo, e lo spegni": non si spegne un interruttore che sta a
+   `pointer-events:none`. La regola aveva disattivato un capitolo intero.
+
+   La lezione, che vale oltre questo file: UNA DECISIONE DI REGIA PRESA PER
+   PULIRE UN'INQUADRATURA PUO' CANCELLARE L'INTERATTIVITA' SENZA ROMPERE NIENTE.
+   Nessuna misura la trova, perche' tutto funziona -- solo, non lo tocca
+   nessuno. Per questo adesso c'e' `collaudo-manopola.mjs`, che gira la manopola
+   DENTRO il primo piano e conta di quanto si muove il meccanismo.
+
+   Resta nascosto il richiamo commerciale, che non comanda niente ed e' fuori
+   posto sopra il meccanismo. E resta l'energia sul TAGLIO, dove il meccanismo
+   non si vede ancora; sul meccanismo torna, perche' e' la lettura di quello che
+   si sta guardando muoversi. */
 .palco[data-battuta="taglio"] .richiamo,
-.palco[data-battuta="meccanismo"] .comandi,
 .palco[data-battuta="meccanismo"] .richiamo{opacity:0;pointer-events:none}
-.palco[data-battuta="taglio"] .pannello--energia,
-.palco[data-battuta="meccanismo"] .pannello--energia{opacity:0}
+.palco[data-battuta="taglio"] .pannello--energia{opacity:0}
 
 /* l'interruttore chiede attenzione solo quando e' il suo momento */
 .palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){

@@ -83,6 +83,14 @@ jobs:
         run: node strumenti/collaudo-cinematica.mjs
         env: { CHROMIUM: '1' }
 
+      # La manopola deve comandare il meccanismo DENTRO il primo piano. Il
+      # difetto che questo cancello ha trovato non rompeva niente: era una
+      # regola di stile che spegneva i comandi proprio dove il sito ha piu'
+      # da dimostrare. Nessun altro cancello poteva vederlo.
+      - name: 'Cancello · la manopola comanda il meccanismo'
+        run: node strumenti/collaudo-manopola.mjs
+        env: { CHROMIUM: '1' }
+
       # ─── IL REFERTO VA DOVE SI LEGGE
       #
       # I registri di GitHub Actions non sono scaricabili senza autenticazione,

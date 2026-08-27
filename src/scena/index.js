@@ -711,6 +711,19 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // La simulazione arriva a `disegna` come parametro, quindi qui si legge
       // l'ultima vista — scritta ogni fotogramma, non catturata alla nascita.
       get stato () { return ultimoStato },
+      /**
+       * Quanti fotogrammi sono stati DISEGNATI. Serve a distinguere due cose
+       * che si leggono identiche: un meccanismo fermo e una scena che non
+       * viene piu' aggiornata. E' gia' costato due volte -- l'ultima con un
+       * cancello che dava l'albero d'ingresso a zero mentre il palco era
+       * uscito dallo schermo, e la simulazione, che intanto girava, faceva da
+       * falso testimone di vitalita'.
+       *
+       * La regola che ne esce: il testimone di vitalita' deve stare DALLA
+       * PARTE della cosa misurata. Se si misura cio' che viene disegnato, a
+       * dire che si sta disegnando dev'essere il disegno.
+       */
+      get fotogrammi () { return frame },
       // I numeri dichiarati dal modello, per il collaudo cinematico.
       get impiantoRapporto () { return impianti[0]?.rapporto ?? null },
       get impiantoEccentricita () { return impianti[0]?.eccentricita ?? null },
