@@ -270,7 +270,33 @@ float fascia (float v, float centro, float mezza, float m) {
 // insieme al colore perche' la variabile della rugosita' nasce in questa riga:
 // scriverla prima da undeclared identifier, ed e' dove si e' fermato il primo
 // tentativo.
-roughnessFactor = mix(roughnessFactor, 0.045, vetroFin);`)
+roughnessFactor = mix(roughnessFactor, 0.045, vetroFin);
+
+// ─── LA BUCCIA D'ARANCIA
+//
+// Un fianco verniciato non ha una rugosita' uniforme: lo spruzzo lascia
+// un'ondulazione larga qualche centimetro, e su quaranta metri di murata e'
+// quella che rompe il riflesso e lo fa sembrare vernice invece che vetro
+// colato. E' l'indizio numero uno di §7, e sullo scafo mancava: l'avevo dato
+// al meccanismo e non alla cosa piu' grande del fotogramma.
+//
+// Ampiezza piccolissima — cinque centesimi su una rugosita' di 0,13 — perche'
+// la buccia d'arancia si vede nel MOVIMENTO del riflesso, non come macchia. A
+// piu' di cosi' lo scafo comincia a sembrare sabbiato.
+//
+// Niente direzione: la vernice non ne ha. Chi ne ha una e' l'acciaio tornito
+// del meccanismo, e li' infatti la lavorazione e' allungata lungo l'asse.
+{
+  // 34 era troppo fitto: a questa distanza si leggeva come puntinatura, non
+  // come ondulazione. Una buccia d'arancia vera ha celle di qualche
+  // centimetro, che su uno scafo lungo quaranta metri, visto da venti, sono
+  // sotto il pixel — quello che si vede e' l'ondulazione LARGA che ne risulta.
+  vec3 b = vLocale * 13.0;
+  float o = sin(b.x + sin(b.y * 0.7) * 1.7) * sin(b.y * 1.1 + sin(b.z) * 1.3)
+          * sin(b.z * 0.9 + b.x * 0.3);
+  // solo dove NON c'e' vetro: una finestra non ha buccia d'arancia
+  roughnessFactor = clamp(roughnessFactor + o * 0.042 * (1.0 - vetroFin), 0.02, 1.0);
+}`)
 }
 /** Cambiando lo shader a mano, three va avvisato di ricompilare. */
-materiali.scafo.customProgramCacheKey = () => 'scafo-finestre-1'
+materiali.scafo.customProgramCacheKey = () => 'scafo-finestre-3'
