@@ -42,6 +42,26 @@ sim.S.mare = 4
 sim.S.stab = true
 
 /**
+ * --- E LA TRAVERSATA E' GIA' COMINCIATA
+ *
+ * Le due righe qui sopra dicono in che mare siamo. Questa dice DA QUANTO.
+ *
+ * Il committente ha scritto "l immagine non si muove", e misurando aveva
+ * ragione: a stabilizzatore spento e mare 5, sei secondi dopo il caricamento
+ * il rollio era 2,3 gradi su 15 nominali. Non un guasto -- l oscillatore
+ * partiva da fermo, e con smorzamento 0,045 l ampiezza ci mette piu' di un
+ * minuto a montare.
+ *
+ * Accelerare la salita avrebbe voluto dire falsificare lo smorzamento, cioe'
+ * il numero su cui poggia tutta la tesi. Invece si corregge l ipotesi
+ * sbagliata: il mare non comincia quando apri la pagina. La nave e' in mare da
+ * prima, e si integra in avanti a porte chiuse prima del primo fotogramma.
+ *
+ * E' esattamente cio' che il banco di misura fa da sempre con TRANSITORIO.
+ */
+sim.scalda()
+
+/**
  * Chi vuole sapere quando lo stato cambia si iscrive qui. Serve perche' i due
  * capitoli hanno cicli di disegno separati — quello del salone dorme mentre sei
  * nella dimostrazione — e chi dorme deve poter ridisegnare una volta quando

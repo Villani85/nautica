@@ -23,6 +23,27 @@ export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
     b.innerHTML = '<span class="mare__barra" aria-hidden="true"></span>'
     b.addEventListener('click', () => {
       sim.S.mare = n
+      /**
+       * --- CAMBIARE STATO DEL MARE E' IMMAGINARE UN ALTRO MARE
+       *
+       * Senza questa riga la manopola cambiava le LETTURE all istante e la
+       * nave no: con smorzamento 0,045 l ampiezza monta con una costante di
+       * tempo di 25 secondi, quindi passando da mare 2 a mare 5 i numeri
+       * saltavano subito e lo scafo ci metteva un minuto. Chi gira una
+       * manopola e non vede muoversi niente conclude che non funziona -- ed e'
+       * esattamente cio' che e' successo.
+       *
+       * La distinzione che regge, e non e' un espediente: lo STATO DEL MARE
+       * non e' un evento della traversata, e' la traversata che si sceglie di
+       * guardare. "Facciamo che il mare sia cinque" vuol dire una nave che sta
+       * in mare cinque **da un pezzo**, non una a cui il mare cambia sotto in
+       * due secondi.
+       *
+       * L INTERRUTTORE invece resta un evento vero, e non si scalda: spegnere
+       * le pinne e guardare il rollio che ricresce lentamente E' l argomento.
+       * Il tempo che ci mette e' il numero che il sito vende.
+       */
+      sim.scalda()
       sim.azzeraPicchi()
       pulsanti.forEach((x, j) => x.setAttribute('aria-pressed', String(j === n)))
       alCambio?.()

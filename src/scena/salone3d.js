@@ -60,6 +60,13 @@ const CALMA = 'filmati/salone-largo.mp4'
 const TESA = 'filmati/salone-teso.mp4'
 const MASCHERA = 'salone/finestrone.png'
 
+/** Quanto sta piu' indietro il mare rispetto alla stanza, in unita' di scena. */
+const PROFONDITA = 0.45
+
+/** Il mare copre gli angoli che l'inclinazione scopre. Vedi `composito.js`. */
+const INGRANDIMENTO = 1.55
+/** Quanto in alto sta l'orizzonte dentro la clip: 45,9% dall'alto. */
+const ORIZZONTE = 0.459
 
 /** Sopra questo rollio ci si irrigidisce; sotto CALMO si torna comodi. */
 const ACCENDE = 5.0
@@ -120,47 +127,42 @@ export function creaSalone3D (base, tuga) {
 
   const geo = new PlaneGeometry(larg, alt)
 
+  /** 1 · IL MARE — la clip intera, ingrandita, che ruota sull'orizzonte. */
   /**
-   * ─── QUI C'ERA IL MARE, ED ERA UN FILMATO
+   * 1 · IL MARE — la stessa clip, dietro, e a ruotare e' l'IMMAGINE.
    *
-   * Dietro la stanza stava la stessa clip, ingrandita, che ruotava sul proprio
-   * orizzonte. Funzionava, e non serviva a niente: era un mare GIRATO, e un
-   * mare girato non risponde a chi guarda.
+   * ─── PERCHE' NON RUOTA IL PIANO
    *
-   * Il committente l'ha detto in tre frasi, e la terza e' la tesi del sito:
-   * *«questi devono avere la possibilita' di muoversi, altrimenti avrei fatto
-   * un filmato»* · *«cioe' sono io che regolo il mare»* · *«deve far vedere
-   * qualcosa che non vedrebbe mai, come il funzionamento»*.
+   * Prima ruotava la mesh, ingrandita 1,55 volte per coprire gli angoli che
+   * l'inclinazione scopre, e una maschera le ritagliava il riquadro della
+   * stanza. Funziona finche' la maschera e' ferma — ma la maschera e' una
+   * texture del piano, e **ruota col piano**. Inclinandosi, il rettangolo
+   * visibile si inclina con lui e i suoi angoli escono dal riquadro della
+   * fotografia: oltre il bordo destro comparivano il divano e la donna una
+   * seconda volta.
    *
-   * Adesso il vetro e' un BUCO -- lo apre `alphaMap` -- e dietro c'e' l'acqua
-   * vera della scena: la stessa superficie che si vede da fuori, mossa dallo
-   * stesso stato del mare, con lo stesso orizzonte. Girando la manopola,
-   * cambia anche cio' che si vede dal finestrone.
+   * L'ho corretto due volte dalla parte sbagliata — prima accorciando la
+   * maschera, poi facendola seguire alla scala — e tutte e due le volte e'
+   * tornato appena la camera si muoveva. La domanda giusta non era «quanto
+   * grande dev'essere il ritaglio», era **chi deve ruotare**.
    *
-   * ─── E LA ROTAZIONE LA FA LA FISICA, NON PIU' IL CODICE
+   * Nel DOM a ritagliare era l'apertura, che sta ferma. Qui l'equivalente e'
+   * far ruotare la TEXTURE dentro un piano fermo: `map.rotation` con il centro
+   * sull'orizzonte. Il piano ha esattamente la misura della stanza, non ha
+   * bisogno di nessuna maschera, e non puo' uscire dal riquadro perche' il
+   * riquadro E' il piano.
    *
-   * La regola resta quella di `docs/09`: **la stanza rolla, l'orizzonte no.**
-   * Ma non serve piu' ottenerla ruotando delle immagini, e non serve piu' la
-   * contro-rotazione che teneva il gruppo livellato:
-   *
-   *   la camera del sito e' LIVELLATA -- e' l'invariante di tutto il sito --
-   *   quindi il mare del mondo, che e' orizzontale, disegna un orizzonte
-   *   orizzontale nel quadro, sempre;
-   *
-   *   il gruppo del salone e' figlio della nave, quindi se lo si lascia stare
-   *   rolla insieme a lei.
-   *
-   * Stanza inclinata, orizzonte piatto, senza una riga che lo imponga. Il
-   * codice che c'era qui non descriveva la scena: la simulava a mano.
-   *
-   * ─── COSA SI PERDE, E VA DETTO
-   *
-   * L'acqua procedurale e' piu' povera del mare girato. E' un baratto
-   * consapevole: un mare piu' brutto che risponde batte un mare piu' bello che
-   * non risponde, su un sito la cui tesi e' che il gesto dell'utente cambia le
-   * cose. E chiude anche il rilievo che il sito avesse due mari diversi, uno
-   * dentro e uno fuori.
+   * L'ingrandimento di 1,55 resta, ma nello spazio della texture: `repeat`
+   * minore di uno mostra una porzione piu' piccola della clip, ingrandita.
+   * E' quello che copre gli angoli quando l'immagine gira.
    */
+  const mareTex = tex(vCalma)
+  mareTex.center.set(0.5, 1 - ORIZZONTE)   // il PIVOT E' L'ORIZZONTE
+  mareTex.repeat.set(1 / INGRANDIMENTO, 1 / INGRANDIMENTO)
+
+  const mare = new Mesh(geo, new MeshBasicMaterial({ map: mareTex, toneMapped: false }))
+  mare.position.z = -PROFONDITA
+  gruppo.add(mare)
 
   /** 2 · LA STANZA — stessa clip, il vetro bucato dalla maschera, ferma. */
   const stanza = new Mesh(geo, new MeshBasicMaterial({
@@ -225,7 +227,7 @@ export function creaSalone3D (base, tuga) {
   /** Rilascia tutto: texture, video, sorgenti. Per chi smonta la scena. */
   function smonta () {
     ferma()
-    for (const m of [stanza, tesa]) {
+    for (const m of [mare, stanza, tesa]) {
       m.material.map?.dispose()
       m.material.alphaMap?.dispose()
       m.material.dispose()
@@ -238,6 +240,20 @@ export function creaSalone3D (base, tuga) {
    * @param {number} gradi  il rollio VERO, dallo stesso integratore della nave
    * @param {number} dt     secondi
    */
+  /**
+   * Il mare arretrato deve riempire lo stesso finestrino: cresce di quanto e'
+   * piu' lontano. La distanza VERA la sa solo chi muove la camera — passargli
+   * quella d'inquadratura, che cambia solo al ridimensionamento, lasciava il
+   * fondale ingrandito com'era da seduti anche dopo essere usciti.
+   *
+   * E crescendo non puo' piu' uscire dal riquadro, perche' il riquadro e' il
+   * piano stesso: e' il guadagno vero di aver tolto la maschera.
+   */
+  function profondita (distanzaCamera) {
+    const k = (distanzaCamera + PROFONDITA) / Math.max(0.01, distanzaCamera)
+    mare.scale.setScalar(k)
+  }
+
   function aggiorna (gradi, dt) {
     const a = Math.abs(gradi)
     if (a > ACCENDE) calmoDa = 0
@@ -246,9 +262,10 @@ export function creaSalone3D (base, tuga) {
     q += (vuole - q) * Math.min(1, dt * VELOCITA)
     tesa.material.opacity = q
 
-    // La stanza non ha piu' bisogno che qualcuno la inclini: rolla perche' e'
-    // figlia della nave, e l'orizzonte resta piatto perche' la camera e'
-    // livellata e il mare e' quello del mondo. Vedi la nota in testa.
+    // Il mare si inclina, la stanza no: da dentro, il proprio salotto sta
+    // fermo. E a inclinarsi e' l'IMMAGINE dentro il piano, non il piano —
+    // altrimenti gli angoli escono dal riquadro. Vedi la nota sopra.
+    mareTex.rotation = MathUtils.degToRad(-gradi)
     ultimo = gradi
   }
 
@@ -256,12 +273,14 @@ export function creaSalone3D (base, tuga) {
   function mostra (v) {
     const o = MathUtils.clamp(v, 0, 1)
     gruppo.visible = o > 0.002
+    mare.material.opacity = o
     stanza.material.opacity = o
+    mare.material.transparent = o < 0.999
     tesa.material.opacity = q * o
   }
 
   return {
-    gruppo, aggiorna, mostra, riproduci, ferma, smonta,
+    gruppo, aggiorna, mostra, riproduci, ferma, smonta, profondita,
     /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
     largo: larg,
     alto: alt,

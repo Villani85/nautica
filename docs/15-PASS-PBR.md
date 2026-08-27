@@ -133,47 +133,63 @@ mare 4, e `stato.js` lo dichiara. *Lo stato non si suppone, si legge.*
 
 ---
 
-## 0-bis · Il mare dal finestrone e' quello della scena `[x]`
+## 0-bis · Il mare dal finestrone doveva essere quello della scena `[-]`
 
-Il committente ha chiuso la questione in due frasi: *«cioe' sono io che regolo
-il mare»* e *«deve far vedere qualcosa che non vedrebbe mai, come il
-funzionamento»*. Dal vetro si vedeva una clip: un mare girato non risponde a
-chi guarda, e quindi non e' il mare di nessuno.
+**Abbandonato dopo averlo costruito, misurato e guardato.** Resta scritto per
+intero perché l'errore vale più della soluzione.
 
-Adesso il vetro e' un **buco** — lo apre `alphaMap` — e dietro c'e' l'acqua
-della scena, la stessa che si vede da fuori, mossa dallo stesso stato.
+### Cos'era, ed era giusto in teoria
 
-### La parte bella: la rotazione l'ha fatta la fisica
+Dietro il vetro c'era una clip, e una clip non risponde a chi guarda. Il vetro
+è diventato un **buco** — lo apre `alphaMap` — con dietro l'acqua della scena,
+la stessa che si vede da fuori, mossa dallo stesso stato del mare.
 
-La regola di `docs/09` e' sempre stata **la stanza rolla, l'orizzonte no**, e
-finora era ottenuta con due rotazioni scritte a mano: una contro-rotazione che
-teneva il gruppo livellato, e una rotazione della texture del mare. Sono uscite
-tutte e due, e la regola resta vera da sola:
+E aveva una proprietà bellissima: **la rotazione la faceva la fisica.** Sono
+uscite due rotazioni scritte a mano — la contro-rotazione che teneva il gruppo
+livellato e la rotazione della texture del mare — e la regola di `docs/09`
+restava vera da sola, perché la camera è livellata e il gruppo del salone è
+figlio della nave. Stanza inclinata, orizzonte piatto, zero righe che lo
+impongano.
 
-- la camera del sito e' **livellata** — e' l'invariante di tutto il sito —
-  quindi il mare del mondo disegna sempre un orizzonte orizzontale;
-- il gruppo del salone e' **figlio della nave**, quindi lasciandolo stare rolla
-  insieme a lei.
+### Perché è stato tolto
 
-Stanza inclinata, orizzonte piatto, zero righe che lo impongano. Il codice che
-c'era non descriveva la scena: la simulava a mano.
+Perché il finestrone diventava **vuoto**. Misurato sulla stessa inquadratura,
+dentro il vano:
 
-### E una cosa che copriva il mare
+| | dettaglio | superficie piatta |
+|---|---|---|
+| mare girato | **3,07** livelli/pixel | **18,1%** |
+| mare 3D della scena | 1,96 | **67,4%** |
 
-Attraverso il buco si vedeva **la nave stessa**: un piano orizzontale a quota
-1,54, cioe' il ponte sopra la tuga, a 0,47 unita' dalla camera contro 1,35 del
-salone. Nascondere la sola `COPERTA` bastava finche' dal vetro c'era un
-filmato, perche' la clip copriva tutto quello che stava dietro. Trovato
-chiedendo alla scena *chi* fosse in quel punto con `?ispeziona=1`, non
-deducendolo dalla forma della macchia.
+Due terzi di finestrone morto. Da dentro, l'acqua si guarda con un angolo
+rasente e non ha quasi dettaglio: fisicamente giusto, visivamente niente. E il
+«cielo» diventava la carta del sito, cioè una campitura crema.
 
-### Quanto e' forte, misurato
+### L'errore che conta, ed è mio
 
-Fra mare 1 e mare 5, dentro il vano: **1,95 livelli su 255 di differenza
-media**, con l'8,5% dei pixel che cambia di piu' di 3 livelli. **Risponde, ma
-poco.** L'acqua a quella distanza e con quell'angolo rende meno di quanto
-dovrebbe, ed e' il prossimo lavoro su questo capitolo — non un dettaglio da
-lasciare implicito.
+**La misura ce l'avevo e l'ho letta male.** Avevo già misurato che fra mare 1 e
+mare 5 il vano cambiava di 1,95 livelli su 255, e l'avevo scritto qui come
+*«risponde, ma poco»*. Era il numero giusto letto con la domanda sbagliata:
+misuravo **quanto risponde**, quando la domanda era **quanto c'è**. Un vano
+vuoto risponde poco perché non c'è niente che possa rispondere.
+
+Se l'è accorto il committente guardando lo schermo, con quattro parole. Un
+numero che dice «debole» e un occhio che dice «vuoto» non sono d'accordo: e
+quando non sono d'accordo, ha ragione l'occhio finché non trovo il numero che
+gli dà torto.
+
+E la metrica giusta non era nemmeno la deviazione standard, che su un campo a
+due tinte con un bordo netto esce alta e non significa niente: era il
+**gradiente locale**, cioè quanto cambia da un pixel al vicino.
+
+### Cosa resta valido
+
+- La richiesta *«sono io che regolo il mare»* era già soddisfatta dove il
+  committente l'aveva precisata: *«intendo il meccanismo sotto in base alla
+  manopola si muove»* — ed è il passo 0, con il suo cancello;
+- l'idea che la fisica produca la rotazione invece di simularla a mano resta
+  giusta, e tornerà utile quando il salone avrà volume (0-ter);
+- la maschera del vano misurata resta, e serve a entrambe le strade.
 
 ---
 
@@ -242,6 +258,62 @@ diversi di sbagliare la stessa cosa:
   diversi; il mare ne ha **12**, da 5. Le onde non combaciano mai. Ma l'acqua
   si puo' dissolvere senza che si veda e le persone no — quindi il
   rimescolamento e' un lavoro sul lato STANZA, non sul mare.
+
+---
+
+## 0-quater · Il mare non comincia quando apri la pagina `[x]`
+
+Il committente l'ha detto in quattro parole — *«l'immagine non si muove»* — e
+misurando aveva ragione, ma non per la ragione che sembrava.
+
+Il filmato girava (il 74% dei pixel della stanza cambia in 0,9 s) e la catena
+del rollio funzionava: la rotazione nel mondo del gruppo del salone segue
+esattamente `sim.S.rollio`, valore per valore. **Il problema era quanto vale
+quel rollio.** A stabilizzatore spento e mare 5, sei secondi dopo il
+caricamento era **2,3 gradi su 15 nominali**, e saliva piano.
+
+### La causa, che non era un guasto
+
+La condizione iniziale. L'oscillatore parte da `theta = 0, omega = 0`, e con
+`ZETA = 0.045` la costante di tempo con cui l'ampiezza monta è
+
+```
+1 / (ZETA · W) = 1 / (0,045 × 0,898) = 25 secondi
+```
+
+Per arrivare al 95% del regime servono tre costanti: **più di un minuto.**
+Nessun visitatore lo concede. Il sito si apriva su una nave immobile e su una
+manopola che sembrava non fare niente.
+
+### La cura, e perché non è quella ovvia
+
+Accelerare la salita avrebbe voluto dire falsificare lo smorzamento — cioè
+proprio il numero su cui poggia tutta la tesi. Si corregge invece l'ipotesi
+implicita sbagliata: **il mare esisteva anche prima che tu arrivassi.** Una
+barca in mare sta già rollando; partire da ferma è l'artefatto, non il regime.
+
+`sim.scalda()` integra 150 secondi a porte chiuse prima del primo fotogramma —
+6 costanti di tempo, oltre le quali non cambia più niente — e costa qualche
+millesimo. È **esattamente ciò che il banco di misura fa già da sempre** con
+`TRANSITORIO = 45`: butta i primi secondi perché l'inviluppo deve montare. Qui
+non si buttano, si vivono prima di aprire il sipario.
+
+Alla partenza il rollio passa da **0,01° a 0,93°**.
+
+### E una distinzione che vale la pena tenere
+
+La manopola dello stato del mare **scalda**, l'interruttore no, e non è un
+espediente:
+
+- lo **stato del mare** non è un evento della traversata, è la traversata che
+  si sceglie di guardare. *«Facciamo che il mare sia cinque»* vuol dire una
+  nave che sta in mare cinque da un pezzo, non una a cui il mare cambia sotto
+  in due secondi. Senza questo, i numeri saltavano subito e lo scafo ci metteva
+  un minuto: chi gira una manopola e non vede muoversi niente conclude che non
+  funziona;
+- l'**interruttore** invece è un evento vero, e resta lento. Spegnere le pinne
+  e guardare il rollio che ricresce piano *è* l'argomento: il tempo che ci mette
+  è il numero che il sito vende.
 
 ---
 
@@ -346,5 +418,8 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | 27 ago, 07:50 | 0-bis | il salone entra nel pass, **in testa**: «altrimenti avrei fatto un filmato» |
 | 27 ago, 09:20 | 0 | **i comandi non si spengono più sul meccanismo.** Una riga di CSS teneva la mano fuori dal primo piano; `collaudo-manopola.mjs` la vieta |
 | 27 ago, 09:20 | 0-bis | deciso col committente: dal finestrone si vedrà **il mare 3D della scena**, non una clip |
-| 27 ago, 10:30 | 0-bis | **fatto.** Le due rotazioni scritte a mano sono uscite: la fisica le produce da sola. Misurato: risponde alla manopola, ma debolmente (1,95/255) |
+| 27 ago, 10:30 | 0-bis | fatto: il vetro bucato sul mare 3D, e due rotazioni scritte a mano tolte |
+| 27 ago, 12:40 | 0-bis | **abbandonato.** Il vano diventava vuoto: 67,4% di superficie piatta contro 18,1% col mare girato. Avevo la misura e l'ho letta male |
+| 27 ago, 12:15 | 0-quater | **«l'immagine non si muove»**: l'integratore partiva da fermo e l'ampiezza monta in 25 s di costante di tempo. Adesso la traversata è già cominciata |
+| 27 ago, 12:15 | — | revisione delle 08:30: corrette la promessa fisica falsa in `#offerta`, i 180,6/181,4 KB (legando anche la prosa alla misura) e l'assenza di cancello su `COLOR_0` |
 | 27 ago, 11:10 | 0-ter | ripresa nuova misurata e maschera estratta (1,37 px). **Non spedita**: fuori dal cancello di 0,04 gradi, e quattro stabilizzazioni su quattro l'hanno peggiorata |

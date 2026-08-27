@@ -246,6 +246,42 @@ if (tutto) {
   note.push(`INGOMBRO  ${d} m, tutto compreso`)
 }
 
+/**
+ * --- L OCCLUSIONE COTTA C E ANCORA?
+ *
+ * Segnalato da una revisione: il canale `COLOR_0` porta l occlusione ambientale
+ * cotta in Blender, ma nessun cancello lo proteggeva. Basterebbe una
+ * ricompressione senza il flag giusto per perderlo, e tutto resterebbe verde --
+ * e' gia' successo con i nomi dei nodi, cancellati in silenzio da gltfpack.
+ *
+ * Qui si conta, e basta. Gli accessori compressi con meshopt NON portano
+ * `min`/`max`, quindi da questo file non si puo dire se i colori variano: un
+ * canale tutto bianco passerebbe questo controllo.
+ *
+ * Quel pezzo lo fa `collaudo-cinematica.mjs`, dove three.js li ha gia
+ * decodificati per disegnarli, e dove si guarda anche se i materiali li
+ * consumano. Scriverlo qui e non farlo sarebbe la cosa peggiore: e' la stessa
+ * regola con cui questo file dichiara di NON controllare il verso delle
+ * normali invece di far finta.
+ */
+if (FILE.includes('impianto')) {
+  let prim = 0
+  let conColore = 0
+  for (const m of g.meshes ?? []) {
+    for (const p of m.primitives) {
+      prim++
+      if (p.attributes.COLOR_0 !== undefined) conColore++
+    }
+  }
+  note.push(`OCCLUSIONE ${conColore} primitive su ${prim} portano COLOR_0 ` +
+            '(la VARIAZIONE la controlla collaudo-cinematica)')
+  if (conColore === 0) {
+    guasti.push('nessuna primitiva porta COLOR_0: l occlusione cotta nei vertici e sparita ' +
+                'dal modello. Il builder la cuoce e la esporta con export_vertex_color=ACTIVE; ' +
+                'se il modello e stato ricompresso, il flag e andato perso')
+  }
+}
+
 const kb = Math.round(statSync(FILE).size / 1024)
 const compresso = g.extensionsRequired?.includes('EXT_meshopt_compression')
 note.push(`PESO      ${kb} KB${compresso ? ' (meshopt)' : ' (non compresso)'}`)

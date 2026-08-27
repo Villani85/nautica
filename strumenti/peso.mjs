@@ -120,6 +120,40 @@ for (const [etichetta, byte] of ATTESI) {
   }
   console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${etichetta.padEnd(42)} ` +
               `dichiara ${m[1].trim().padStart(9)}, misura ${kb(byte).padStart(9)}`)
+
+  /**
+   * ─── E LO STESSO NUMERO DETTO IN PROSA
+   *
+   * Una revisione ha trovato la tabella che dichiarava 181,4 KB e, nove righe
+   * piu' sotto, un paragrafo che diceva ancora 180,6. Il cancello non se n'era
+   * accorto perche' guardava la tabella: la prosa non era sorvegliata da
+   * nessuno, e quindi si era fermata a una misura vecchia.
+   *
+   * La correzione non e' cambiare 180,6 in 181,4 -- sarebbe di nuovo un numero
+   * scritto a mano, che ricomincerebbe a scivolare al primo commit. E' legare
+   * anche la frase alla misura: in pagina il numero sta dentro un
+   * `<b data-peso="...">` la cui chiave e' L'ETICHETTA STESSA della riga di
+   * tabella. Una lista sola, due posti che la leggono -- che e' la regola che
+   * questo repo si e' gia' dato per le soglie e per la sezione A.
+   */
+  const marca = `<b data-peso="${etichetta}">`
+  const j = pagina.indexOf(marca)
+  if (j >= 0) {
+    const vecchio = pagina.slice(j + marca.length, pagina.indexOf('</b>', j))
+    const prosa = parseFloat(vecchio.replace(',', '.'))
+    const okProsa = Math.abs(prosa - misurato) <= TOLLERANZA
+    if (SCRIVI) {
+      const nuovo = misurato.toFixed(1) + ' KB'
+      if (nuovo !== vecchio.trim()) {
+        paginaNuova = paginaNuova.replace(marca + vecchio + '</b>', marca + nuovo + '</b>')
+      }
+    }
+    console.log(`  ${okProsa ? 'OK   ' : 'FALSO'}  ${('— e la stessa cifra in prosa').padEnd(42)} ` +
+                `dichiara ${vecchio.trim().padStart(9)}, misura ${kb(byte).padStart(9)}`)
+    if (!okProsa && !SCRIVI) {
+      scarti.push(`il paragrafo dice ${vecchio.trim()} dove la tabella e la build dicono ${kb(byte)}`)
+    }
+  }
   if (!ok) {
     /**
      * `--scrivi` riporta i numeri misurati dentro la pagina.

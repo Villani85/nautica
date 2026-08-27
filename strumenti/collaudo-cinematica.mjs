@@ -267,6 +267,52 @@ if (!conGiro) {
               'non e\' verificabile, e proprio li\' si nascondeva il guasto di stanotte')
 }
 
+/**
+ * --- L OCCLUSIONE COTTA NEI VERTICI, DOVE E GIA DECODIFICATA
+ *
+ * Rilievo di una revisione, ed e quello giusto: `collaudo-glb.mjs` conta le
+ * primitive che dichiarano `COLOR_0`, ma dal solo JSON del glTF non puo dire
+ * se quei colori VARIANO -- gli accessori compressi con meshopt non portano
+ * `min`/`max`, quindi un canale tutto bianco passerebbe il conteggio senza che
+ * niente si accorga che l occlusione e sparita. E sparire e' esattamente cio
+ * che ha gia fatto un altra volta un attributo, quando gltfpack ha cancellato
+ * tutti i nomi dei nodi.
+ *
+ * Qui invece i dati ci sono gia decodificati: three.js li ha letti per
+ * disegnarli. Quindi il controllo si fa dove costa zero, e chiede due cose
+ * diverse -- che il canale VARI (non un bianco piatto) e che i materiali lo
+ * CONSUMINO (`vertexColors`), perche un attributo presente e ignorato dal
+ * materiale e occlusione che non si vede.
+ */
+const ao = await pagina.evaluate(() => {
+  let conAttributo = 0, consumato = 0, minimo = 1, massimo = 0
+  window.__nautica.scena.traverse((o) => {
+    const c = o.geometry && o.geometry.attributes && o.geometry.attributes.color
+    if (!c) return
+    conAttributo++
+    if (o.material && o.material.vertexColors) consumato++
+    for (let i = 0; i < c.count; i++) {
+      const v = c.getX(i)
+      if (v < minimo) minimo = v
+      if (v > massimo) massimo = v
+    }
+  })
+  return { conAttributo, consumato, minimo, massimo }
+})
+righe.push(`  OCCLUSIONE  ${ao.conAttributo} mesh con colori nei vertici, ` +
+           `${ao.consumato} con materiale che li usa, valori da ` +
+           `${ao.minimo.toFixed(3)} a ${ao.massimo.toFixed(3)}`)
+if (ao.conAttributo === 0) {
+  guasti.push("nessuna mesh porta colori nei vertici: l occlusione cotta e sparita dal modello")
+} else if (ao.massimo - ao.minimo < 0.05) {
+  guasti.push(`i colori nei vertici non variano (da ${ao.minimo.toFixed(3)} a ` +
+              `${ao.massimo.toFixed(3)}): il canale c e ma e piatto, cioe ` +
+              "l occlusione non e stata cotta o e andata persa nella compressione")
+} else if (ao.consumato < ao.conAttributo) {
+  guasti.push(`${ao.conAttributo - ao.consumato} mesh portano i colori nei vertici ma il ` +
+              "loro materiale non li consuma: occlusione cotta e poi ignorata")
+}
+
 console.log('cinematica dell\'impianto, dentro il capitolo della dimostrazione')
 for (const r of righe) console.log(r)
 if (dichiarati) {

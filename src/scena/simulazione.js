@@ -289,7 +289,44 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
 
   function azzeraPicchi () { viva.azzera(); nuda.azzera(); S.picco = 0; S.riduzione = 0 }
 
-  return { S, passo, azzeraPicchi }
+  /**
+   * --- IL MARE NON COMINCIA QUANDO APRI LA PAGINA
+   *
+   * Difetto trovato dal committente con tre parole -- "l immagine non si
+   * muove" -- e poi misurato: a stabilizzatore spento e mare 5, dopo sei
+   * secondi dal caricamento il rollio era 2,3 gradi su 15 nominali, e saliva
+   * piano. Chi apriva il sito vedeva una nave quasi immobile.
+   *
+   * Non era un guasto: era la CONDIZIONE INIZIALE. L oscillatore parte da
+   * theta = 0, omega = 0, e con smorzamento 0,045 la costante di tempo con cui
+   * l ampiezza monta e' 1/(ZETA*W) = 25 secondi. Per arrivare al 95% del
+   * regime servono tre costanti, cioe' **piu' di un minuto** -- un tempo che
+   * nessun visitatore concede.
+   *
+   * La cura non e' accelerare la salita, che sarebbe falsificare lo
+   * smorzamento -- cioe' proprio il numero su cui poggia tutta la tesi del
+   * sito. E' correggere l ipotesi implicita: **il mare esisteva anche prima
+   * che tu arrivassi.** Una barca in mare sta gia' rollando; partire da ferma
+   * e' l artefatto, non il regime.
+   *
+   * Quindi si integra in avanti prima del primo fotogramma. E' la stessa cosa
+   * che il banco di misura fa gia' da sempre con TRANSITORIO: butta i primi
+   * 45 secondi perche' l inviluppo deve montare. Qui non si buttano -- si
+   * vivono a porte chiuse, e il sito si apre a traversata avviata.
+   *
+   * Costa qualche millesimo: 150 secondi simulati a 50 Hz sono 7500 passi di
+   * un integratore che fa quattro moltiplicazioni.
+   *
+   * @param {number} secondi  quanto mare e' gia' passato. Il valore di
+   *   riferimento e' sei costanti di tempo: oltre, non cambia piu' niente.
+   */
+  function scalda (secondi = 150) {
+    if (S.ridotto) return
+    const dt = 1 / 50
+    for (let k = 0; k < Math.round(secondi / dt); k++) passo(dt, t + dt)
+  }
+
+  return { S, passo, azzeraPicchi, scalda }
 }
 
 /**
