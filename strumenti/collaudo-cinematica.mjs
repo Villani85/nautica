@@ -1,5 +1,5 @@
-import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
+import { apriBrowser } from './browser.mjs'
 
 /**
  * COLLAUDO DELLA CINEMATICA — il meccanismo si muove davvero, e col rapporto
@@ -60,14 +60,6 @@ const GIRO_INTERO = 380               // gradi d'ingresso: sotto, l'orbita non h
 const PINNA_MASSIMA = 25.5            // gradi, §1.5 con mezzo grado di margine numerico
 const ORBITA_VISIBILE = 0.03          // eccentricita' osservata / raggio del disco
 
-/** Stessa scala degli altri cancelli: Chrome di sistema, poi il ripiego. */
-async function apriBrowser () {
-  if (process.env.CHROMIUM) return await chromium.launch()
-  try { return await chromium.launch({ channel: 'chrome' }) } catch {}
-  try { return await chromium.launch() } catch {}
-  console.error('nessun browser disponibile: `npx playwright install chromium`')
-  process.exit(2)
-}
 
 /** Il server di anteprima, se non ce n'e' gia' uno acceso. */
 async function serviteci () {

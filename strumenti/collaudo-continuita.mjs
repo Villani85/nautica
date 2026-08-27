@@ -1,5 +1,5 @@
-import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
+import { apriBrowser } from './browser.mjs'
 
 /**
  * COLLAUDO DELLA CONTINUITA' — l'atto e' uno solo, e non si taglia.
@@ -52,13 +52,6 @@ const PASSI = 44
 const PITCH_MAX = 1e-4        // il quaternione di una camera livellata
 const SALTO_MAX = 6           // volte il passo mediano
 
-async function apriBrowser () {
-  if (process.env.CHROMIUM) return await chromium.launch()
-  try { return await chromium.launch({ channel: 'chrome' }) } catch {}
-  try { return await chromium.launch() } catch {}
-  console.error('nessun browser disponibile: `npx playwright install chromium`')
-  process.exit(2)
-}
 
 /**
  * ─── SI PROVA LA BUILD, NON IL SERVER DI SVILUPPO
@@ -126,7 +119,32 @@ await pagina.evaluate(() => {
   const d = document.querySelector('#dimostrazione')
   scrollTo({ top: scrollY + d.getBoundingClientRect().top + 10, behavior: 'instant' })
 })
-await pagina.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
+/**
+ * Sessanta secondi, non trenta: senza scheda grafica WebGL gira in software e
+ * la prima scena puo' metterci molto. E se scade, il messaggio deve parlare
+ * della causa — nessun contesto WebGL — invece che del sintomo, che e' un
+ * timeout e non dice niente a chi legge un registro di CI.
+ */
+try {
+  await pagina.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
+} catch {
+  const webgl = await pagina.evaluate(() => {
+    try { return !!document.createElement('canvas').getContext('webgl2') } catch { return false }
+  })
+  console.error(webgl
+    ? [
+        '',
+        '  La scena non si e avviata entro un minuto, ma un contesto WebGL c e:',
+        '  la causa sta negli errori qui sopra, non nel tempo.'
+      ].join('\n')
+    : [
+        '',
+        '  NESSUN CONTESTO WEBGL.',
+        '  Senza scheda grafica serve --enable-unsafe-swiftshader, che',
+        '  strumenti/browser.mjs passa gia: se manca, e quel file a essere stato aggirato.'
+      ].join('\n'))
+  process.exit(1)
+}
 await pagina.waitForTimeout(1200)
 
 /**

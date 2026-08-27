@@ -1,4 +1,4 @@
-import { chromium } from 'playwright-core'
+import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
@@ -89,38 +89,12 @@ const esito = (ok, testo) => {
  * Un messaggio che manda a fare la cosa sbagliata e' peggio di nessun
  * messaggio.
  */
-async function apriBrowser () {
-  try {
-  /**
-   * QUALE BROWSER, e si puo' forzare.
- *
-   * Di norma si usa il Chrome di sistema, perche' `playwright-core` non scarica
-   * browser. Ma chi clona il progetto puo' avere solo il chromium di Playwright,
-   * e un cancello che e' verde su un browser e rosso sull'altro non vale niente.
-   * `CHROMIUM=1` forza quello interno, cosi' la differenza si puo' riprodurre
-   * invece che discutere.
-   */
-    if (process.env.CHROMIUM) return await chromium.launch({ headless: VISIBILE })
-    return await chromium.launch({ channel: 'chrome', headless: VISIBILE })
-  } catch (e) {
-    try {
-      return await chromium.launch({ headless: VISIBILE })
-    } catch (e2) {
-      console.error(`
-  ROTTO  nessun browser disponibile.
-
-         Questo collaudo usa playwright-core, che di proposito NON scarica
-         browser: si appoggia al Chrome di sistema. Una delle due:
-
-             npx playwright install chrome      (lo installa Playwright)
-             oppure installa Google Chrome
-
-         Attenzione: "npx playwright install" da solo NON basta.
-`)
-      process.exit(1)
-    }
-  }
-}
+/**
+ * IL BROWSER LO APRE `browser.mjs`, per tutti e quattro i collaudi che ne
+ * hanno bisogno. Qui c'era una copia della stessa logica, e la copia non
+ * aveva il flag che serve dove non c'e' una GPU — la pipeline restava rossa
+ * mentre in locale passava tutto. La nota per esteso sta li'.
+ */
 
 /** C'e' gia' qualcosa che risponde su quell'indirizzo? */
 async function risponde (url) {
@@ -157,7 +131,7 @@ if (!(await risponde(INDIRIZZO))) {
   }
 }
 
-const b = await apriBrowser()
+const b = await apriBrowser({ visibile: VISIBILE })
 const collisioni = []
 const traboccamenti = []
 let overflow = []
