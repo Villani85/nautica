@@ -330,6 +330,228 @@ espediente:
 
 ---
 
+## 0-quinquies · Il salone risponde davvero `[x]`
+
+Sei richieste del committente in un'ora, tutte sullo stesso capitolo, tutte
+vere. Vale la pena tenerle insieme perché raccontano un errore solo: **avevo
+costruito una scena che si guarda invece di una in cui si sta.**
+
+### 1 · La stanza rolla, il mare no — ed era al contrario
+
+*«la barca si deve muovere»*, e prima ancora *«per creare il movimento della
+barca ma l'orizzonte che non si muove»*.
+
+Il codice faceva l'opposto: teneva ferma la stanza e inclinava il mare. Da
+dentro si vedeva un salotto immobile e un orizzonte che si spostava di un
+grado — cioè **niente**, perché l'occhio si aggancia ai verticali della stanza,
+non a una linea lontana.
+
+Adesso ruota la fotografia dentro un piano fermo, **insieme alla sua
+maschera** — il buco del vetro appartiene alla stanza e deve inclinarsi con
+lei — e l'ingrandimento necessario si calcola dall'angolo vero a ogni
+fotogramma: `cos|a| + (9/16)·sin|a|`, cioè 1,00 da fermo e 1,19 a dodici gradi.
+Tenerlo fisso al massimo avrebbe voluto dire buttare il 16% della fotografia
+anche col mare calmo.
+
+Misurato a mare 5, sistema spento: rollio 4,7° · stanza 4,7° · maschera 4,7° ·
+zoom 1,039 · **mare 0**.
+
+### 2 · Il mare ha una finestra sua
+
+*«il mare devi creare una finestra, altrimenti il movimento è incoerente»*.
+
+Dietro il vetro c'era **la clip della stanza ingrandita 1,55 volte**: divano,
+montante e persone compresi. Si vedeva acqua solo perché il vano sta a sinistra
+e a sinistra, nella copia ingrandita, c'è ancora acqua — ma a una scala diversa,
+e ruotando ruotava un divano ingrandito dietro il vetro.
+
+`salone-da-filmato.py` adesso ritaglia la regione che è **solo mare e cielo**,
+dedotta dalle rette del vano e non scelta a occhio, e la specchia in orizzontale
+fino a un 16:9 esatto — 1096×616, **nessun riscalamento**, quindi nessuna
+perdita di nitidezza e onde alla loro scala. L'ingrandimento residuo scende da
+1,55 a 1,15, che è solo quello che serve alla rotazione.
+
+### 3 · Due difetti di generazione, tolti tagliando dove combacia
+
+Il gesto del braccio a 4,7-5,4 s e le braccia che si compenetrano a 10,6-11,7 s.
+Non si taglia a caso: si **cerca**, in una finestra attorno all'intervallo, la
+coppia di fotogrammi che costa meno — misurata sul lato stanza, perché
+dall'altra parte c'è acqua che non combacia mai e coprirebbe il segnale.
+
+| da togliere | taglio trovato | costo |
+|---|---|---|
+| 4,6-5,5 s | 0,67 → 9,50 s | 2,7× un fotogramma adiacente |
+| 10,6-11,7 s | 10,17 → 14,17 s | 7,1× |
+
+Il primo cade sul punto in cui la clip torna su sé stessa: toglie il gesto **e**
+una delle tre ripetizioni. Il secondo costa sette volte e si vedrebbe, quindi la
+**dissolvenza si adatta al costo** — 1,12 s invece di 0,4. Su un'inquadratura
+ferma con due persone sedute una dissolvenza lunga è grammatica, non un errore
+nascosto. La clip passa da 30,0 a 15,65 s e da 12 MB a 0,98.
+
+### 4 · L'attrito, e l'invito a scendere
+
+*«quando parte la clip devi bloccare un attimo lo scroll»* e *«dopo 3 secondi
+devi far apparire un messaggio scroll»*. Sono i due tempi dello stesso momento:
+mezzo secondo in cui la pagina non cede — **mezzo, non tre**, che è la
+differenza fra un segno e un guasto — e poi, quando lo sguardo ha finito, il
+permesso di andare oltre. Una volta sola, all'apertura, e non con movimento
+ridotto.
+
+### 5 · Le sequenze 2-6 tacciono
+
+*«non serve a nulla, non legge nessuno quelle cose»*. Le battute restano come
+**stati** — camera, taglio, regole di stile dipendono da `data-battuta` — ma
+smettono di parlare.
+
+L'unica perdita vera è *«Turn it on»*, che era la sola istruzione del sito. Non
+si compensa con altro testo: si compensa con **l'interruttore**, che in quella
+battuta adesso pulsa finché non viene toccato.
+
+### 6 · «Che la nave potesse girare l'ho capito ora»
+
+L'ha scritto **il committente**, dopo giorni passati su questo sito. Il
+suggerimento stava a 9 px in un angolo, in inchiostro tenue, e sotto i 900 px
+era `display:none` — cioè da telefono non lo scopriva nessuno, sul dispositivo
+dove il gesto è più naturale.
+
+Se non lo scopre chi l'ha commissionato, non lo scopre nessun giurato. Adesso
+sta sotto la nave, ha la dimensione di un'etichetta, porta il segno del gesto, e
+**su telefono c'è**.
+
+---
+
+## 0-sexies · Con movimento ridotto il sito si riduce, non si spegne `[x]`
+
+*«deve partire su tutti gli schermi anche su chi disattiva le animazioni»* — ed
+era già una regola data e disattesa.
+
+Chi aveva la preferenza attiva non riceveva un sito più calmo: ne riceveva una
+**fotografia**. Tre cose si spegnevano insieme, e la terza per sbaglio:
+
+- `simulazione.js` congelava la nave al proprio angolo di picco;
+- `index.js` non faceva avanzare né l'orologio né le onde;
+- `demo.js` non avviava il ciclo di disegno — e **dentro quel ciclo vive il
+  video del salone**. Nessuno aveva deciso di fermarlo: si è fermato perché era
+  attaccato a qualcosa che qualcun altro spegneva.
+
+Il difetto vestibolare non è il movimento, è l'**ampiezza** del movimento.
+Quindici gradi a tutto schermo sono un problema, cinque no. La forzante scende a
+un terzo e tutto il resto gira identico. `collaudo-ridotto.mjs` misura due volte
+— con e senza la preferenza — perché «si muove» e «si muove meno» sono due
+requisiti diversi che si contraddicono se se ne controlla uno solo.
+
+---
+
+## 0-septies · Il clic non teletrasporta più la nave `[x]`
+
+Difetto **mio**, introdotto tre ore prima curando quello opposto, e trovato da
+una revisione esterna. Il clic sulla manopola chiamava `sim.scalda()`, che
+integra 150 secondi in un colpo:
+
+| | salto nel fotogramma del clic |
+|---|---|
+| mare 4 → 5 | **6,27°** |
+| mare 2 → 5 | 1,94° |
+| un fotogramma normale | 0,043° |
+
+Centoquarantasei volte. E il mio cancello non poteva vederlo: misura
+l'escursione picco-picco *prima* e *dopo*, e in mezzo c'era un taglio di
+montaggio che nessuna delle due misure poteva contenere. **Una misura fra due
+stati non vede cosa succede nel passaggio.**
+
+La cura è una proprietà dell'equazione, non un espediente: il rollio nudo è
+**lineare** nella forzante, quindi il regime nel mare *b* è quello nel mare *a*
+moltiplicato per il rapporto delle ampiezze — stessa orbita, stessa fase, scala
+diversa. Basta moltiplicare angolo e velocità per quel rapporto, spalmato su
+1,6 s applicando a ogni passo la radice `dt`-esima.
+
+Il caso peggiore scende da 6,27° a 0,234° per fotogramma, cioè **1,7 volte la
+velocità angolare che la nave fa da sola** — dentro il suo moto naturale. E
+`collaudo-manopola.mjs` adesso campiona **a cavallo** del gesto, non prima e
+dopo.
+
+Resta lento un caso solo, e va detto: da mare **zero** il rapporto non esiste,
+e l'ampiezza deve montare davvero con la sua costante di 25 secondi. Da una
+calma piatta il mare ci mette del tempo ad arrivare.
+
+---
+
+## 0-octies · Il salone deve potersi attraversare `[ ]` — **il passo che resta**
+
+Questa sezione era nel piano a `2c52cf0` ed **è sparita** mentre riscrivevo i
+passi 0-bis e 0-ter. Segnalato da una revisione, verificato: è vero, e non è una
+svista da poco. È l'unico passo che cambia la categoria del sito, ed era stato
+sostituito da lavoro su un filmato — cioè esattamente la deriva che il passo
+serviva a evitare.
+
+Rimessa qui, intera, e non si tocca finché non è fatta.
+
+### Perché è il passo che conta
+
+*«questi devono avere la possibilità di muoversi, altrimenti avrei fatto un
+filmato»*. Oggi il salone sono due piani con sopra delle texture. La camera ci
+passa davanti, non dentro: spostandola, nessuna superficie si comporta come la
+superficie che è. **Un piano fotografico è un filmato con dei passi in più.**
+
+Tutto quello che è stato fatto in queste ore — la stanza che rolla, la finestra
+di solo mare, i tagli, l'attrito — rende il capitolo migliore. Nessuna di quelle
+cose gli dà **volume**.
+
+### Cosa NON si fa
+
+Non si modella il salone. La fotografia è l'asset più forte del sito — legno,
+lampada accesa, due persone vere — e sostituirla con mobili costruiti a mano
+significherebbe buttare l'unica cosa che oggi *non* sembra CG.
+
+### Cosa si fa: la fotografia proiettata su un volume
+
+Si costruisce il guscio grezzo della stanza — pavimento, soffitto, le due
+murate, la paratia di fondo, il vano del finestrone — e ci si **proietta sopra
+la clip dalla posizione della camera che l'ha ripresa**. Da quel punto di vista
+l'immagine è identica a oggi, pixel per pixel. Spostandosi, ogni superficie si
+comporta come la superficie che è: il montante copre il divano, il mare scorre
+dietro il vano, il pavimento fugge.
+
+È la stessa idea del resto del sito applicata a un'immagine invece che a una
+carena: **ciò che è fotografia si guarda, ma deve stare dove starebbe.**
+
+### Il punto difficile, e come si verifica
+
+La proiezione vale solo se la camera che proietta è nella stessa posa di quella
+che ha ripreso. Sbagliarla di poco si vede subito: i bordi del finestrone
+proiettato non cadono su quelli modellati.
+
+Si tara sulle linee della fotografia — e tre di quelle linee **sono già
+misurate**: `salone-da-filmato.py` ha adattato al bordo del vano la diagonale
+alta (59,46° dalla verticale), il montante (−0,25°) e la battuta bassa
+(−55,90°), con un errore medio di 1,37 px. Da tre rette e un'ipotesi di
+rettangolo si ricava la posa della camera. **Il lavoro di calibrazione è già
+mezzo fatto e non lo sapevo.**
+
+Due cancelli:
+
+1. **i bordi proiettati devono cadere su quelli costruiti** entro pochi pixel;
+2. **muovendo la camera di mezza unità, le occlusioni devono cambiare.** Un
+   billboard non cambia. Si misura contando i pixel che cambiano fra due pose
+   vicine in una regione dove un oggetto vicino passa davanti a uno lontano.
+
+### E il mare torna a essere quello della scena
+
+Il passo 0-bis è stato abbandonato perché dal vetro l'acqua 3D rendeva un vano
+vuoto — 67,4% di superficie piatta contro 18,1%. Ma la ragione era l'**angolo**:
+da dentro si guarda l'acqua radente da 3,6 m, e a quell'angolo la superficie
+attuale non ha dettaglio.
+
+Con il volume, quel problema si può affrontare dalla parte giusta: non
+sostituendo due pezzi, ma **migliorando l'oceano** — creste vicine, glitter
+speculare, una normale di dettaglio a corto raggio, schiuma. È lavoro che serve
+comunque al fotorealismo generale, e la misura per decidere se è pronto esiste
+già ed è quella: dettaglio e superficie piatta dentro il vano.
+
+
+---
+
 ## 1 · Le UV `[ ]`
 
 **Un atlante solo per l'impianto**, non uno per pezzo e non uno per materiale.
@@ -436,4 +658,8 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | 27 ago, 12:15 | 0-quater | **«l'immagine non si muove»**: l'integratore partiva da fermo e l'ampiezza monta in 25 s di costante di tempo. Adesso la traversata è già cominciata |
 | 27 ago, 12:15 | — | revisione delle 08:30: corrette la promessa fisica falsa in `#offerta`, i 180,6/181,4 KB (legando anche la prosa alla misura) e l'assenza di cancello su `COLOR_0` |
 | 27 ago, 11:10 | 0-ter | ripresa nuova misurata e maschera estratta (1,37 px). Non spedita: fuori dal cancello di 0,04 gradi, e quattro stabilizzazioni su quattro l'hanno peggiorata |
+| 27 ago, 15:00 | 0-octies | **rimessa nel piano** la specifica del salone attraversabile: era sparita riscrivendo 0-bis e 0-ter, e l ha trovata una revisione. E il lavoro di calibrazione e gia mezzo fatto: le tre rette del vano sono misurate |
+| 27 ago, 14:30 | 0-quinquies | il salone risponde: la stanza rolla e l orizzonte no, il mare ha una finestra sua, due difetti di generazione tagliati, attrito e invito, sequenze 2-6 mute, la rotazione si scopre |
+| 27 ago, 14:30 | 0-sexies | movimento ridotto: si riduce, non si spegne. Il ciclo spento fermava anche il video |
+| 27 ago, 14:30 | 0-septies | tolto il teletrasporto che avevo introdotto io: 6,27 gradi in un fotogramma diventano 0,23 |
 | 27 ago, 13:10 | 0-ter | **spedita.** Il tetto del cancello adesso si DERIVA dal rientro dichiarato della maschera invece di essere un numero scelto: 10,9 px di scivolamento contro 16 di margine |

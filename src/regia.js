@@ -82,32 +82,36 @@ const SEQUENZA = [
   {
     id: 'emerge',
     da: 0.00, a: 0.13,
-    titolo: 'Now from the outside',
-    testo: 'Forty metres of hull, in the same conditions. Above the line is the product you buy; below it, the part that makes it work.'
   },
   {
     id: 'mare',
     da: 0.13, a: 0.30,
-    titolo: 'The same sea, from outside',
-    testo: 'This is the water that was running past the window a minute ago. Sea state 4 — a bare hull damps almost nothing against it, which is the whole reason stabilisers exist.'
+    /**
+     * QUI C'ERA UNA FRASE CHE IL CODICE NON SOSTIENE PIU'.
+     *
+     * Diceva "this is the water that was running past the window a minute
+     * ago". Lo e' stato per un commit: il vetro era bucato sull'acqua della
+     * scena. Poi quella strada e' stata abbandonata -- il vano diventava vuoto,
+     * 67,4% di superficie piatta contro 18,1% -- e dentro e' tornato il
+     * filmato. La battuta e' rimasta, ed e' diventata una bugia sul proprio
+     * prodotto: dentro c'e' una clip, fuori c'e' geometria procedurale.
+     *
+     * Segnalato da una revisione. Adesso dice cio' che e' vero e verificabile:
+     * lo STATO del mare e l'integratore sono gli stessi. La superficie no, e
+     * finche' non lo sara' il sito non lo afferma.
+     */
   },
   {
     id: 'invito',
     da: 0.30, a: 0.44,
-    titolo: 'The system is off',
-    testo: 'Turn it on. It is the only thing you are asked to do — and if you do not, the ship keeps rolling.'
   },
   {
     id: 'calma',
     da: 0.44, a: 0.60,
-    titolo: 'The ship settles',
-    testo: 'The reduction is not declared. Two simulations run in parallel — one with the fins, one without — and the number is the ratio between their steady-state RMS.'
   },
   {
     id: 'taglio',
     da: 0.60, a: 0.80,
-    titolo: 'The cut enters the hull',
-    testo: 'The section plane runs along the ship. The cut face is not an approximation: it is the same curve that generates the hull.'
   },
   {
     id: 'meccanismo',
@@ -246,9 +250,30 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
     if (indice === ultima) return
     ultima = indice
     palco.dataset.battuta = b.id
-    num.textContent = String(indice + 1).padStart(2, '0')
-    tit.textContent = b.titolo
-    txt.textContent = b.testo
+    /**
+     * --- LE BATTUTE 2-6 NON PARLANO PIU'
+     *
+     * Il committente: *"dalla sequenza 2 alla 6 va cancellata, non serve a
+     * nulla, non legge nessuno quelle cose"*. Ha ragione, e la ragione e' la
+     * stessa che il progetto si e' gia' dato scegliendo il bersaglio: i siti
+     * che vincono sono cose con cui si gioca, non cose che spiegano. Cinque
+     * schermate di didascalia fra l apertura e il meccanismo erano cinque
+     * inviti a leggere invece che a toccare.
+     *
+     * Le battute restano come STATI -- la camera, il taglio, le regole di
+     * stile dipendono da `data-battuta` -- ma smettono di parlare. Chi non ha
+     * niente da dire non lascia un riquadro vuoto: si spegne.
+     *
+     * L unica perdita vera e' "Turn it on", che era la sola istruzione del
+     * sito. Non si compensa con altro testo: si compensa con l interruttore,
+     * che in quella battuta si accende da solo -- e che adesso lo fa in modo
+     * piu' netto. Un comando che si fa notare batte una frase che lo descrive.
+     */
+    const muta = !b.titolo && !b.testo
+    didascalia.dataset.muta = muta ? 'si' : 'no'
+    num.textContent = muta ? '' : String(indice + 1).padStart(2, '0')
+    tit.textContent = b.titolo || ''
+    txt.textContent = b.testo || ''
   }
 
   /**

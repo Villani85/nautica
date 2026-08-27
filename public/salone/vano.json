@@ -1,4 +1,5 @@
 {
- "rientro_px": 16,
- "perche": "di quanto la maschera rientra rispetto al vano misurato. collaudo-filmato.mjs ci deriva il proprio tetto: se il vano scivola di piu di questo, si apre un foro nel legno."
+ "rientro_px": 24,
+ "orizzonte_mare": 0.5422,
+ "perche": "rientro_px: di quanto la maschera rientra rispetto al vano misurato; collaudo-filmato.mjs ci deriva il proprio tetto. orizzonte_mare: dove sta l orizzonte dentro salone-mare.mp4, frazione dall alto; e il perno attorno a cui il salone lo ruota."
 }

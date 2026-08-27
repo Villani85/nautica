@@ -111,7 +111,25 @@ let file = process.argv[2]
 if (!file) {
   const dir = RADICE + 'public/filmati'
   let elenco = []
-  try { elenco = readdirSync(dir).filter(f => f.endsWith('.mp4')) } catch { /* cartella assente */ }
+  /**
+   * --- UNA CLIP CHE NON HA NIENTE DI FERMO NON SI PUO' MISURARE QUI
+   *
+   * `salone-mare.mp4` e' solo mare e cielo: non contiene un solo spigolo che
+   * stia fermo, e questo cancello misura proprio lo spostamento di due bordi
+   * di riferimento. Su acqua che scorre trova bordi ovunque e da nessuna parte,
+   * e produrrebbe un numero che non descrive niente -- il modo peggiore di
+   * fallire, perche' sembra una misura.
+   *
+   * Escluderla non e' un buco: la sua stabilita' e' quella della sorgente da
+   * cui viene ritagliata, che e' `salone-largo.mp4`, ed E' misurata qui sopra.
+   * Se la camera si muove, si muove in tutte e due.
+   */
+  const SENZA_GEOMETRIA = ['salone-mare.mp4']
+  try {
+    elenco = readdirSync(dir)
+      .filter(f => f.endsWith('.mp4'))
+      .filter(f => !SENZA_GEOMETRIA.includes(f))
+  } catch { /* cartella assente */ }
   if (!elenco.length) {
     console.error('  ROTTO  nessun filmato in public/filmati: il capitolo del salone non ha i suoi asset.')
     process.exit(1)

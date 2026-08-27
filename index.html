@@ -85,7 +85,12 @@
   <div class="linea linea--acqua" aria-hidden="true"></div>
 
   <p id="patto" class="patto">Illustrative model · Generic geometry · Normalised values</p>
-  <p id="nota" class="nota">Drag, or use the arrow keys, to rotate</p>
+  <!-- Non e' una nota a margine: e' l'unico posto in cui il sito dice che la
+       nave si puo' girare. Stava a 9 px in un angolo, e su telefono era
+       `display:none` -- cioe' da mobile non lo scopriva nessuno. Il committente
+       l'ha detto dopo giorni di lavoro sul proprio sito: "che la nave potesse
+       girare l'ho capito ora". -->
+  <p id="nota" class="nota"><i aria-hidden="true"></i><span>Drag to rotate</span></p>
 
   <div class="pannello pannello--energia" id="energia">
     <div class="barra" id="b-carico">
@@ -115,6 +120,13 @@
       <span>Stabilisation</span>
     </button>
   </div>
+
+  <!-- L'invito a scendere: compare dopo tre secondi e sparisce al primo gesto.
+       Non e' un'istruzione, e' un permesso: la prima schermata chiede di essere
+       guardata, e questo dice quando si puo' andare oltre. -->
+  <p class="invito" id="invito-scorri" data-visibile="no" aria-hidden="true">
+    <span>Scroll</span><i></i>
+  </p>
 
   <button type="button" id="apri-chiusura" class="richiamo">For your product</button>
 

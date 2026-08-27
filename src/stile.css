@@ -334,13 +334,41 @@ html[data-unica="si"] .atto--demo{margin-top:0}
   font-family:var(--t-dato);font-size:9px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--acqua-tenue);max-width:none;
 }
+/* --- IL SITO DEVE DIRE CHE LA NAVE SI GIRA, E DIRLO DOVE SI GUARDA
+
+   Stava a 9 px nell'angolo in alto a destra, in inchiostro tenue, e sotto i
+   900 px spariva del tutto. Risultato misurabile: il committente stesso, dopo
+   giorni passati su questo sito, ha scritto "che la nave potesse girare l'ho
+   capito ora". Se non lo scopre chi l'ha commissionato, non lo scopre nessuno
+   -- e la Usability pesa il 30% del voto.
+
+   Adesso sta sotto la nave, dove l'occhio gia' guarda, ha la dimensione di
+   un'etichetta e non di una nota legale, e porta il segno del gesto: due punte
+   che vanno in direzioni opposte. Sparisce al primo trascinamento, perche' un
+   suggerimento che resta dopo essere stato capito diventa un rimprovero. */
 .nota{
   font-variation-settings:var(--v-dato);
-  position:absolute;right:var(--u4);top:var(--u12);z-index:6;
-  font-family:var(--t-dato);font-size:9px;letter-spacing:.18em;
+  position:absolute;left:50%;transform:translateX(-50%);bottom:31vh;z-index:6;
+  display:flex;align-items:center;gap:.55rem;
+  font-family:var(--t-dato);font-size:11px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--inchiostro-tenue);max-width:none;
   transition:opacity .5s;
 }
+/* le due punte del gesto: si allontanano e tornano, una volta ogni tre secondi */
+.nota i{
+  display:block;width:var(--u5);height:1px;background:currentColor;position:relative;
+}
+.nota i::before,.nota i::after{
+  content:'';position:absolute;top:-3px;width:7px;height:7px;
+  border-top:1px solid currentColor;border-left:1px solid currentColor;
+}
+.nota i::before{left:0;transform:rotate(-45deg);animation:tira 3s ease-in-out infinite}
+.nota i::after{right:0;transform:rotate(135deg);animation:tira 3s ease-in-out infinite reverse}
+@keyframes tira{
+  0%,100%{opacity:.45;margin-left:0;margin-right:0}
+  50%{opacity:1;margin-left:-3px;margin-right:-3px}
+}
+@media (prefers-reduced-motion:reduce){ .nota i::before,.nota i::after{animation:none} }
 .nota[data-visto="si"]{opacity:0}
 
 .pannello{position:absolute;z-index:6;font-family:var(--t-dato)}
@@ -802,7 +830,10 @@ html[data-unica="si"] .atto--demo{margin-top:0}
   .testata nav{display:none}
 
   /* "Drag, or use the arrow keys" e' meta' falso su uno schermo tattile. */
-  .nota{display:none}
+  /* Qui c'era `display:none`, cioe' da telefono nessuno poteva sapere che la
+     nave si gira. Sul tattile il gesto e' anche piu' naturale che col mouse:
+     e' l'ultimo posto in cui nascondere l'unico invito a toccare. */
+  .nota{font-size:10px;bottom:34vh}
   .patto{left:var(--u2);font-size:8px;letter-spacing:.14em}
 
   /* le quattro bande, dal basso verso l'alto */
@@ -944,3 +975,53 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 /* L'ultimo bersaglio sotto misura: il collegamento del contatto, 463x31.
    Largo lo era, alto no. */
 .indirizzo a{display:inline-flex;align-items:center;min-height:44px}
+
+/* --- L'INVITO A SCENDERE, E LA DIDASCALIA CHE TACE
+
+   Due cose che arrivano dallo stesso momento: la prima schermata deve essere
+   guardata prima di essere superata, e dalla seconda alla sesta battuta non c e
+   piu' niente da leggere. */
+
+.invito{
+  /* SOPRA i comandi, non addosso: alla prima prova finiva sull'etichetta
+     SPEED. La barra dei comandi arriva a circa un quarto dell'altezza, quindi
+     l'invito sta piu' su e resta al centro, dove l'occhio torna. */
+  position:fixed;left:50%;bottom:32vh;transform:translateX(-50%);
+  z-index:9;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:.5rem;
+  font:var(--et);letter-spacing:.22em;text-transform:uppercase;
+  color:var(--acqua-tenue);
+  opacity:0;transition:opacity .7s ease;
+}
+.invito[data-visibile="si"]{opacity:1}
+/* la stanghetta scende e risale: dice la direzione senza scriverla */
+.invito i{
+  display:block;width:1px;height:var(--u5);background:currentColor;
+  transform-origin:top;animation:scendi 2.2s ease-in-out infinite;
+}
+@keyframes scendi{
+  0%,100%{transform:scaleY(.35);opacity:.35}
+  50%{transform:scaleY(1);opacity:.9}
+}
+/* chi ha chiesto movimento ridotto riceve il segno, non il battito */
+@media (prefers-reduced-motion:reduce){ .invito i{animation:none;transform:scaleY(1)} }
+
+/* Una didascalia che non ha niente da dire non lascia un riquadro vuoto. */
+.didascalia[data-muta="si"]{opacity:0;pointer-events:none}
+
+/* --- E L'INTERRUTTORE CHIEDE PIU' FORTE
+
+   La battuta "invito" era l unica istruzione del sito: "Turn it on". E' stata
+   tolta insieme alle altre quattro, e non si compensa con altro testo -- si
+   compensa col comando. Qui non cambia colore e basta: pulsa, una volta ogni
+   due secondi, finche' non viene toccato. */
+.palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){
+  animation:chiama 2s ease-in-out infinite;
+}
+@keyframes chiama{
+  0%,100%{box-shadow:0 0 0 0 rgba(79,224,196,0)}
+  50%{box-shadow:0 0 0 6px rgba(79,224,196,.18)}
+}
+@media (prefers-reduced-motion:reduce){
+  .palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){animation:none}
+}

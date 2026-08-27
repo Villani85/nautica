@@ -455,7 +455,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     ultimoStato = sim.S
     const dt = Math.min(orologio.getDelta(), 0.05)
     frame++
-    if (!sim.S.ridotto) t += dt
+    /**
+     * L orologio della scena avanza SEMPRE, anche con movimento ridotto: da
+     * lui dipendono le onde e, indirettamente, il ciclo di disegno che fa
+     * girare il video del salone. Spegnerlo non faceva un sito piu' calmo,
+     * faceva una fotografia. Vedi `simulazione.js`: si riduce, non si spegne.
+     */
+    t += dt
 
     // Il passo della simulazione non lo fa piu' questa scena: lo fa `stato.js`,
     // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo
@@ -494,7 +500,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // il mare con quella del fotogramma precedente. Uno sfasamento di un
     // fotogramma su un raggio di 5,5 unita' non si vede — la camera si sposta
     // di millesimi per giro.
-    if (!sim.S.ridotto) acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z)
+    acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z)
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
     acqua.chiarisci(spaccato)

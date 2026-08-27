@@ -3,6 +3,7 @@ import { sim, statoCambiato } from './stato.js'
 import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
 import { creaRegia } from './regia.js'
+import { attritoDiApertura } from './ui/attrito.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -58,7 +59,9 @@ export function avviaDimostrazione () {
   const passo = (marca) => { scena.disegna(sim, marca); aggiornaLetture(sim.S) }
 
   function avviaCiclo () {
-    if (inCorso || sim.S.ridotto) return
+    // il ciclo parte SEMPRE: con movimento ridotto la scena e' piu' piccola,
+    // non ferma. Un ciclo spento ferma anche il video del salone.
+    if (inCorso) return
     inCorso = true
     scena.render.setAnimationLoop(passo)
     scena.accendi?.()
@@ -80,7 +83,7 @@ export function avviaDimostrazione () {
     const uno = (marca) => { passo(marca); if (++n < 45) requestAnimationFrame(uno) }
     requestAnimationFrame(uno)
   }
-  const risveglia = () => { if (sim.S.ridotto) sveglia(); else avviaCiclo() }
+  const risveglia = () => avviaCiclo()
 
   /**
    * ─── IL PALCO E' QUELLO DELLA DIMOSTRAZIONE, NON IL PRIMO CHE CAPITA
@@ -137,7 +140,19 @@ export function avviaDimostrazione () {
   preferenza.addEventListener('change', (e) => {
     sim.S.ridotto = e.matches
     sim.azzeraPicchi()
-    if (e.matches) { fermaCiclo(); sveglia() } else avviaCiclo()
+    /**
+     * NON si ferma piu' niente. Qui c'era `if (e.matches) { fermaCiclo();
+     * sveglia() }`, cioe' la vecchia scorciatoia: attivare la preferenza a
+     * sito aperto lo faceva diventare una fotografia -- e con lui si fermava
+     * il VIDEO del salone, che vive dentro quel ciclo e che nessuno aveva
+     * deciso di spegnere.
+     *
+     * Adesso il ciclo gira sempre e a cambiare e' l'ampiezza, dentro
+     * `simulazione.js`. Il ramo resta per un motivo solo: assicurarsi che il
+     * ciclo sia acceso anche se la preferenza cambia mentre la sezione e'
+     * ferma.
+     */
+    avviaCiclo()
     statoCambiato()   // vale per tutti i capitoli, non solo per questo
   })
 
@@ -207,6 +222,16 @@ export function avviaDimostrazione () {
   }
 
   addEventListener('scroll', leggiScorrimento, { passive: true })
+
+  /**
+   * L'apertura chiede mezzo secondo prima di cedere, e dopo tre offre di
+   * scendere. Sta qui e non dentro la regia perche' e' una proprieta' della
+   * VISITA -- succede una volta -- non della battuta, che si puo' riattraversare.
+   */
+  attritoDiApertura({
+    invito: document.getElementById('invito-scorri'),
+    ridotto: sim.S.ridotto
+  })
   addEventListener('resize', leggiScorrimento)
   leggiScorrimento()
 

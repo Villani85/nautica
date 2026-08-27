@@ -57,16 +57,63 @@ import {
  */
 
 const CALMA = 'filmati/salone-largo.mp4'
-const TESA = 'filmati/salone-teso.mp4'
+/**
+ * LA POSA PUNTELLATA E' SPENTA, e va detto perche'.
+ *
+ * `salone-teso.mp4` viene da un'altra generazione: e' una ripresa NOTTURNA con
+ * il finestrone nero e un'inquadratura diversa -- 72 livelli su 255 di
+ * differenza media dalla clip calma. Dissolvendo su di essa a rollio alto il
+ * sito mostrerebbe un altro salone, di notte, senza mare, proprio nel momento
+ * in cui rivendica che sopra e sotto la linea sono la stessa traversata.
+ *
+ * Uno strato che mostra un'altra stanza e' peggio di nessuno strato. Resta
+ * spento finche' non esiste una posa puntellata girata DALLA STESSA ripresa: a
+ * quel punto basta rimettere il nome qui.
+ *
+ * E c'e' un guadagno collaterale che una revisione aveva chiesto: si torna a
+ * due decodificatori invece di tre, che su un telefono e' batteria e calore.
+ */
+const TESA = null
+/**
+ * IL MARE HA UNA CLIP SUA, ed e' la correzione che serviva.
+ *
+ * Dietro il vetro c era la CLIP DELLA STANZA ingrandita 1,55 volte -- divano,
+ * montante e persone compresi. Attraverso il buco si vedeva acqua solo perche'
+ * il vano sta a sinistra e a sinistra, nella copia ingrandita, c e' ancora
+ * acqua. Ma le onde erano a una scala diversa da quelle del vano, e ruotando
+ * ruotava un divano ingrandito dietro il vetro.
+ *
+ * Il committente: *"il mare devi creare una finestra, altrimenti il movimento
+ * e' incoerente rispetto all'attuale movimento del mare"*.
+ *
+ * `salone-da-filmato.py` ritaglia dalla ripresa la regione che e' solo mare e
+ * cielo -- dedotta dalle rette del vano, non scelta -- e la specchia in
+ * orizzontale fino a un 16:9 esatto, cosi' non serve nessun riscalamento.
+ * Dietro il vetro adesso c e' soltanto mare, alla sua scala.
+ */
+const MARE = 'filmati/salone-mare.mp4'
 const MASCHERA = 'salone/finestrone.png'
 
 /** Quanto sta piu' indietro il mare rispetto alla stanza, in unita' di scena. */
 const PROFONDITA = 0.45
 
-/** Il mare copre gli angoli che l'inclinazione scopre. Vedi `composito.js`. */
-const INGRANDIMENTO = 1.55
-/** Quanto in alto sta l'orizzonte dentro la clip: 45,9% dall'alto. */
-const ORIZZONTE = 0.459
+/**
+ * Quanto la clip del mare eccede il riquadro, per non scoprire gli angoli
+ * quando ruota. Prima era 1,55 e serviva a due cose insieme: coprire la
+ * rotazione E trovare dell'acqua dentro una clip che era per meta' stanza.
+ * Adesso la clip e' gia' tutta mare, quindi resta solo il primo compito, ed e'
+ * un calcolo: un riquadro 16:9 ruotato di 12 gradi ha bisogno di
+ * cos12 + (9/16)*sin12 = 1,095. Con un po' di margine, 1,15.
+ */
+const INGRANDIMENTO = 1.15
+/**
+ * Dove sta l'orizzonte DENTRO `salone-mare.mp4`: e' il perno della rotazione.
+ * Lo misura `salone-da-filmato.py` sulla mediana temporale -- dove le onde si
+ * annullano e la linea e' pulita -- e lo scrive in `public/salone/vano.json`.
+ * Qui e' copiato, e `collaudo-filmato.mjs` verifica che le due copie coincidano:
+ * un numero misurato che vive in due posti deve avere qualcuno che li confronta.
+ */
+const ORIZZONTE = 0.539
 
 /** Sopra questo rollio ci si irrigidisce; sotto CALMO si torna comodi. */
 const ACCENDE = 5.0
@@ -122,7 +169,8 @@ export function creaSalone3D (base, tuga) {
   }
 
   const vCalma = video(base + CALMA)
-  const vTesa = video(base + TESA)
+  const vTesa = TESA ? video(base + TESA) : null
+  const vMare = video(base + MARE)
   const maschera = new TextureLoader().load(base + MASCHERA)
 
   const geo = new PlaneGeometry(larg, alt)
@@ -156,7 +204,7 @@ export function creaSalone3D (base, tuga) {
    * minore di uno mostra una porzione piu' piccola della clip, ingrandita.
    * E' quello che copre gli angoli quando l'immagine gira.
    */
-  const mareTex = tex(vCalma)
+  const mareTex = tex(vMare)
   mareTex.center.set(0.5, 1 - ORIZZONTE)   // il PIVOT E' L'ORIZZONTE
   mareTex.repeat.set(1 / INGRANDIMENTO, 1 / INGRANDIMENTO)
 
@@ -164,19 +212,60 @@ export function creaSalone3D (base, tuga) {
   mare.position.z = -PROFONDITA
   gruppo.add(mare)
 
-  /** 2 · LA STANZA — stessa clip, il vetro bucato dalla maschera, ferma. */
+  /**
+   * 2 · LA STANZA — e adesso e' LEI che rolla.
+   *
+   * --- ERA AL CONTRARIO, E IL COMMITTENTE L'AVEVA GIA' DETTO
+   *
+   * Fin qui la stanza stava ferma e a inclinarsi era il mare. Da dentro si
+   * vedeva un salotto immobile e un orizzonte che si spostava di un grado:
+   * *"la barca si deve muovere"*, e aveva ragione -- non si muoveva niente di
+   * cio' che l'occhio usa come riferimento.
+   *
+   * La regola che aveva chiesto e' l'opposta, e l'aveva scritta prima:
+   * *"per creare il movimento della barca ma l'orizzonte che non si muove"*.
+   * E' anche quella di `docs/09`: **la stanza rolla, l'orizzonte no.**
+   *
+   * --- COME, SENZA SCOPRIRE GLI ANGOLI
+   *
+   * A ruotare non e' il piano ma la TEXTURE dentro un piano fermo -- la stessa
+   * soluzione del mare, per la stessa ragione: un piano che ruota porta fuori
+   * dal riquadro i propri angoli. Qui pero' ruotano DUE texture insieme, la
+   * fotografia e la sua maschera, perche' il buco del vetro appartiene alla
+   * stanza e deve inclinarsi con lei. Un solo angolo, applicato a tutte e due:
+   * se divergono, il vano scivola sotto il ritaglio.
+   *
+   * --- E L'INGRANDIMENTO SI CALCOLA A OGNI FOTOGRAMMA
+   *
+   * Ruotando, un riquadro 16:9 ha bisogno di `cos|a| + (9/16)*sin|a|` volte se
+   * stesso per non scoprire gli angoli: 1,00 da fermo, 1,19 a dodici gradi.
+   * Tenerlo fisso al massimo vorrebbe dire buttare il 16% della fotografia
+   * anche quando il mare e' calmo -- cioe' pagare sempre il prezzo del caso
+   * peggiore. Si calcola invece dall'angolo vero, e da fermo la fotografia e'
+   * intera.
+   */
+  const stanzaTex = tex(vCalma)
+  const mascheraRuota = maschera.clone()
+  mascheraRuota.needsUpdate = true
+  const tesaTex = vTesa ? tex(vTesa) : null
+  const mascheraTesa = vTesa ? maschera.clone() : null
+  if (mascheraTesa) mascheraTesa.needsUpdate = true
+  const RUOTANO = [stanzaTex, mascheraRuota, tesaTex, mascheraTesa].filter(Boolean)
+  for (const t of RUOTANO) t.center.set(0.5, 0.5)
+
   const stanza = new Mesh(geo, new MeshBasicMaterial({
-    map: tex(vCalma), alphaMap: maschera, transparent: true, toneMapped: false
+    map: stanzaTex, alphaMap: mascheraRuota, transparent: true, toneMapped: false
   }))
   stanza.position.z = 0.004
   gruppo.add(stanza)
 
   /** 3 · LA POSA PUNTELLATA, sopra la calma quando la stanza rolla davvero. */
-  const tesa = new Mesh(geo, new MeshBasicMaterial({
-    map: tex(vTesa), alphaMap: maschera, transparent: true, opacity: 0, toneMapped: false
-  }))
-  tesa.position.z = 0.008
-  gruppo.add(tesa)
+  const tesa = vTesa
+    ? new Mesh(geo, new MeshBasicMaterial({
+      map: tesaTex, alphaMap: mascheraTesa, transparent: true, opacity: 0, toneMapped: false
+    }))
+    : null
+  if (tesa) { tesa.position.z = 0.008; gruppo.add(tesa) }
 
   gruppo.position.set(0, tuga.quota, tuga.z)
   // guarda verso poppa: e' da li' che la camera arriva e da li' se ne va
@@ -195,10 +284,11 @@ export function creaSalone3D (base, tuga) {
 
   function riproduci () {
     vCalma.play().catch(() => {})
-    vTesa.play().catch(() => {})
+    vTesa?.play().catch(() => {})
+    vMare.play().catch(() => {})
     if (!sincro) {
       sincro = setInterval(() => {
-        if (vCalma.readyState > 1 &&
+        if (vTesa && vCalma.readyState > 1 &&
             Math.abs(vCalma.currentTime - vTesa.currentTime % (vTesa.duration || 1)) > RIALLINEA) {
           try { vTesa.currentTime = vCalma.currentTime % (vTesa.duration || 1) } catch {}
         }
@@ -220,20 +310,21 @@ export function creaSalone3D (base, tuga) {
    */
   function ferma () {
     vCalma.pause()
-    vTesa.pause()
+    vTesa?.pause()
+    vMare.pause()
     if (sincro) { clearInterval(sincro); sincro = 0 }
   }
 
   /** Rilascia tutto: texture, video, sorgenti. Per chi smonta la scena. */
   function smonta () {
     ferma()
-    for (const m of [mare, stanza, tesa]) {
+    for (const m of [mare, stanza, tesa].filter(Boolean)) {
       m.material.map?.dispose()
       m.material.alphaMap?.dispose()
       m.material.dispose()
       m.geometry.dispose()
     }
-    for (const v of [vCalma, vTesa]) { v.removeAttribute('src'); v.load(); v.remove() }
+    for (const v of [vCalma, vTesa, vMare].filter(Boolean)) { v.removeAttribute('src'); v.load(); v.remove() }
   }
 
   /**
@@ -260,12 +351,20 @@ export function creaSalone3D (base, tuga) {
     else if (a < CALMO) calmoDa += dt
     const vuole = calmoDa > CONVINCE ? 0 : (a > ACCENDE ? 1 : q)
     q += (vuole - q) * Math.min(1, dt * VELOCITA)
-    tesa.material.opacity = q
+    if (tesa) tesa.material.opacity = q
 
-    // Il mare si inclina, la stanza no: da dentro, il proprio salotto sta
-    // fermo. E a inclinarsi e' l'IMMAGINE dentro il piano, non il piano —
-    // altrimenti gli angoli escono dal riquadro. Vedi la nota sopra.
-    mareTex.rotation = MathUtils.degToRad(-gradi)
+    /**
+     * IL MARE NON RUOTA PIU'. A ruotare e' la stanza, che e' quello che si
+     * vede da dentro una barca: il proprio salotto si inclina, l'orizzonte no.
+     * La fotografia e la sua maschera girano insieme, e l'ingrandimento segue
+     * l'angolo invece di stare fermo al caso peggiore.
+     */
+    const inclina = MathUtils.degToRad(gradi)
+    const copre = Math.abs(Math.cos(inclina)) + (alt / larg) * Math.abs(Math.sin(inclina))
+    for (const t of RUOTANO) {
+      t.rotation = inclina
+      t.repeat.set(1 / copre, 1 / copre)
+    }
     ultimo = gradi
   }
 
@@ -276,7 +375,7 @@ export function creaSalone3D (base, tuga) {
     mare.material.opacity = o
     stanza.material.opacity = o
     mare.material.transparent = o < 0.999
-    tesa.material.opacity = q * o
+    if (tesa) tesa.material.opacity = q * o
   }
 
   return {

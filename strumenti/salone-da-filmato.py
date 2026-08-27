@@ -161,10 +161,14 @@ lim = np.where(yy <= ya, rette[0][0] * yy + rette[0][1],
 # Due strumenti, un contratto: questo dichiara quanto perdona, quello misura
 # quanto scivola. Nessuno dei due si fida di se stesso.
 #
-# 16 px coprono lo scivolamento misurato sulla ripresa buona -- deriva 3,1 px
+# 24 px: la ripresa senza ciclo si muove di piu' di quella precedente -- il
+# cancello ha misurato 17,3 px di scivolamento contro i 16 di allora, e ha
+# bocciato. Il numero non si alza a occhio: si alza fin sopra la misura, e il
+# cancello lo riverifica. Per riferimento, sulla ripresa precedente lo
+# scivolamento era -- deriva 3,1 px
 # piu (0,48% di scala + 0,34 gradi) per un raggio di 734 px, cioe 11,0 in
 # tutto -- con un margine che regge una ripresa un po peggiore.
-RIENTRO = 16
+RIENTRO = 24
 vano = np.clip(lim - RIENTRO - xx, 0, 2) / 2.0
 FUORI_SAL.mkdir(parents=True, exist_ok=True)
 # alphaMap vuole BIANCO dove resta opaco: la stanza. Il vetro va a nero.
@@ -245,6 +249,111 @@ def ff(argomenti):
         sys.exit((r.stderr or '(nessun messaggio)')[-800:])
 
 
+# --- 2-bis - IL PEZZO DA TOGLIERE, E DOVE TAGLIARLO ------------------------
+#
+# Fra 4,7 e 5,4 secondi l uomo alza il braccio con la mano aperta, in un gesto
+# senza motivo che il generatore ha inventato. In una clip che cicla lo si vede
+# ogni volta. Il committente ha autorizzato di toglierlo.
+#
+# Un taglio netto salterebbe: le persone si muovono molto. Ma i due fotogrammi
+# ai capi del taglio non devono essere QUALSIASI due -- devono essere i due che
+# si somigliano di piu'. Quindi non si sceglie dove tagliare: si CERCA, dentro
+# una finestra attorno all intervallo da togliere, la coppia (uscita, entrata)
+# che costa meno.
+#
+# Il costo si misura sul lato STANZA e non su tutto il quadro: dall altra parte
+# c e' acqua, che non combacia mai e che coprirebbe il segnale delle persone con
+# il proprio rumore. E' la stessa scelta che fa `collaudo-filmato.mjs` quando
+# decide su quale meta' misurare.
+#
+# Poi mezzo secondo di dissolvenza: sopra due pose che gia' combaciano non si
+# vede, e perdona l ultimo pixel di differenza.
+
+DA_TOGLIERE = []   # vedi DOPO_IL_DIFETTO: su questa ripresa conviene partire dopo
+
+# --- IL DIFETTO STA ALL INIZIO, QUINDI NON SI TAGLIA: SI PARTE DOPO
+#
+# Su `..._noloop.mp4` l unico difetto e' a 1,0-2,1 s, dove le braccia dei due si
+# compenetrano. Toglierlo con un taglio in mezzo costava 8,5 volte un fotogramma
+# adiacente -- si sarebbe visto. Ma un difetto all inizio non ha bisogno di un
+# taglio: basta cominciare dopo.
+#
+# E gia' che la clip CICLA, i due estremi non si scelgono a caso: si cerca la
+# coppia (inizio, fine) che rende invisibile IL GIRO. E' lo stesso criterio dei
+# tagli, applicato alla giunzione che l utente vede piu' spesso -- quella che
+# torna ogni volta che il video ricomincia.
+DOPO_IL_DIFETTO = 2.3     # secondi: l inizio non puo' cadere prima
+DURATA_MINIMA = 12.0      # sotto, la ripetizione si riconosce comunque
+FINESTRA_TAGLIO = 4.0         # di quanto si puo' spostare ciascun capo. A 0,7 il
+                              # taglio migliore costava 7,8 volte un fotogramma
+                              # adiacente; a 4,0 ne costa 2,7, perche' trova il
+                              # punto in cui la clip torna su se stessa
+# La dissolvenza si adatta al costo del taglio, e non e' un trucco: una
+# giunzione che costa due volte un fotogramma adiacente e' gia' invisibile e una
+# dissolvenza lunga la ammorbidirebbe inutilmente; una che ne costa sette si
+# vede, e su un'inquadratura ferma con due persone sedute una dissolvenza lunga
+# e' grammatica -- un raccordo -- non un errore nascosto.
+def dissolvenza_per (rapporto):
+    return min(1.2, max(0.30, 0.30 + (rapporto - 2.0) * 0.16))
+
+
+DISSOLVENZA = 0.4             # solo per il calcolo del margine fra due tagli
+
+print()
+print('  2-bis - i pezzi da togliere')
+w3, h3 = 320, 180
+G3 = leggi('scale=%d:%d' % (w3, h3), w3, h3)[:, :, :, 0]
+x0 = int(0.58 * w3)
+STANZA = [f[int(h3 * 0.06):int(h3 * 0.92), x0:].reshape(-1) for f in G3]
+
+
+def costo(a, b):
+    return float(np.abs(STANZA[a] - STANZA[b]).mean())
+
+
+adiacente = float(np.median([costo(k, k + 1) for k in range(0, len(STANZA) - 1, 7)]))
+raggio = int(FINESTRA_TAGLIO * FPS)
+tagli = []
+minimo = 0
+for (t0, t1) in DA_TOGLIERE:
+    ini, fin = int(t0 * FPS), int(t1 * FPS)
+    migliore = None
+    for a in range(max(minimo, ini - raggio), ini + 1):
+        for b in range(fin, min(len(STANZA) - 1, fin + raggio) + 1):
+            c = costo(a, b)
+            if migliore is None or c < migliore[0]:
+                migliore = (c, a, b)
+    if migliore is None:
+        sys.exit('     nessun taglio possibile per l intervallo %.1f-%.1f s' % (t0, t1))
+    c, a, b = migliore
+    print('     %.1f-%.1f s  ->  taglio da %.2f a %.2f   costo %.2f, cioe %.1f volte un fotogramma adiacente'
+          % (t0, t1, a / FPS, b / FPS, c, c / adiacente))
+    if c > adiacente * 6:
+        print('        costoso: dissolvenza allungata a %.2f s per raccordarlo'
+              % dissolvenza_per(c / adiacente))
+    tagli.append((a, b, dissolvenza_per(c / adiacente)))
+    minimo = b + int(DISSOLVENZA * FPS) + 2
+
+# --- 2-ter - I DUE ESTREMI, SCELTI PERCHE' IL GIRO NON SI VEDA -------------
+
+print()
+print('  2-ter - dove comincia e dove finisce')
+migliore = None
+dopo = int(DOPO_IL_DIFETTO * FPS)
+minlen = int(DURATA_MINIMA * FPS)
+for i0 in range(dopo, len(STANZA) - minlen, 2):
+    for j0 in range(i0 + minlen, len(STANZA), 2):
+        c = costo(i0, j0)
+        if migliore is None or c < migliore[0]:
+            migliore = (c, i0, j0)
+if migliore is None:
+    sys.exit('     la ripresa e piu corta della durata minima richiesta')
+cGiro, INIZIO, FINE = migliore
+print('     da %.2f s a %.2f s  =  %.2f s   giunzione del giro %.2f, cioe %.1f volte un fotogramma adiacente'
+      % (INIZIO / FPS, FINE / FPS, (FINE - INIZIO) / FPS, cGiro, cGiro / adiacente))
+if cGiro > adiacente * 4:
+    print('     ATTENZIONE: il giro si vedra. Serve una ripresa piu lunga o piu calma.')
+
 # --- 3 - LA STANZA, RICOMPRESSA E BASTA
 #
 # Qui ci sono stati quattro tentativi di stabilizzazione, e OGNUNO ha
@@ -286,12 +395,122 @@ def ff(argomenti):
 # 3,972, il crf 26 a 3,795 e il crf 30 a 3,714. Due per cento di dettaglio in
 # meno per il 39% di peso in meno: da 3,68 a 2,24 MB sul file piu' pesante del
 # sito. Il numero e' misurato, non ereditato da un'abitudine.
-ff(['-i', str(SORGENTE), '-an',
+# I pezzi che restano, e una dissolvenza a ogni giunzione. `xfade` vuole
+# l'offset nel tempo del flusso GIA' concatenato, non della sorgente: dopo ogni
+# fusione la durata accumulata cala di `DISSOLVENZA`, e dimenticarlo sposta la
+# giunzione di mezzo secondo per ogni taglio.
+pezzi = []
+prec = INIZIO / FPS
+for (a, b, _d) in tagli:
+    pezzi.append((prec, a / FPS))
+    prec = b / FPS
+pezzi.append((prec, FINE / FPS))
+
+filtro = []
+for i, (d, f) in enumerate(pezzi):
+    taglio = 'trim=%.3f:%.3f' % (d, f)
+    filtro.append('[0:v]%s,setpts=PTS-STARTPTS[p%d];' % (taglio, i))
+corrente = 'p0'
+durata = pezzi[0][1] - pezzi[0][0]
+for i in range(1, len(pezzi)):
+    esce = 'x%d' % i
+    d = tagli[i - 1][2]
+    filtro.append('[%s][p%d]xfade=transition=fade:duration=%.3f:offset=%.3f[%s];'
+                  % (corrente, i, d, durata - d, esce))
+    lung = pezzi[i][1] - pezzi[i][0]
+    durata = durata + lung - d
+    corrente = esce
+print('     restano %.2f s su %.2f' % (durata, DURATA))
+
+ff(['-i', str(SORGENTE), '-an', '-filter_complex',
+    ''.join(filtro).rstrip(';'), '-map', '[' + corrente + ']',
     '-c:v', 'libx264', '-crf', '30', '-preset', 'slow',
     '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
     'public/filmati/salone-largo.mp4'])
 peso = (FUORI_FILM / 'salone-largo.mp4').stat().st_size
 print('     scritta: public/filmati/salone-largo.mp4  (%.2f MB)' % (peso / 1e6))
+
+# --- 4 - UNA FINESTRA DI SOLO MARE ----------------------------------------
+#
+# Dietro il vetro c era la CLIP INTERA ingrandita 1,55 volte: divano, montante
+# e persone compresi. Attraverso il buco si vedeva acqua solo perche' il vano
+# sta a sinistra e a sinistra, nella copia ingrandita, c e' ancora acqua. Ma le
+# onde erano a una scala diversa da quelle del vano, e ruotando ruotava un
+# divano ingrandito dietro il vetro.
+#
+# Il committente l ha detto cosi': "il mare devi creare una finestra, altrimenti
+# il movimento e' incoerente rispetto all attuale movimento del mare".
+#
+# --- IL RITAGLIO SI DEDUCE DALLE RETTE, NON SI SCEGLIE
+#
+# Il punto 1 ha gia' misurato i tre bordi del vano. La regione che e' SOLO mare
+# e cielo per ogni riga e' quella a sinistra del bordo piu' stretto:
+#
+#   in alto la diagonale parte da x = q0 (a y=0);
+#   in basso la battuta arriva a x = q0 alla riga y = (q2 - q0) / -m2.
+#
+# Sotto quella riga il legno entrerebbe nel ritaglio. Quindi il rettangolo e'
+# x in [0, q0], y in [0, quella riga] -- dedotto, non stimato.
+#
+# --- E POI SI ALLARGA A SPECCHIO
+#
+# Il rettangolo e' alto e stretto; il piano da riempire e' 16:9. Ingrandirlo
+# per forza vorrebbe dire onde due volte e mezzo piu' grandi di quelle del vano,
+# cioe' lo stesso difetto di prima al contrario. Si specchia invece in
+# orizzontale: l acqua e' statisticamente simmetrica, l orizzonte specchiato
+# resta un orizzonte, e l ingrandimento residuo scende a circa 1,17.
+
+print()
+print('  4 - la finestra di solo mare')
+X_MARE = int(rette[0][1])                       # dove la diagonale alta taglia y=0
+Y_MARE = int((rette[2][1] - X_MARE) / -rette[2][0])   # dove la battuta bassa arriva a X_MARE
+Y_MARE = min(Y_MARE, H)
+print('     regione di solo mare: x 0..%d, y 0..%d  (dedotta dalle rette del vano)' % (X_MARE, Y_MARE))
+
+# l orizzonte dentro il ritaglio, misurato sulla mediana dove le onde si annullano
+banda = med[:Y_MARE, 40:min(X_MARE - 40, 400)].mean(axis=(1, 2))
+gr = banda[:-8] - banda[8:]
+y_oriz = int(np.argmax(gr)) + 4
+print('     orizzonte a y=%d, cioe %.3f dall alto del ritaglio  (contrasto %.1f)'
+      % (y_oriz, y_oriz / Y_MARE, gr.max()))
+
+# Il ritaglio specchiato e' largo 2*X_MARE. Lo si taglia in altezza fino a
+# renderlo 16:9 ESATTO, cosi' non serve nessun riscalamento: nessuna perdita di
+# nitidezza, nessuna deformazione delle onde, e un file piu' leggero. L altezza
+# tolta e' in fondo, dove c e' solo acqua.
+LARGO_MARE = 2 * X_MARE
+ALTO_MARE = (LARGO_MARE * H // W) & ~1
+if ALTO_MARE > Y_MARE:
+    sys.exit('     il ritaglio di mare e piu basso di quanto serva per un 16:9: '
+             'la ripresa non ha abbastanza acqua sotto l orizzonte')
+print('     ritaglio specchiato: %dx%d, 16:9 esatto, nessun riscalamento'
+      % (LARGO_MARE, ALTO_MARE))
+y_oriz_frazione = y_oriz / ALTO_MARE
+
+ff(['-i', str(SORGENTE), '-an',
+    '-filter_complex',
+    # STESSI ESTREMI DELLA STANZA: due clip che ciclano a tempi diversi si
+    # sfasano, e dopo qualche giro il mare dietro il vetro non appartiene piu'
+    # al momento della stanza davanti. Restano due file perche' hanno due
+    # ritagli diversi, ma sono la stessa fetta di traversata.
+    ('[0:v]trim=%.3f:%.3f,setpts=PTS-STARTPTS,crop=%d:%d:0:0,'
+     'split=2[a][b];[b]hflip[m];[a][m]hstack=2'
+     % (INIZIO / FPS, FINE / FPS, X_MARE, ALTO_MARE)),
+    '-c:v', 'libx264', '-crf', '30', '-preset', 'slow',
+    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    'public/filmati/salone-mare.mp4'])
+pesoM = (FUORI_FILM / 'salone-mare.mp4').stat().st_size
+print('     scritta: public/filmati/salone-mare.mp4  (%.2f MB)' % (pesoM / 1e6))
+
+(FUORI_SAL / 'vano.json').write_text(json.dumps({
+    'rientro_px': RIENTRO,
+    'orizzonte_mare': round(y_oriz_frazione, 4),
+    'perche': ('rientro_px: di quanto la maschera rientra rispetto al vano misurato; '
+               'collaudo-filmato.mjs ci deriva il proprio tetto. '
+               'orizzonte_mare: dove sta l orizzonte dentro salone-mare.mp4, '
+               'frazione dall alto; e il perno attorno a cui il salone lo ruota.')
+}, indent=1), encoding='utf-8')
+print('     aggiornato public/salone/vano.json')
 
 print()
 print('  fatto: maschera, rientro dichiarato e stanza ricompressa.')

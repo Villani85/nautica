@@ -75,7 +75,19 @@ import { apriBrowser } from './browser.mjs'
 const PORTA = 5180
 const BASE = `http://localhost:${PORTA}/nautica/`
 
-/** ~1,5 s a 60 Hz: abbastanza per due periodi di rollio. */
+/**
+ * ~1,5 s a 60 Hz.
+ *
+ * Qui c'era scritto "abbastanza per due periodi di rollio", ed era falso: il
+ * periodo di rollio dichiarato e' 7 secondi, quindi 1,5 s ne sono un quinto.
+ * Segnalato da una revisione che ha confrontato il commento col numero.
+ *
+ * La finestra va bene lo stesso, ma per un'altra ragione, e vale la pena
+ * scriverla giusta: non si misura il rollio, si misura L'ALBERO D'INGRESSO,
+ * che gira 29 volte piu' in fretta per via del riduttore. In un quinto di
+ * periodo di rollio l'albero fa quasi sei giri -- piu' che abbastanza per
+ * un'escursione picco-picco che significhi qualcosa.
+ */
 const FOTOGRAMMI = 90
 
 /**
@@ -314,6 +326,75 @@ if (!(crescita >= CRESCITA_MIN)) {
   guai.push('la manopola non comanda il meccanismo: da mare 2 a mare 5 l escursione ' +
             `dell albero cresce solo ${crescita.toFixed(2)} volte (minimo ${CRESCITA_MIN})`)
 }
+
+/* --- 4 - E IL CLIC NON DEVE TELETRASPORTARE LA NAVE ---------------------- */
+
+/**
+ * --- IL DIFETTO CHE QUESTO CANCELLO NON SAPEVA VEDERE
+ *
+ * Per tre ore il clic sulla manopola ha chiamato `sim.scalda()`, che integra
+ * 150 secondi in un colpo. La risposta era immediata e la nave SALTAVA: 6,27
+ * gradi nel fotogramma del clic, dove un fotogramma normale ne fa 0,043.
+ * Centoquarantasei volte.
+ *
+ * E questo file era verde. Misura l'escursione picco-picco su 90 fotogrammi e
+ * confronta mare 2 con mare 5: due stati, entrambi corretti, e in mezzo un
+ * taglio di montaggio che nessuna delle due misure poteva contenere.
+ *
+ * **Una misura fra due stati non vede cosa succede nel passaggio.** Il
+ * campionamento va messo A CAVALLO del gesto, non prima e dopo.
+ *
+ * Il metro non e' un numero assoluto: e' la velocita' angolare che la nave fa
+ * da sola. Un fotogramma della transizione puo' essere piu' veloce del moto
+ * normale -- sta cambiando ampiezza -- ma non di un ordine di grandezza, o si
+ * legge come un salto.
+ */
+const VOLTE_MAX = 6
+
+const attraverso = async (sel, etichetta) => {
+  // prima: la velocita' angolare naturale, per avere il metro
+  const nat = await pagina.evaluate((n) => new Promise((res) => {
+    let i = 0, prec = window.__nautica.stato.rollio, max = 0
+    const passo = () => {
+      const v = window.__nautica.stato.rollio
+      const d = Math.abs(v - prec); if (d > max) max = d; prec = v
+      if (++i < n) requestAnimationFrame(passo); else res(max)
+    }
+    requestAnimationFrame(passo)
+  }), 60)
+
+  // poi: si campiona SENZA INTERRUZIONE mentre il clic arriva
+  const promessa = pagina.evaluate((n) => new Promise((res) => {
+    let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
+    const passo = () => {
+      const v = window.__nautica.stato.rollio
+      const d = Math.abs(v - prec)
+      if (d > max) { max = d; quando = i }
+      prec = v
+      if (++i < n) requestAnimationFrame(passo); else res({ max, quando })
+    }
+    requestAnimationFrame(passo)
+  }), 150)
+  await new Promise(r => setTimeout(r, 250))
+  await tocca(sel)
+  const { max, quando } = await promessa
+
+  const volte = max / Math.max(1e-6, nat)
+  nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
+       `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)
+  if (volte > VOLTE_MAX) {
+    guai.push(`${etichetta}: il clic sposta la nave di ${max.toFixed(2)} gradi in un fotogramma, ` +
+              `${volte.toFixed(0)} volte quello che fa da sola. E un salto temporale, e questo sito ` +
+              'se lo e vietato')
+  }
+}
+
+await metti(true)
+await tocca(MARE_ALTO)
+await new Promise(r => setTimeout(r, 800))
+await attraverso(MARE_BASSO, 'clic da mare 5 a mare 2')
+await new Promise(r => setTimeout(r, 800))
+await attraverso(MARE_ALTO, 'clic da mare 2 a mare 5')
 
 /* --- REFERTO ------------------------------------------------------------ */
 

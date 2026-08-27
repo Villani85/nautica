@@ -91,6 +91,14 @@ jobs:
         run: node strumenti/collaudo-manopola.mjs
         env: { CHROMIUM: '1' }
 
+      # Con `prefers-reduced-motion` il sito si riduce, non si spegne. Il
+      # difetto che questo cancello ha trovato: il ciclo di disegno spento
+      # fermava anche il VIDEO del salone -- che nessuno aveva deciso di
+      # fermare, ma era attaccato a qualcosa che qualcun altro spegneva.
+      - name: 'Cancello · il movimento ridotto e una versione ridotta'
+        run: node strumenti/collaudo-ridotto.mjs
+        env: { CHROMIUM: '1' }
+
       # ─── IL REFERTO VA DOVE SI LEGGE
       #
       # I registri di GitHub Actions non sono scaricabili senza autenticazione,

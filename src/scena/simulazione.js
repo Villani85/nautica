@@ -62,6 +62,14 @@ const A_STALLO = MathUtils.degToRad(20)   // oltre questa incidenza la portanza 
 const A_MAX = MathUtils.degToRad(25)      // limite meccanico dell'attuatore
 const RESIDUO = 0.45                      // quanta portanza resta a fondo corsa, in stallo
 
+/**
+ * Quanto scende l ampiezza con `prefers-reduced-motion`. Un terzo: a mare 5 il
+ * rollio nudo passa da 15 a 5 gradi -- si vede benissimo che la nave si muove e
+ * che le pinne la raddrizzano, senza il campo visivo che oscilla di quindici.
+ * Il numero e' una scelta di progetto e sta scritto in un posto solo.
+ */
+const RIDOTTO = 1 / 3
+
 const FINESTRA_PICCO = 10        // secondi
 const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi sotto
 
@@ -231,26 +239,35 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   function passo (dt, tempoScena) {
     const aut = S.stab ? autorita(S.velocita) : 0
 
-    if (S.ridotto) {
-      /**
-       * Movimento ridotto: niente oscillazione autonoma, ma i due stati
-       * restano confrontabili. Si mostra il PICCO — la nave inclinata al suo
-       * angolo massimo, ferma — a sistema spento e acceso. La tesi resta
-       * dimostrabile senza che niente si muova da solo.
-       */
-      const nudo = AMPIEZZA_MARE[S.mare]
-      const rid = aut > 0 ? riduzioneVera(S.mare, S.velocita) : 0
-      S.rollio = nudo * (1 - rid)
-      S.rollioNudo = nudo
-      S.picco = Math.abs(S.rollio)
-      S.riduzione = rid
-      S.pinna = 0; S.carico = 0; S.recupero = 0
-      return
-    }
-
+    /**
+     * --- IL MOVIMENTO RIDOTTO RIDUCE, NON SPEGNE
+     *
+     * Qui c era un ramo che congelava tutto: niente oscillazione, la nave
+     * ferma al proprio angolo di picco, e il commento diceva "la tesi resta
+     * dimostrabile senza che niente si muova da solo".
+     *
+     * Era una decisione sbagliata e il committente l ha corretta due volte,
+     * l ultima cosi: "deve partire su tutti gli schermi anche su chi disattiva
+     * le animazioni". Ha ragione, e la ragione non e' solo di gusto:
+     *
+     *   - il ciclo di disegno spento non ferma solo il rollio, ferma anche il
+     *     VIDEO del salone, che vive dentro quel ciclo. Chi ha la preferenza
+     *     attiva non vedeva un sito piu' calmo: ne vedeva una fotografia;
+     *   - e il difetto vestibolare non e' il movimento, e' l AMPIEZZA del
+     *     movimento. Quindici gradi di rollio a tutto schermo sono un problema;
+     *     cinque no. Togliere tutto e' la scorciatoia di chi non vuole
+     *     progettare la versione ridotta.
+     *
+     * Quindi si riduce: la forzante scende a un terzo, tutto il resto gira
+     * identico -- pinne, riduzione misurata, letture, video. La tesi non e'
+     * piu' "dimostrabile lo stesso": e' dimostrata dalla stessa scena, in
+     * piccolo.
+     */
+    riscala(dt)
     t += dt
-    viva.passo(dt, t, S.mare, aut, momento)
-    nuda.passo(dt, t, S.mare, 0, momento)
+    const onda = S.ridotto ? (tt, m) => momento(tt, m) * RIDOTTO : momento
+    viva.passo(dt, t, S.mare, aut, onda)
+    nuda.passo(dt, t, S.mare, 0, onda)
 
     S.rollio = MathUtils.radToDeg(viva.c.theta)
     S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)
@@ -290,6 +307,74 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   function azzeraPicchi () { viva.azzera(); nuda.azzera(); S.picco = 0; S.riduzione = 0 }
 
   /**
+   * --- CAMBIARE MARE SENZA TELETRASPORTARE LA NAVE
+   *
+   * Tre ore fa qui si chiamava `scalda()` a ogni clic sulla manopola: la
+   * risposta diventava immediata, e la nave saltava. Misurato dopo che una
+   * revisione l ha segnalato:
+   *
+   *     mare 4 -> 5   6,27 gradi in UN fotogramma
+   *     mare 2 -> 5   1,94
+   *     un fotogramma normale                0,043
+   *
+   * Centoquarantasei volte il moto di un fotogramma. Ed e' esattamente la
+   * violazione che questo sito si e' vietato -- nessun salto temporale --
+   * commessa da me mentre curavo il difetto opposto.
+   *
+   * --- PERCHE' SCALDARE ERA LO STRUMENTO SBAGLIATO
+   *
+   * `scalda()` integra 150 secondi: il sistema arriva a regime, ma in una FASE
+   * qualunque. La posa dopo il clic non ha nessun rapporto con quella prima, e
+   * l occhio legge un taglio di montaggio.
+   *
+   * --- LA CURA E' UNA PROPRIETA' DELL EQUAZIONE, NON UN ESPEDIENTE
+   *
+   * L equazione del rollio nudo e' LINEARE nella forzante, e la forzante e'
+   * proporzionale ad AMPIEZZA_MARE. Quindi il regime nel mare b e' il regime
+   * nel mare a **moltiplicato** per il rapporto delle ampiezze: stessa orbita,
+   * stessa fase, scala diversa.
+   *
+   * Basta moltiplicare lo stato -- angolo e velocita' -- per quel rapporto. E
+   * per non farlo in un fotogramma solo, lo si spalma su una finestra breve:
+   * a ogni passo si applica la radice `dt`-esima, cosi' il prodotto totale e'
+   * esatto e il singolo fotogramma non salta. Con k = 2,5 su 0,8 secondi, un
+   * fotogramma moltiplica per 1,019: due per cento, invisibile.
+   *
+   * La pinna non va toccata: il controllore la ricalcola dalla velocita' di
+   * rollio, quindi segue da sola.
+   *
+   * --- L UNICO CASO CHE RESTA LENTO, E VA DETTO
+   *
+   * Da mare ZERO il rapporto non esiste: zero moltiplicato per qualunque cosa
+   * resta zero, e non c e' nessuna orbita da riscalare. Li' l ampiezza deve
+   * montare davvero, con la sua costante di 25 secondi. E' onesto: da una calma
+   * piatta il mare ci mette del tempo ad arrivare. Non lo nascondo dietro un
+   * salto.
+   */
+  function cambiaMare (n) {
+    const prima = AMPIEZZA_MARE[S.mare]
+    S.mare = n
+    const dopo = AMPIEZZA_MARE[n]
+    if (prima <= 0 || dopo <= 0) return
+    versoK = dopo / prima
+    versoT = 1.6
+  }
+
+  let versoK = 1
+  let versoT = 1.6
+
+  /** Applica un pezzo del riscalamento, proporzionale al passo. */
+  function riscala (dt) {
+    if (versoT <= 0) return
+    const quota = Math.min(dt, versoT) / versoT
+    const f = Math.pow(versoK, quota)
+    for (const r of [viva.c, nuda.c]) { r.theta *= f; r.omega *= f }
+    versoK /= f
+    versoT -= dt
+    if (versoT <= 1e-6) { versoK = 1; versoT = 0 }
+  }
+
+  /**
    * --- IL MARE NON COMINCIA QUANDO APRI LA PAGINA
    *
    * Difetto trovato dal committente con tre parole -- "l immagine non si
@@ -321,12 +406,11 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
    *   riferimento e' sei costanti di tempo: oltre, non cambia piu' niente.
    */
   function scalda (secondi = 150) {
-    if (S.ridotto) return
     const dt = 1 / 50
     for (let k = 0; k < Math.round(secondi / dt); k++) passo(dt, t + dt)
   }
 
-  return { S, passo, azzeraPicchi, scalda }
+  return { S, passo, azzeraPicchi, scalda, cambiaMare }
 }
 
 /**
