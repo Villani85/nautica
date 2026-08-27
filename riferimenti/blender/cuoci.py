@@ -327,8 +327,42 @@ if sconosciuti:
 if not tenuti:
     raise SystemExit('nessun pezzo tenuto: i nomi dei materiali sono cambiati?')
 
-centro = (minimo + massimo) / 2
-misura = max(massimo[a] - minimo[a] for a in range(3))
+"""
+--- SI MIRA ALL'ATTUATORE, NON ALL'INGOMBRO DI TUTTO
+
+Il soggetto di questo fotogramma e' la macchina: il motore, il riduttore,
+l'albero. La pinna e' quello che si vede sempre; l'attuatore e' **quello che
+non si vedrebbe mai**, ed e' la ragione per cui il primo piano esiste.
+
+Mirando all'ingombro complessivo la camera si mette in mezzo fra i due e non
+guarda ne' l'uno ne' l'altro: la pinna e' lunga e sposta il centro verso fuori,
+e il telaio trasversale a cui l'attuatore e' imbullonato finiva di PIATTO in
+mezzo all'immagine, largo, a coprire il soggetto.
+
+Il gruppo si dichiara per materiale -- sono i materiali che esistono solo
+sull'attuatore -- e la camera si mette DALLA SUA PARTE del telaio, cioe' verso
+il centro nave. Cosi' il telaio diventa lo sfondo su cui la macchina e'
+montata, che e' il suo mestiere, invece di un muro davanti.
+"""
+ATTUATORE = {'motore', 'carter', 'lucido', 'sezione', 'tenuta', 'cavo', 'bronzo'}
+
+att_lo = Vector((1e9, 1e9, 1e9))
+att_hi = Vector((-1e9, -1e9, -1e9))
+for q, (vs, lo, hi) in zip(pezzi, misure):
+    if q.get('nome') not in ATTUATORE or not dentro(lo, hi):
+        continue
+    for a in range(3):
+        att_lo[a] = min(att_lo[a], lo[a])
+        att_hi[a] = max(att_hi[a], hi[a])
+
+if att_lo[0] > att_hi[0]:
+    print('MIRA  nessun pezzo di attuatore: si mira allingombro complessivo')
+    centro = (minimo + massimo) / 2
+    misura = max(massimo[a] - minimo[a] for a in range(3))
+else:
+    centro = (att_lo + att_hi) / 2
+    misura = max(att_hi[a] - att_lo[a] for a in range(3))
+    print('MIRA  attuatore - ingombro %.3f' % misura)
 print('LATO %s - %d pezzi dentro il volume, %d fuori' % (LATO, tenuti, fuori_volume))
 print('OSPITI (materiale della nave, ma dentro il meccanismo): %s'
       % (', '.join(sorted(set(ospiti))) if ospiti else 'nessuno'))
@@ -454,11 +488,18 @@ pb.inputs['Base Color'].default_value = (0.055, 0.06, 0.065, 1)
 pb.inputs['Roughness'].default_value = 0.38
 piano.data.materials.append(mp)
 
-bpy.ops.object.camera_add(location=(centro[0] + d * 0.35, centro[1] - d * 2.1, centro[2] + d * 0.30))
+# VERSO IL CENTRO NAVE, non verso il mare aperto: la x dell'attuatore e' piu'
+# piccola di quella del telaio, quindi la camera va a x MINORE per averlo
+# davanti invece che dietro il telaio.
+VERSO = -1.0 if os.environ.get('LATO', 'dritta') == 'dritta' else 1.0
+DISTANZA = float(os.environ.get('DISTANZA', '1.25'))
+bpy.ops.object.camera_add(location=(centro[0] + VERSO * d * 1.15 * DISTANZA,
+                                    centro[1] - d * 1.70 * DISTANZA,
+                                    centro[2] + d * 0.42 * DISTANZA))
 cam = bpy.context.object
 cam.data.lens = 60
 cam.data.dof.use_dof = True
-cam.data.dof.focus_distance = d * 2.1
+cam.data.dof.focus_distance = (Vector(centro) - cam.location).length
 cam.data.dof.aperture_fstop = 5.6
 # la camera guarda il centro dell'ingombro: non si sceglie a occhio
 dirv = Vector(centro) - cam.location
