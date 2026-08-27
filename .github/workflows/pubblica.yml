@@ -93,20 +93,28 @@ jobs:
       # Vale la pena solo per i cancelli che possono fallire per ragioni
       # d'ambiente — impaginazione, font, browser — cioe' quelli che in locale
       # passano e in CI no.
+      # ─── IL REFERTO ESCE COME ANNOTAZIONE
+      #
+      # I registri di GitHub Actions non si scaricano senza token, e il
+      # riepilogo del lavoro non e' esposto dall'API pubblica: provato, torna
+      # vuoto. Le ANNOTAZIONI si', da `/check-runs/{id}/annotations`. E' l'unico
+      # canale per cui il referto di una CI rossa arriva a chi non ha le chiavi.
+      #
+      # NIENTE FILTRI. Il primo tentativo faceva `grep` delle righe
+      # interessanti: non ha trovato niente, e con `set -e` lo script e' morto
+      # prima di scrivere una sola annotazione. Un meccanismo di diagnosi che
+      # ha bisogno di indovinare quali righe contano fallisce proprio quando
+      # serve. Si versano le ultime venticinque e basta.
       - name: Collaudo dell'impaginato
         run: |
           set -o pipefail
-          npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt || {
-            # Il RIEPILOGO non e' esposto dall'API pubblica — provato, torna
-            # vuoto. Le ANNOTAZIONI si': `::error::` finisce in
-            # `/check-runs/{id}/annotations`, che si legge senza token. E'
-            # l'unico canale per cui il referto di una CI rossa arriva a chi
-            # non ha le chiavi del repository.
-            grep -E '^\s*(ROTTO|·|[A-Z]{4,})' /tmp/imp.txt | tail -12 | while IFS= read -r r; do
-              echo "::error::${r}"
+          if ! npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt; then
+            tail -25 /tmp/imp.txt | while IFS= read -r r; do
+              printf '::error::%s
+' "$r"
             done
             exit 1
-          }
+          fi
         env:
           CHROMIUM: '1'
 
