@@ -280,6 +280,10 @@ p{max-width:60ch}
    Il salone resta davanti (z-index) durante la sovrapposizione, altrimenti un
    fratello successivo lo coprirebbe per la sola regola dell'ordine. */
 .atto--salone{position:relative;z-index:2}
+/* Con la scena unica il salone non e' piu' una sezione: la sovrapposizione di
+   uno schermo serviva a cucire due palchi, e senza il primo diventerebbe un
+   buco di uno schermo prima della dimostrazione. */
+html[data-unica="si"] .atto--demo{margin-top:0}
 .atto--demo{background:none;min-height:auto;height:520svh;
   margin-top:-100svh;position:relative;z-index:1}
 .palco{

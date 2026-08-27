@@ -124,6 +124,9 @@ export function costruisciNave () {
   // E il terzo lato aperto: il ponte.
   const ponte = new Mesh(costruisciPonte(72), materiali.coperta)
   nave.add(ponte); guscio.push(ponte)
+  // da DENTRO il salone il ponte e' il pavimento sotto i piedi, non una lastra
+  // che attraversa la stanza a mezz'aria: si spegne insieme alle pareti
+  pareti.push(ponte)
 
   // Lo spigolo chiaro e' la stessa idea del taglio applicata al volume:
   // dice dove finisce il pezzo senza aggiungere una luce.
@@ -312,6 +315,7 @@ export function costruisciNave () {
      * implementazione della stessa cosa: quella che non da' errore e diverge
      * in silenzio.
      */
-    tuga: { z: TUGA_Z, quota: quotaTuga, largh: larghTuga, alt: TUGA_ALT, pareti }
+    tuga: { z: TUGA_Z, quota: quotaTuga, largh: larghTuga, alt: TUGA_ALT, pareti },
+    allestimento: allest.gruppo
   }
 }

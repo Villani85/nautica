@@ -115,14 +115,37 @@ for (let i = 0; i <= PASSI; i++) {
     const n = window.__nautica
     if (!n) return null
     const c = n.camera
+    /**
+     * SI ASPETTANO I FOTOGRAMMI, NON I MILLISECONDI — e la differenza non e'
+     * accademica.
+     *
+     * Prima aspettavo 40 ms e confrontavo due letture: se erano uguali,
+     * «ferma». Ma **«non si muove» e «non sta disegnando» si leggono
+     * identici**: se il ciclo e' in stallo — un fotogramma di video che si
+     * decodifica, una compilazione di shader — la lettura e' la stessa perche'
+     * nessuno ha aggiornato niente, e il campione esce VECCHIO. Da li' un
+     * passo che sembra un salto.
+     *
+     * Misurato: tre esecuzioni identiche, due rosse con picco 290x e 137x e
+     * una verde con 1,1x, sulla stessa corsa di 35,5 unita'. Lo stesso sito,
+     * tre risposte.
+     *
+     * `requestAnimationFrame` restituisce solo quando un fotogramma e' stato
+     * prodotto davvero. Quindi si contano quelli: almeno quattro, poi si
+     * aspetta che due letture consecutive coincidano. Con un tetto, perche' un
+     * ciclo fermo non deve bloccare il collaudo — deve farlo fallire.
+     */
     const leggi = () => c.position.toArray()
+    const frame = () => new Promise(r => requestAnimationFrame(r))
     let prima = leggi()
-    for (let k = 0; k < 30; k++) {
-      await new Promise(r => setTimeout(r, 40))
+    let fermi = 0
+    for (let k = 0; k < 40; k++) {
+      await Promise.race([frame(), new Promise(r => setTimeout(r, 250))])
       const ora = leggi()
       const d = Math.hypot(ora[0] - prima[0], ora[1] - prima[1], ora[2] - prima[2])
       prima = ora
-      if (d < 1e-4) break
+      fermi = d < 1e-4 ? fermi + 1 : 0
+      if (k >= 4 && fermi >= 3) break
     }
     return {
       pos: c.position.toArray(),

@@ -1,6 +1,6 @@
 import {
   Group, Mesh, PlaneGeometry, MeshBasicMaterial, VideoTexture,
-  TextureLoader, SRGBColorSpace, MathUtils
+  TextureLoader, SRGBColorSpace, MathUtils, CanvasTexture
 } from 'three'
 
 /**
@@ -126,9 +126,36 @@ export function creaSalone3D (base, tuga) {
 
   /** 1 · IL MARE — la clip intera, ingrandita, che ruota sull'orizzonte. */
   const perno = new Group()
+  /**
+   * IL MARE INGRANDITO VA RITAGLIATO AL RIQUADRO DELLA STANZA.
+   *
+   * E' grande 1,55 volte perche' ruotando di dodici gradi un rettangolo
+   * scopre gli angoli. Ma quel di piu' non deve VEDERSI: fuori dal riquadro
+   * della fotografia comparivano una seconda volta il divano e la donna, come
+   * un fotogramma incollato accanto a se stesso.
+   *
+   * Nel DOM lo risolveva `overflow:hidden` sull'apertura. Qui non c'e' nessun
+   * riquadro che ritagli, quindi il ritaglio si mette nel materiale: una
+   * maschera bianca al centro esattamente quanto la stanza, nera intorno.
+   * Ruotando, e' la MASCHERA a girare col piano — che e' giusto: e' la finestra
+   * a essere ferma rispetto alla stanza, non rispetto al mondo.
+   */
+  const LATO_MASCHERA = 256
+  const tela = document.createElement('canvas')
+  tela.width = tela.height = LATO_MASCHERA
+  const cx = tela.getContext('2d')
+  cx.fillStyle = '#000'
+  cx.fillRect(0, 0, LATO_MASCHERA, LATO_MASCHERA)
+  const dentro = LATO_MASCHERA / INGRANDIMENTO
+  cx.fillStyle = '#fff'
+  cx.fillRect((LATO_MASCHERA - dentro) / 2, (LATO_MASCHERA - dentro) / 2, dentro, dentro)
+  const ritaglio = new CanvasTexture(tela)
+
   const mare = new Mesh(
     new PlaneGeometry(larg * INGRANDIMENTO, alt * INGRANDIMENTO),
-    new MeshBasicMaterial({ map: tex(vCalma), toneMapped: false })
+    new MeshBasicMaterial({
+      map: tex(vCalma), alphaMap: ritaglio, transparent: true, toneMapped: false
+    })
   )
   // il piano nasce centrato: lo si sposta perche' il PERNO cada sull'orizzonte
   mare.position.y = (ORIZZONTE - 0.5) * alt * INGRANDIMENTO

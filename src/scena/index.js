@@ -9,6 +9,7 @@ import { costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
+import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente } from './ambiente.js'
 import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
@@ -18,8 +19,9 @@ const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
 const RAGGIO_MECCANISMO = 2.6
-/** La scena unica e' ancora dietro un interruttore: vedi `salone3d.js`. */
-const LA_SCENA_E_UNA = typeof location !== 'undefined' && location.search.includes('unica')
+// La decisione «una scena o due» sta in un posto solo, `regia.js`: due
+// definizioni della stessa condizione sono due condizioni che un giorno
+// divergono, e qui divergerebbero fra la corsa della camera e le battute.
 const AZIMUT_MAX = 0.92
 
 /** Dove sta il meccanismo: e' li' che la camera va a finire. */
@@ -168,7 +170,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
-  const { nave, agganci, guscio, tappo, spostaTappo, tuga } = costruisciNave()
+  const { nave, agganci, guscio, tappo, spostaTappo, tuga, allestimento } = costruisciNave()
   const tugaQuota = tuga.quota
   const tugaZ = tuga.z
   scena.add(nave)
@@ -239,9 +241,24 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * Sta DENTRO la tuga, alla quota che `nave.js` ha calcolato sul cavallino:
    * nessun numero riscritto, nessuna posa scelta a occhio.
    */
-  const salone = location.search.includes('unica')
-    ? creaSalone3D(base, tuga)
-    : null
+  const salone = LA_SCENA_E_UNA ? creaSalone3D(base, tuga) : null
+
+  /**
+   * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
+   *
+   * L'allestimento — divani, tavolo, le due figure — e il fuoribordo — la
+   * fascia di mare dentro la tuga — servivano a dare qualcosa da vedere
+   * ATTRAVERSO il finestrino quando il salone era altrove, in DOM. Adesso il
+   * salone e' li' dentro, ed e' una fotografia: tenerli sarebbe mostrare due
+   * volte la stessa stanza, una modellata e una ripresa, nello stesso metro
+   * cubo.
+   *
+   * Si e' visto entrandoci: il raggio ha risposto «#bdb4a3 a un metro» — un
+   * divano — e «#ffffff a settantasei centimetri» — la fascia del mare —
+   * davanti alla fotografia. Da fuori sembravano a posto; da dentro erano
+   * mobili in mezzo al fotogramma.
+   */
+  if (LA_SCENA_E_UNA) allestimento.visible = false
   if (salone) { nave.add(salone.gruppo); salone.riproduci() }
   const saloneLargo = salone ? salone.largo : 1
   const saloneAlto = salone ? salone.alto : 1
@@ -251,6 +268,14 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   sovra.caricato
     .then(({ parti }) => {
       for (const m of parti) { m.castShadow = true; m.receiveShadow = true }
+      /**
+       * La COPERTA in teak e' pavimento visto da fuori e lastra sospesa vista
+       * da dentro: da seduti in salotto attraversava l'inquadratura a
+       * mezz'aria. Si spegne con le pareti — sono la stessa cosa, la faccia
+       * esterna di un posto in cui si sta.
+       */
+      const coperta = sovra.gruppo.getObjectByName('COPERTA')
+      if (coperta && LA_SCENA_E_UNA) tuga.pareti.push(coperta)
     })
     .catch(e => console.error('[nautica] sovrastruttura non caricata', e))
   /**
@@ -261,6 +286,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   const fuoribordo = costruisciFuoribordo()
   fuoribordo.gruppo.position.set(0, 1.28, 0.6)   // dentro la sovrastruttura
+  if (LA_SCENA_E_UNA) fuoribordo.gruppo.visible = false
   scena.add(fuoribordo.gruppo)
 
   const acqua = costruisciAcqua()
@@ -525,7 +551,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * quella che fa debordare del 32%.
      */
     const DEBORDO = 1.32
-    const dist = Math.max(Math.min(distL, distH), distL / DEBORDO)
+    // l'1% di abbondanza: alla distanza esatta il piano e l'inquadratura
+    // coincidono, e basta un arrotondamento perche' resti una fessura sul
+    // bordo da cui si vede oltre la fotografia. Misurato: 7 mm sopra e sotto
+    const dist = Math.max(Math.min(distL, distH), distL / DEBORDO) * 0.99
     // NEGATIVO, e il segno costa un provino: la camera guarda verso -z, quindi
     // la destra dello schermo e' la -x della scena. Con lo scarto positivo il
     // ritaglio verticale si mangiava proprio la donna — lo stesso difetto che
@@ -539,7 +568,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      *
      * Si sposta solo quando l'immagine e' davvero tagliata ai lati.
      */
-    const scarto = dist < distL * 0.995 ? 0.11 * saloneLargo : 0
+    /**
+     * E LO SCARTO NON PUO' SUPERARE IL RITAGLIO DISPONIBILE.
+     *
+     * L'11% viene dal telefono, dove l'immagine deborda del 32% e c'e' molto
+     * da tagliare. Su una scrivania deborda del 2%, e spostarsi dell'11%
+     * significa portare l'inquadratura OLTRE il bordo della fotografia: si
+     * vedeva una seconda copia della donna in una striscia a destra, ed era
+     * il piano del mare che continua dietro.
+     *
+     * Misurato invece che intuito: inquadratura larga 1,268, fotografia 1,293,
+     * quindi il margine per lato e' 12 millimetri e mezzo — non 142.
+     */
+    const largoInquadratura = 2 * dist * Math.tan(mezzoH)
+    const margine = Math.max(0, (saloneLargo - largoInquadratura) / 2)
+    const scarto = Math.min(0.11 * saloneLargo, margine)
 
     const dentroY = nave.position.y + tugaQuota
     const fuoriX = miraX + Math.sin(azimut) * raggio

@@ -21,7 +21,54 @@
  * obbedienza; questo mostra cosa succede se non fai niente, che e' esattamente
  * la tesi.
  */
-export const BATTUTE = [
+/**
+ * ─── LA SCENA E' UNA SOLA, e le battute lo dicono
+ *
+ * Prima il sito aveva due atti in due sezioni: un salone in DOM e una
+ * dimostrazione in WebGL. Ora e' un atto solo, e comincia SEDUTI nel salone.
+ * `?doppia=1` riporta alla vecchia architettura — resta finche' la nuova non
+ * ha girato su un telefono vero.
+ */
+export const LA_SCENA_E_UNA =
+  typeof location === 'undefined' || !location.search.includes('doppia')
+
+/**
+ * La prima battuta del vecchio ordine era «la nave emerge»: serviva perche'
+ * altrimenti lo schermo era vuoto. Adesso il capitolo apre dentro la nave, e
+ * quella battuta diventa cio' che e' sempre stata nella testa di chi guarda —
+ * il momento in cui si esce e la si vede da fuori.
+ */
+const SALOTTO = {
+  id: 'salotto',
+  da: 0.00, a: 0.15,
+  titolo: 'Sea state four. Nobody in here is thinking about it.',
+  /**
+   * Accorciato di due righe: a 1440x900 il riquadro traboccava di 33 px, cioe'
+   * 1,2 righe, e `collaudo-impaginato` l'ha preso subito. Non si allarga il
+   * riquadro — si dice la stessa cosa in meno parole, che qui e' anche meglio:
+   * questa battuta va guardata, non letta.
+   */
+  testo: 'Outside, the swell is running two metres. In here the glasses are ' +
+         'standing up. Somebody decided that, and it cost a fraction of what ' +
+         'the boat cost.'
+}
+
+/** Le soglie della corsa, spostate per far posto al salone. */
+export const S = LA_SCENA_E_UNA
+  /**
+   * L'uscita non comincia al primo pixel: la prima battuta e' il salone, e un
+   * salone che si allontana appena si tocca la rotella non lo si guarda mai.
+   * Misurato: a p = 0,02 con la corsa che partiva da zero la camera era gia'
+   * a tre unita' e la fotografia occupava un quarto dello schermo.
+   */
+  ? { uscita: [0.05, 0.20], emerge: [0.15, 0.26], mare: [0.26, 0.38],
+      invito: [0.38, 0.50], calma: [0.50, 0.64], taglio: [0.64, 1.00],
+      avvicina: [0.84, 1.00] }
+  : { uscita: [0.00, 0.00], emerge: [0.00, 0.13], mare: [0.13, 0.30],
+      invito: [0.30, 0.44], calma: [0.44, 0.60], taglio: [0.60, 1.00],
+      avvicina: [0.82, 1.00] }
+
+const SEQUENZA = [
   {
     id: 'emerge',
     da: 0.00, a: 0.13,
@@ -59,6 +106,25 @@ export const BATTUTE = [
     testo: 'Servomotor, cycloidal reduction, output carrier, shaft, gland, fin. It costs a fraction of the boat, and it decides whether anyone is comfortable on board.'
   }
 ]
+
+/**
+ * Le battute della sequenza si riallineano alle soglie di `S`, invece di
+ * portarsi dietro due copie della stessa lista con numeri diversi. Due liste
+ * divergono; una lista e una tabella di soglie no.
+ */
+const CHIAVI = ['emerge', 'mare', 'invito', 'calma', 'taglio', 'meccanismo']
+const riallineata = SEQUENZA.map((b, i) => {
+  const k = CHIAVI[i]
+  const soglia = S[k]
+  if (!soglia) return b
+  return { ...b, da: soglia[0], a: soglia[1] }
+})
+// il taglio e il meccanismo si dividono l'ultimo tratto, come prima
+const inizioMecc = S.taglio[0] + (S.taglio[1] - S.taglio[0]) * 0.5
+riallineata[4] = { ...riallineata[4], da: S.taglio[0], a: inizioMecc }
+riallineata[5] = { ...riallineata[5], da: inizioMecc, a: 1.01 }
+
+export const BATTUTE = LA_SCENA_E_UNA ? [SALOTTO, ...riallineata] : SEQUENZA
 
 /** In quale battuta siamo, e quanto siamo avanti dentro di essa. */
 export function battutaA (p) {
@@ -115,16 +181,16 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
      * momento in cui si chiude la scheda.
      */
     const SOTT_ACQUA = 0.42
-    scena.impostaEmersione(SOTT_ACQUA + (1 - SOTT_ACQUA) * dolce(fra(p, 0.00, 0.13)))
+    scena.impostaEmersione(SOTT_ACQUA + (1 - SOTT_ACQUA) * dolce(fra(p, S.emerge[0], S.emerge[1])))
 
-    const salita = Math.round(fra(p, 0.13, 0.30) * 4)
+    const salita = Math.round(fra(p, S.mare[0], S.mare[1]) * 4)
     if (salita > mareRaggiunto) {
       mareRaggiunto = salita
       if (sim.S.mare !== salita) { sim.S.mare = salita; sim.azzeraPicchi(); alCambio?.() }
     }
 
     // 6 - 7 · il taglio entra e il meccanismo si scopre
-    scena.impostaSpaccato(dolce(fra(p, 0.60, 1.00)))
+    scena.impostaSpaccato(dolce(fra(p, S.taglio[0], S.taglio[1])))
 
     /**
      * ─── L'AVVICINAMENTO, ed e' la richiesta piu' esplicita che il sito abbia
@@ -144,7 +210,7 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
      * entrando si abbassa da solo nella meta' d'acqua — che e' esattamente la
      * tesi, non un ripiego di inquadratura.
      */
-    scena.impostaAvvicinamento(dolce(fra(p, 0.82, 1.00)))
+    scena.impostaAvvicinamento(dolce(fra(p, S.avvicina[0], S.avvicina[1])))
 
     /**
      * L'USCITA DAL SALONE occupa la prima battuta. Con la scena unica non c'e'
@@ -152,7 +218,7 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
      * alza dalla poltrona e esce dallo scafo. Senza `?unica=1` questa chiamata
      * non fa niente e la corsa resta quella di sempre.
      */
-    scena.impostaUscita(dolce(fra(p, 0.00, 0.15)))
+    scena.impostaUscita(dolce(fra(p, S.uscita[0], Math.max(S.uscita[1], 1e-6))))
 
     const { indice, b } = battutaA(p)
 

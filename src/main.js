@@ -1,5 +1,12 @@
 import './stile.css'
 import { collegaModale } from './ui/modale.js'
+/**
+ * `regia.js` non importa three — verificato, e va tenuto cosi': questo modulo
+ * sta nel percorso critico della prima schermata e non deve tirarsi dietro il
+ * motore 3D. Da li' arriva solo la decisione «una scena o due», che deve
+ * stare in un posto solo.
+ */
+import { LA_SCENA_E_UNA } from './regia.js'
 
 /**
  * Questo modulo non importa three. Deve restare cosi'.
@@ -138,7 +145,28 @@ if (demo) {
  * aspettare di essere vicino, e nel frattempo non contende la scheda grafica.
  */
 const salone = document.querySelector('#salone')
-if (salone) {
+
+/**
+ * ─── IL CAPITOLO IN DOM SPARISCE QUANDO LA SCENA E' UNA
+ *
+ * Il salone non e' piu' una sezione a parte: e' la prima battuta della
+ * dimostrazione, dentro la stessa scena 3D, con la stessa camera. Tenerlo
+ * anche qui vorrebbe dire mostrarlo due volte di fila — ed e' esattamente
+ * l'architettura a due scene che stiamo togliendo.
+ *
+ * Si RIMUOVE invece di nasconderlo: un `display:none` lascerebbe in piedi il
+ * suo osservatore, i suoi video e il suo ciclo di fotogrammi, cioe' il costo
+ * senza il beneficio. E la sezione portava anche la sovrapposizione di uno
+ * schermo con la dimostrazione, che senza di lei diventerebbe un buco: la
+ * toglie il foglio di stile leggendo `data-unica`.
+ *
+ * `?doppia=1` riporta indietro, finche' la nuova non ha girato su un telefono
+ * vero.
+ */
+if (salone && LA_SCENA_E_UNA) {
+  salone.remove()
+  document.documentElement.dataset.unica = 'si'
+} else if (salone) {
   const caricaSalone = new IntersectionObserver(async (voci, oss) => {
     if (!voci.some(v => v.isIntersecting)) return
     oss.disconnect()
