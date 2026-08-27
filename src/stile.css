@@ -471,11 +471,25 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    nascosto alla vista — perche' la tastiera non deve perdere il filo. */
 .comandi,.richiamo,.pannello--energia,.pannello--letture{transition:opacity .45s}
 
-/* battuta 1: solo la nave che emerge */
-.palco[data-battuta="emerge"] .comandi,
-.palco[data-battuta="emerge"] .richiamo,
-.palco[data-battuta="emerge"] .pannello--energia,
-.palco[data-battuta="emerge"] .pannello--letture{opacity:0}
+/* ─── LA BATTUTA 1 NON E' PIU' «SOLO LA NAVE CHE EMERGE»
+
+   Questa regola nascondeva tutto durante l'emersione, e aveva senso finche' la
+   prima battuta era una nave che compariva dal nulla: non c'era ancora niente
+   da comandare.
+
+   Non ha mai funzionato — `data-battuta` finiva sull'elemento sbagliato — e
+   quando stanotte ho corretto quel difetto la regola si e' accesa su un
+   capitolo che nel frattempo era cambiato: adesso «emerge» viene DOPO il
+   salone, e spegnere i comandi li' lascia mezza schermata vuota. Sul telefono,
+   dove la meta' bassa e' tutto quello che c'e', si vede come una pagina rotta.
+
+   Registrato invece di cancellato in silenzio, perche' e' un caso istruttivo:
+   **correggere un difetto vecchio puo' accendere una decisione vecchia**, e la
+   decisione va rivista insieme al difetto, non ereditata.
+
+   Resta valida per l'unica cosa che ancora vale: il richiamo commerciale non
+   sta addosso alle persone nella prima battuta. */
+.palco[data-battuta="salotto"] .richiamo{opacity:0}
 
 /* battute 6-7: la sezione. I comandi si ritirano, le letture restano */
 .palco[data-battuta="taglio"] .comandi,
