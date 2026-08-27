@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>banco del salto a runtime</title>
+<style>
+  body { margin: 0; background: #111; color: #eee; font: 13px/1.5 monospace }
+  video { width: 640px; display: block }
+  pre { padding: 12px; white-space: pre-wrap }
+</style>
+<video id="v" muted playsinline preload="auto"></video>
+<pre id="log">in attesa</pre>
+<script>
+/* BANCO: QUANTO SI VEDE UN SALTO A RUNTIME.
+ *
+ * La domanda non e' "quanto ci mette la seek" -- quella e' una misura del
+ * lettore. La domanda e' QUANTI MILLISECONDI L'IMMAGINE RESTA FERMA, perche'
+ * e' l'unica cosa che l'occhio vede. Quindi non si cronometra `seeked`: si
+ * cronometra l'intervallo fra due FOTOGRAMMI PRESENTATI, con
+ * `requestVideoFrameCallback`, che e' l'unico orologio che sta dalla parte
+ * della cosa misurata.
+ *
+ * A 24 fotogrammi al secondo il passo normale e' 41,7 ms. Un salto che
+ * produce un buco di 42 ms non si vede: e' un fotogramma. Uno che ne produce
+ * 200 e' un blocco visibile.
+ */
+const V = document.getElementById('v')
+const LOG = document.getElementById('log')
+const esiti = []
+let ultimo = null          // orologio dell ultimo fotogramma presentato
+let attesa = null          // salto in corso
+
+function passo(ora, meta) {
+  const buco = ultimo === null ? null : ora - ultimo
+  if (attesa && meta.mediaTime >= attesa.a - 0.08) {
+    esiti.push({
+      da: attesa.da, a: attesa.a,
+      buco_ms: buco,
+      attesa_ms: ora - attesa.chiesto,
+      arrivato_a: meta.mediaTime,
+      fotogrammi_persi: buco === null ? null : Math.max(0, Math.round(buco / (1000 / 24)) - 1)
+    })
+    attesa = null
+  }
+  ultimo = ora
+  V.requestVideoFrameCallback(passo)
+}
+
+window.__banco = {
+  pronto: () => V.readyState >= 3,
+  esiti: () => esiti,
+  bufferizzato: () => {
+    const b = []
+    for (let i = 0; i < V.buffered.length; i++) b.push([V.buffered.start(i), V.buffered.end(i)])
+    return b
+  },
+  salta: (da, a) => {
+    attesa = { da, a, chiesto: performance.now() }
+    V.currentTime = a
+  },
+  tempo: () => V.currentTime,
+  durata: () => V.duration
+}
+
+V.addEventListener('loadeddata', () => { V.requestVideoFrameCallback(passo) })
+V.src = new URLSearchParams(location.search).get('v') || '/public/filmati/salone-largo.mp4'
+V.play().catch(e => { LOG.textContent = 'play negato: ' + e })
+setInterval(() => {
+  LOG.textContent = 'tempo ' + V.currentTime.toFixed(2) + ' / ' + (V.duration || 0).toFixed(2) +
+    '   readyState ' + V.readyState + '   salti misurati ' + esiti.length
+}, 250)
+</script>

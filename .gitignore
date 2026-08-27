@@ -8,3 +8,20 @@ Thumbs.db
 .env.*
 dist/
 provino/font/
+
+# --- ROBA CHE NON APPARTIENE AL REPO
+#
+# Binari di terze parti scaricati da uno strumento (KTX-Software, 5,6 MB): lo
+# strumento sa trovarli da solo in quattro posti diversi, e versionarli
+# significherebbe portarsi dietro un eseguibile Windows dentro un repo che
+# altrove pesa i chunk al decimo di KB.
+riferimenti/ktx2/attrezzo/
+
+# Uscite intermedie delle cotture e dei provini: si rigenerano con un comando,
+# e sono megabyte di PNG e .blend. Il patto di questo repo e' che si versiona
+# CIO' CHE PRODUCE, non cio' che e' stato prodotto -- tranne i beni che il sito
+# serve davvero, che stanno in public/.
+riferimenti/blender/uscite/
+riferimenti/blender/provino/uscita/
+riferimenti/ktx2/uscita/
+riferimenti/ktx2/provino/

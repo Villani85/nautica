@@ -1,0 +1,46 @@
+{
+  "quando": "2026-08-27T12:36:32.463Z",
+  "fonte": "src/scena/impianto.js — creaCorsaCoperchio",
+  "prescrizione": {
+    "documento": "docs/14-FOTOREALISMO.md §4.2",
+    "min": 0.9,
+    "max": 1.2
+  },
+  "durataPiena": 1.0160483724638198,
+  "durata1090": 0.4971211190588279,
+  "durata0199": 0.7809975330360106,
+  "velocitaPicco": 1.9291958144496928,
+  "faseDelPicco": 0.34939617613517343,
+  "massimo": 1,
+  "monotona": true,
+  "scartoDallaFormula": 0.0032164494239755592,
+  "ritorno": {
+    "aperturaMassimaPrimaDelRipensamento": 0.5326928212389133,
+    "tornaAZero": true,
+    "cambiComandoOscillazioneInterna": 0,
+    "cambiComandoOscillazioneAttraverso": 9,
+    "accelerazioneMassimaInInversione": 27.153475597327382,
+    "accelerazioneAperturaPulita": 7.437988684638521,
+    "accelerazionePerFrameRate": [
+      {
+        "fps": 60,
+        "a": 27.153475597327382
+      },
+      {
+        "fps": 120,
+        "a": 28.005397053208185
+      },
+      {
+        "fps": 240,
+        "a": 28.432092022817628
+      },
+      {
+        "fps": 1000,
+        "a": 28.755017717818607
+      }
+    ],
+    "crescitaColFrameRate": 1.0589811096097348
+  },
+  "primoFotogrammaAggancia": true,
+  "guasti": []
+}

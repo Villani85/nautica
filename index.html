@@ -115,6 +115,9 @@
       <input type="range" id="velocita" class="cursore" min="0" max="20" step="1" value="12"
              aria-describedby="v-velocita">
     </div>
+    <!-- `aria-pressed` NON si scrive qui: lo stato iniziale lo possiede
+         `src/stato.js`, e averlo in due posti li ha fatti divergere.
+         Lo imposta `collegaComandi` all'accensione. -->
     <button type="button" id="stab" class="interruttore" aria-pressed="false">
       <span class="spia" aria-hidden="true"></span>
       <span>Stabilisation</span>
@@ -246,11 +249,31 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path, fonts excluded (gzip)</dt><dd>15.1 KB</dd></div>
-      <div><dt>— of which JavaScript</dt><dd>2.9 KB</dd></div>
-      <div><dt>Fonts, self-hosted and subset</dt><dd>39.7 KB</dd></div>
-      <div><dt>3D engine, loaded only on demand (gzip)</dt><dd>181.7 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>15,7 KB</dd></div>
+      <div><dt>— of which JavaScript</dt><dd>2,9 KB</dd></div>
+      <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
+      <!--
+        QUESTA RIGA MANCAVA, ED ERA IL 70% DI QUELLO CHE SI PAGA.
+        La tabella si intitola "the numbers, measured" e i due filmati del
+        salone non comparivano da nessuna parte: in tutto il documento la
+        parola "video" non c'era. Un sito che pubblica il proprio peso come
+        prova di onesta' non puo' omettere la voce piu' pesante.
+      -->
+      <div><dt>Saloon footage, two clips</dt><dd>1,38 MB</dd></div>
+      <!--
+        E "loaded only on demand" era falso: l'osservatore in `src/main.js` ha
+        `rootMargin: '200% 0px'`, e la dimostrazione e' la seconda sezione
+        utile, quindi il motore parte da solo a scorrimento fermo. Il numero
+        era giusto, l'aggettivo no.
+      -->
+      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>186,9 KB</dd></div>
       <div><dt>3D models downloaded</dt><dd>367 KB</dd></div>
+      <!--
+        E il totale, che e' la riga che un giurato verifica in dieci secondi.
+        Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
+        cose diverse e la differenza e' 134 volte.
+      -->
+      <div><dt>Total before the first rendered frame</dt><dd>1,97 MB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
@@ -258,7 +281,7 @@
       <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
     </dl>
 
-    <p>The 3D engine weighs <b data-peso="3D engine, loaded only on demand (gzip)">181.7 KB</b>
+    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">186,9 KB</b>
     compressed and is not on the critical path:
     it is requested only when the demonstration comes near. That is the real
     reason the code was moved to ES modules — <em>not</em> the total weight,

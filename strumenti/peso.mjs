@@ -33,6 +33,29 @@ cammina(dist)
 if (!voci.length) { console.error('dist/ e\' vuota'); process.exit(1) }
 
 const kb = (n) => (n / 1024).toFixed(1).replace('.', ',') + ' KB'
+/**
+ * Oltre il megabyte si scrive in MB, perche' "1440,0 KB" e' un numero che
+ * nessuno legge come "un megabyte e mezzo" -- e questa tabella esiste per
+ * essere letta in dieci secondi da qualcuno che non si fida.
+ */
+const misura = (n) => n >= 1024 * 1024
+  ? (n / 1048576).toFixed(2).replace('.', ',') + ' MB'
+  : kb(n)
+
+/** I filmati del salone, che il sito serve da `public/` e non da `dist/assets`. */
+let byteFilmati = 0
+try {
+  for (const f of readdirSync('public/filmati')) {
+    if (f.endsWith('.mp4')) byteFilmati += statSync('public/filmati/' + f).size
+  }
+} catch { /* nessuna cartella */ }
+/** I modelli, stessa ragione. */
+let byteModelli = 0
+try {
+  for (const f of readdirSync('public/modelli')) {
+    if (f.endsWith('.glb')) byteModelli += statSync('public/modelli/' + f).size
+  }
+} catch { /* nessuna cartella */ }
 const eCritico = (v) => /index\.html$/.test(v.p) || /\/index-[^/]*\.(js|css)$/.test(v.p) || /\.woff2$/.test(v.p)
 const critico = voci.filter(eCritico)
 const dopo = voci.filter(v => !eCritico(v))
@@ -78,10 +101,31 @@ const font = critico.filter(v => /\.woff2$/.test(v.p))
 const jsDopo = dopo.filter(v => v.p.endsWith('.js'))
 
 const ATTESI = [
-  ['Critical path, fonts excluded (gzip)', somma(senzaFont, 'gz')],
+  ['Critical path to first text, fonts excluded (gzip)', somma(senzaFont, 'gz')],
   ['— of which JavaScript', somma(jsCritico, 'gz')],
   ['Fonts, self-hosted and subset', somma(font, 'gz')],
-  ['3D engine, loaded only on demand (gzip)', somma(jsDopo, 'gz')]
+  ['3D engine, loaded on approach (gzip)', somma(jsDopo, 'gz')],
+  /**
+   * --- LE DUE RIGHE CHE MANCAVANO, ED ERANO IL 70% DEL CONTO
+   *
+   * Un collaudo ha misurato i byte veri sul filo fino al primo fotogramma
+   * DISEGNATO: 2,03 MiB, di cui 1,44 di filmati. La tabella si intitolava
+   * "the numbers, measured" e i filmati non comparivano da nessuna parte --
+   * la parola "video" non era in tutto il documento.
+   *
+   * Il numero pubblicato non era falso: descriveva un'altra cosa, cioe' il
+   * percorso fino al primo TESTO dipinto. Ma un sito che pubblica il proprio
+   * peso come prova di onesta' non puo' lasciare fuori la voce piu' pesante e
+   * chiamare "critical path" il 0,7% del conto.
+   *
+   * Il totale si somma da cio' che gia' si misura: percorso critico, font,
+   * motore, modelli, filmati. Non e' il numero del browser -- che dipende
+   * anche dalla compressione del server -- ed e' per questo che la riga dice
+   * "before the first rendered frame" e non "measured in Chrome".
+   */
+  ['Saloon footage, two clips', byteFilmati],
+  ['Total before the first rendered frame',
+    somma(critico, 'gz') + somma(jsDopo, 'gz') + byteModelli + byteFilmati]
 ]
 
 const TOLLERANZA = 0.3
@@ -104,8 +148,18 @@ for (const [etichetta, byte] of ATTESI) {
                 'questo controllo va aggiornato invece che perso')
     continue
   }
-  const dichiarato = parseFloat(m[1].replace(',', '.'))
-  const ok = Math.abs(dichiarato - misurato) <= TOLLERANZA
+  const grezzo = m[1].trim()
+  /**
+   * La virgola decimale: la pagina scrive "1,38 MB" perche' cosi' scrive
+   * tutta la tabella, e `parseFloat("1,38")` restituisce 1 -- senza errore.
+   * Il cancello diceva falso su una riga identica alla misura. Un lettore che
+   * legge cio' che il proprio scrittore scrive deve parlarne la lingua.
+   */
+  const dichiarato = parseFloat(grezzo.replace(',', '.')) * (/MB/i.test(grezzo) ? 1024 : 1)
+  // per le righe in MB la tolleranza da 0,3 KB sarebbe piu' fine
+  // dell'arrotondamento a due decimali della riga stessa (0,01 MB = 10,5 KB)
+  const toll = /MB/i.test(grezzo) ? 10.5 : TOLLERANZA
+  const ok = Math.abs(dichiarato - misurato) <= toll
   /**
    * Con `--scrivi` si riscrive SEMPRE, non solo quando il cancello e' rosso.
    * Riscrivere solo fuori tolleranza lascerebbe accumulare lo scarto fin
@@ -113,13 +167,13 @@ for (const [etichetta, byte] of ATTESI) {
    * riga e' falsa senza che nessun passaggio l'abbia mai fatta diventare tale.
    */
   if (SCRIVI) {
-    const nuovo = misurato.toFixed(1) + ' KB'
+    const nuovo = misura(byte)
     if (nuovo !== m[1].trim()) {
       paginaNuova = paginaNuova.replace(ancora + m[1] + '</dd>', ancora + nuovo + '</dd>')
     }
   }
   console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${etichetta.padEnd(42)} ` +
-              `dichiara ${m[1].trim().padStart(9)}, misura ${kb(byte).padStart(9)}`)
+              `dichiara ${m[1].trim().padStart(9)}, misura ${misura(byte).padStart(9)}`)
 
   /**
    * ─── E LO STESSO NUMERO DETTO IN PROSA
@@ -143,7 +197,7 @@ for (const [etichetta, byte] of ATTESI) {
     const prosa = parseFloat(vecchio.replace(',', '.'))
     const okProsa = Math.abs(prosa - misurato) <= TOLLERANZA
     if (SCRIVI) {
-      const nuovo = misurato.toFixed(1) + ' KB'
+      const nuovo = misura(byte)
       if (nuovo !== vecchio.trim()) {
         paginaNuova = paginaNuova.replace(marca + vecchio + '</b>', marca + nuovo + '</b>')
       }
@@ -168,7 +222,7 @@ for (const [etichetta, byte] of ATTESI) {
      * Il cancello resta, e serve a chi si dimentica di rigenerare.
      */
     if (!SCRIVI) {
-      scarti.push(`«${etichetta}» dichiara ${m[1].trim()} ma la build ne misura ${kb(byte)}`)
+      scarti.push(`«${etichetta}» dichiara ${m[1].trim()} ma la build ne misura ${misura(byte)}`)
     }
   }
 }

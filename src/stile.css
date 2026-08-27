@@ -1025,3 +1025,12 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 @media (prefers-reduced-motion:reduce){
   .palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){animation:none}
 }
+
+/* --- IL CURSORE DICE CHE SI PRENDE
+
+   Una riga, ed e' la convenzione che tutti conoscono. La rotazione era l'unica
+   affordance del sito senza un comando con dei bordi: quattro oggetti dicono di
+   essere toccabili, la tela no. Su tattile non serve -- li' trascinare e' il
+   gesto predefinito. */
+.tela,canvas[role="application"]{cursor:grab}
+.tela:active,canvas[role="application"]:active{cursor:grabbing}

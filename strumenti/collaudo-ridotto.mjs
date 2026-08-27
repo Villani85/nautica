@@ -38,7 +38,20 @@ import { apriBrowser } from './browser.mjs'
  *      opposto e altrettanto vero.
  */
 
-const PORTA = 5180
+/**
+ * --- LA PORTA SI PUO' CAMBIARE, E SERVE PIU' DI QUANTO SEMBRI
+ *
+ * Tutti i collaudi che aprono un browser usavano la 5180 e la cercavano gia'
+ * accesa. Con un solo collaudo alla volta -- in CI, sempre -- e' giusto cosi'.
+ * In locale, con piu' processi che misurano insieme, diventa una risorsa
+ * contesa: il primo che finisce spegne il server sotto chi sta ancora
+ * campionando, e Playwright riferisce `Execution context was destroyed, most
+ * likely because of a navigation`. E' successo tre volte, e nessuna delle tre
+ * il messaggio nominava la causa.
+ *
+ * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
+ */
+const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
 const BASE = `http://localhost:${PORTA}/nautica/`
 const FOTOGRAMMI = 90    // 1,5 s a 60 Hz. Basta: si guarda se si MUOVE, non un periodo intero
 
@@ -47,7 +60,7 @@ async function serviteci () {
     const r = await fetch(BASE, { redirect: 'manual' })
     if (r.status < 500) return null
   } catch {}
-  const s = spawn('npm', ['run', 'preview'], { shell: true, stdio: 'ignore' })
+  const s = spawn('npm', ['run', 'preview', '--', '--port', String(PORTA)], { shell: true, stdio: 'ignore' })
   for (let i = 0; i < 60; i++) {
     try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
     await new Promise(r => setTimeout(r, 500))
@@ -56,6 +69,24 @@ async function serviteci () {
   console.error('il server non si e alzato')
   process.exit(2)
 }
+
+/**
+ * --- NON SI SPEGNE UN SERVER CHE STA SERVENDO QUALCUN ALTRO
+ *
+ * Con piu' collaudi in parallelo -- e in questa sessione ce n'erano quindici,
+ * fra agenti e sessione principale -- tutti trovano `npm run preview` gia'
+ * acceso sulla 5180 e lo riusano, come e' giusto. Poi il primo che finisce lo
+ * UCCIDE, e chi sta ancora campionando muore con
+ * `page.evaluate: Execution context was destroyed`.
+ *
+ * E' successo davvero, due volte, e il messaggio parla di navigazione: la
+ * causa vera -- un altro processo che ha spento il server -- non compare da
+ * nessuna parte. Un guasto che nomina la conseguenza e non la causa.
+ *
+ * `TIENI_SERVER=1` lo lascia acceso. Serve in locale quando si lancia piu' di
+ * un collaudo insieme; in CI non si mette, e il server muore con la corsa.
+ */
+const TIENI_SERVER = !!process.env.TIENI_SERVER
 
 const guai = []
 const server = await serviteci()
@@ -171,7 +202,7 @@ if (con.escursione >= senza.escursione * 0.85) {
 for (const e of [...con.errori, ...senza.errori].slice(0, 3)) guai.push('eccezione in pagina: ' + e)
 
 await browser.close()
-server?.kill()
+if (!TIENI_SERVER) server?.kill()
 
 if (guai.length) {
   console.error('')

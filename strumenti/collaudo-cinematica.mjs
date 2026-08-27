@@ -46,7 +46,20 @@ import { apriBrowser } from './browser.mjs'
  * Non misura millisecondi.
  */
 
-const PORTA = 5180
+/**
+ * --- LA PORTA SI PUO' CAMBIARE, E SERVE PIU' DI QUANTO SEMBRI
+ *
+ * Tutti i collaudi che aprono un browser usavano la 5180 e la cercavano gia'
+ * accesa. Con un solo collaudo alla volta -- in CI, sempre -- e' giusto cosi'.
+ * In locale, con piu' processi che misurano insieme, diventa una risorsa
+ * contesa: il primo che finisce spegne il server sotto chi sta ancora
+ * campionando, e Playwright riferisce `Execution context was destroyed, most
+ * likely because of a navigation`. E' successo tre volte, e nessuna delle tre
+ * il messaggio nominava la causa.
+ *
+ * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
+ */
+const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
 const BASE = `http://localhost:${PORTA}/nautica/`
 const PUNTI = [0.15, 0.35, 0.60]      // frazioni del capitolo
 const CAMPIONI_MINIMI = 20            // abbastanza da vedere un'escursione della pinna
@@ -73,7 +86,7 @@ async function serviteci () {
    * server di sviluppo, quindi la stessa suite verificava due rappresentazioni
    * diverse dello stesso commit.
    */
-  const s = spawn('npm', ['run', 'preview'], { shell: true, stdio: 'ignore' })
+  const s = spawn('npm', ['run', 'preview', '--', '--port', String(PORTA)], { shell: true, stdio: 'ignore' })
   for (let i = 0; i < 60; i++) {
     try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
     await new Promise(r => setTimeout(r, 500))
@@ -82,6 +95,24 @@ async function serviteci () {
   console.error('il server non si e\' alzato')
   process.exit(2)
 }
+
+/**
+ * --- NON SI SPEGNE UN SERVER CHE STA SERVENDO QUALCUN ALTRO
+ *
+ * Con piu' collaudi in parallelo -- e in questa sessione ce n'erano quindici,
+ * fra agenti e sessione principale -- tutti trovano `npm run preview` gia'
+ * acceso sulla 5180 e lo riusano, come e' giusto. Poi il primo che finisce lo
+ * UCCIDE, e chi sta ancora campionando muore con
+ * `page.evaluate: Execution context was destroyed`.
+ *
+ * E' successo davvero, due volte, e il messaggio parla di navigazione: la
+ * causa vera -- un altro processo che ha spento il server -- non compare da
+ * nessuna parte. Un guasto che nomina la conseguenza e non la causa.
+ *
+ * `TIENI_SERVER=1` lo lascia acceso. Serve in locale quando si lancia piu' di
+ * un collaudo insieme; in CI non si mette, e il server muore con la corsa.
+ */
+const TIENI_SERVER = !!process.env.TIENI_SERVER
 
 const server = await serviteci()
 const browser = await apriBrowser()
@@ -322,7 +353,7 @@ if (dichiarati) {
 if (errori.length) console.log('  errori di pagina: ' + errori.slice(0, 3).join(' | '))
 
 await browser.close()
-if (server) server.kill()
+if (server && !TIENI_SERVER) server.kill()
 
 if (guasti.length) {
   console.error('\nCOLLAUDO CINEMATICA FALLITO')

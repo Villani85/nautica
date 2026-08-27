@@ -1,0 +1,230 @@
+{
+ "sorgente": "public/filmati/salone-largo.mp4",
+ "fotogramma_px": [
+  1280,
+  720
+ ],
+ "misurato": {
+  "rette_vano": {
+   "diagonale_alta": {
+    "m": 1.621707,
+    "q": 552.946,
+    "errore_px": 2.163
+   },
+   "montante": {
+    "m": -0.007573,
+    "q": 702.911,
+    "errore_px": 0.699
+   },
+   "battuta_bassa": {
+    "m": -1.500683,
+    "q": 1501.82,
+    "errore_px": 1.896
+   }
+  },
+  "errore_medio_rette_px": 1.175,
+  "punto_di_fuga_vano_px": [
+   1045.77,
+   303.89
+  ],
+  "orizzonte_mare": {
+   "a": -0.010801,
+   "b": 335.587,
+   "y_al_centro_px": 328.67,
+   "inclinazione_gradi": -0.619,
+   "rms_px": 0.575
+  },
+  "giunzione_pavimento_forzata_sul_punto_di_fuga_px": 1.12,
+  "giunzione_soffitto_forzata_sul_punto_di_fuga_px": 3.0
+ },
+ "dichiarato": {
+  "focale_px": 1177.51,
+  "focale_mm_equiv35": 33.12,
+  "da_dove": "src/scena/index.js:81 new PerspectiveCamera(34, ...) — il sito monta la fotografia perche riempia quel campo, quindi dichiara di fatto la lente della sorgente. IL FILMATO NON LA DETERMINA: vedi la testa dello script.",
+  "punto_principale_px": [
+   640.0,
+   360.0
+  ],
+  "scala_da": "src/scena/nave.js TUGA.alt = 0.94 unita e src/scafo/ordinate.js:19 1 unita = 2,5 m -> 2,35 m di altezza d aria fra moquette e soffitto",
+  "altezza_aria_m": 2.35,
+  "larghezza_tuga_m": 4.575,
+  "lunghezza_tuga_m": 15.5
+ },
+ "camera": {
+  "posizione_m": {
+   "x_dal_montante": -2.9322,
+   "y_sopra_il_pavimento": 1.17,
+   "z_dalla_parete": 0.8436
+  },
+  "orientamento_gradi": {
+   "imbardata": -18.98,
+   "beccheggio": -2.827,
+   "rollio": -0.289
+  },
+  "assetto_rispetto_al_mare_gradi": {
+   "totale": 1.588,
+   "attorno_alla_murata": -1.282,
+   "lungo_la_nave": 0.937,
+   "nota": "il pavimento della stanza e il mare visto dal vano NON sono paralleli in questa ripresa"
+  },
+  "rotazione_stanza_verso_camera": [
+   [
+    0.325471,
+    0.005043,
+    0.945539
+   ],
+   [
+    -0.045003,
+    -0.99877,
+    0.020818
+   ],
+   [
+    0.944481,
+    -0.049328,
+    -0.324844
+   ]
+  ]
+ },
+ "guscio_m": {
+  "assi": "X lungo la murata di sinistra, verso il fondo della stanza; Y in alto; Z fuori dalla parete, verso l interno. Origine sullo spigolo BASSO DESTRO del vano, cioe l incrocio fra montante e battuta.",
+  "pavimento_y_m": -0.5628,
+  "soffitto_y_m": 1.7872,
+  "altezza_aria_m": 2.35,
+  "murata_sinistra_z_m": 0.0,
+  "murata_destra_z_m": 4.5747,
+  "paratia_fondo_x_m": null,
+  "paratia_fondo_perche": "NON determinata, e non e una pigrizia: la murata corre verso il punto di fuga, e li un pixel vale metri. Vedi righello_di_profondita: la colonna 900 sta a 4,6 m, la 1000 a 21,7, la 1035 a 103. Il pavimento e letto con certezza fino a X = 1.90 m; il solo limite superiore vero e la fine della tuga, X = 12.6 m.",
+  "profondita_letta_x_m": 1.9,
+  "paratia_fondo_massimo_x_m": 12.568,
+  "vano": {
+   "z_m": 0.0,
+   "x_da_m": -2.1746,
+   "x_a_m": 0.0,
+   "y_da_m": 0.0,
+   "y_a_m": 1.1449,
+   "nota": "x_da_m NON e misurato: il montante di sinistra e fuori quadro. E la X in cui la parete esce dal bordo sinistro del fotogramma, cioe il MINIMO perche il guscio copra l inquadratura."
+  }
+ },
+ "riproiezione": {
+  "errore_medio_px": 1.175,
+  "errore_massimo_px": 13.278,
+  "contro": "il bordo del vano trovato nei pixel, non le rette adattate",
+  "andata_ritorno_px": 0.0,
+  "tetto_px": 4.0,
+  "pavimento_scarto_px": 1.12,
+  "soffitto_scarto_px": 3.0,
+  "orizzonte_scarto_px": [
+   -37.0,
+   -26.8,
+   -16.7
+  ],
+  "contro_la_maschera_spedita_px": 1.56
+ },
+ "righello_di_profondita": {
+  "cosa_e": "a quale X lungo la murata corrisponde una colonna del fotogramma, al livello del pavimento, e a che distanza dalla camera. Serve a vedere quanto in fretta la profondita esplode avvicinandosi al punto di fuga: e li che il guscio smette di essere misurato e comincia a essere inventato.",
+  "colonne": [
+   [
+    750.0,
+    0.586,
+    3.802
+   ],
+   [
+    800.0,
+    1.373,
+    4.54
+   ],
+   [
+    850.0,
+    2.562,
+    5.68
+   ],
+   [
+    900.0,
+    4.567,
+    7.636
+   ],
+   [
+    950.0,
+    8.665,
+    11.687
+   ],
+   [
+    1000.0,
+    21.717,
+    24.691
+   ],
+   [
+    1020.0,
+    41.118,
+    44.074
+   ],
+   [
+    1035.0,
+    102.944,
+    105.886
+   ]
+  ]
+ },
+ "sensibilita": {
+  "orizzonte_10px": "la posa non cambia: non lo usa. Cambia di 0.49 gradi il dislivello dichiarato fra mare e pavimento. Prendendo la verticale dall orizzonte invece che dal montante, la verticale ruota di 1.28 gradi e il montante riproiettato passa da 0.70 a 4.8 px di errore.",
+  "variazioni_percentuali": {
+   "altezza d aria +10%": {
+    "vano_pc": 10.0,
+    "distanza_parete_pc": 10.0,
+    "altezza_occhio_pc": 10.0,
+    "profondita_fondo_pc": 10.0,
+    "imbardata_gradi": 0.0,
+    "beccheggio_gradi": 0.0
+   },
+   "altezza d aria -10%": {
+    "vano_pc": -10.0,
+    "distanza_parete_pc": -10.0,
+    "altezza_occhio_pc": -10.0,
+    "profondita_fondo_pc": -10.0,
+    "imbardata_gradi": 0.0,
+    "beccheggio_gradi": 0.0
+   },
+   "focale +20%": {
+    "vano_pc": -0.04,
+    "distanza_parete_pc": 1.61,
+    "altezza_occhio_pc": -0.52,
+    "profondita_fondo_pc": 19.68,
+    "imbardata_gradi": 2.983,
+    "beccheggio_gradi": 0.458
+   },
+   "focale -20%": {
+    "vano_pc": 0.06,
+    "distanza_parete_pc": -2.77,
+    "altezza_occhio_pc": 0.94,
+    "profondita_fondo_pc": -19.56,
+    "imbardata_gradi": -4.275,
+    "beccheggio_gradi": -0.671
+   },
+   "punto di fuga 20 px piu su": {
+    "vano_pc": 0.04,
+    "distanza_parete_pc": -0.16,
+    "altezza_occhio_pc": 4.99,
+    "profondita_fondo_pc": 0.27,
+    "imbardata_gradi": 0.018,
+    "beccheggio_gradi": -0.953
+   },
+   "punto di fuga 20 px piu giu": {
+    "vano_pc": -0.05,
+    "distanza_parete_pc": 0.07,
+    "altezza_occhio_pc": -5.0,
+    "profondita_fondo_pc": -0.31,
+    "imbardata_gradi": -0.015,
+    "beccheggio_gradi": 0.955
+   }
+  },
+  "legenda": "vano = altezza del vano; parete = distanza della camera dalla murata; occhio = quota della camera sul pavimento; fondo = quanto lontano lungo la murata cade l ultimo punto misurato del pavimento."
+ },
+ "non_determinato": [
+  "La LUNGHEZZA FOCALE. La ripresa e generata e non e una prospettiva coerente, e questo lo MISURA il punto 5: 5 verticali della stanza, inclinate fra -0.80 e +0.05 gradi, sparse invece che a ventaglio -- convergono in modo utilizzabile? NO. Senza una seconda direzione ortogonale affidabile la focale non si misura: qui e DICHIARATA dal sito. Tutte le lunghezze in metri e soprattutto la PROFONDITA del rilievo dipendono da lei (vedi la sensibilita: la focale +/-20% sposta il fondo del +/-20%).",
+  "Le rette longitudinali della stanza NON hanno un punto di fuga solo: il vano ne da uno, la giunzione col pavimento e quella col soffitto un altro, l orizzonte del mare un terzo. La posa combacia sul VANO -- il bordo che si vede -- e paga 1.1/3.0 px sulle giunzioni e 27 px sull orizzonte. Una posa sola non puo combaciare ovunque su questa fotografia.",
+  "La LARGHEZZA DEL VANO. Il montante di sinistra e fuori quadro.",
+  "La PARATIA DI FONDO. La murata si avvicina al punto di fuga: la sua fine cade dove un pixel vale metri. Il solo limite vero e la lunghezza della tuga, 15.5 m.",
+  "IL VERSO. Se la murata col vano sia quella di sinistra e se il fondo sia a prua o a poppa, la fotografia non lo dice: e una scelta di chi monta il guscio.",
+  "La MURATA OPPOSTA e il PAVIMENTO oltre la moquette visibile: fuori quadro. La murata di dritta qui e messa a 4.57 m, che e il baglio della tuga dichiarato, non una misura."
+ ]
+}

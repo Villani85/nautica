@@ -1,0 +1,139 @@
+{
+ "filmato": "public\\filmati\\salone-largo.mp4",
+ "fotogrammi": 324,
+ "fps": 24.0,
+ "durata_s": 13.5,
+ "peso_byte": 853229,
+ "adiacente": 1.4175388813018799,
+ "grafo_per_distanza": [
+  {
+   "fotogrammi": 12,
+   "secondi": 0.5,
+   "minimo": 2.44,
+   "sotto3": 164,
+   "sotto4": 1846,
+   "nodi4": 124
+  },
+  {
+   "fotogrammi": 24,
+   "secondi": 1.0,
+   "minimo": 3.46,
+   "sotto3": 0,
+   "sotto4": 612,
+   "nodi4": 63
+  },
+  {
+   "fotogrammi": 48,
+   "secondi": 2.0,
+   "minimo": 3.73,
+   "sotto3": 0,
+   "sotto4": 234,
+   "nodi4": 34
+  },
+  {
+   "fotogrammi": 96,
+   "secondi": 4.0,
+   "minimo": 4.12,
+   "sotto3": 0,
+   "sotto4": 0,
+   "nodi4": 0
+  },
+  {
+   "fotogrammi": 144,
+   "secondi": 6.0,
+   "minimo": 6.59,
+   "sotto3": 0,
+   "sotto4": 0,
+   "nodi4": 0
+  },
+  {
+   "fotogrammi": 240,
+   "secondi": 10.0,
+   "minimo": 6.59,
+   "sotto3": 0,
+   "sotto4": 0,
+   "nodi4": 0
+  }
+ ],
+ "archi": 910,
+ "nodi": 71,
+ "raggiungibili": 71,
+ "politiche": {
+  "uniforme": {
+   "copertura": 120.0,
+   "copertura60": 114.5,
+   "coda60": 112.0,
+   "ripetizione": 3.270833333333333,
+   "riconosciuto": 8.75,
+   "arco_riusato": 12.125,
+   "giunzione_media": 4.283559384129264,
+   "giunzione_max": 4.495482444763184,
+   "salti": 111.0,
+   "bloccati": 0,
+   "riconosce_min": 5.541666666666667
+  },
+  "pesata": {
+   "copertura": 120.0,
+   "copertura60": 110.5,
+   "coda60": 100.0,
+   "ripetizione": 3.270833333333333,
+   "riconosciuto": 8.708333333333334,
+   "arco_riusato": 13.166666666666668,
+   "giunzione_media": 4.244379830511917,
+   "giunzione_max": 4.495482444763184,
+   "salti": 112.0,
+   "bloccati": 0,
+   "riconosce_min": 5.458333333333333
+  },
+  "tabu": {
+   "copertura": 116.0,
+   "copertura60": 101.5,
+   "coda60": 96.5,
+   "ripetizione": 3.270833333333333,
+   "riconosciuto": 8.729166666666668,
+   "arco_riusato": 9.8125,
+   "giunzione_media": 4.29764144813735,
+   "giunzione_max": 4.495482444763184,
+   "salti": 109.0,
+   "bloccati": 0,
+   "riconosce_min": 5.5
+  },
+  "parsimoniosa": {
+   "copertura": 120.0,
+   "copertura60": 119.0,
+   "coda60": 100.5,
+   "ripetizione": 4.625,
+   "riconosciuto": 7.583333333333333,
+   "arco_riusato": 13.625,
+   "giunzione_media": 4.247407220400773,
+   "giunzione_max": 4.495482444763184,
+   "salti": 111.0,
+   "bloccati": 0,
+   "riconosce_min": 7.5
+  }
+ },
+ "politica_scelta": "uniforme",
+ "strada_A": {
+  "segmenti": 22,
+  "durata_s": 47.264290771484376,
+  "durata_misurata_s": null,
+  "giunzione_media_x": 4.324615841820126,
+  "giunzione_max_x": 4.495482444763184,
+  "dissolvenza_min_s": 0.5902352905273438,
+  "dissolvenza_max_s": 0.6992771911621094,
+  "riconosce_a_s": 18.958333333333332,
+  "peso_stimato_byte": 2987204.707456507,
+  "peso_misurato_byte": null
+ },
+ "strada_B": {
+  "salti": 910,
+  "migliore_x": 3.7304630279541016,
+  "mediano_x": 4.181511878967285,
+  "peso_byte": 853229,
+  "dissolvenza": false
+ },
+ "giro_attuale": {
+  "durata_s": 13.5,
+  "riconosce_a_s": 16.5
+ }
+}

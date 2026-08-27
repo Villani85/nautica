@@ -730,6 +730,19 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * dire che si sta disegnando dev'essere il disegno.
        */
       get fotogrammi () { return frame },
+      /**
+       * L'AZIMUT VERO, e non si deduce dalla posizione della camera.
+       *
+       * Provando a misurare l'auto-dimostrazione della rotazione ho calcolato
+       * l'angolo come `atan2(camera.position.x, camera.position.z)`. Sbagliato:
+       * la camera orbita attorno a una MIRA che si sposta verso il meccanismo,
+       * quindi quell'angolo mescola la rotazione con lo spostamento del centro.
+       * Usciva 1,13 gradi dove il comando ne chiedeva 5.
+       *
+       * E' lo stesso errore di due misure fa: dedurre una grandezza da un
+       * effetto che ne contiene anche un'altra. Qui si legge alla sorgente.
+       */
+      get azimut () { return azimut },
       // I numeri dichiarati dal modello, per il collaudo cinematico.
       get impiantoRapporto () { return impianti[0]?.rapporto ?? null },
       get impiantoEccentricita () { return impianti[0]?.eccentricita ?? null },

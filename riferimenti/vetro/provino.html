@@ -1,0 +1,375 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>provino vetro</title>
+<style>
+  html, body { margin: 0; background: #060f11; }
+  canvas { display: block; }
+</style>
+
+<!--
+  PROVINO DEL VETRO — misura, non dimostrazione.
+
+  Serve a rispondere a UNA domanda: quanto costa `transmission` rispetto al
+  vetro di oggi, e quanto ne recupera la strada senza trasmissione.
+
+  Casi (`?caso=`):
+    oggi      MeshStandardMaterial metalness 0,85 — quello che c'e' in materiali.js
+    fisico    creaVetro()          — transmission 1, ior 1,5, spessore 12 mm
+    leggero   creaVetroLeggero()   — Fresnel sull'alpha, piu' il retro
+    fondo     nessun vetro         — il pavimento del costo: la scena senza pannelli
+
+  Parametri: n (pannelli), posa (lontano|primopiano), scala
+  (transmissionResolutionScale), l/h (dimensioni), immagine=1 (abilita la
+  lettura dei pixel, che da sola cambia le prestazioni: mai insieme alla misura).
+
+  Tutto quello che il provino misura lo espone su `window.__provino`; i numeri
+  li stampa `misura.mjs`, non questa pagina.
+-->
+
+<script type="importmap">
+{ "imports": { "three": "/node_modules/three/build/three.module.js" } }
+</script>
+
+<script type="module">
+import {
+  Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
+  SRGBColorSpace, NoToneMapping, PMREMGenerator, Mesh, MeshStandardMaterial,
+  MeshBasicMaterial, CylinderGeometry, BoxGeometry, Group, DoubleSide, Color,
+  WebGLRenderTarget, HalfFloatType, UnsignedByteType, LinearMipmapLinearFilter, LinearFilter,
+  CanvasTexture, EquirectangularReflectionMapping
+} from 'three'
+import { telaAmbiente } from '../../src/scena/ambiente.js'
+import { creaVetro, creaVetroLeggero, creaVetroRetro, VETRO } from '../../src/scena/vetro.js'
+
+const q = new URLSearchParams(location.search)
+const caso = q.get('caso') || 'oggi'
+const N = Number(q.get('n') || 12)
+const posa = q.get('posa') || 'lontano'
+const scala = Number(q.get('scala') || 1)
+const L = Number(q.get('l') || 720)
+const H = Number(q.get('h') || 450)
+const conImmagine = q.has('immagine')
+
+// ─── il renderer, con le stesse regole del sito (nessun tone mapping, sRGB)
+const render = new WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: conImmagine })
+render.setPixelRatio(1)
+render.setSize(L, H)
+render.outputColorSpace = SRGBColorSpace
+render.toneMapping = NoToneMapping
+render.transmissionResolutionScale = scala
+document.body.appendChild(render.domElement)
+
+const scena = new Scene()
+// Il sito ha il canvas trasparente sul fondo CSS. Qui no, e per una ragione di
+// misura: su fondo trasparente il vetro leggero — che e' `transparent` — si
+// fonde con alpha parziale, e `getImageData` restituisce colori premoltiplicati
+// che non sono confrontabili con quelli del vetro fisico, che e' opaco.
+const camera = new PerspectiveCamera(34, L / H, 0.05, 60)
+
+/**
+ * ─── IL BANCO DEL FRESNEL (`?uniforme=1`) — e perche' e' dovuto esistere
+ *
+ * La prima misura del contrasto bordo/centro diceva: vetro di oggi **2,72**,
+ * vetro fisico **2,21**. Cioe' il metallo avrebbe avuto piu' Fresnel del
+ * dielettrico, che e' impossibile.
+ *
+ * Il numero era giusto e la conclusione sbagliata: sull'ambiente del sito il
+ * centro e il bordo del pannello non riflettono la stessa cosa — il centro
+ * guarda dietro la camera, il bordo guarda di lato, e in mezzo c'e' l'orizzonte
+ * fra carta e acqua, cioe' il contrasto piu' forte dell'intera scena. Quel
+ * rapporto misurava la disuniformita' dell'ambiente, non la riflettanza.
+ *
+ * Per misurare il Fresnel serve un ambiente che non abbia niente da dire:
+ * tinta unita, nessuna luce diretta, niente dietro il vetro. Cosi' l'unica cosa
+ * che puo' far cambiare la luminanza lungo il pannello e' l'angolo.
+ */
+const uniforme = q.has('uniforme')
+
+scena.background = new Color(uniforme ? 0x000000 : 0x060f11)
+
+if (!uniforme) {
+  // stesse luci del sito: il confronto vale solo se l'unica cosa che cambia
+  // e' il materiale del vetro
+  scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, 2.7))
+  const sole = new DirectionalLight(0xfff6e4, 3.6)
+  sole.position.set(4.5, 7, 6)
+  scena.add(sole)
+}
+
+function telaUniforme () {
+  const c = document.createElement('canvas')
+  c.width = 64; c.height = 32
+  const x = c.getContext('2d')
+  x.fillStyle = '#808080'
+  x.fillRect(0, 0, 64, 32)
+  const t = new CanvasTexture(c)
+  t.mapping = EquirectangularReflectionMapping
+  t.colorSpace = SRGBColorSpace
+  return t
+}
+
+const pmrem = new PMREMGenerator(render)
+pmrem.compileEquirectangularShader()
+const tela = uniforme ? telaUniforme() : telaAmbiente(1.0)
+const ambiente = pmrem.fromEquirectangular(tela).texture
+tela.dispose()
+pmrem.dispose()
+
+/**
+ * IL PANNELLO E' CURVO, e non e' un vezzo: e' l'unico modo di misurare il
+ * Fresnel con UNA immagine. Su una lastra piana e frontale l'angolo di
+ * incidenza e' lo stesso ovunque, quindi la curva di riflettanza non si vede.
+ * Su mezzo cilindro l'angolo passa da 0 al centro a radente ai bordi: il
+ * profilo di luminanza lungo la larghezza E' la curva di Fresnel.
+ */
+const geometriaPannello = new CylinderGeometry(0.5, 0.5, 0.34, 64, 1, true, -1.1, 2.2)
+
+// dietro ogni pannello ci deve essere qualcosa, o la trasmissione non ha
+// niente da trasmettere e il provino misurerebbe il vuoto
+const interno = new BoxGeometry(0.7, 0.34, 0.5)
+const arredo = new BoxGeometry(0.12, 0.1, 0.3)
+
+function materialeVetro () {
+  if (caso === 'oggi') {
+    // la copia esatta di materiali.js, con l'ambiente che gli da' index.js
+    const m = new MeshStandardMaterial({ color: 0x0b2226, metalness: 0.85, roughness: 0.12 })
+    m.envMap = ambiente
+    m.envMapIntensity = 1
+    return m
+  }
+  if (caso === 'fisico') return creaVetro({ ambiente })
+  if (caso === 'leggero') return creaVetroLeggero({ ambiente, velo, durezza })
+  return null
+}
+
+const velo = Number(q.get('velo') || VETRO.velo)
+const durezza = Number(q.get('durezza') || 5)
+const retroOpacita = q.has('retro') ? Number(q.get('retro')) : 0.8
+
+const vetro = materialeVetro()
+const retro = caso === 'leggero' ? creaVetroRetro({ ambiente, opacita: retroOpacita }) : null
+const scafo = uniforme
+  ? new MeshBasicMaterial({ color: 0x000000, side: DoubleSide })
+  : new MeshStandardMaterial({ color: 0x14201f, roughness: 0.85, metalness: 0.05, side: DoubleSide })
+const luce = uniforme
+  ? new MeshBasicMaterial({ color: 0x000000 })
+  : new MeshStandardMaterial({ color: 0xd9cdb4, roughness: 0.6, metalness: 0.0 })
+
+const pannelli = []
+const gruppo = new Group()
+scena.add(gruppo)
+
+for (let i = 0; i < N; i++) {
+  const cella = new Group()
+  const colonne = Math.ceil(Math.sqrt(N))
+  const cx = (i % colonne) - (colonne - 1) / 2
+  const cy = Math.floor(i / colonne) - (Math.ceil(N / colonne) - 1) / 2
+  cella.position.set(cx * 1.15, cy * 0.55, 0)
+
+  const stanza = new Mesh(interno, scafo)
+  stanza.position.z = -0.28
+  cella.add(stanza)
+  for (const dx of [-0.18, 0.2]) {
+    const a = new Mesh(arredo, luce)
+    a.position.set(dx, -0.06, -0.16)
+    cella.add(a)
+  }
+
+  if (vetro) {
+    const p = new Mesh(geometriaPannello, vetro)
+    cella.add(p)
+    pannelli.push(p)
+    if (retro) {
+      const r = new Mesh(geometriaPannello, retro)
+      r.scale.setScalar(1 - (VETRO.spessoreMm / 1000) / 2.5 / 0.5) // scostato di 12 mm veri
+      /**
+       * IL RETRO VA DISEGNATO PRIMA, e la prima corsa l'ha dimostrato col
+       * numero: contrasto bordo/centro **0,79**, cioe' il bordo piu' SCURO del
+       * centro — l'opposto del Fresnel. Le due mesh hanno lo stesso centro,
+       * quindi l'ordinamento per distanza fra trasparenti e' indeciso e vinceva
+       * l'ordine di inserimento: il retro nero si fondeva SOPRA il riflesso
+       * della faccia esterna, proprio dove il riflesso e' tutto.
+       */
+      r.renderOrder = -1
+      cella.add(r)
+      pannelli.push(r)
+    }
+  }
+  gruppo.add(cella)
+}
+
+function inquadra () {
+  if (posa === 'primopiano') {
+    // davanti al pannello centrale, a 1,4 unita' = 3,5 m: e' la distanza a cui
+    // il sito porta la camera sul meccanismo (2,6 unita' sulla nave intera)
+    camera.position.set(0, 0, 1.35)
+    camera.lookAt(0, 0, 0)
+  } else {
+    const colonne = Math.ceil(Math.sqrt(N))
+    camera.position.set(0, 0, 1.6 + colonne * 0.75)
+    camera.lookAt(0, 0, 0)
+  }
+}
+inquadra()
+
+const gl = render.getContext()
+
+/**
+ * ─── LA DIAGNOSI DEL BERSAGLIO (`?bersaglio=`)
+ *
+ * Serve a rispondere a una domanda che i primi numeri hanno aperto: il vetro
+ * trasmissivo e' uscito 29 volte piu' caro del vetro di oggi, ma il pass in
+ * piu' aggiunge solo 36 chiamate di disegno su 48 — cioe' poco piu' di un
+ * fotogramma di lavoro. Trenta volte non ci stanno.
+ *
+ * Il sospetto e' il BERSAGLIO in cui three disegna la copia della scena, che
+ * non e' un render target qualunque: half-float, MSAA 4x imposto
+ * (`Math.max(4, capabilities.samples)`) e catena di mipmap rigenerata a ogni
+ * fotogramma. Su una GPU sono cose economiche; su un rasterizzatore software
+ * potrebbero non esserlo affatto.
+ *
+ * Quindi si disegna la STESSA scena due volte — una nel bersaglio e una a
+ * schermo — cambiando solo il tipo di bersaglio:
+ *
+ *   semplice       byte, niente MSAA, niente mipmap
+ *   trasmissione   com'e' fatto quello di three
+ *
+ * La differenza fra i due e' il costo del FORMATO, e non c'entra col vetro.
+ */
+const tipoBersaglio = q.get('bersaglio')
+let bersaglio = null
+if (tipoBersaglio === 'trasmissione') {
+  bersaglio = new WebGLRenderTarget(L, H, {
+    generateMipmaps: true, type: HalfFloatType,
+    minFilter: LinearMipmapLinearFilter, samples: 4
+  })
+} else if (tipoBersaglio === 'semplice') {
+  bersaglio = new WebGLRenderTarget(L, H, {
+    generateMipmaps: false, type: UnsignedByteType,
+    minFilter: LinearFilter, samples: 0
+  })
+}
+
+function unFotogramma () {
+  if (bersaglio) {
+    render.setRenderTarget(bersaglio)
+    render.render(scena, camera)
+    render.setRenderTarget(null)
+  }
+  render.render(scena, camera)
+}
+
+// ─── la lettura dei pixel: sempre dallo stesso canvas, sempre alla stessa
+// dimensione ridotta, cosi' i profili di due casi si sottraggono senza scale
+const RID_L = 180, RID_H = 112
+const tela2d = document.createElement('canvas')
+tela2d.width = RID_L; tela2d.height = RID_H
+const ctx = tela2d.getContext('2d', { willReadFrequently: true })
+
+function luminanze () {
+  ctx.clearRect(0, 0, RID_L, RID_H)
+  ctx.drawImage(render.domElement, 0, 0, RID_L, RID_H)
+  const d = ctx.getImageData(0, 0, RID_L, RID_H).data
+  const out = new Float64Array(RID_L * RID_H)
+  for (let i = 0; i < out.length; i++) {
+    // luma su valori sRGB gia' codificati: e' un confronto fra immagini, non
+    // una misura radiometrica, e va detto perche' i rapporti sono compressi
+    out[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]
+  }
+  return out
+}
+
+window.__provino = {
+  caso, N, posa, scala,
+
+  /** Quanti pannelli e quanta geometria sta davvero disegnando. */
+  info () {
+    unFotogramma()
+    const r = render.info.render
+    return { chiamate: r.calls, triangoli: r.triangles, programmi: render.info.programs.length }
+  },
+
+  /**
+   * IL COSTO — e il metro precedente era rotto, quindi vale la pena dirlo.
+   *
+   * La prima stesura misurava il THROUGHPUT: K disegni di fila, `gl.finish()`
+   * alla fine, tempo diviso K. Sembra il metodo piu' pulito, e qui **dava
+   * numeri diversi fino a 30 volte per lo stesso identico caso** (0,19 ms e
+   * 11,58 ms per il vetro di oggi, a pochi secondi di distanza). Con
+   * SwiftShader il lavoro non sta dove `finish()` lo aspetta.
+   *
+   * Quindi si misura l'unica cosa che l'utente vede davvero: **quanti
+   * fotogrammi escono in un tempo dato**, dentro il ciclo rAF, che e' anche il
+   * ciclo in cui gira il sito. Si riporta la mediana degli intervalli e non la
+   * media: un rasterizzatore software ha code lunghe, e la media le insegue.
+   *
+   * Il valore assoluto resta senza significato (nessuna GPU): serve solo a
+   * fare rapporti fra casi misurati di fila.
+   */
+  async costo ({ scaldata = 10, secondi = 2 } = {}) {
+    for (let i = 0; i < scaldata; i++) unFotogramma()
+
+    const intervalli = []
+    const fine = performance.now() + secondi * 1000
+    let precedente = performance.now()
+    await new Promise(risolvi => {
+      const passo = () => {
+        unFotogramma()
+        const ora = performance.now()
+        intervalli.push(ora - precedente)
+        precedente = ora
+        if (ora < fine) requestAnimationFrame(passo); else risolvi()
+      }
+      requestAnimationFrame(passo)
+    })
+
+    const ordinati = intervalli.slice().sort((a, b) => a - b)
+    const mediana = ordinati[Math.floor(ordinati.length / 2)]
+    const r = render.info.render
+    return {
+      caso, N, scala,
+      fotogrammi: intervalli.length,
+      fps: intervalli.length / secondi,
+      msMediano: mediana,
+      chiamate: r.calls,
+      triangoli: r.triangles
+    }
+  },
+
+  /** Il quadro, ridotto, come profilo di luminanza. */
+  quadro () {
+    unFotogramma()
+    return Array.from(luminanze())
+  },
+
+  /**
+   * LA MASCHERA DEL PANNELLO — perche' «bordo» e «centro» devono essere gli
+   * stessi pixel in tutti i casi, e a occhio non lo sarebbero. Si disegna il
+   * solo vetro in bianco piatto su fondo nero: da li' escono le colonne
+   * occupate, ed e' l'unica cosa che decide dove si campiona.
+   */
+  maschera () {
+    if (!pannelli.length) return null
+    const salva = pannelli.map(p => p.material)
+    const bianco = new MeshBasicMaterial({ color: new Color(0xffffff) })
+    const fondoPrec = scena.background
+    scena.background = new Color(0x000000)
+    const visibili = []
+    gruppo.traverse(o => { if (o.isMesh && !pannelli.includes(o)) { visibili.push([o, o.visible]); o.visible = false } })
+    pannelli.forEach(p => { p.material = bianco })
+    unFotogramma()
+    const m = Array.from(luminanze())
+    pannelli.forEach((p, i) => { p.material = salva[i] })
+    visibili.forEach(([o, v]) => { o.visible = v })
+    scena.background = fondoPrec
+    bianco.dispose()
+    return m
+  },
+
+  larghezza: RID_L,
+  altezza: RID_H
+}
+
+unFotogramma()
+window.__pronto = true
+</script>

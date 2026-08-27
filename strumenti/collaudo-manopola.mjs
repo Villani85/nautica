@@ -72,7 +72,20 @@ import { apriBrowser } from './browser.mjs'
  *    mano.
  */
 
-const PORTA = 5180
+/**
+ * --- LA PORTA SI PUO' CAMBIARE, E SERVE PIU' DI QUANTO SEMBRI
+ *
+ * Tutti i collaudi che aprono un browser usavano la 5180 e la cercavano gia'
+ * accesa. Con un solo collaudo alla volta -- in CI, sempre -- e' giusto cosi'.
+ * In locale, con piu' processi che misurano insieme, diventa una risorsa
+ * contesa: il primo che finisce spegne il server sotto chi sta ancora
+ * campionando, e Playwright riferisce `Execution context was destroyed, most
+ * likely because of a navigation`. E' successo tre volte, e nessuna delle tre
+ * il messaggio nominava la causa.
+ *
+ * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
+ */
+const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
 const BASE = `http://localhost:${PORTA}/nautica/`
 
 /**
@@ -106,7 +119,7 @@ async function serviteci () {
     const r = await fetch(BASE, { redirect: 'manual' })
     if (r.status < 500) return null
   } catch {}
-  const s = spawn('npm', ['run', 'preview'], { shell: true, stdio: 'ignore' })
+  const s = spawn('npm', ['run', 'preview', '--', '--port', String(PORTA)], { shell: true, stdio: 'ignore' })
   for (let i = 0; i < 60; i++) {
     try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
     await new Promise(r => setTimeout(r, 500))
@@ -115,6 +128,24 @@ async function serviteci () {
   console.error('il server non si e alzato')
   process.exit(2)
 }
+
+/**
+ * --- NON SI SPEGNE UN SERVER CHE STA SERVENDO QUALCUN ALTRO
+ *
+ * Con piu' collaudi in parallelo -- e in questa sessione ce n'erano quindici,
+ * fra agenti e sessione principale -- tutti trovano `npm run preview` gia'
+ * acceso sulla 5180 e lo riusano, come e' giusto. Poi il primo che finisce lo
+ * UCCIDE, e chi sta ancora campionando muore con
+ * `page.evaluate: Execution context was destroyed`.
+ *
+ * E' successo davvero, due volte, e il messaggio parla di navigazione: la
+ * causa vera -- un altro processo che ha spento il server -- non compare da
+ * nessuna parte. Un guasto che nomina la conseguenza e non la causa.
+ *
+ * `TIENI_SERVER=1` lo lascia acceso. Serve in locale quando si lancia piu' di
+ * un collaudo insieme; in CI non si mette, e il server muore con la corsa.
+ */
+const TIENI_SERVER = !!process.env.TIENI_SERVER
 
 const guai = []
 const nota = (t) => { console.log('   ' + t) }
@@ -129,7 +160,7 @@ pagina.on('pageerror', e => guai.push('eccezione: ' + String(e).slice(0, 200)))
 
 const finisci = async (codice) => {
   await browser.close()
-  server?.kill()
+  if (!TIENI_SERVER) server?.kill()
   process.exit(codice)
 }
 
@@ -351,19 +382,43 @@ if (!(crescita >= CRESCITA_MIN)) {
  */
 const VOLTE_MAX = 6
 
-const attraverso = async (sel, etichetta) => {
-  // prima: la velocita' angolare naturale, per avere il metro
-  const nat = await pagina.evaluate((n) => new Promise((res) => {
-    let i = 0, prec = window.__nautica.stato.rollio, max = 0
-    const passo = () => {
-      const v = window.__nautica.stato.rollio
-      const d = Math.abs(v - prec); if (d > max) max = d; prec = v
-      if (++i < n) requestAnimationFrame(passo); else res(max)
-    }
-    requestAnimationFrame(passo)
-  }), 60)
+/**
+ * --- E UN PAVIMENTO ASSOLUTO, PERCHE' UN RAPPORTO CON UN DENOMINATORE
+ *     PICCOLO NON SIGNIFICA NIENTE
+ *
+ * La prima stesura prendeva la velocita' naturale PRIMA del clic. Passando da
+ * mare 2 a mare 5 quel riferimento e' la nave quasi ferma -- 0,006 gradi per
+ * fotogramma -- quindi una transizione da 0,04 usciva "sette volte" e il
+ * cancello diventava rosso per un movimento di 2,4 gradi al secondo, cioe'
+ * invisibile.
+ *
+ * Due correzioni, e la seconda e' quella che vale:
+ *
+ *   - il riferimento si prende DOPO che la transizione si e' assestata: e' la
+ *     velocita' che la nave ha nello stato in cui si trova, non in quello da
+ *     cui viene;
+ *   - e un salto deve essere veloce IN ASSOLUTO prima ancora che fuori
+ *     carattere. Sotto un decimo di grado per fotogramma -- sei gradi al
+ *     secondo -- l'occhio non legge un taglio, qualunque cosa dica il rapporto.
+ *
+ * E' la terza volta in questa sessione che un rapporto mi inganna perche' il
+ * denominatore era piccolo. La regola che ne esce: **un rapporto ha bisogno di
+ * un pavimento**, o misura il rumore del proprio denominatore.
+ */
+const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
 
-  // poi: si campiona SENZA INTERRUZIONE mentre il clic arriva
+const naturale = (n) => pagina.evaluate((n) => new Promise((res) => {
+  let i = 0, prec = window.__nautica.stato.rollio, max = 0
+  const passo = () => {
+    const v = window.__nautica.stato.rollio
+    const d = Math.abs(v - prec); if (d > max) max = d; prec = v
+    if (++i < n) requestAnimationFrame(passo); else res(max)
+  }
+  requestAnimationFrame(passo)
+}), n)
+
+const attraverso = async (sel, etichetta) => {
+  // si campiona SENZA INTERRUZIONE mentre il clic arriva
   const promessa = pagina.evaluate((n) => new Promise((res) => {
     let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
     const passo = () => {
@@ -379,10 +434,12 @@ const attraverso = async (sel, etichetta) => {
   await tocca(sel)
   const { max, quando } = await promessa
 
+  // il metro si prende DOPO, quando la nave e' nello stato nuovo
+  const nat = await naturale(60)
   const volte = max / Math.max(1e-6, nat)
   nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
        `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)
-  if (volte > VOLTE_MAX) {
+  if (max > SALTO_INVISIBILE && volte > VOLTE_MAX) {
     guai.push(`${etichetta}: il clic sposta la nave di ${max.toFixed(2)} gradi in un fotogramma, ` +
               `${volte.toFixed(0)} volte quello che fa da sola. E un salto temporale, e questo sito ` +
               'se lo e vietato')

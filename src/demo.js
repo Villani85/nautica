@@ -137,6 +137,18 @@ export function avviaDimostrazione () {
     tela: scena.tela, ruota: scena.ruota, suggerimento: $('#nota')
   })
 
+  /**
+   * IL PRIMO MOVIMENTO LO FA IL SITO, e lo fa quando la nave entra in campo --
+   * non al caricamento, che sarebbe una dimostrazione data a nessuno. Una volta
+   * sola per visita: ripeterla diventerebbe un tic.
+   */
+  let giaMostrato = false
+  const dimostraLaRotazione = () => {
+    if (giaMostrato) return
+    giaMostrato = true
+    collegaPuntoDiVista.mostra?.()
+  }
+
   preferenza.addEventListener('change', (e) => {
     sim.S.ridotto = e.matches
     sim.azzeraPicchi()
@@ -165,7 +177,9 @@ export function avviaDimostrazione () {
    * niente in leggibilita'.
    */
   const osservatore = new IntersectionObserver((voci) => {
-    for (const v of voci) v.isIntersecting ? risveglia() : fermaCiclo()
+    for (const v of voci) {
+      if (v.isIntersecting) { risveglia(); dimostraLaRotazione() } else fermaCiclo()
+    }
   }, { threshold: 0.05 })
   osservatore.observe(sezione)
 

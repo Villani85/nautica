@@ -1,0 +1,153 @@
+{
+  "quando": "2026-08-27T13:38:12.455Z",
+  "visibile": false,
+  "riferimento": {
+    "dettaglio": 10.73,
+    "piatta": 3.2
+  },
+  "sfarfallioGirato": 1.349,
+  "pose": {
+    "fuori": {
+      "originale": {
+        "dettaglio": 0.287,
+        "piatta": 97.6,
+        "pixel": 167841,
+        "sottoLaLinea": [
+          18.5,
+          61.7,
+          62.3
+        ]
+      },
+      "prima": {
+        "dettaglio": 0.287,
+        "piatta": 97.6,
+        "pixel": 167841,
+        "sottoLaLinea": [
+          18.5,
+          61.7,
+          62.3
+        ]
+      },
+      "dopo": {
+        "dettaglio": 0.287,
+        "piatta": 97.6,
+        "pixel": 167841,
+        "sottoLaLinea": [
+          18.5,
+          61.7,
+          62.3
+        ]
+      }
+    },
+    "radente-sole": {
+      "originale": {
+        "dettaglio": 0.927,
+        "piatta": 96.8,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      },
+      "prima": {
+        "dettaglio": 0.788,
+        "piatta": 98.2,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      },
+      "dopo": {
+        "dettaglio": 12.433,
+        "piatta": 7.6,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      }
+    },
+    "radente-spalle": {
+      "originale": {
+        "dettaglio": 1.027,
+        "piatta": 96.7,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      },
+      "prima": {
+        "dettaglio": 0.918,
+        "piatta": 98.2,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      },
+      "dopo": {
+        "dettaglio": 12.438,
+        "piatta": 7.9,
+        "pixel": 118260,
+        "sottoLaLinea": [
+          14.9,
+          51.6,
+          55.6
+        ]
+      }
+    }
+  },
+  "metaBassa": {
+    "radente-sole": {
+      "dettaglio": 8.851,
+      "piatta": 30,
+      "pixel": 336779,
+      "sottoLaLinea": [
+        14.9,
+        51.6,
+        55.6
+      ]
+    },
+    "radente-spalle": {
+      "dettaglio": 8.95,
+      "piatta": 30.1,
+      "pixel": 336779,
+      "sottoLaLinea": [
+        14.9,
+        51.6,
+        55.6
+      ]
+    }
+  },
+  "sfarfallio": {
+    "fuori": {
+      "prima": 0.026,
+      "dopo": 0.026
+    },
+    "radente-sole": {
+      "prima": 0.191,
+      "dopo": 2.144
+    },
+    "radente-spalle": {
+      "prima": 0.102,
+      "dopo": 2.22
+    }
+  },
+  "costi": {
+    "radente": {
+      "prima": 2.6,
+      "dopo": 3.4
+    },
+    "fuori": {
+      "prima": 2.5,
+      "dopo": 2.7
+    }
+  }
+}

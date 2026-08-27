@@ -138,24 +138,87 @@ Riferimenti di formato:
 ### 1.5 Bersaglio dimensionale del nuovo asset
 
 Il riferimento di scala è la classe **Quantum e1500**, non la sua forma
-proprietaria. La scheda ufficiale riporta:
+proprietaria. La scheda ufficiale riporta, alla lettera:
 
-- unità interna: **1.105 × 729 × 928 mm**;
-- altezza complessiva: **1.310 mm**;
-- pinne tipiche: **1,5–3,5 m²**;
-- yacht tipici: **30–66 m**.
+| voce della scheda | valore |
+|---|---|
+| Dimensions (L × W × H) — *inside vessel after installation*\*\*\* | **1.105 × 729 × 928 mm** |
+| Hull Unit Height (Overall)\*\*\* | **la cella è vuota** |
+| Typical Fin Size Range | 1,5–3,5 m² |
+| Typical Vessel Length (for a pair) | 30–66 m |
+| Hull Unit Weight | 779 kg |
+
+\*\*\* nota della scheda: «*Dimensions are of the equipment, and do not include
+service allowances*».
 
 Fonte: [Quantum e1500 Hull Unit — scheda tecnica ufficiale](https://cdn.quantumstabilizers.com/uploads/e1500-Hull-Unit-Technical-Specifications-0726.pdf).
 
+**CORREZIONE — «altezza complessiva 1.310 mm» non esiste in quella fonte.**
+
+Per mesi questo paragrafo ha attribuito alla scheda un valore che la scheda non
+riporta: nel PDF citato la riga *Hull Unit Height (Overall)* c'è, ma **la cella
+del valore è vuota** — verificato estraendo il testo del documento, dove fra
+`2.5m² - 3.9m²` e `1105mm x 729mm x 928mm` non c'è nessun numero. Nel PDF non
+compare la stringa `1310` in nessuna forma.
+
+Il numero ha comunque prodotto danni per tutto il tempo in cui è stato lì:
+
+1. `glb-grezzo.py` lo copiava in una costante `ALT_TOT = 1.310` che **non
+   compariva in nessuna espressione**: un bersaglio che non costruiva niente;
+2. `glb-impianto.py` non l'ha nemmeno più ereditata, e nessuno se n'è accorto;
+3. una revisione ha misurato l'altezza del gruppo, trovato 1,141 m, e
+   registrato uno scarto del −13% da un numero che non ha fonte. Per giunta
+   quel 1,141 **non era l'altezza di niente**: era la distanza fra il fondo
+   della fondazione e la cima di un cavo elettrico — un nodo `cavo` rimasto
+   fuori dal contratto di §2.1 per il difetto descritto in `glb-impianto.py`.
+
+Entrambi i lati del confronto erano sbagliati. Non si aggiusta un modello per
+inseguire una quota senza fonte: quella sarebbe la stessa colpa di `mx[0]−0.18`,
+l'aritmetica che faceva tornare l'apertura della pinna.
+
+**E l'errore era anche di categoria.** Una hull unit ha un'*overall height*
+perché nei disegni di installazione è **verticale**: l'unità sta sopra il
+fasciame e sotto c'è il *lower bearing housing* con l'albero che esce dal
+guscio. Quell'altezza si misura **lungo l'asse dell'albero**. Nel nostro
+modello §2.3 mette l'asse dell'albero su **+X, fuoribordo**: la quota che
+descrive quella direzione esiste già, ed è l'apertura della pinna. Mettere una
+*overall height* sull'asse verticale significa confrontare due misure diverse —
+esattamente ciò che §1.3 vieta.
+
 **DECISIONE — Il modello originale usa come obiettivo:**
 
-| grandezza | obiettivo Blender/glTF | dopo scala `0,4` nella scena |
-|---|---:|---:|
-| ingombro unità interna | circa 1,10 × 0,73 × 0,93 m | 0,44 × 0,29 × 0,37 |
-| altezza complessiva | circa 1,31 m | 0,524 |
-| apertura della pinna | circa 1,50 m | 0,60 |
-| area planare pinna | circa 2,20 m² | 0,352 unità²; il valore autoritativo resta in `extras` |
-| incidenza massima | ±25° | invariata |
+| grandezza | obiettivo Blender/glTF | tolleranza | dopo scala `0,4` nella scena |
+|---|---:|---:|---:|
+| ingombro unità interna | 1,105 × 0,928 × 0,729 m *(X larghezza, Y altezza, Z profondità in glTF)* | ±5% | 0,442 × 0,371 × 0,292 |
+| altezza complessiva del gruppo | 0,928 m, datum asse albero | ±5% | 0,371 |
+| apertura della pinna | 1,50 m dal piano del fasciame | ±2 cm | 0,60 |
+| area planare pinna | 2,20 m² | ±5% | 0,352 unità²; il valore autoritativo resta in `extras` |
+| incidenza massima | ±25° | — | invariata |
+
+**L'altezza del gruppo e quella dell'unità interna sono lo stesso numero, e non
+è una svista.** In questo impianto tutto ciò che eccede l'unità — tenuta,
+albero, pinna — sporge **fuoribordo lungo l'asse dell'albero**, non verso
+l'alto. Non esiste una terza quota verticale da prescrivere: se un giorno ne
+esisterà una (un gruppo di sollevamento, un quadro montato sopra), sarà perché
+qualcuno avrà modellato geometria che oggi non c'è, e allora quel numero avrà
+una fonte.
+
+**Che cosa entra nella misura**, perché è la parte che si è già rotta:
+
+- **fuori la lastra del fasciame** (`STATIC_HULL_PLATE`): è un elemento di
+  scena, non equipaggiamento, e nel sito è addirittura invisibile;
+- **fuori ciò che sta oltre il fasciame** — `STATIC_SEAL`, `RIG_SHAFT`,
+  `RIG_FIN` — perché la quota di scheda è dichiarata *inside vessel*;
+- **fuori i flessibili**, riconosciuti dal **materiale** `cavo` e non dal nome
+  del nodo: la scheda dice che le quote sono *of the equipment*, e dove arriva
+  un cavo dipende da dov'è il quadro, non dal prodotto. Per materiale invece
+  che per nome, così la regola vale anche per il prossimo flessibile;
+- **l'altezza si dichiara col suo datum** (§1.3 punto 2): non «0,95 m», ma «da
+  −0,614 a +0,336 rispetto all'asse dell'albero». La stessa altezza sopra o
+  sotto l'asse non si installa allo stesso modo.
+
+Queste quattro righe non sono commento: sono ciò che `strumenti/collaudo-glb.mjs`
+misura, ed è il cancello che §10.1 chiedeva e che non esisteva.
 
 Le quote sono un **bersaglio di progetto** compatibile con le fonti, non la
 pretesa di riprodurre l'e1500.

@@ -1,0 +1,41 @@
+01:21.218  blend            | Read blend: "C:\Users\Giuseppe\Webingegno\nautica\riferimenti\blender\provino\provino.blend"
+BlenderMCP: cannot start server in background mode (blender -b) - commands would never execute
+BlenderMCP: run Blender with a GUI, or use a virtual display: xvfb-run -a blender
+BlenderMCP addon registered
+======================================================================
+COTTURA  ALTA  ->  BASSA
+  facce alta 196   facce bassa 6
+  diagonale bassa  3.4641
+  texture          2048 px, margine 16 texel
+  estrusione cage  0.034641   distanza di ricerca 0.173205
+  occlusione       64 campioni, raggio 0.4330
+======================================================================
+C:\Users\Giuseppe\Webingegno\nautica\riferimenti\blender\cottura.py:292: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+C:\Users\Giuseppe\Webingegno\nautica\riferimenti\blender\cottura.py:324: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  if not mat or not mat.use_nodes:
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+
+MISURA della normale  (bassa-normale.png)
+  area UV della bassa     3394968 texel (80.94% della texture)
+  cotta dentro l'area UV  100.00%   <- se crolla, il raggio non ha trovato l'alta
+  texel utili misurati    3376480
+  deviazione standard R   18.060 livelli  (piatta = 0)
+  deviazione standard G   17.387 livelli
+  texel con informazione  76.663%  (scarto da (128,128) oltre 8 livelli)
+  scostamento medio da (128,128)  R 0.04  G 0.09
+  macchie (scarto dalla mediana dei vicini > 41/255)  0.0001%
+  ORM occlusione R    min  123.5  media  254.2  max  255.0  dev  5.72  su 100.00% dell'area UV
+  ORM rugosita' G     min   38.2  media   89.4  max  140.2  dev 20.12  su 100.00% dell'area UV
+  ORM metallicita' B  min  216.7  media  216.8  max  216.8  dev  0.00  su 100.00% dell'area UV
+  scritto  C:\Users\Giuseppe\Webingegno\nautica\riferimenti\blender\provino\uscita\bassa-orm.png
+
+COTTURA ACCETTATA - dev R 18.06 / G 17.39, macchie 0.0001%, tetto 0.05%
+BlenderMCP server stopped
+BlenderMCP addon unregistered
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:35:40)
+
+Blender quit

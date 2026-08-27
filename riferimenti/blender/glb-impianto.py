@@ -415,12 +415,37 @@ for nodo, v in vuoti.items():
     v.parent = padre
     v.matrix_parent_inverse = padre.matrix_world.inverted()
 
+# ─── `convert` GUARDA LA SELEZIONE, NON L'OGGETTO ATTIVO ─────────────────
+#
+# Qui prima c'era `objects.active = o` e basta, subito dopo un DESELECT ALL.
+# `bpy.ops.object.convert` lavora su `selected_editable_objects`: senza
+# selezione non converte niente, non solleva niente, non stampa niente.
+# La curva restava CURVE, e da li' partiva una catena tutta silenziosa:
+#
+#   1. `join()` unisce solo gli oggetti dello STESSO tipo dell'attivo, che e'
+#      una mesh: la curva veniva scartata senza un avviso;
+#   2. non essendo unita, non veniva mai imparentata: restava orfana alla
+#      radice della scena;
+#   3. la cottura dell'occlusione salta tutto cio' che non e' MESH: il cavo
+#      usciva senza COLOR_0, cioe' piatto;
+#   4. `uv-impianto.py` e `cuoci-impianto.py` prendono `type == 'MESH'`:
+#      il cavo non entrava nell'atlante e non avrebbe mai avuto una texture;
+#   5. l'esportatore glTF converte le curve da solo, quindi nel GLB il pezzo
+#      c'era, con un nodo di nome `cavo` appeso alla radice della scena e
+#      fuori dal contratto di §2.1.
+#
+# Il punto 5 e' quello che ha fatto danno fuori di qui: quel nodo orfano e' il
+# punto piu' alto di tutto l'assieme (y = +0,527 contro +0,336 del carter), e
+# un audit ha misurato l'«altezza complessiva» del gruppo come la distanza fra
+# il fondo della fondazione e la cima di un CAVO. Un cavo non e' una quota.
 for nodo, lista in pezzi_di.items():
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in lista:
+    for o in list(lista):
         if o.type == 'CURVE':
+            bpy.ops.object.select_all(action='DESELECT')
+            o.select_set(True)
             bpy.context.view_layer.objects.active = o
             bpy.ops.object.convert(target='MESH')
+    bpy.ops.object.select_all(action='DESELECT')
     for o in lista:
         o.select_set(True)
     bpy.context.view_layer.objects.active = lista[0]
@@ -430,6 +455,27 @@ for nodo, lista in pezzi_di.items():
     unito.name = nodo + '_MESH'
     unito.parent = vuoti[nodo]
     unito.matrix_parent_inverse = vuoti[nodo].matrix_world.inverted()
+
+# ─── E LA GUARDIA, PERCHE' IL SILENZIO ERA IL PROBLEMA ───────────────────
+#
+# Il difetto sopra non si e' visto per settimane perche' NIENTE lo diceva: il
+# file usciva, si apriva, pesava giusto. Qui si ferma la costruzione se resta
+# anche un solo pezzo fuori dalla gerarchia — che e' l'unica forma in cui quel
+# guasto puo' ripresentarsi, qualunque ne sia la causa.
+fuori = [o.name for o in bpy.data.objects
+         if o.parent is None and o is not IMPIANTO]
+if fuori:
+    raise SystemExit(
+        'ERRORE: %d oggetti sono rimasti fuori dalla gerarchia di IMPIANTO: %s.\n'
+        'Sarebbero finiti nel GLB come nodi alla radice della scena, senza nome '
+        'di contratto, senza occlusione cotta e senza UV. Vedi la nota su '
+        '`convert` qui sopra.' % (len(fuori), ', '.join(fuori)))
+resta_curva = [o.name for o in bpy.data.objects if o.type == 'CURVE']
+if resta_curva:
+    raise SystemExit(
+        'ERRORE: %s e\' ancora una CURVE dopo il montaggio. La cottura '
+        'dell\'occlusione e gli srotolatori guardano solo le MESH: uscirebbe '
+        'piatta e senza UV.' % ', '.join(resta_curva))
 
 IMPIANTO['assetRole'] = 'generic-electric-fin-actuator'
 IMPIANTO['authoringUnit'] = 'meter'
@@ -451,8 +497,31 @@ IMPIANTO['cycloDiscRadiusM'] = 0.135
 IMPIANTO['modelClaim'] = 'illustrative'
 
 # ─── l'ingombro, misurato e dichiarato ───────────────────────────────────
+#
+# COSA ENTRA NELL'INGOMBRO DELL'UNITA' INTERNA, E PERCHE' PROPRIO QUESTO
+#
+# §1.5 prende le sue quote dalla scheda della classe e1500, che le qualifica
+# in due modi ed e' quella qualifica a decidere cosa si misura:
+#
+#   «Dimensions (L x W x H) — inside vessel after installation»
+#       cio' che resta DENTRO la barca. Fuori restano la tenuta (che e' la
+#       penetrazione a scafo), l'albero che l'attraversa e la pinna.
+#
+#   «Dimensions are of the equipment, and do not include service allowances»
+#       l'EQUIPAGGIAMENTO. Un cavo che dalla morsettiera se ne va verso la
+#       paratia e' installazione, non macchina: dove arriva dipende da dov'e'
+#       il quadro, non dal prodotto. Va escluso, e per materiale invece che
+#       per nome, cosi' la regola vale anche per il prossimo flessibile.
+#
+# La misura si fa sui VERTICI e non su `bound_box`, perche' il riquadro
+# dell'oggetto e' unico e non sa distinguere le facce del cavo da quelle del
+# motore, ora che sono lo stesso pezzo unito.
+FUORI_BORDO = ('RIG_FIN', 'RIG_SHAFT', 'STATIC_SEAL', 'STATIC_HULL')
+NON_EQUIPAGGIAMENTO = {'cavo'}
+
 mn = Vector((1e9, 1e9, 1e9)); mx = Vector((-1e9, -1e9, -1e9))
 ii = Vector((1e9, 1e9, 1e9)); im = Vector((-1e9, -1e9, -1e9))
+ga = Vector((1e9, 1e9, 1e9)); gm = Vector((-1e9, -1e9, -1e9))
 tri = 0
 for o in bpy.data.objects:
     if o.type != 'MESH':
@@ -462,12 +531,28 @@ for o in bpy.data.objects:
         w = o.matrix_world @ Vector(v)
         for i in range(3):
             mn[i] = min(mn[i], w[i]); mx[i] = max(mx[i], w[i])
-        if not o.name.startswith(('RIG_FIN', 'STATIC_HULL')):
-            for i in range(3):
-                ii[i] = min(ii[i], w[i]); im[i] = max(im[i], w[i])
+    nomi_mat = [m.name if m else '' for m in o.data.materials] or ['']
+    for p in o.data.polygons:
+        if nomi_mat[min(p.material_index, len(nomi_mat) - 1)] in NON_EQUIPAGGIAMENTO:
+            continue
+        for k in p.vertices:
+            w = o.matrix_world @ o.data.vertices[k].co
+            # il gruppo: tutto l'equipaggiamento, anche cio' che sta fuori bordo
+            if not o.name.startswith('STATIC_HULL'):
+                for i in range(3):
+                    ga[i] = min(ga[i], w[i]); gm[i] = max(gm[i], w[i])
+            # l'unita' interna: solo cio' che resta dentro la barca
+            if not o.name.startswith(FUORI_BORDO):
+                for i in range(3):
+                    ii[i] = min(ii[i], w[i]); im[i] = max(im[i], w[i])
 print('FACCE %d' % tri)
-print('INGOMBRO interna %.3f x %.3f x %.3f m  (bersaglio %.2f x %.2f x %.2f)'
+print('INGOMBRO interna %.3f x %.3f x %.3f m  (bersaglio %.3f x %.3f x %.3f)'
       % (im[0]-ii[0], im[1]-ii[1], im[2]-ii[2], U_LARG, U_LUNG, U_ALT))
+# L'ALTEZZA COMPLESSIVA SI DICHIARA COL SUO DATUM, §1.3 punto 2.
+# Un solo numero non basta: la stessa altezza puo' stare sopra o sotto l'asse
+# dell'albero, e le due cose non si installano allo stesso modo.
+print('ALTEZZA complessiva del gruppo %.3f m  (da %+.3f a %+.3f sull\'asse albero, bersaglio %.3f)'
+      % (gm[2]-ga[2], ga[2], gm[2], U_ALT))
 # La misura vera: il punto piu' esterno della PINNA, con i modificatori
 # applicati, contro il piano del fasciame che sta a x = 0.
 # Si guarda l'oggetto UNITO, non `pezzi_di['RIG_FIN']`: il montaggio fonde i

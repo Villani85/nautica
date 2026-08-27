@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Banco dell'acqua</title>
+<!-- Senza, il browser chiede /favicon.ico, prende 404, e il 404 finisce nel
+     referto della misura come se fosse un guasto del banco. -->
+<link rel="icon" href="data:,">
+<style>
+  html,body{margin:0;background:#111;color:#E9E5DD;font:13px/1.5 ui-monospace,monospace}
+  /* Lo sfondo e' lo stesso spacco del sito — `src/stile.css`: carta sopra la
+     linea, acqua sotto, stacco secco al 50%. Serve perche' il canvas ha
+     `alpha:true` e i pixel misurati sono quelli COMPOSITATI, come a schermo. */
+  #palco{position:relative;width:1098px;height:616px;
+    background:linear-gradient(to bottom,#E9E5DD 0%,#E9E5DD 50%,#0F3438 50%,#071A1D 100%)}
+  #palco canvas{position:absolute;inset:0}
+  video{display:none}
+</style>
+</head>
+<body>
+<div id="palco"></div>
+<video id="girato" muted playsinline preload="auto"></video>
+<script type="module" src="./banco.js"></script>
+</body>
+</html>

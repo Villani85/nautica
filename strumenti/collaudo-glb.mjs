@@ -32,6 +32,12 @@
  *   INGOMBRO        misurato in metri e confrontato col bersaglio. §12 vieta
  *                   le scale scelte guardando lo schermo: questo e' il modo
  *                   di non sceglierle guardando lo schermo
+ *   UNITA'/ALTEZZA  le due quote di §1.5 che stavano in tabella senza cancello.
+ *                   Un numero prescritto e non misurato scivola: questo lo
+ *                   aveva gia' fatto, e la storia sta scritta accanto al codice
+ *   RADICE          ogni pezzo sotto un nodo del contratto. Un nodo alla radice
+ *                   della scena arriva nel sito lo stesso, e non da' errore:
+ *                   da' un pezzo che nessun nome comanda
  *   PESO            1,5 MB e' un obiettivo provvisorio (§9), non un cancello
  *                   definitivo — ma sfondarlo va detto, non scoperto
  *
@@ -108,8 +114,17 @@ function locale (n) {
 const punto = (m, p) => [0, 1, 2].map(i =>
   m[i] * p[0] + m[4 + i] * p[1] + m[8 + i] * p[2] + m[12 + i])
 
-/** Percorre il sottoalbero e restituisce l'ingombro in metri, o null. */
-function ingombro (indice, m0 = I4) {
+/**
+ * Percorre il sottoalbero e restituisce l'ingombro in metri, o null.
+ *
+ * `senzaMateriali` toglie dal conto le primitive di certi materiali. Serve
+ * perche' §1.5 misura l'ingombro dell'EQUIPAGGIAMENTO — e' la nota della
+ * scheda e1500, «dimensions are of the equipment» — mentre nel modello lo
+ * stesso nodo porta anche il cavo che se ne va verso la paratia. Si filtra per
+ * materiale e non per nome del nodo perche' il cavo E' dentro STATIC_MOTOR:
+ * e' li' che deve stare, ed e' li' che non deve contare.
+ */
+function ingombro (indice, m0 = I4, senzaMateriali = null) {
   const mn = [Infinity, Infinity, Infinity]
   const mx = [-Infinity, -Infinity, -Infinity]
   let trovato = false
@@ -120,6 +135,7 @@ function ingombro (indice, m0 = I4) {
     const w = mul(m, locale(n))
     if (n.mesh !== undefined) {
       for (const p of g.meshes[n.mesh].primitives) {
+        if (senzaMateriali?.has(g.materials?.[p.material]?.name)) continue
         const a = g.accessors[p.attributes.POSITION]
         if (!a?.min) continue
         trovato = true
@@ -147,6 +163,14 @@ const guasti = []
 const note = []
 
 const persi = NODI.filter(n => !perNome.has(n))
+/**
+ * QUESTO FILE E' L'IMPIANTO SE HA IL CONTRATTO DELL'IMPIANTO, non se si chiama
+ * cosi'. I controlli specifici erano gia' condizionati a `FILE.includes(
+ * 'impianto')`: basta collaudare una copia con un altro nome — cioe' proprio
+ * cio' che si fa per provare che un cancello sa fallire — e meta' dei controlli
+ * si spegne restituendo verde. Trovato provando a rompere il cancello nuovo.
+ */
+const E_IMPIANTO = !persi.length
 if (persi.length) {
   guasti.push(`mancano i nodi ${persi.join(', ')} — sono il contratto di §2.1`)
 } else {
@@ -243,7 +267,151 @@ if (pinna) {
 const tutto = perNome.has('IMPIANTO') ? ingombro(perNome.get('IMPIANTO')) : null
 if (tutto) {
   const d = [0, 1, 2].map(i => (tutto.mx[i] - tutto.mn[i]).toFixed(2)).join(' x ')
-  note.push(`INGOMBRO  ${d} m, tutto compreso`)
+  note.push(`INGOMBRO  ${d} m, tutto compreso — lastra del fasciame e pinna incluse`)
+}
+
+/**
+ * ═══ §1.5 · LE DUE QUOTE PRESCRITTE CHE NESSUNO MISURAVA ═══════════════
+ *
+ * §10.1 chiede il rosso quando «il bounding box fisico esce dalla tolleranza
+ * dichiarata». Fino a qui erano coperte solo l'apertura della pinna e l'area:
+ * l'ingombro dell'unita' interna e l'altezza complessiva stavano in tabella in
+ * §1.5 e non le guardava nessuno.
+ *
+ * Ed e' successo esattamente quello che succede a un numero senza cancello.
+ * Una revisione ha misurato l'altezza del gruppo e l'ha trovata a 1,141 m
+ * contro 1,31 prescritti — il 13% in meno. Ma nessuno dei due numeri era
+ * quello che sembrava:
+ *
+ *   1,310   non esiste nella fonte. Nel PDF della e1500 la riga «Hull Unit
+ *           Height (Overall)» c'e' e la CELLA DEL VALORE E' VUOTA. Il numero
+ *           era stato attribuito alla scheda da qualcuno, ed e' rimasto in
+ *           §1.5 abbastanza a lungo da diventare un fatto. `glb-grezzo.py` lo
+ *           copiava in `ALT_TOT = 1.310`, una costante mai usata in nessuna
+ *           espressione: un bersaglio che non costruiva niente.
+ *
+ *   1,141   non era l'altezza di niente. Era la distanza fra il fondo della
+ *           fondazione e la cima di un CAVO ELETTRICO — un nodo `cavo` finito
+ *           alla radice della scena, fuori dal contratto di §2.1, per un
+ *           `convert` che non convertiva. Un cavo non e' una quota: dove
+ *           arriva dipende da dov'e' il quadro.
+ *
+ * Quindi qui non si controlla «il bounding box». Si controlla il bounding box
+ * di cio' che §1.5 dichiara di misurare, che e' un'altra cosa e va scritta:
+ *
+ *   fuori la lastra   `STATIC_HULL_PLATE` e' scena, non equipaggiamento; il
+ *                     sito la nasconde perche' lo scafo vero ce l'ha gia'
+ *   fuori il bordo    la quota di scheda dice «inside vessel after
+ *                     installation»: tenuta, albero e pinna stanno oltre
+ *   fuori i cavi      la scheda dice «dimensions are of the equipment». Per
+ *                     MATERIALE, non per nome del nodo: il cavo deve stare
+ *                     dentro STATIC_MOTOR, e li' non deve contare
+ *
+ * L'altezza si stampa col suo datum — da quanto sotto a quanto sopra l'asse
+ * dell'albero — perche' §1.3 punto 2 la definisce cosi' e perche' la stessa
+ * altezza sopra o sotto l'asse non si installa allo stesso modo.
+ */
+const U_BERSAGLIO = [1.105, 0.928, 0.729]   // X larghezza, Y altezza, Z profondita'
+const ALT_BERSAGLIO = 0.928                 // §1.5: niente sporge in verticale
+const TOLLERANZA_QUOTE = 0.05               // ±5%, dichiarata in §1.5
+const OLTRE_IL_FASCIAME = ['STATIC_SEAL', 'RIG_SHAFT', 'RIG_FIN']
+const NON_EQUIPAGGIAMENTO = new Set(['cavo'])
+
+if (E_IMPIANTO) {
+  /**
+   * PRIMA: LA REGOLA D'ESCLUSIONE DEVE AVERE A COSA APPLICARSI.
+   *
+   * Filtrare per un materiale che non esiste piu' non da' errore: da' un
+   * ingombro piu' grande e un cancello che si accende senza spiegare perche'.
+   * Se qualcuno rinomina `cavo`, deve rompersi qui, dove la causa e' scritta.
+   */
+  const materiali = new Set((g.materials ?? []).map(m => m.name))
+  const mancanti = [...NON_EQUIPAGGIAMENTO].filter(m => !materiali.has(m))
+  if (mancanti.length) {
+    guasti.push(
+      `il materiale "${mancanti.join(', ')}" non esiste piu' nel modello: e' quello ` +
+      'con cui §1.5 riconosce i flessibili da tenere fuori dall\'ingombro. ' +
+      'Se e\' stato rinominato, va aggiornata la regola, non persa.')
+  }
+
+  const unione = (nomi) => {
+    const mn = [Infinity, Infinity, Infinity]
+    const mx = [-Infinity, -Infinity, -Infinity]
+    let trovato = false
+    for (const n of nomi) {
+      const b = perNome.has(n) ? ingombro(perNome.get(n), I4, NON_EQUIPAGGIAMENTO) : null
+      if (!b) continue
+      trovato = true
+      for (let d = 0; d < 3; d++) {
+        if (b.mn[d] < mn[d]) mn[d] = b.mn[d]
+        if (b.mx[d] > mx[d]) mx[d] = b.mx[d]
+      }
+    }
+    return trovato ? { mn, mx } : null
+  }
+
+  const dentro = NODI.filter(n => n !== 'STATIC_HULL_PLATE' && !OLTRE_IL_FASCIAME.includes(n))
+  const gruppo = NODI.filter(n => n !== 'STATIC_HULL_PLATE')
+
+  const u = unione(dentro)
+  if (!u) {
+    guasti.push('non trovo geometria per l\'unita\' interna: §1.5 non e\' verificabile')
+  } else {
+    const d = [0, 1, 2].map(i => u.mx[i] - u.mn[i])
+    const scarto = [0, 1, 2].map(i => (d[i] - U_BERSAGLIO[i]) / U_BERSAGLIO[i])
+    note.push(
+      `UNITA'    ${d.map(v => v.toFixed(3)).join(' x ')} m dentro il fasciame ` +
+      `(bersaglio ${U_BERSAGLIO.join(' x ')}), scarto ` +
+      scarto.map(s => `${s >= 0 ? '+' : ''}${(s * 100).toFixed(1)}%`).join(' / '))
+    const assi = ['larghezza', 'altezza', 'profondita\'']
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(scarto[i]) > TOLLERANZA_QUOTE) {
+        guasti.push(
+          `${assi[i]} dell'unita' interna ${d[i].toFixed(3)} m contro ${U_BERSAGLIO[i]} di §1.5: ` +
+          `${(scarto[i] * 100).toFixed(1)}%, fuori dal ±${TOLLERANZA_QUOTE * 100}% dichiarato`)
+      }
+    }
+  }
+
+  const gr = unione(gruppo)
+  if (!gr) {
+    guasti.push('non trovo geometria per il gruppo: l\'altezza complessiva non e\' verificabile')
+  } else {
+    const h = gr.mx[1] - gr.mn[1]
+    const scarto = (h - ALT_BERSAGLIO) / ALT_BERSAGLIO
+    note.push(
+      `ALTEZZA   ${h.toFixed(3)} m complessivi, da ${gr.mn[1] >= 0 ? '+' : ''}${gr.mn[1].toFixed(3)} ` +
+      `a ${gr.mx[1] >= 0 ? '+' : ''}${gr.mx[1].toFixed(3)} sull'asse dell'albero ` +
+      `(bersaglio ${ALT_BERSAGLIO}, scarto ${scarto >= 0 ? '+' : ''}${(scarto * 100).toFixed(1)}%)`)
+    if (Math.abs(scarto) > TOLLERANZA_QUOTE) {
+      guasti.push(
+        `altezza complessiva del gruppo ${h.toFixed(3)} m contro ${ALT_BERSAGLIO} di §1.5: ` +
+        `${(scarto * 100).toFixed(1)}%, fuori dal ±${TOLLERANZA_QUOTE * 100}% dichiarato. ` +
+        'Prima di alzare un pezzo: §1.5 dice che in questo impianto NIENTE sporge in ' +
+        'verticale oltre l\'unita\', quindi o e\' cresciuto qualcosa che non doveva, ' +
+        'o un flessibile e\' rientrato nel conto.')
+    }
+  }
+
+  /**
+   * E IL PEZZO CHE SCAPPA DAL CONTRATTO.
+   *
+   * E' il difetto che ha prodotto il numero sbagliato: un nodo alla radice
+   * della scena, accanto a IMPIANTO invece che sotto. Nel sito arriva lo
+   * stesso — `gruppo.add(glb.scene)` prende tutto — quindi non si vede
+   * nessun errore: si vede un pezzo che non risponde a nessun nome del
+   * contratto, senza occlusione cotta e senza UV.
+   */
+  const radici = (g.scenes?.[g.scene ?? 0]?.nodes ?? []).map(i => nodi[i]?.name ?? '(senza nome)')
+  const intrusi = radici.filter(n => n !== 'IMPIANTO')
+  note.push(`RADICE    la scena ha ${radici.length} nodo/i in cima: ${radici.join(', ')}`)
+  if (intrusi.length) {
+    guasti.push(
+      `alla radice della scena c'e' anche ${intrusi.join(', ')}, fuori da IMPIANTO. ` +
+      'Ogni pezzo deve stare sotto un nodo di §2.1: quello che sta fuori non riceve ' +
+      'le trasformazioni della regia, non ha l\'occlusione cotta, non entra ' +
+      'nell\'atlante UV — e falsa qualunque misura d\'ingombro.')
+  }
 }
 
 /**
@@ -264,7 +432,7 @@ if (tutto) {
  * regola con cui questo file dichiara di NON controllare il verso delle
  * normali invece di far finta.
  */
-if (FILE.includes('impianto')) {
+if (E_IMPIANTO) {
   let prim = 0
   let conColore = 0
   for (const m of g.meshes ?? []) {
