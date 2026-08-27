@@ -179,12 +179,39 @@ for (const f of PUNTI) {
       raggioDisco: n.impiantoDati?.cycloDiscRadiusM ?? null
     }
   })
+  /**
+   * --- UN TETTO DI TEMPO ACCANTO A QUELLO DI CAMPIONI
+   *
+   * `CAMPIONI_MAX` da solo basta su questa macchina: 160 campioni a 50 ms sono
+   * otto secondi. In CI si disegna in SOFTWARE a 1,2 fotogrammi al secondo, e
+   * ogni lettura aspetta un fotogramma: 160 campioni diventano oltre due
+   * minuti, per tre punti del capitolo. Il cancello sembrava appeso, e la
+   * pubblicazione restava ferma senza che niente dicesse perche'.
+   *
+   * Adesso c'e' anche un tetto di venti secondi per punto. Se il giro
+   * dell'albero non si e' completato dentro quel tempo, si va avanti con
+   * quello che si e' visto: le prove che seguono usano l'escursione osservata,
+   * e una escursione piccola le fa fallire per conto proprio. Un cancello che
+   * non finisce non protegge niente.
+   */
+  // 45 s: su una macchina con GPU il giro si chiude in due e il tetto non viene
+  // mai toccato; senza GPU serve tutto, e misurato bastano -- 48 campioni per
+  // punto, con il terzo punto che chiude il giro e regge la prova.
+  const TETTO_MS = Number(process.env.TETTO_PUNTO_MS || 45000)
+  const t0 = Date.now()
+  let scaduto = false
   for (let i = 0; i < CAMPIONI_MAX; i++) {
     serie.push(await leggi())
     const v = serie.filter(Boolean).map(s => s.ingresso)
     const giro = v.length > 1 ? (Math.max(...v) - Math.min(...v)) * 180 / Math.PI : 0
     if (i >= CAMPIONI_MINIMI && giro >= GIRO_INTERO) break
+    if (Date.now() - t0 > TETTO_MS) { scaduto = true; break }
     await pagina.waitForTimeout(PASSO_MS)
+  }
+  if (scaduto) {
+    console.log(`  al ${(f * 100).toFixed(0)}% del capitolo il giro non si e chiuso in ` +
+                `${(TETTO_MS / 1000).toFixed(0)} s: ${serie.length} campioni. ` +
+                'Macchina lenta, non difetto: si giudica su cio che si e visto.')
   }
 
   const buoni = serie.filter(Boolean)

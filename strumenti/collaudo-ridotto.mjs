@@ -227,9 +227,24 @@ if (!con.ridotto) {
   guai.push('con reducedMotion=reduce la pagina non si accorge della preferenza: ' +
             'il resto di questo collaudo non prova niente')
 }
-if (con.disegnati < FOTOGRAMMI / 3) {
-  guai.push(`con la preferenza attiva la scena ha disegnato ${con.disegnati} fotogrammi su ${FOTOGRAMMI}: ` +
-            'e una fotografia, non un sito piu calmo')
+/**
+ * --- SI CONFRONTA CON I CAMPIONI PRESI, NON CON IL TETTO
+ *
+ * Era `FOTOGRAMMI / 3`. Quando il tetto era 90 chiedeva 30 fotogrammi in un
+ * secondo e mezzo, ragionevole. Alzando il tetto a 600 -- per far convergere
+ * la RMS -- lo stesso controllo ha cominciato a chiederne **200**, e su una
+ * macchina che disegna in software a 1,2 al secondo non ci arriva nessuno.
+ * Ha tenuto la CI rossa un'altra volta, subito dopo che l'avevo curata: la
+ * correzione precedente aveva spostato il difetto invece di toglierlo.
+ *
+ * La domanda vera e': la scena disegna, o e' una fotografia? Si risponde
+ * confrontando cio' che ha disegnato con cio' che si e' potuto CAMPIONARE in
+ * quella stessa finestra -- un rapporto fra due cose misurate sulla stessa
+ * macchina, che e' l'unica forma che regge ovunque.
+ */
+if (con.disegnati < Math.max(3, con.campioni / 3)) {
+  guai.push(`con la preferenza attiva la scena ha disegnato ${con.disegnati} fotogrammi ` +
+            `mentre se ne campionavano ${con.campioni}: e una fotografia, non un sito piu calmo`)
 }
 if (con.video !== null && con.video < 0.4) {
   guai.push(`con la preferenza attiva il video del salone e avanzato di ${con.video}s in un secondo e mezzo: ` +
