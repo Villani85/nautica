@@ -358,20 +358,99 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     if (prima <= 0 || dopo <= 0) return
     versoK = dopo / prima
     versoT = 1.6
+    versoChi = [viva.c, nuda.c]   // il mare e' cambiato per tutte e due
+  }
+
+  /**
+   * --- L'INTERRUTTORE NON FACEVA VEDERE NIENTE, E ORA SI SA DI QUANTO
+   *
+   * `cambiaMare` riscala l'ampiezza perche' altrimenti la transizione naturale
+   * dura piu' di un minuto -- e' scritto qui sopra, col numero. **All'
+   * interruttore non era mai stata applicata**, e all'interruttore serve di
+   * piu': e' il gesto centrale del sito.
+   *
+   * Misurato spegnendo e campionando il rollio picco-picco:
+   *
+   *     prima di spegnere    1,70 gradi
+   *     2 s dopo             0,16      <- SCENDE
+   *     4 s dopo             1,18
+   *     6 s dopo             4,32
+   *     10 s dopo            8,56
+   *     16 s dopo           10,12
+   *
+   * Chi preme vede la nave CALMARSI, poi niente per qualche secondo, e
+   * conclude che il bottone non funziona. La cosa piu' importante che questo
+   * sito ha da mostrare era invisibile a chi la chiedeva.
+   *
+   * Non e' un salto: e' la stessa riscalatura di `cambiaMare`, che moltiplica
+   * theta e omega insieme e quindi **conserva la fase** -- l'orbita si allarga,
+   * non si sposta. Il rapporto e' quello di regime, cioe' quello che la fisica
+   * darebbe da sola aspettando: si accorcia l'attesa, non si cambia il
+   * risultato.
+   */
+  function cambiaStab (v) {
+    if (v === S.stab) return
+    /**
+     * IL BERSAGLIO NON SI CALCOLA: SI LEGGE DALLA NAVE NUDA.
+     *
+     * Primo tentativo: fattore `1/(1 - riduzione)`. A venti nodi la riduzione
+     * vale 0,97, quindi 33 volte -- e la nave usciva a **79 gradi picco-picco**,
+     * cioe' rovesciata. Il rapporto fra le RMS a regime non e' il rapporto fra
+     * le orbite in questo istante, e usarlo come tale e' un errore di
+     * grandezza.
+     *
+     * Ma la corsa NUDA gira gia' accanto a quella viva -- e' il metro della
+     * riduzione, e costa zero. Il bersaglio e' la sua orbita, e l'orbita di un
+     * oscillatore si misura: `sqrt(theta^2 + (omega/W)^2)` e' il raggio, ed e'
+     * costante lungo il giro mentre theta e omega da soli oscillano. Prendere
+     * il raggio invece di theta evita di riscalare a caso a seconda di dove ci
+     * si trova nel ciclo.
+     */
+    const raggio = (r) => Math.hypot(r.theta, r.omega / W)
+    const rNuda = raggio(nuda.c)
+    const rViva = raggio(viva.c)
+    S.stab = v
+    if (rViva < 1e-6 || rNuda < 1e-6) return
+    // spegnendo si va all'orbita della nave nuda; accendendo si torna a cio'
+    // che il sistema lascia, cioe' la stessa orbita ridotta
+    const resta = Math.max(0.02, 1 - S.riduzione)
+    const bersaglio = v ? rNuda * resta : rNuda
+    const k = bersaglio / rViva
+    if (!Number.isFinite(k) || k <= 0) return
+    // un tetto: se qualcosa va storto nei rapporti, meglio una transizione
+    // lenta che una nave rovesciata
+    versoK = Math.min(Math.max(k, 0.05), 20)
+    versoT = 1.6
+    versoChi = [viva.c]           // lo stabilizzatore non esiste per la nuda
   }
 
   let versoK = 1
   let versoT = 1.6
+  let versoChi = []
 
   /** Applica un pezzo del riscalamento, proporzionale al passo. */
+  /**
+   * --- CHI SI RISCALA NON E' SEMPRE TUTTI E DUE
+   *
+   * Questa funzione nasce per `cambiaMare`, e li' e' giusto che scali
+   * entrambe le corse: il mare e' cambiato per tutte e due le navi.
+   *
+   * Per l'interruttore no. Lo stabilizzatore non tocca la nave NUDA -- e'
+   * proprio la sua definizione: e' la corsa che non ce l'ha. Scalando anche
+   * lei, il bersaglio si allontanava mentre lo inseguivo, ed e' un anello che
+   * si chiude su se stesso: misurato, il rollio nudo e' passato da 9 gradi a
+   * **520** in pochi secondi, e la nave viva a 320 picco-picco.
+   *
+   * Adesso chi si riscala si dichiara.
+   */
   function riscala (dt) {
     if (versoT <= 0) return
     const quota = Math.min(dt, versoT) / versoT
     const f = Math.pow(versoK, quota)
-    for (const r of [viva.c, nuda.c]) { r.theta *= f; r.omega *= f }
+    for (const r of versoChi) { r.theta *= f; r.omega *= f }
     versoK /= f
     versoT -= dt
-    if (versoT <= 1e-6) { versoK = 1; versoT = 0 }
+    if (versoT <= 1e-6) { versoK = 1; versoT = 0; versoChi = [] }
   }
 
   /**
@@ -410,7 +489,7 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     for (let k = 0; k < Math.round(secondi / dt); k++) passo(dt, t + dt)
   }
 
-  return { S, passo, azzeraPicchi, scalda, cambiaMare }
+  return { S, passo, azzeraPicchi, scalda, cambiaMare, cambiaStab }
 }
 
 /**

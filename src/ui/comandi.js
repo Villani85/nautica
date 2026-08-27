@@ -11,6 +11,15 @@ import { AMPIEZZA_MARE } from '../scena/simulazione.js'
  * che e' esattamente cio' che WCAG intende.
  */
 export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
+  /**
+   * QUALUNQUE comando toccato annulla la dimostrazione automatica, non solo
+   * l'interruttore. Chi sta gia' provando i comandi non va interrotto -- e
+   * misurato, la dimostrazione che scattava mentre il cancello della manopola
+   * cliccava il mare veniva letta come un salto temporale sul clic: 0,12 gradi
+   * in un fotogramma, 14 volte il naturale. Il cancello aveva ragione: dal suo
+   * punto di vista la nave ERA saltata.
+   */
+  let toccato = false
   const pulsanti = []
 
   for (let n = 0; n < AMPIEZZA_MARE.length; n++) {
@@ -22,6 +31,7 @@ export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
     b.setAttribute('aria-label', `Sea state ${n}, nominal roll amplitude ${AMPIEZZA_MARE[n]} degrees`)
     b.innerHTML = '<span class="mare__barra" aria-hidden="true"></span>'
     b.addEventListener('click', () => {
+      toccato = true
       /**
        * NON `sim.S.mare = n` seguito da `sim.scalda()`. Quella coppia -- che e'
        * stata qui per tre ore -- faceva saltare la nave di 6,27 gradi in un
@@ -68,11 +78,67 @@ export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
   toggle.setAttribute('aria-pressed', String(sim.S.stab))
 
   toggle.addEventListener('click', () => {
-    sim.S.stab = !sim.S.stab
+    toccato = true
+    // passa da `cambiaStab` e non da `S.stab` diretto: e' li' che vive la
+    // riscalatura d'ampiezza, senza la quale premere non fa vedere niente
+    sim.cambiaStab(!sim.S.stab)
     toggle.setAttribute('aria-pressed', String(sim.S.stab))
     sim.azzeraPicchi()
     alCambio?.()
   })
+
+  /**
+   * --- IL SITO SPEGNE PER PRIMO, UNA VOLTA SOLA
+   *
+   * Alla battuta del meccanismo non si capiva cosa dovesse fare chi guarda: la
+   * macchina si muove, quattro numeri cambiano in fondo allo schermo, e niente
+   * dice che le due cose siano la stessa. E la differenza -- l'unica cosa che
+   * questo sito ha da mostrare -- si vede SOLO spegnendo, cioe' facendo una
+   * cosa che nessuno ti ha detto di fare.
+   *
+   * Il fantasma era la risposta tecnica alla stessa domanda, ed e' stato
+   * bocciato con una riga giusta: «non porta emozioni». Un confronto disegnato
+   * accanto parla alla testa. Ma il confronto esiste gia' nella scena: basta
+   * spegnere, e la nave rolla davvero.
+   *
+   * Quindi lo fa il sito, come gia' fa per la rotazione: **il primo movimento
+   * lo fa lui**. Spegne, la nave prende il mare per due secondi e mezzo, e
+   * riaccende. Poi l'interruttore resta li' con l'invito, e a quel punto si sa
+   * cosa succede a premerlo.
+   *
+   * Le condizioni sono tre, e ognuna evita un modo di essere fastidiosi:
+   *   - UNA VOLTA SOLA per visita: una dimostrazione che si ripete e' un
+   *     cartellone;
+   *   - MAI se la mano ha gia' toccato l'interruttore: chi ha capito non va
+   *     interrotto, ed e' la stessa regola di `mostraCheSiGira`;
+   *   - MAI con `prefers-reduced-motion`: li' si sta chiedendo di non essere
+   *     mossi, e questa e' esattamente una mossa non richiesta.
+   *
+   * E se durante la dimostrazione la mano tocca l'interruttore, la
+   * dimostrazione LASCIA: non riaccende, perche' riaccendere sopra la mano di
+   * qualcuno sarebbe il contrario di quello che sta insegnando.
+   */
+  let dimostrato = false
+  function mostraCheSiSpegne ({ durata = 2600 } = {}) {
+    if (dimostrato || toccato || !sim.S.stab) return false
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false
+    dimostrato = true
+    const cambia = (v) => {
+      sim.cambiaStab(v)
+      toggle.setAttribute('aria-pressed', String(v))
+      sim.azzeraPicchi()
+      alCambio?.()
+    }
+    document.documentElement.dataset.dimostra = 'spento'
+    cambia(false)
+    setTimeout(() => {
+      delete document.documentElement.dataset.dimostra
+      if (!toccato) cambia(true)
+    }, durata)
+    return true
+  }
+  collegaComandi.mostraCheSiSpegne = mostraCheSiSpegne
+  return { mostraCheSiSpegne }
 }
 
 /**

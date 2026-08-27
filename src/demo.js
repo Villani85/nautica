@@ -52,7 +52,10 @@ export function avviaDimostrazione () {
     recupero: $('#v-recupero'),
     fCarico: $('#b-carico .riempi'),
     fRecupero: $('#b-recupero .riempi'),
-    velocita: $('#v-velocita')
+    velocita: $('#v-velocita'),
+    pinna: $('#v-pinna'),
+    nudo: $('#v-nudo'),
+    rollio2: $('#v-rollio2')
   })
 
   let inCorso = false
@@ -106,13 +109,41 @@ export function avviaDimostrazione () {
    * «calma» e l'altro niente. Il codice, letto, sembrava giusto.
    */
   const palco = sezione.querySelector('.palco')
+  /* La regia nasce prima dei comandi, quindi la dimostrazione automatica si
+     raggiunge attraverso un contenitore invece che passandola: e' il prezzo
+     dell'ordine di costruzione, e costa una riga. */
+  let comandi = null
+  const vivo = $('#battuta-vivo')
+
   const regia = creaRegia({
     scena, sim, palco,
     didascalia: $('#battuta'),
-    alCambio: risveglia
+    alCambio: risveglia,
+    /**
+     * ENTRANDO NEL MECCANISMO succedono due cose, e sono la risposta a
+     * «non si capisce cosa deve fare l'utente»:
+     *   1. compare la riga viva, che dice cosa sta succedendo ADESSO -- angolo
+     *      della pinna e rollio che la nave avrebbe senza;
+     *   2. il sito SPEGNE da solo per due secondi e mezzo, cosi' la differenza
+     *      si vede invece di doverla immaginare. Poi riaccende e lascia
+     *      l'interruttore a chi guarda.
+     */
+    allaBattuta: (id) => {
+      const acceso = id === 'meccanismo'
+      if (vivo) {
+        vivo.dataset.visibile = acceso ? 'si' : 'no'
+        // il paragrafo si accorcia quando la riga viva prende il suo posto
+        vivo.closest('.battuta')?.setAttribute('data-vivo', acceso ? 'si' : 'no')
+      }
+      /* `?senzaDimostra=1` la spegne: serve ai cancelli che misurano i salti
+         al clic, dove una dimostrazione che parte da sola e' rumore. */
+      if (acceso && !new URLSearchParams(location.search).has('senzaDimostra')) {
+        setTimeout(() => comandi?.mostraCheSiSpegne?.(), 1400)
+      }
+    }
   })
 
-  collegaComandi({
+  comandi = collegaComandi({
     contenitore: $('#mare'), toggle: $('#stab'), sim,
     // La regia va rivalutata anche quando cambia lo STATO, non solo la
     // posizione: accendendo il sistema da fermi il testo restava indietro.

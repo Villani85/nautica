@@ -143,9 +143,25 @@
   <div class="pila">
   <div id="battuta" class="battuta" data-spento="no" aria-live="polite">
     <p class="et"><span data-ruolo="numero">01</span> — The sequence</p>
+    <p class="battuta__vivo" id="battuta-vivo" data-visibile="no" aria-hidden="true">
+      <span class="battuta__vivo--acceso">
+        <span>Fin <b id="v-pinna">0,0</b>°</span><i></i><span>without it, <b id="v-nudo">0,0</b>° of roll</span>
+      </span>
+      <span class="battuta__vivo--spento">
+        <span>Fin idle</span><i></i><span>the ship is rolling <b id="v-rollio2">0,0</b>°</span>
+      </span>
+    </p>
     <h3 data-ruolo="titolo">The surface opens</h3>
     <p data-ruolo="testo">Forty metres of hull.</p>
     <p class="battuta__spento">The system is off. The ship keeps rolling.</p>
+    <!-- COSA STA SUCCEDENDO, ADESSO. Non e' una didascalia scritta: i due
+         numeri arrivano dalla simulazione a ogni fotogramma, e il secondo e' il
+         controfattuale — quanto rollerebbe la nave senza. E' la tesi del sito
+         detta con i suoi stessi numeri, nel momento in cui la si guarda. -->
+    <!-- Due frasi, e la seconda non e' un dettaglio: a sistema SPENTO il
+         controfattuale non ha senso — la nave sta gia' rollando, e il numero
+         che conta e' quello, non quello che eviterebbe. -->
+    
   </div>
 
   <div class="pannello pannello--letture" id="lettura">
@@ -249,8 +265,8 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>15,8 KB</dd></div>
-      <div><dt>— of which JavaScript</dt><dd>2,9 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>16,6 KB</dd></div>
+      <div><dt>— of which JavaScript</dt><dd>3,2 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
       <!--
         QUESTA RIGA MANCAVA, ED ERA IL 70% DI QUELLO CHE SI PAGA.
@@ -266,14 +282,14 @@
         utile, quindi il motore parte da solo a scorrimento fermo. Il numero
         era giusto, l'aggettivo no.
       -->
-      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>190,6 KB</dd></div>
+      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>191,1 KB</dd></div>
       <div><dt>3D models downloaded</dt><dd>436 KB</dd></div>
       <!--
         E il totale, che e' la riga che un giurato verifica in dieci secondi.
         Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
         cose diverse e la differenza e' 134 volte.
       -->
-      <div><dt>Total before the first rendered frame</dt><dd>2,04 MB</dd></div>
+      <div><dt>Total before the first rendered frame</dt><dd>2,05 MB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
@@ -281,7 +297,7 @@
       <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
     </dl>
 
-    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">190,6 KB</b>
+    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">191,1 KB</b>
     compressed and is not on the critical path:
     it is requested only when the demonstration comes near. That is the real
     reason the code was moved to ES modules — <em>not</em> the total weight,

@@ -1040,3 +1040,125 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    gesto predefinito. */
 .tela,canvas[role="application"]{cursor:grab}
 .tela:active,canvas[role="application"]:active{cursor:grabbing}
+
+
+/* ═══ LA RIGA VIVA — cosa sta succedendo, adesso ═══
+   Compare solo alla battuta del meccanismo: prima non c'e' niente da spiegare,
+   e una riga che vive per tutta la pagina smette di essere notata. */
+/* `display:none` e non `opacity:0`: con l'opacita' il riquadro resta nel
+   flusso e la didascalia sfondava di 71-109 px su tre viewport su cinque --
+   trovato dal cancello dell'impaginato, non guardando. */
+.battuta__vivo{
+  display:none;align-items:center;gap:var(--u2);
+  margin-top:var(--u2);
+  font-variation-settings:var(--v-dato);
+  font-family:var(--t-dato);font-size:var(--etichetta);
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--tenue);
+  opacity:0;transform:translateY(4px);
+  transition:opacity .5s ease,transform .5s ease;
+  pointer-events:none;
+}
+.battuta__vivo[data-visibile="si"]{display:flex;opacity:1;transform:none}
+/* La specificita' conta: `.battuta__vivo>span` (una classe + un elemento)
+   batteva `.battuta__vivo--spento` (una classe sola), e si vedevano tutte e
+   due le frasi insieme. Le regole che NASCONDONO si scrivono allo stesso
+   peso di quelle che mostrano, o non nascondono. */
+.battuta__vivo>span{display:flex;align-items:center;gap:var(--u2);white-space:nowrap}
+.battuta__vivo>span.battuta__vivo--spento{display:none}
+.battuta[data-spento="si"] .battuta__vivo>span.battuta__vivo--acceso{display:none}
+.battuta[data-spento="si"] .battuta__vivo>span.battuta__vivo--spento{display:flex}
+.battuta__vivo b{
+  font-variation-settings:var(--v-display);
+  font-family:var(--t-display);font-size:15px;
+  font-weight:600;letter-spacing:0;text-transform:none;
+  color:var(--recupero);
+  /* le cifre non devono ballare mentre cambiano: sono un metro, non un testo */
+  font-variant-numeric:tabular-nums;
+}
+/* Il trattino fra i due pezzi: e' un rapporto, non un elenco. */
+.battuta__vivo i{
+  display:block;width:var(--u3);height:1px;background:currentColor;opacity:.5;flex:none;
+}
+@media (prefers-reduced-motion:reduce){
+  .battuta__vivo{transition:none}
+}
+
+
+/* ═══ IL SITO SPEGNE PER PRIMO ═══
+
+   Mentre la dimostrazione automatica e' in corso l'interruttore deve DIRE che
+   e' lui la causa: senza, la nave comincia a rollare e sembra che il sito si
+   sia rotto. Il richiamo e' lo stesso `chiama` gia' usato per invitare ad
+   accendere -- una convenzione sola, non due. */
+:root[data-dimostra="spento"] .interruttore{
+  animation:chiama 1.3s ease-in-out infinite;
+  border-color:var(--carico);
+}
+:root[data-dimostra="spento"] .battuta__vivo b{color:var(--carico)}
+
+/* E la riga viva cambia registro: mentre il sistema e' spento, il numero che
+   conta e' quello che la nave STA facendo, non quello che eviterebbe. */
+:root[data-dimostra="spento"] .battuta__vivo{color:var(--carico)}
+
+@media (prefers-reduced-motion:reduce){
+  :root[data-dimostra="spento"] .interruttore{animation:none}
+}
+
+
+/* Quando la riga viva e' in scena, il paragrafo si accorcia: sono due cose che
+   dicono la stessa cosa, e quella che si muove vince. Senza, la didascalia
+   sfondava di 71 px a 1440x900 e di 102 a 1366x768 -- misurato dal cancello
+   dell'impaginato, che li ha contati su cinque viewport. */
+.battuta[data-vivo="si"] p[data-ruolo="testo"]{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+}
+/* LA RIGA VIVA PRENDE IL POSTO DELL'ETICHETTA, e non e' un compromesso di
+   spazio: «07 — The sequence» e' una numerazione, la riga viva e' cio' che
+   sta succedendo. Alla battuta del meccanismo la seconda vale piu' della
+   prima, e cosi' non costa una riga a nessuno. */
+.battuta[data-vivo="si"] .et{display:none}
+.battuta__vivo{margin-top:0}
+/* Su uno schermo basso due righe non bastavano ancora -- 84 px fuori a
+   1280x720. Li' il paragrafo LASCIA IL POSTO: alla battuta del meccanismo la
+   riga viva e' la didascalia, e il testo lungo e' quello che il committente ha
+   gia' detto che nessuno legge. */
+@media (max-height:860px){
+  .battuta[data-vivo="si"] p[data-ruolo="testo"]{display:none}
+  /* e la riga viva stringe: margine di un'unita' invece di due, e le due
+     frasi vanno a capo invece di allargare il riquadro */
+  .battuta__vivo{margin-top:var(--u);flex-wrap:wrap;row-gap:var(--u)}
+  .battuta[data-vivo="si"] h3[data-ruolo="titolo"]{
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;
+  }
+}
+/* Sotto i 780 px di altezza la riga viva stringe ancora: a 1280x720 restavano
+   34 px fuori, e un riquadro che sfonda su un portatile da 13 pollici non e'
+   un caso di nicchia. */
+@media (max-height:780px){
+  .battuta__vivo{margin-top:2px;font-size:9px;gap:var(--u)}
+  .battuta__vivo b{font-size:13px}
+  .battuta__vivo i{width:var(--u2)}
+}
+/* Su un telefono resta solo la meta' che conta: quanto rollerebbe SENZA. E'
+   il controfattuale, cioe' la tesi; l'angolo della pinna e' il dettaglio. */
+@media (max-width:560px){
+  .battuta__vivo>span>span:first-child,
+  .battuta__vivo>span>i{display:none}
+}
+
+
+/* ═══ L'INVITO NON STA ADDOSSO AL PEZZO ═══
+   «Scroll / drag to rotate» sta al centro dello schermo, che alla battuta del
+   meccanismo e' esattamente dove sta il meccanismo: il testo ci finiva sopra e
+   il primo piano diventava illeggibile. Li' l'invito scende sotto il pezzo e
+   si fa piu' tenue: ha gia' fatto il suo lavoro, e adesso c'e' qualcosa da
+   guardare. */
+/* `#nota` e' «Drag to rotate», `#invito-scorri` e' «Scroll». Tutti e due
+   stanno al centro, che alla battuta del meccanismo e' dove sta il
+   meccanismo. Li' si spostano in basso e si fanno tenui: hanno gia' fatto il
+   loro lavoro, e adesso c'e' qualcosa da guardare. */
+:root:has(.palco[data-battuta="meccanismo"]) #invito-scorri{
+  bottom:22vh;opacity:.35;
+}
+.palco[data-battuta="meccanismo"] .nota{opacity:.35}

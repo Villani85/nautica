@@ -54,7 +54,8 @@ export async function avviaSalone () {
     tasto?.setAttribute('aria-pressed', String(sim.S.stab))
   }
   tasto?.addEventListener('click', () => {
-    sim.S.stab = !sim.S.stab
+    // stessa strada dell'altro interruttore: la riscalatura sta li'
+    sim.cambiaStab(!sim.S.stab)
     sim.azzeraPicchi()
     rifletti()
     statoCambiato()

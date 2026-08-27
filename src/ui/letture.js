@@ -22,6 +22,23 @@ export function creaLetture (el) {
     el.fCarico.style.right = `${100 - S.carico}%`
     el.fRecupero.style.right = `${100 - S.recupero}%`
     if (el.velocita) el.velocita.textContent = Math.round(S.velocita)
+    /**
+     * --- LA RIGA VIVA: COSA STA SUCCEDENDO, ADESSO
+     *
+     * Guardando la battuta del meccanismo non si capiva cosa stesse facendo il
+     * pezzo: c'erano quattro numeri in fondo allo schermo e una macchina che
+     * si muoveva, e niente diceva che le due cose fossero la stessa.
+     *
+     * Questi due numeri lo dicono, e sono gia' nella simulazione: l'angolo
+     * della PINNA in questo istante, e il rollio della nave NUDA -- cioe'
+     * quanto rollerebbe senza. Il secondo e' il controfattuale, ed e' la tesi
+     * del sito detta con i suoi stessi numeri nel momento in cui la si guarda.
+     *
+     * Niente e' scritto a mano: se la fisica cambia, cambia la frase.
+     */
+    if (el.pinna) el.pinna.textContent = grad(S.pinna * 180 / Math.PI)
+    if (el.nudo) el.nudo.textContent = grad(Math.abs(S.rollioNudo))
+    if (el.rollio2) el.rollio2.textContent = grad(Math.abs(S.rollio))
 
     /**
      * LA RIDUZIONE E' MISURATA, non stampata.

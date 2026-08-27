@@ -171,7 +171,7 @@ const fra = (p, a, b) => Math.max(0, Math.min(1, (p - a) / (b - a)))
 /** Addolcimento: parte e arriva senza spigolo. */
 const dolce = (x) => x * x * (3 - 2 * x)
 
-export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
+export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattuta }) {
   let ultima = -1
   const tit = didascalia.querySelector('[data-ruolo="titolo"]')
   const txt = didascalia.querySelector('[data-ruolo="testo"]')
@@ -265,6 +265,11 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
 
     if (indice === ultima) return
     ultima = indice
+    /* Chi entra in una battuta lo deve sapere UNA VOLTA, non a ogni
+       fotogramma: la dimostrazione automatica dell'interruttore parte
+       entrando nel meccanismo, e ripartire a ogni scorrimento la
+       trasformerebbe in un cartellone. */
+    if (palco.dataset.battuta !== b.id) allaBattuta?.(b.id, b)
     palco.dataset.battuta = b.id
     /**
      * --- LE BATTUTE 2-6 NON PARLANO PIU'
