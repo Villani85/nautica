@@ -731,6 +731,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        */
       get fotogrammi () { return frame },
       /**
+       * IL PIANO DI SEZIONE, perche' il render offline deve applicare LO
+       * STESSO taglio della pagina.
+       *
+       * Il primo render col fasciame dentro mostrava una paratia bianca che
+       * tagliava l'immagine in due. Non era un difetto del render: nella
+       * pagina quel pezzo di guscio e' TAGLIATO da questo piano, e Blender non
+       * ne sapeva niente. Senza esportarlo, il fotogramma cotto mostra una
+       * nave diversa da quella che si vede sul sito -- che e' la sola cosa che
+       * il fotorealismo non puo' permettersi.
+       */
+      get sezione () {
+        return { nx: pianoSezione.normal.x, ny: pianoSezione.normal.y,
+                 nz: pianoSezione.normal.z, costante: pianoSezione.constant }
+      },
+      /**
        * L'AZIMUT VERO, e non si deduce dalla posizione della camera.
        *
        * Provando a misurare l'auto-dimostrazione della rotazione ho calcolato

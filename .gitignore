@@ -30,3 +30,8 @@ riferimenti/ktx2/provino/
 riferimenti/blender/__pycache__/
 # la geometria esportata si rigenera con esporta-meccanismo.mjs
 riferimenti/blender/meccanismo.json
+
+# L HDRI e un ingresso di cottura, non un pezzo del sito: 7 MB che non
+# vanno spediti a nessuno. Si riscarica con riferimenti/blender/hdri/DOVE.md
+riferimenti/blender/hdri/*.hdr
+meccanismo.json

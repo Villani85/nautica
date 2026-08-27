@@ -22,7 +22,7 @@ e' **l'angolo della pinna a scegliere il fotogramma**. Non e' tempo reale, e'
 reattivo — che e' cio' che serve: quando l'utente muove l'andatura, la pinna
 cambia incidenza e la sequenza segue.
 """
-import bpy, json, math, sys, os, time
+import bpy, bmesh, json, math, sys, os, time
 from mathutils import Matrix, Vector
 
 argv = sys.argv[sys.argv.index('--') + 1:]
@@ -111,7 +111,17 @@ MAT = {
     'cavo': verniciato('cavo', (0.07, 0.07, 0.075), 0.55),
     'bronzo': metallo('bronzo', (0.66, 0.50, 0.30), 0.30),
     'accento': metallo('accento', (0.31, 0.88, 0.77), 0.24, aniso=0.4),
+    # IL FASCIAME DELLA FONDAZIONE. Porta il materiale dello scafo perche' e'
+    # scafo -- ma e' la lamiera che il meccanismo attraversa, e senza di essa i
+    # bulloni restano per aria. Vernice nautica: dielettrica, non metallo.
+    'carena': verniciato('carena', (0.10, 0.11, 0.12), 0.22),
 }
+
+# I materiali che appartengono alla NAVE e non al meccanismo. Non sono vietati:
+# entrano se e solo se stanno dentro il volume del meccanismo, e quando entrano
+# lo si DICE, perche' un pezzo di scafo dentro un primo piano di macchinario e'
+# una decisione, non un incidente.
+OSPITE = {'carena', 'coperta', 'scafo'}
 
 # --- SI SCEGLIE PER NOME, E UN NOME SCONOSCIUTO E' UN ERRORE
 #
@@ -133,51 +143,163 @@ MAT = {
 #      render**. Aggiungere un pezzo in Blender senza dirlo qui non deve poter
 #      produrre un'immagine incompleta che sembra completa.
 #
-# Cio' che non e' meccanismo si dichiara, cosi' il salto e' una decisione
-# scritta e non un buco nella tabella.
-NON_MECCANISMO = {'carena', 'coperta', 'acqua', 'interno', 'vetro', 'scafo'}
-
-
-def del_meccanismo(nome):
-    """None = non e' meccanismo (si salta). Altrimenti il nome del materiale."""
-    if not nome or nome.startswith('sovra_') or nome in NON_MECCANISMO:
-        return None
-    return nome
-
 # three.js ha Y in alto, Blender Z: (x, y, z) -> (x, -z, y)
 GIRA = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 
-pezzi = json.load(open(SORGENTE, encoding='utf-8'))
+_dati = json.load(open(SORGENTE, encoding='utf-8'))
+# L'esportatore scriveva una lista; adesso scrive anche il piano di sezione.
+# Si accettano tutte e due le forme, ma senza il piano il taglio non si applica
+# e lo si DICE: un fasciame non tagliato e' una paratia che nella pagina non
+# c'e'.
+if isinstance(_dati, dict):
+    pezzi, SEZIONE = _dati['pezzi'], _dati.get('sezione')
+else:
+    pezzi, SEZIONE = _dati, None
+
+"""
+--- CHI ENTRA NEL RENDER SI DECIDE CON LA GEOMETRIA, NON CON UNA LISTA DI NOMI
+
+Qui c'era `NON_MECCANISMO`, una lista di materiali da saltare: carena, coperta,
+acqua, interno, vetro, scafo. Sembrava ragionevole e produceva un difetto che
+ho impiegato due render a capire: **i bulloni fluttuavano staccati.**
+
+Misurato pezzo per pezzo, con centro e ingombro di ognuno, la causa e' saltata
+fuori. Dentro il gruppo di dritta ci sono due pezzi che portano il materiale
+`carena`:
+
+    carena  mesh_11   dim 1,04   in mezzo al meccanismo
+    carena  mesh_10   dim 0,40   sotto al meccanismo
+
+Non sono lo scafo: sono **il fasciame che il meccanismo attraversa**, la
+lamiera a cui i bulloni sono avvitati. Portano il materiale dello scafo perche'
+sono scafo -- ma sono anche il pezzo senza il quale l'immagine non ha senso.
+Un meccanismo fotografato senza la lamiera che lo tiene e' un meccanismo per
+aria, ed e' esattamente cio' che si vedeva.
+
+Il nome del materiale non poteva distinguerli, perche' e' lo stesso nome. La
+posizione si': **stanno dentro il volume del meccanismo.** Quindi:
+
+  1. il SEME sono i pezzi che portano un materiale del meccanismo e stanno dal
+     lato scelto -- l'unica cosa di cui si e' certi;
+  2. si misura il volume del seme;
+  3. entra anche **qualunque pezzo il cui centro cade dentro quel volume**,
+     comunque si chiami.
+
+Non e' una soglia scelta a occhio: il volume lo dettano i pezzi stessi. E
+separa cio' che la lista sbagliava in tutte e due le direzioni -- tiene dentro
+il fasciame della fondazione, e lascia fuori i candelieri di coperta (12
+triangoli l'uno, a 1,66 m piu' in alto) che una lista di nomi non nominava e
+che entravano perche' nessuno li aveva previsti.
+"""
+
+
+def ingombro(q):
+    m = q['m']
+    pos = q['pos']
+    M = Matrix([[m[c * 4 + r] for c in range(4)] for r in range(4)])   # three e' per colonne
+    lo = Vector((1e9, 1e9, 1e9))
+    hi = Vector((-1e9, -1e9, -1e9))
+    vs = []
+    for i in range(len(pos) // 3):
+        v = GIRA @ (M @ Vector((pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2])))
+        vs.append(v)
+        for a in range(3):
+            lo[a] = min(lo[a], v[a])
+            hi[a] = max(hi[a], v[a])
+    return vs, lo, hi
+
+
+misure = [ingombro(q) for q in pezzi]
+
+"""
+--- IL TAGLIO DELLA PAGINA SI APPLICA ANCHE QUI
+
+Nel sito il guscio e' tagliato da un piano: `normale (0,0,-1)`, costante
+lerpata mentre si scorre. E' cosi' che si guarda dentro la nave. Blender non ne
+sapeva niente, e il primo render col fasciame dentro mostrava una PARATIA
+BIANCA che spaccava l'immagine in due -- un pezzo che sul sito, in quella posa,
+e' tagliato via.
+
+Il piano tiene i punti con `n . p + C > 0`. `GIRA` e' una rotazione, quindi
+`n . p_sito = (GIRA n) . p_blender`: la condizione si porta di la' ruotando la
+normale, senza rifare i conti. Si taglia SOLO cio' che la pagina taglia --
+i materiali della nave -- perche' il meccanismo, nella pagina, non e' tagliato.
+"""
+
+TAGLIO = None
+if SEZIONE:
+    N = GIRA @ Vector((SEZIONE['nx'], SEZIONE['ny'], SEZIONE['nz']))
+    C = SEZIONE['costante']
+    TAGLIO = (N * (-C), -N)
+    print('SEZIONE  normale %.0f %.0f %.0f - costante %.3f' % (N[0], N[1], N[2], C))
+else:
+    print('SEZIONE  ASSENTE: il fasciame non viene tagliato. Riesporta con la')
+    print('         versione nuova di esporta-meccanismo.mjs.')
+
+LATO = os.environ.get('LATO', 'dritta')
+segno = 1.0 if LATO == 'dritta' else -1.0
+
+seme_lo = Vector((1e9, 1e9, 1e9))
+seme_hi = Vector((-1e9, -1e9, -1e9))
+for q, (vs, lo, hi) in zip(pezzi, misure):
+    if q.get('nome') not in MAT:
+        continue
+    if ((lo[0] + hi[0]) / 2) * segno < 0:
+        continue
+    for a in range(3):
+        seme_lo[a] = min(seme_lo[a], lo[a])
+        seme_hi[a] = max(seme_hi[a], hi[a])
+
+if seme_lo[0] > seme_hi[0]:
+    raise SystemExit('LATO=%s: nessun pezzo col materiale del meccanismo da quel lato.' % LATO)
+
+
+def dentro(lo, hi):
+    return all(seme_lo[a] <= (lo[a] + hi[a]) / 2 <= seme_hi[a] for a in range(3))
+
+
 tenuti = 0
-saltati = 0
+fuori_volume = 0
 sconosciuti = set()
 vertici_tenuti = 0
 minimo = Vector((1e9, 1e9, 1e9))
 massimo = Vector((-1e9, -1e9, -1e9))
+ospiti = []
 
-for k, p in enumerate(pezzi):
-    nome = del_meccanismo(p.get('nome'))
-    if nome is None:
-        saltati += 1
+for k, (q, (vs, lo, hi)) in enumerate(zip(pezzi, misure)):
+    if not dentro(lo, hi):
+        fuori_volume += 1
         continue
+    nome = q.get('nome') or ''
     if nome not in MAT:
-        sconosciuti.add(nome)
+        sconosciuti.add(nome or '(pezzo senza materiale)')
         continue
-    pos, idx = p['pos'], p['idx']
-    n = len(pos) // 3
-    M = Matrix([[p['m'][c * 4 + r] for c in range(4)] for r in range(4)])   # three e' per colonne
-    vs = []
-    for i in range(n):
-        v = M @ Vector((pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]))
-        v = GIRA @ v
-        vs.append(v)
-        for a in range(3):
-            minimo[a] = min(minimo[a], v[a]); massimo[a] = max(massimo[a], v[a])
-    fs = [(idx[i], idx[i + 1], idx[i + 2]) for i in range(0, len(idx), 3)] if idx \
-        else [(i, i + 1, i + 2) for i in range(0, n, 3)]
+    if nome in OSPITE:
+        ospiti.append(nome)
+    idx = q['idx']
+    n = len(vs)
+    fs = [(idx[i], idx[i + 1], idx[i + 2]) for i in range(0, len(idx), 3)] if idx         else [(i, i + 1, i + 2) for i in range(0, n, 3)]
     me = bpy.data.meshes.new('p%d' % k)
     me.from_pydata([tuple(v) for v in vs], [], fs)
     me.update()
+    if TAGLIO and nome in OSPITE:
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                               plane_co=TAGLIO[0], plane_no=TAGLIO[1],
+                               clear_outer=True)
+        bm.to_mesh(me)
+        bm.free()
+        me.update()
+        if not len(me.vertices):
+            fuori_volume += 1
+            continue
+        lo = Vector((1e9, 1e9, 1e9))
+        hi = Vector((-1e9, -1e9, -1e9))
+        for v in me.vertices:
+            for a in range(3):
+                lo[a] = min(lo[a], v.co[a])
+                hi[a] = max(hi[a], v.co[a])
     ob = bpy.data.objects.new('p%d' % k, me)
     bpy.context.collection.objects.link(ob)
     ob.data.materials.append(MAT[nome])
@@ -187,33 +309,32 @@ for k, p in enumerate(pezzi):
     # non esiste, e un millimetro che raccoglie una luce e' cio' che si legge
     # come pezzo lavorato.
     mo = ob.modifiers.new('smusso', 'BEVEL')
-    mo.width = 0.004; mo.segments = 2; mo.limit_method = 'ANGLE'; mo.angle_limit = math.radians(35)
+    mo.width = 0.004
+    mo.segments = 2
+    mo.limit_method = 'ANGLE'
+    mo.angle_limit = math.radians(35)
+    for a in range(3):
+        minimo[a] = min(minimo[a], lo[a])
+        massimo[a] = max(massimo[a], hi[a])
     tenuti += 1
     vertici_tenuti += n
 
-# SI INQUADRA UN GRUPPO SOLO. L'ingombro comprende dritta e sinistra, e una
-# camera che li tiene entrambi e' una camera che non guarda niente.
-# SI INQUADRA IL GRUPPO DI DRITTA, non tutti e due. L'ingombro totale comprende
-# dritta e sinistra piu' le pinne: una camera che li tiene tutti e' una camera
-# che non guarda niente, e infatti il pezzo usciva minuscolo in mezzo al vuoto.
-# Il gruppo di dritta sta fra il riduttore (x minimo positivo) e l'estremita'
-# della pinna: si prende quello e basta.
-xs = [v for v in (minimo[0], massimo[0])]
-centro = (minimo + massimo) / 2
-centro[0] = massimo[0] * 0.55
-centro[2] = (minimo[2] + massimo[2]) / 2
-misura = massimo[0] * 0.95
-print('PEZZI %d di %d · ingombro %.2f · centro %.2f %.2f %.2f'
-      % (tenuti, len(pezzi), misura, centro[0], centro[1], centro[2]))
 if sconosciuti:
-    print('MATERIALI SCONOSCIUTI: ' + ', '.join(sorted(sconosciuti)))
+    print('MATERIALI SCONOSCIUTI DENTRO IL VOLUME: ' + ', '.join(sorted(sconosciuti)))
     print('Non li salto: un render incompleto che sembra completo e peggio di')
     print('nessun render. Aggiungili a MAT in questo file.')
     raise SystemExit(2)
 if not tenuti:
-    raise SystemExit('nessun pezzo del meccanismo: i nomi dei materiali sono cambiati?')
-print('MATERIA  %d pezzi tenuti (%d vertici), %d saltati perche non meccanismo'
-      % (tenuti, vertici_tenuti, saltati))
+    raise SystemExit('nessun pezzo tenuto: i nomi dei materiali sono cambiati?')
+
+centro = (minimo + massimo) / 2
+misura = max(massimo[a] - minimo[a] for a in range(3))
+print('LATO %s - %d pezzi dentro il volume, %d fuori' % (LATO, tenuti, fuori_volume))
+print('OSPITI (materiale della nave, ma dentro il meccanismo): %s'
+      % (', '.join(sorted(set(ospiti))) if ospiti else 'nessuno'))
+print('PEZZI %d di %d - ingombro %.2f - centro %.2f %.2f %.2f'
+      % (tenuti, len(pezzi), misura, centro[0], centro[1], centro[2]))
+print('MATERIA  %d pezzi tenuti (%d vertici)' % (tenuti, vertici_tenuti))
 
 
 def softbox(pos, rot, energia, misura_luce, y):
@@ -223,11 +344,45 @@ def softbox(pos, rot, energia, misura_luce, y):
     o.data.energy = energia; o.rotation_euler = rot
 
 
+# --- QUANTO PESANO I SOFTBOX RISPETTO ALL'AMBIENTE
+#
+# Erano tarati quando il mondo era un gradiente spento e dovevano fare tutta la
+# luce. Con un HDRI di officina vero l'ambiente illumina gia', e i softbox si
+# SOMMANO: il fasciame, che ha colore base 0,10 -- blu quasi nero -- usciva
+# bianco. Un materiale scuro che rende chiaro non e' un problema di materiale.
+# Il valore giusto si sceglie misurando, non a occhio: LUCE lo fa variare.
+LUCE = float(os.environ.get('LUCE', '1.0'))
+
+"""
+--- L'ESPOSIZIONE, SCELTA COL CRITERIO DEI FOTOGRAFI E NON A OCCHIO
+
+La scena non era mai stata esposta. Con l'HDRI dell'officina -- finestre vere,
+molto luminose -- il fotogramma bruciava, e a occhio avevo concluso che
+"i materiali rendono bianchi". Misurando, la conclusione era sbagliata:
+
+    esposizione   fasciame(0,10)   carter(0,30)   pavimento(0,055)   bruciato
+         0            177,5            134,9           112,0          0,44%
+        -1,0          145,5             97,6            77,3          0,03%
+        -2,0          107,7             66,3            51,1          0,00%
+        -3,5           60,2             34,3            25,0          0,00%
+
+Il carter ha albedo 0,30 e rende PIU' SCURO del fasciame che ha 0,10. Se fosse
+un errore di materiale l'ordine sarebbe rispettato; non lo e' perche' il
+fasciame e' una lamiera larga rivolta all'officina e il carter sta nella sua
+ombra. **Geometria, non materiale** -- e quindi nei materiali non c'era niente
+da correggere.
+
+Il criterio scelto e' quello che usa chi fotografa: *esporre a destra* -- la
+massima esposizione che tiene il bruciato sotto lo 0,1%. Da' **-1,0**. E' una
+regola che si puo' rieseguire, non un numero che mi piaceva.
+"""
+sc.view_settings.exposure = float(os.environ.get('ESPOSIZIONE', '-1.0'))
+
 d = misura
 softbox((centro[0] + d, centro[1] - d * 1.4, centro[2] + d * 1.1),
-        (math.radians(48), 0, math.radians(30)), 120 * d * d, d * 1.6, 0.28)
+        (math.radians(48), 0, math.radians(30)), 120 * d * d * LUCE, d * 1.6, 0.28)
 softbox((centro[0] - d * 1.3, centro[1] + d, centro[2] + d * 0.5),
-        (math.radians(74), 0, math.radians(-126)), 45 * d * d, d * 1.4, 0.30)
+        (math.radians(74), 0, math.radians(-126)), 45 * d * d * LUCE, d * 1.4, 0.30)
 
 """
 ─── L'AMBIENTE E' UN HDRI VERO, e prima l'avevo escluso per una ragione giusta
@@ -247,7 +402,18 @@ e' la differenza fra un render e una foto.
 sc.world = bpy.data.worlds.new('m'); sc.world.use_nodes = True
 wn = sc.world.node_tree
 sf = wn.nodes['Background']
-AMBIENTE = os.path.join(os.path.dirname(SORGENTE), 'hdri', 'ambiente.hdr')
+# --- DOVE SI CERCA L'AMBIENTE, E PERCHE' NON BASTA UN POSTO SOLO
+#
+# Qui c'era un percorso solo: accanto al JSON. Su Colab il JSON e lo script
+# stanno tutti e due in /content e coincideva; in locale il JSON sta nella
+# radice del repo e l'HDRI in riferimenti/blender/hdri, e NON coincideva.
+# Il render ripiegava sul gradiente, lo diceva in una riga di log in mezzo a
+# cento, e ho misurato per venti minuti una scena diversa da quella che
+# credevo di guardare. Adesso i posti sono tre e si STAMPA quello usato.
+_dove = [os.environ.get('AMBIENTE_HDR') or '',
+         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hdri', 'ambiente.hdr'),
+         os.path.join(os.path.dirname(os.path.abspath(SORGENTE)), 'hdri', 'ambiente.hdr')]
+AMBIENTE = next((x for x in _dove if x and os.path.exists(x)), _dove[1])
 if os.path.exists(AMBIENTE):
     env = wn.nodes.new('ShaderNodeTexEnvironment')
     env.image = bpy.data.images.load(AMBIENTE)
@@ -258,7 +424,7 @@ if os.path.exists(AMBIENTE):
     wn.links.new(rot.outputs['Vector'], env.inputs['Vector'])
     wn.links.new(env.outputs['Color'], sf.inputs[0])
     sf.inputs[1].default_value = 1.0
-    print('AMBIENTE officina')
+    print('AMBIENTE officina: ' + AMBIENTE)
 else:
     gr = wn.nodes.new('ShaderNodeTexGradient'); gr.gradient_type = 'EASING'
     cc = wn.nodes.new('ShaderNodeTexCoord')
@@ -272,12 +438,15 @@ else:
     wn.links.new(gr.outputs['Fac'], ra.inputs['Fac'])
     wn.links.new(ra.outputs['Color'], sf.inputs[0])
     sf.inputs[1].default_value = 1.6
-    print('AMBIENTE gradiente (nessun hdri)')
+    print('AMBIENTE gradiente (nessun hdri). Cercato in: ' + ' | '.join(x for x in _dove if x))
 
+# Era `misura * 8` e il BORDO del piano cadeva dentro l'inquadratura: una riga
+# orizzontale netta a meta' immagine, che sembrava un orizzonte e non lo era.
+# A 60 volte l'ingombro il bordo esce dal campo e il pavimento sfuma nell'HDRI.
 # UN PIANO D'APPOGGIO. I pezzi galleggiavano nel nulla: una fotografia di
 # macchinario e' sempre DA QUALCHE PARTE, e l'ombra di contatto e' cio' che fa
 # appoggiare un oggetto invece di farlo levitare.
-bpy.ops.mesh.primitive_plane_add(size=misura * 8, location=(centro[0], centro[1], minimo[2] - 0.02))
+bpy.ops.mesh.primitive_plane_add(size=misura * 60, location=(centro[0], centro[1], minimo[2] - 0.02))
 piano = bpy.context.object
 mp = bpy.data.materials.new('piano'); mp.use_nodes = True
 pb = mp.node_tree.nodes['Principled BSDF']
@@ -325,7 +494,11 @@ else:
     print('su CPU, sapendo che ci mette ore, rilancia con CUOCI_CPU=1.')
     raise SystemExit(2)
 sc.cycles.use_denoising = True
-sc.cycles.samples = 140
+# I CAMPIONI SI ABBASSANO QUANDO SI MISURA, NON QUANDO SI CONSEGNA. Per
+# scegliere un'esposizione basta la luminanza media di una toppa, e quella e'
+# stabile molto prima che l'immagine sia pulita: 24 campioni bastano e costano
+# un sesto. Il fotogramma buono si cuoce a 140.
+sc.cycles.samples = int(os.environ.get('CAMPIONI', '140'))
 sc.render.resolution_x = 1000
 sc.render.resolution_y = 620
 sc.render.film_transparent = False

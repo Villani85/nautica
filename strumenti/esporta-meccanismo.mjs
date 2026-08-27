@@ -81,15 +81,27 @@ await pg.waitForTimeout(1500)
 await pg.evaluate(() => scrollTo(0, 6600))
 await pg.waitForTimeout(3000)
 
-const pezzi = await pg.evaluate(() => {
+const TETTO_TRI = Number(process.env.TETTO_TRI || 3000)
+const raccolto = await pg.evaluate((TETTO_TRI) => {
   if (!window.__nautica) return null
   const out = []
+  const scartati = []
   window.__nautica.nave.updateMatrixWorld(true)
   window.__nautica.nave.traverse(o => {
     if (!o.isMesh) return
     const g = o.geometry
     const tri = g.index ? g.index.count / 3 : g.attributes.position.count / 3
-    if (tri > 3000) return
+    /**
+     * IL TETTO DEI TRIANGOLI SCARTAVA IN SILENZIO, e i bulloni restavano soli.
+     *
+     * Questa riga diceva `if (tri > 3000) return`. Serviva a tenere fuori la
+     * carena quando l'esportatore girava sull'intera nave; adesso la scelta
+     * la fa il NOME del materiale, e il tetto e' rimasto a scartare pezzi del
+     * meccanismo senza dirlo. Non si toglie e basta: si REGISTRA cio' che
+     * scarta, perche' un filtro muto e' il modo in cui si perde un pezzo per
+     * settimane.
+     */
+    if (tri > TETTO_TRI) { scartati.push({ nodo: o.name || '', nome: o.material.name || '', tri }); return }
     out.push({
       /**
        * IL NOME DEL MATERIALE, e non solo il colore.
@@ -138,8 +150,11 @@ const pezzi = await pg.evaluate(() => {
       idx: g.index ? Array.from(g.index.array) : null
     })
   })
-  return out
-})
+  return { out, scartati, sezione: window.__nautica.sezione }
+}, TETTO_TRI)
+const pezzi = raccolto && raccolto.out
+const scartati = (raccolto && raccolto.scartati) || []
+const sezione = raccolto && raccolto.sezione
 await browser.close()
 preview?.kill()
 
@@ -152,11 +167,19 @@ if (!pezzi.length) {
   process.exit(1)
 }
 
-writeFileSync(FUORI, JSON.stringify(pezzi))
+writeFileSync(FUORI, JSON.stringify({ sezione, pezzi }))
 const tri = pezzi.reduce((s, p) => s + (p.idx ? p.idx.length / 3 : p.pos.length / 9), 0)
 const colori = [...new Set(pezzi.map(p => p.col))]
 console.log(`  ${pezzi.length} pezzi · ${tri} triangoli · ${(JSON.stringify(pezzi).length / 1048576).toFixed(1)} MB`)
 console.log(`  materiali: ${colori.join(' ')}`)
+if (scartati.length) {
+  const t = scartati.reduce((s, x) => s + x.tri, 0)
+  console.log(`
+  SCARTATI DAL TETTO (${TETTO_TRI} triangoli): ${scartati.length} pezzi, ${t} triangoli`)
+  for (const x of scartati.slice(0, 20)) console.log(`    ${x.tri.toString().padStart(6)}  ${x.nome || '(senza materiale)'}  ${x.nodo}`)
+  console.log("  se uno di questi e' meccanismo, alza TETTO_TRI: i pezzi avvitati restano senza cio' a cui sono avvitati.")
+}
+console.log(`  sezione: normale ${sezione.nx},${sezione.ny},${sezione.nz} costante ${sezione.costante.toFixed(3)}`)
 console.log(`  scritto ${FUORI}`)
 console.log('\n  poi si cuoce:')
 console.log(`  "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe" -b -P riferimenti/blender/cuoci.py -- ${FUORI} <cartella>`)
