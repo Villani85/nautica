@@ -202,5 +202,11 @@ export function creaSalone3D (base, tuga) {
     tesa.material.opacity = q * o
   }
 
-  return { gruppo, aggiorna, mostra, riproduci, ferma, get rollio () { return ultimo } }
+  return {
+    gruppo, aggiorna, mostra, riproduci, ferma,
+    /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
+    largo: larg,
+    alto: alt,
+    get rollio () { return ultimo }
+  }
 }

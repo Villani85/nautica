@@ -18,8 +18,6 @@ const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
 const RAGGIO_MECCANISMO = 2.6
-/** Quanto sta a poppavia del salone la camera, seduta dentro. */
-const DENTRO_SALONE = 1.15
 /** La scena unica e' ancora dietro un interruttore: vedi `salone3d.js`. */
 const LA_SCENA_E_UNA = typeof location !== 'undefined' && location.search.includes('unica')
 const AZIMUT_MAX = 0.92
@@ -245,6 +243,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     ? creaSalone3D(base, tuga)
     : null
   if (salone) { nave.add(salone.gruppo); salone.riproduci() }
+  const saloneLargo = salone ? salone.largo : 1
+  const saloneAlto = salone ? salone.alto : 1
 
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
@@ -474,15 +474,82 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * quota dell'oggetto. Guardare il meccanismo «per bene» vorrebbe dire
      * inclinare in giu', e la linea se ne andrebbe al primo grado.
      */
+    /**
+     * QUANTO STA LONTANA LA CAMERA DAL SALONE: non un numero, un CONTO.
+     *
+     * Su uno schermo verticale l'inquadratura 16:10 del salone verrebbe
+     * tagliata ai lati, e cio' che si perde sono proprio le due cose che
+     * contano — il finestrino a sinistra e le persone a destra. Era gia'
+     * successo con la versione in DOM, e li' si era curato debordando del 32%.
+     *
+     * Qui non serve nessun ripiego: la distanza si RICAVA dall'angolo di campo
+     * orizzontale vero, che dipende dal rapporto della finestra. Cosi' la
+     * larghezza della fotografia riempie il fotogramma e basta, su qualunque
+     * schermo, e il capitolo non ha piu' un caso mobile.
+     */
+    const mezzoV = MathUtils.degToRad(camera.fov) / 2
+    const mezzoH = Math.atan(Math.tan(mezzoV) * camera.aspect)
+    /**
+     * SI RIEMPIE, NON SI CONTIENE — e la differenza si e' vista sul telefono.
+     *
+     * Prima calcolavo solo la distanza che fa entrare la LARGHEZZA. Su uno
+     * schermo verticale quella distanza e' enorme, e la fotografia diventava
+     * una striscia alta un quinto dello schermo con due bande vuote sopra e
+     * sotto. Misurato a 390x844.
+     *
+     * Il verso giusto e' quello di `object-fit: cover`: si prende la distanza
+     * MINORE fra quella che riempie la larghezza e quella che riempie
+     * l'altezza, cosi' l'immagine deborda nell'altra direzione invece di
+     * lasciare vuoto. E' la stessa decisione presa per la versione in DOM,
+     * dove costava un debordamento del 32%.
+     *
+     * E DEBORDANDO SI TAGLIA DA UNA PARTE SOLA. La fotografia ha gli estremi
+     * sacrificabili — a sinistra mare aperto, a destra il fondo della stanza —
+     * ma un ritaglio simmetrico su schermo stretto tagliava fuori la donna,
+     * cioe' meta' della coppia. Lo scarto sposta l'inquadratura verso le
+     * persone: e' la stessa misura della versione in DOM, l'11% della
+     * larghezza, presa allora guardando i fotogrammi.
+     */
+    const distL = (saloneLargo / 2) / Math.tan(mezzoH)
+    const distH = (saloneAlto / 2) / Math.tan(mezzoV)
+    /**
+     * E LA REGOLA NON E' NE' «CONTIENI» NE' «RIEMPI», ed e' costato due
+     * provini scoprirlo. Riempiendo (`min`) su un telefono a 390x844 resta
+     * visibile il 29% della larghezza: si perde la coppia, cioe' il soggetto.
+     * Contenendo (`distL`) l'immagine diventa una striscia alta un quinto.
+     *
+     * La versione in DOM aveva gia' risolto questo, e con un numero misurato:
+     * l'apertura deborda del 32% e si taglia il 16% per lato — proprio le parti
+     * che non raccontano niente, mare aperto a sinistra e fondo della stanza a
+     * destra. Qui la stessa decisione diventa una distanza: mai piu' vicina di
+     * quella che fa debordare del 32%.
+     */
+    const DEBORDO = 1.32
+    const dist = Math.max(Math.min(distL, distH), distL / DEBORDO)
+    // NEGATIVO, e il segno costa un provino: la camera guarda verso -z, quindi
+    // la destra dello schermo e' la -x della scena. Con lo scarto positivo il
+    // ritaglio verticale si mangiava proprio la donna — lo stesso difetto che
+    // la versione in DOM aveva gia' corretto, ripetuto al contrario.
+    /**
+     * E si sposta verso le PERSONE, che stanno a +x — la destra dello schermo,
+     * perche' guardando lungo -z con l'alto in +y la destra della camera e' +x.
+     * Il segno l'ho sbagliato due volte in due provini, e la seconda per la
+     * ragione peggiore: avevo dedotto dal risultato di un ritaglio troppo
+     * stretto invece che dalla geometria.
+     *
+     * Si sposta solo quando l'immagine e' davvero tagliata ai lati.
+     */
+    const scarto = dist < distL * 0.995 ? 0.11 * saloneLargo : 0
+
     const dentroY = nave.position.y + tugaQuota
     const fuoriX = miraX + Math.sin(azimut) * raggio
     const fuoriZ = miraZ + Math.cos(azimut) * raggio
 
-    camera.position.x = MathUtils.lerp(0, fuoriX, uscita)
+    camera.position.x = MathUtils.lerp(scarto, fuoriX, uscita)
     camera.position.y = MathUtils.lerp(dentroY, 0, uscita)
-    camera.position.z = MathUtils.lerp(tugaZ + DENTRO_SALONE, fuoriZ, uscita)
+    camera.position.z = MathUtils.lerp(tugaZ + dist, fuoriZ, uscita)
     camera.lookAt(
-      MathUtils.lerp(0, miraX, uscita),
+      MathUtils.lerp(scarto, miraX, uscita),
       camera.position.y,
       MathUtils.lerp(tugaZ, miraZ, uscita))
 
