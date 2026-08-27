@@ -11,7 +11,14 @@ il perché.
 
 ## Bloccato sull'umano — non provare a farlo
 
-- [ ] **GitHub → Settings → Pages → Source: GitHub Actions.** Il workflow è già
+- [ ] **GitHub → Settings → Pages → Source: GitHub Actions.** — **è l'unica
+      cosa che manca perché il sito esista.** Dalla notte del 27 agosto la
+      pipeline è verde da capo a fondo: compila, installa ffmpeg e il browser,
+      passa tutti e nove i cancelli — compresi i due che aprono una pagina
+      vera — misura il peso e carica l'artefatto. L'ultimo passo,
+      `deploy-pages`, fallisce e basta, perché Pages non è acceso. Non è un
+      difetto del codice: è un interruttore nel pannello, e non posso premerlo
+      io. Il workflow è già
       in `.github/workflows/pubblica.yml` e i cancelli girano prima di
       pubblicare. **Finché non è acceso, nessuna misura reale è possibile**:
       niente LCP, niente INP, niente telefono vero, niente persone che lo
