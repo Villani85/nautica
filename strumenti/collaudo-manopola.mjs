@@ -407,15 +407,41 @@ const VOLTE_MAX = 6
  */
 const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
 
-const naturale = (n) => pagina.evaluate((n) => new Promise((res) => {
-  let i = 0, prec = window.__nautica.stato.rollio, max = 0
+/**
+ * --- IL METRO E' UN PERCENTILE, L'EVENTO E' UN MASSIMO
+ *
+ * Questo cancello era **instabile**: stessa build, verde poi rosso, rapporti
+ * 0,84 · 1,07 · 3,76 contro una soglia di 1,3. E' segnato in
+ * docs/15-PASS-PBR.md come «un cancello che da' un esito a caso e' peggio di
+ * nessun cancello».
+ *
+ * La causa: sia il metro sia l'evento usavano il MASSIMO su sessanta
+ * fotogrammi. Per l'evento e' giusto -- un salto temporale e' per definizione
+ * un singolo fotogramma anomalo, e il massimo e' esattamente cio' che lo
+ * trova. Per il METRO no: il massimo di sessanta campioni di un processo a
+ * fase casuale e' la statistica piu' rumorosa che esista, e finiva al
+ * denominatore di un rapporto.
+ *
+ * Adesso il fondo naturale e' il **novantacinquesimo percentile** su una
+ * finestra di TRE SECONDI -- non di N fotogrammi, perche' in CI si disegna a
+ * 1,2 fotogrammi al secondo e un conteggio diventa un tempo diverso su ogni
+ * macchina. E' lo stesso difetto che teneva rossa la CI su collaudo-ridotto.
+ */
+const naturale = (n, durata = 3000) => pagina.evaluate(([n, durata]) => new Promise((res) => {
+  const t0 = performance.now()
+  let i = 0, prec = window.__nautica.stato.rollio
+  const passi = []
   const passo = () => {
     const v = window.__nautica.stato.rollio
-    const d = Math.abs(v - prec); if (d > max) max = d; prec = v
-    if (++i < n) requestAnimationFrame(passo); else res(max)
+    passi.push(Math.abs(v - prec)); prec = v
+    if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
+    else {
+      passi.sort((a, b) => a - b)
+      res(passi.length ? passi[Math.floor(passi.length * 0.95)] : 0)
+    }
   }
   requestAnimationFrame(passo)
-}), n)
+}), [n, durata])
 
 const attraverso = async (sel, etichetta) => {
   // si campiona SENZA INTERRUZIONE mentre il clic arriva
@@ -435,7 +461,7 @@ const attraverso = async (sel, etichetta) => {
   const { max, quando } = await promessa
 
   // il metro si prende DOPO, quando la nave e' nello stato nuovo
-  const nat = await naturale(60)
+  const nat = await naturale(600)
   const volte = max / Math.max(1e-6, nat)
   nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
        `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)
