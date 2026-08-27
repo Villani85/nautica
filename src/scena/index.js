@@ -173,7 +173,18 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    *
    * `?ombre=0|1024|2048` la forza, per poterla guardare invece di discuterla.
    */
-  const forzata = new URLSearchParams(location.search).get('ombre')
+  /**
+   * `?ombre` accetta solo i tre livelli che esistono. Un numero qualunque —
+   * `?ombre=37` — produrrebbe una mappa che nessuno ha mai guardato, e un
+   * interruttore diagnostico che accetta valori non previsti smette di essere
+   * una diagnosi: diventa un altro modo di rompere la scena.
+   */
+  const LIVELLI_OMBRA = [0, 1024, 2048]
+  const chiesta = new URLSearchParams(location.search).get('ombre')
+  const forzata = chiesta !== null && LIVELLI_OMBRA.includes(Number(chiesta)) ? chiesta : null
+  if (chiesta !== null && forzata === null) {
+    console.warn(`[nautica] ?ombre=${chiesta} non e' fra ${LIVELLI_OMBRA.join(', ')}: ignorato`)
+  }
   const nuclei = navigator.hardwareConcurrency || 4
   const latoCorto = Math.min(screen.width, screen.height)
   const auto = (nuclei <= 4 || latoCorto < 700) ? 1024 : 2048
@@ -237,7 +248,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * chiedergli un'ombra produce sfarfallio sul filo del ponte.
    */
   for (const m of guscio) {
-    if (!m.isMesh) continue
+    if (!m.isMesh) continue      // le linee non hanno volume: vedi sopra
     m.castShadow = true
     m.receiveShadow = true
   }
@@ -256,7 +267,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   /**
    * ─── IL SALONE, DENTRO QUESTA SCENA
    *
-   * Dietro `?unica=1` finche' non regge da solo. Il capitolo che oggi vive in
+   * E' il comportamento predefinito; `?doppia=1` riporta alla vecchia architettura. Il capitolo che oggi vive in
    * DOM diventa geometria di questa nave: stesso renderer, stessa camera,
    * stesso mare, stesso integratore. Non e' un effetto in piu' — e' la
    * risposta al rilievo che le due meta' del sito erano due sistemi diversi.
@@ -336,7 +347,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let avvicinamento = 0
   /**
    * QUANTO SI E' USCITI DAL SALONE. 0 = seduti dentro, 1 = l'inquadratura di
-   * sempre, la nave intera da 19,5 unita'. Vive solo con `?unica=1`.
+   * sempre, la nave intera da 19,5 unita'. Vive solo con `?doppia=1` (che la spegne).
    */
   let uscita = LA_SCENA_E_UNA ? 0 : 1
 
@@ -509,7 +520,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     /**
      * ─── DA DENTRO IL SALONE ALLA NAVE INTERA, IN UN MOVIMENTO SOLO
      *
-     * Con `?unica=1` la camera comincia SEDUTA nel salone e ne esce
+     * Con `?doppia=1` (che la spegne) la camera comincia SEDUTA nel salone e ne esce
      * attraversando il fasciame. Non e' un effetto: e' cio' che rende una sola
      * esperienza due capitoli che prima erano due scene.
      *
@@ -681,6 +692,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       get impiantoEccentricita () { return impianti[0]?.eccentricita ?? null },
       get impiantoDati () { return impianti[0]?.dati ?? null },
       tugaPareti: tuga.pareti,
+      ombre: TESSITURA_OMBRA,
       /** Chi c'e' a questo punto dello schermo? Coordinate 0-1. */
       chi (u, v) {
         raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)

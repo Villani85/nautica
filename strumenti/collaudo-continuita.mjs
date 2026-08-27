@@ -60,12 +60,24 @@ async function apriBrowser () {
   process.exit(2)
 }
 
+/**
+ * ─── SI PROVA LA BUILD, NON IL SERVER DI SVILUPPO
+ *
+ * Rilievo di una revisione, e ha ragione: il server di sviluppo serve moduli
+ * non impacchettati, senza minificazione e senza la divisione in chunk. Le
+ * cose che possono rompere la continuita' — un import differito che arriva
+ * tardi, un chunk che manca — sono proprio quelle che li' non esistono.
+ *
+ * Quindi `npm run preview`, che serve `dist/`. Se un server e' gia' acceso
+ * sulla porta lo si usa: in locale e' comodo, e chi lo ha acceso sa cosa ha
+ * acceso. In CI non c'e' niente di acceso e parte sempre la preview.
+ */
 async function serviteci () {
   try {
     const r = await fetch(BASE, { redirect: 'manual' })
     if (r.status < 500) return null
   } catch {}
-  const s = spawn('npm', ['run', 'dev'], { shell: true, stdio: 'ignore' })
+  const s = spawn('npm', ['run', 'preview'], { shell: true, stdio: 'ignore' })
   for (let i = 0; i < 60; i++) {
     try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
     await new Promise(r => setTimeout(r, 500))
