@@ -52,6 +52,7 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
           parti.push(o)
           for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
             if (!m) continue
+            if (m.name === 'sovra_teak') fughe(m)
             if (pianoSezione) m.clippingPlanes = [pianoSezione]
             if (ambiente && 'envMap' in m) {
               m.envMap = ambiente
@@ -69,4 +70,61 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
   })
 
   return { gruppo, caricato, parti }
+}
+
+
+/**
+ * ─── LE FUGHE DEL TEAK
+ *
+ * Una coperta in teak senza fughe e' una tavola marrone, e il generatore
+ * Blender lo dichiarava come debito: «servirebbe una texture, e la texture
+ * arriva dalla cottura». Una revisione l'ha rilevato come uno dei punti che
+ * fanno leggere il risultato come «CG pulita».
+ *
+ * Le fughe pero' non hanno bisogno di una texture, e nemmeno delle UV: sono
+ * righe parallele a intervallo costante, e la coordinata che serve — la
+ * posizione lungo lo scafo — ce l'ha gia' ogni vertice. E' la stessa strada
+ * gia' presa per le finestre di murata, per le stesse ragioni: nessuna UV da
+ * cuocere, nessuna geometria parallela che possa scollarsi.
+ *
+ * LE QUOTE VENGONO DALLA PRATICA, non dallo schermo: un corso di teak su uno
+ * yacht sta fra 50 e 70 mm e la fuga nera fra 4 e 6. In unita' di scena, dove
+ * 1 = 2,5 m, sono 0,024 e 0,002.
+ *
+ * I corsi corrono LUNGO la barca, quindi si contano lungo x — la larghezza —
+ * ed e' il verso giusto: su una coperta vera i corsi seguono il fianco.
+ */
+const CORSO = 0.024      // 60 mm
+const FUGA = 0.0022      // 5,5 mm
+
+function fughe (m) {
+  m.onBeforeCompile = (s) => {
+    s.vertexShader = s.vertexShader
+      .replace('#include <common>', ['#include <common>', 'varying vec3 vTeak;'].join('\n'))
+      .replace('#include <begin_vertex>', ['#include <begin_vertex>', '  vTeak = transformed;'].join('\n'))
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', ['#include <common>', 'varying vec3 vTeak;'].join('\n'))
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{
+  // dove cade il pixel dentro il proprio corso, da 0 a 1
+  float u = fract(vTeak.x / ${CORSO.toFixed(4)});
+  float mezza = ${(FUGA / CORSO / 2).toFixed(4)};
+  // la fuga sta a cavallo del confine: si guarda la distanza dal bordo
+  float d = min(u, 1.0 - u);
+  // la derivata tiene la fuga larga un pixel quando la coperta e' lontana:
+  // senza, da lontano il motivo diventa un tremolio (aliasing) invece che
+  // una superficie
+  float sfuma = max(fwidth(u) * 0.9, 0.0008);
+  float nera = 1.0 - smoothstep(mezza - sfuma, mezza + sfuma, d);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.045, 0.038, 0.032), nera * 0.85);
+
+  // e il legno non e' tutto dello stesso colore: ogni corso ha il suo,
+  // leggermente. E' quello che distingue una coperta da una stampa
+  float corso = floor(vTeak.x / ${CORSO.toFixed(4)});
+  float tinta = fract(sin(corso * 12.9898) * 43758.5453);
+  diffuseColor.rgb *= 0.92 + 0.16 * tinta;
+}`)
+  }
+  m.customProgramCacheKey = () => 'teak-fughe-1'
+  m.needsUpdate = true
 }
