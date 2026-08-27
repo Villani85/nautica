@@ -29,6 +29,40 @@ const cammina = (d) => {
     }
   }
 }
+/**
+ * --- IL CANCELLO MISURA dist/, CHE NON E' VERSIONATA
+ *
+ * Quindi il suo verdetto dipende da quando si e' compilato l'ultima volta, e
+ * non lo diceva. Successo davvero, su due macchine nello stesso quarto d'ora:
+ * qui verde, su un clone con una dist/ vecchia di decine di commit CINQUE
+ * RIGHE FALSO -- dentro c'erano ancora i font da 67 KB di due famiglie fa.
+ * Il cancello confrontava la pagina di oggi con la build di ieri, senza dire
+ * che stava misurando il passato.
+ *
+ * Un rosso falso insegna a ignorare i rossi, che e' il modo in cui un
+ * cancello muore. Percio': se una sorgente e' piu' nuova della build, questo
+ * strumento NON emette un verdetto -- dice cosa manca e quanto costa.
+ * Rifiutarsi e' piu' onesto che compilare di nascosto.
+ */
+function piuRecente (cartella) {
+  let m = 0
+  for (const f of readdirSync(cartella, { recursive: true })) {
+    const q = join(cartella, String(f))
+    let st
+    try { st = statSync(q) } catch { continue }
+    if (st.isFile() && st.mtimeMs > m) m = st.mtimeMs
+  }
+  return m
+}
+const sorgenti = Math.max(piuRecente('src'), statSync('index.html').mtimeMs)
+if (sorgenti > piuRecente(dist)) {
+  console.error('')
+  console.error('STANTIO: dist/ e piu vecchia di src/ o di index.html.')
+  console.error('Questo cancello misurerebbe una build che non corrisponde alla pagina,')
+  console.error('e un verdetto sul passato non e un verdetto. Esegui `npm run build`.')
+  process.exit(2)
+}
+
 cammina(dist)
 if (!voci.length) { console.error('dist/ e\' vuota'); process.exit(1) }
 
