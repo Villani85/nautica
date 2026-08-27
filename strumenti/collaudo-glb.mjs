@@ -264,9 +264,23 @@ if (kb > TETTO_KB) {
  *
  *   l'unita'    la conversione 0,4 vale solo per un modello in metri;
  *   i nomi      la compressione li cancella tutti se si scorda `-kn`;
- *   il verso    una normale rivolta dentro non da' errore: da fuori la parete
- *               sparisce e si vede attraverso la nave. Successo davvero, e a
- *               schermo sembrava un pezzo modellato male.
+ *   la sostanza un nodo puo' sopravvivere come guscio vuoto: sotto ogni nome
+ *               ci deve essere geometria;
+ *   l'ingombro  un modello che esce di scala si vede subito qui e mai altrove.
+ *
+ * ─── COSA QUESTO CANCELLO NON CONTROLLA, E VA DETTO
+ *
+ * **Il verso delle normali.** Una normale rivolta dentro non da' errore: da
+ * fuori la parete sparisce per culling e si vede attraverso la nave. E'
+ * successo davvero, sulla sovrastruttura, e a schermo sembrava un pezzo
+ * modellato male — non una faccia al rovescio.
+ *
+ * Controllarlo qui vorrebbe dire decodificare le mesh compresse con meshopt,
+ * cioe' portarsi dentro il decodificatore per un controllo solo. La difesa
+ * vera sta a monte, nel builder, che ricalcola le normali verso l'esterno con
+ * `recalc_face_normals` — ed e' li' che va tenuta. Scriverlo qui e non farlo
+ * sarebbe la cosa peggiore: un commento che promette un controllo inesistente
+ * insegna a fidarsi di un verde che non copre niente.
  *
  * Le domande specifiche dell'impianto — orbita, apertura, area — restano dove
  * sono: valgono per lui e per nessun altro.
@@ -284,6 +298,34 @@ for (const altro of ALTRI) {
   if (!conNome) guasti.push(`${altro}: nessun nodo ha un nome — la compressione li ha cancellati`)
   if (ex2?.authoringUnit !== 'meter') {
     guasti.push(`${altro}: authoringUnit e' "${ex2?.authoringUnit}", non "meter"`)
+  }
+  // sotto ogni nodo con nome ci deve essere geometria: un nome sopravvive alla
+  // compressione anche quando il pezzo no
+  const nodi2 = j.nodes ?? []
+  const idx2 = new Map(nodi2.map((n, i) => [n.name, i]).filter(([n]) => n))
+  const conMesh = (i) => {
+    let trovato = false
+    ;(function scendi (k) {
+      const n = nodi2[k]
+      if (!n || trovato) return
+      if (n.mesh !== undefined) { trovato = true; return }
+      for (const c of n.children ?? []) scendi(c)
+    })(i)
+    return trovato
+  }
+  const vuoti2 = [...idx2.keys()].filter(n => !/_MESH$/.test(n) && !conMesh(idx2.get(n)))
+  const senzaGeometria = vuoti2.filter(n => n !== 'SOVRASTRUTTURA_NAVE')
+  if (senzaGeometria.length) {
+    guasti.push(`${altro}: nodi senza geometria sotto: ${senzaGeometria.join(', ')}`)
+  }
+  // e l'altezza d'aria dichiarata deve stare nella forbice di un quaranta metri
+  const aria = ex2?.airDraftM
+  if (typeof aria === 'number') {
+    note.push(`          altezza d'aria dichiarata ${aria.toFixed(2)} m`)
+    if (aria < 8 || aria > 12) {
+      guasti.push(`${altro}: altezza d'aria ${aria.toFixed(2)} m, fuori dalla forbice 8-12 ` +
+                  'di un quaranta metri: o il modello sta in unaltra scala, o le quote sono cambiate')
+    }
   }
 }
 
