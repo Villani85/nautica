@@ -789,6 +789,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * nave diversa da quella che si vede sul sito -- che e' la sola cosa che
        * il fotorealismo non puo' permettersi.
        */
+      /** Le uniformi dell'acqua: servono ai banchi che devono cambiare una
+       *  grandezza sola a fotogramma fermo. */
+      acqua,
       get sezione () {
         return { nx: pianoSezione.normal.x, ny: pianoSezione.normal.y,
                  nz: pianoSezione.normal.z, costante: pianoSezione.constant }

@@ -692,5 +692,12 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
     materialeVolume.opacity = FONDA + (CHIARA - FONDA) * Math.max(0, Math.min(1, q))
   }
 
-  return { gruppo, anima, chiarisci, seguiNave }
+  /**
+   * `uni` esce anche fuori, e serve a una cosa sola: misurare. Il mare si
+   * muove e la nave rolla, quindi due catture separate non si possono
+   * confrontare -- il rumore vale il 24% dei pixel, il segnale cercato molto
+   * meno. Con le uniformi in mano un banco cambia SOLO la grandezza che sta
+   * studiando e disegna due volte lo stesso istante.
+   */
+  return { gruppo, anima, chiarisci, seguiNave, uni }
 }
