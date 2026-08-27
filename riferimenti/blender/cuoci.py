@@ -83,23 +83,85 @@ def metallo(nome, colore, base, aniso=0.70):
 # Passando i valori del foglio di stile il pezzo usciva quasi nero: quelli sono
 # scelti per stare su carta chiara con luci di scena, non per riflettere. Un
 # acciaio vero ha riflettanza attorno a 0,56, un bronzo attorno a 0,62.
+def verniciato(nome, colore, base):
+    """Non tutto il meccanismo e' metallo nudo: carter e motore sono VERNICIATI,
+    e la vernice non ha direzione di lavorazione. Dare a tutti la striatura del
+    tornito sarebbe il difetto opposto a quello che si sta curando -- un pezzo
+    unico invece di un assieme di pezzi diversi."""
+    m = bpy.data.materials.new(nome)
+    m.use_nodes = True
+    b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (*colore, 1)
+    b.inputs['Metallic'].default_value = 0.0
+    b.inputs['Roughness'].default_value = base
+    if 'Coat Weight' in b.inputs:
+        b.inputs['Coat Weight'].default_value = 0.25
+        b.inputs['Coat Roughness'].default_value = 0.12
+    return m
+
+
 MAT = {
     'acciaio': metallo('acciaio', (0.54, 0.56, 0.58), 0.20),
+    'lucido': metallo('lucido', (0.62, 0.64, 0.66), 0.09),
+    'sezione': metallo('sezione', (0.58, 0.60, 0.62), 0.28, aniso=0.35),
+    'tenuta': metallo('tenuta', (0.44, 0.40, 0.34), 0.34),
+    'carter': verniciato('carter', (0.30, 0.33, 0.35), 0.32),
+    'motore': verniciato('motore', (0.14, 0.15, 0.16), 0.38),
+    'gomma': verniciato('gomma', (0.05, 0.05, 0.055), 0.72),
+    'cavo': verniciato('cavo', (0.07, 0.07, 0.075), 0.55),
     'bronzo': metallo('bronzo', (0.66, 0.50, 0.30), 0.30),
     'accento': metallo('accento', (0.31, 0.88, 0.77), 0.24, aniso=0.4),
 }
+
+# --- SI SCEGLIE PER NOME, E UN NOME SCONOSCIUTO E' UN ERRORE
+#
+# Qui c'era `MECCANISMO = {'49555a': 'acciaio', '6e6350': 'bronzo',
+# '4fe0c4': 'accento'}` -- una tabella di COLORI, ereditata da quando il
+# meccanismo era costruito a mano nel codice. Adesso arriva da un GLB con i
+# suoi materiali, e di quei tre colori ne sopravviveva **uno**.
+#
+# Misurato: il render teneva **10 pezzi su 73**, cioe' 240 vertici su 45.000 --
+# lo 0,5% del pezzo -- e produceva un PNG lo stesso. La guardia esisteva
+# (`if not tenuti: raise`) ma scattava solo a ZERO: un cancello che vede il
+# guasto totale e non quello parziale.
+#
+# Due correzioni, e la seconda vale piu' della prima:
+#
+#   1. si sceglie per NOME. Il colore e' una chiave sbagliata due volte: cambia
+#      quando cambia la tinta, e due materiali diversi possono averlo uguale;
+#   2. un materiale del meccanismo che questa tabella non conosce **ferma il
+#      render**. Aggiungere un pezzo in Blender senza dirlo qui non deve poter
+#      produrre un'immagine incompleta che sembra completa.
+#
+# Cio' che non e' meccanismo si dichiara, cosi' il salto e' una decisione
+# scritta e non un buco nella tabella.
+NON_MECCANISMO = {'carena', 'coperta', 'acqua', 'interno', 'vetro', 'scafo'}
+
+
+def del_meccanismo(nome):
+    """None = non e' meccanismo (si salta). Altrimenti il nome del materiale."""
+    if not nome or nome.startswith('sovra_') or nome in NON_MECCANISMO:
+        return None
+    return nome
 
 # three.js ha Y in alto, Blender Z: (x, y, z) -> (x, -z, y)
 GIRA = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 
 pezzi = json.load(open(SORGENTE, encoding='utf-8'))
 tenuti = 0
+saltati = 0
+sconosciuti = set()
+vertici_tenuti = 0
 minimo = Vector((1e9, 1e9, 1e9))
 massimo = Vector((-1e9, -1e9, -1e9))
 
 for k, p in enumerate(pezzi):
-    nome = MECCANISMO.get(p['col'])
-    if not nome:
+    nome = del_meccanismo(p.get('nome'))
+    if nome is None:
+        saltati += 1
+        continue
+    if nome not in MAT:
+        sconosciuti.add(nome)
         continue
     pos, idx = p['pos'], p['idx']
     n = len(pos) // 3
@@ -127,6 +189,7 @@ for k, p in enumerate(pezzi):
     mo = ob.modifiers.new('smusso', 'BEVEL')
     mo.width = 0.004; mo.segments = 2; mo.limit_method = 'ANGLE'; mo.angle_limit = math.radians(35)
     tenuti += 1
+    vertici_tenuti += n
 
 # SI INQUADRA UN GRUPPO SOLO. L'ingombro comprende dritta e sinistra, e una
 # camera che li tiene entrambi e' una camera che non guarda niente.
@@ -142,8 +205,15 @@ centro[2] = (minimo[2] + massimo[2]) / 2
 misura = massimo[0] * 0.95
 print('PEZZI %d di %d · ingombro %.2f · centro %.2f %.2f %.2f'
       % (tenuti, len(pezzi), misura, centro[0], centro[1], centro[2]))
+if sconosciuti:
+    print('MATERIALI SCONOSCIUTI: ' + ', '.join(sorted(sconosciuti)))
+    print('Non li salto: un render incompleto che sembra completo e peggio di')
+    print('nessun render. Aggiungili a MAT in questo file.')
+    raise SystemExit(2)
 if not tenuti:
-    raise SystemExit('nessun pezzo del meccanismo: i colori sono cambiati?')
+    raise SystemExit('nessun pezzo del meccanismo: i nomi dei materiali sono cambiati?')
+print('MATERIA  %d pezzi tenuti (%d vertici), %d saltati perche non meccanismo'
+      % (tenuti, vertici_tenuti, saltati))
 
 
 def softbox(pos, rot, energia, misura_luce, y):
@@ -227,13 +297,33 @@ cam.rotation_euler = dirv.to_track_quat('-Z', 'Y').to_euler()
 sc.camera = cam
 
 sc.render.engine = 'CYCLES'
-try:
-    pr = bpy.context.preferences.addons['cycles'].preferences
-    pr.get_devices(); pr.compute_device_type = 'OPTIX'
-    for dev in pr.devices: dev.use = True
-    sc.cycles.device = 'GPU'
-except Exception:
-    pass
+
+# ─── OPTIX si VERIFICA, non si spera. Qui prima c'era un try/except che non
+#     entrava mai: assegnare compute_device_type su una macchina senza scheda
+#     NON solleva niente. Assegna, get_devices() torna il solo CPU, e
+#     scene.cycles.device = 'GPU' viene pure accettato. Cycles ripiega su CPU
+#     in silenzio e il render esce identico, solo dieci volte piu' lento.
+#     Non c'era nessun ripiego da intercettare: c'era un guasto che non passa
+#     di li'. Lo stesso principio dei materiali sconosciuti, un fotogramma
+#     lentissimo che sembra normale e' peggio di un errore.
+pr = bpy.context.preferences.addons['cycles'].preferences
+pr.compute_device_type = 'OPTIX'   # prima il backend
+pr.get_devices()                   # poi l'enumerazione: l'ordine inverso conta
+optix = [d for d in pr.devices if d.type == 'OPTIX']
+if optix:
+    for dev in pr.devices:
+        dev.use = (dev.type == 'OPTIX')   # solo GPU: la CPU accesa accanto rallenta
+    sc.cycles.device = 'GPU'              # senza questa la scena resta su CPU
+    print('OPTIX    %s' % ', '.join(d.name for d in optix))
+elif os.environ.get('CUOCI_CPU'):
+    sc.cycles.device = 'CPU'
+    print('OPTIX assente: render su CPU perche CUOCI_CPU e impostata. Sara lento.')
+else:
+    print('OPTIX NON DISPONIBILE: Cycles ripiegherebbe su CPU senza dirlo.')
+    print('Device visti: %s' % [(d.name, d.type) for d in pr.devices])
+    print('Su una macchina con NVIDIA controlla i driver. Per cuocere lo stesso')
+    print('su CPU, sapendo che ci mette ore, rilancia con CUOCI_CPU=1.')
+    raise SystemExit(2)
 sc.cycles.use_denoising = True
 sc.cycles.samples = 140
 sc.render.resolution_x = 1000

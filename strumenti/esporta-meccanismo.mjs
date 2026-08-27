@@ -109,7 +109,32 @@ const pezzi = await pg.evaluate(() => {
       met: o.material.metalness ?? 0.5,
       rug: o.material.roughness ?? 0.5,
       m: Array.from(o.matrixWorld.elements),
-      pos: Array.from(g.attributes.position.array),
+      /**
+       * --- SI LEGGE DALL'ATTRIBUTO, NON DALL'ARRAY
+       *
+       * Qui c'era `Array.from(g.attributes.position.array)`. Per una geometria
+       * NON interlacciata e' giusto; per una interlacciata quell'array e' il
+       * buffer CONDIVISO -- posizioni, normali e UV mescolate -- e leggerlo a
+       * tre a tre da' coordinate prese da tre attributi diversi.
+       *
+       * Misurato sulla scena viva: **59 geometrie su 85 sono interlacciate**,
+       * perche' e' cio' che produce la compressione meshopt con cui viaggiano
+       * i modelli. Il render offline usciva un ammasso di schegge, e ci ho
+       * messo tempo a sospettarlo perche' un PNG lo produceva lo stesso.
+       *
+       * `getX/getY/getZ` conoscono `stride` e `offset` e restituiscono il
+       * vertice vero in tutti e due i casi. Costa qualche millisecondo su
+       * quarantamila vertici, una volta.
+       */
+      pos: (() => {
+        const a = g.attributes.position
+        const v = new Array(a.count * 3)
+        for (let i = 0; i < a.count; i++) {
+          v[i * 3] = a.getX(i); v[i * 3 + 1] = a.getY(i); v[i * 3 + 2] = a.getZ(i)
+        }
+        return v
+      })(),
+      interlacciata: !!g.attributes.position.isInterleavedBufferAttribute,
       idx: g.index ? Array.from(g.index.array) : null
     })
   })

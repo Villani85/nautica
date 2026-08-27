@@ -1,6 +1,7 @@
 import { Group } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { creaVetroLeggero } from './vetro.js'
 
 /**
  * LA SOVRASTRUTTURA — i due ponti sopra la tuga, la coperta e la battagliola.
@@ -54,6 +55,37 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
             if (!m) continue
             if (m.name === 'sovra_teak') fughe(m)
             if (m.name === 'sovra_guscio') vernice(m)
+            /**
+             * --- IL VETRO SMETTE DI ESSERE UNO SPECCHIO SCURO
+             *
+             * Dal GLB arriva un `MeshStandardMaterial` con `metalness` alto:
+             * da fuori regge, perche' di giorno un vetro di yacht *e'* uno
+             * specchio scuro. Ma misurato non lo e' abbastanza -- riflette in
+             * faccia l'**1,94%** dove una lastra vera ne riflette il **7,69**.
+             *
+             * La causa non e' che un metallo non abbia Fresnel: three lo
+             * applica anche ai conduttori. E' che con `metalness` la
+             * riflettanza in faccia diventa IL COLORE, e qui il colore e'
+             * quasi nero. Il metalness non toglie il Fresnel: **toglie il
+             * pavimento del Fresnel**. La faccia si svuota e restano accesi
+             * solo i bordi.
+             *
+             * `creaVetroLeggero` ne riflette il **5,56%** -- la piu' vicina
+             * alla lastra vera -- e costa lo stesso ordine di grandezza. La
+             * trasmissione vera costerebbe **trenta volte tanto** ed e'
+             * inutile qui: su una lastra piana da 12 mm lo scarto di
+             * rifrazione e' 4 mm, sotto il pixel.
+             */
+            if (m.name === 'sovra_vetro') {
+              const nuovo = creaVetroLeggero({ ambiente, pianoSezione })
+              nuovo.name = m.name
+              if (Array.isArray(o.material)) {
+                o.material[o.material.indexOf(m)] = nuovo
+              } else {
+                o.material = nuovo
+              }
+              continue
+            }
             if (pianoSezione) m.clippingPlanes = [pianoSezione]
             if (ambiente && 'envMap' in m) {
               m.envMap = ambiente

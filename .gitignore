@@ -25,3 +25,8 @@ riferimenti/blender/uscite/
 riferimenti/blender/provino/uscita/
 riferimenti/ktx2/uscita/
 riferimenti/ktx2/provino/
+
+# Blender lascia i .pyc degli script eseguiti con -P
+riferimenti/blender/__pycache__/
+# la geometria esportata si rigenera con esporta-meccanismo.mjs
+riferimenti/blender/meccanismo.json
