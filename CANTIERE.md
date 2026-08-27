@@ -135,6 +135,78 @@ vedeva come una cosa che non succedeva mai.
 
 ---
 
+### 1quater · La scena e' una sola — 27 agosto, notte `[x]`
+
+**Il difetto bloccante di due revisioni consecutive è chiuso.** Il sito apre
+seduti nel salone, dentro la stessa scena 3D che poi diventa la nave e il
+meccanismo: un canvas, un renderer, una camera, un mare, un integratore,
+dall'inizio alla fine. `#salone` non è più una sezione — è la prima battuta
+della dimostrazione.
+
+`?doppia=1` riporta alla vecchia architettura. Resta finché la nuova non ha
+girato su un telefono vero, ed è anche ciò che permette al cancello di
+dimostrare di funzionare: `collaudo-continuita --doppia` **fallisce**.
+
+**Cosa è servito, e nessuna delle cose era prevista:**
+
+| | perché |
+|---|---|
+| la tuga da 1,80 a 2,35 m | un ponte da 1,80 non è abitabile, e un'inquadratura 16:10 alta così sarebbe larga tre metri e mezzo: la fotografia del salone non ci stava. Non era posizionamento, era quota |
+| montanti sui fianchi | erano sbarre che attraversavano la stanza da murata a murata. Da fuori non si vedeva: da fuori se ne vede solo l'estremità nel finestrino |
+| pareti, coperta, allestimento e fuoribordo spenti da dentro | sono la rappresentazione **esterna** del salone. Da dentro sono mobili in mezzo al fotogramma e una feritoia da cui guardare il mondo |
+| il mare ritagliato | è grande 1,55× perché ruotando scopre gli angoli, ma quel di più non deve vedersi. Nel DOM lo ritagliava `overflow:hidden` |
+| la distanza ricavata dal campo | né «contieni» né «riempi»: su telefono l'immagine deborda del 32%, come già decideva la versione in DOM |
+
+**Tutte trovate col raggio di `?ispeziona=1`**, che risponde col nome e il
+colore di ciò che sta davanti. Nessuna si sarebbe trovata rileggendo il
+codice — due le avevo già rilette senza vederle.
+
+### La domanda aperta che va decisa a mente fresca
+
+**In che verso si attraversa.** Oggi la camera parte dal salone ed **esce**:
+salone → fuori → nave intera → taglio → meccanismo. Viene dalle tue parole —
+«da qui quando farò scroll è come se andassi giù nella barca» — e tiene la
+tesi, perché la riduzione del rollio si dimostra guardando la nave da fuori.
+
+Una revisione sostiene il contrario: esterno → apertura dello scafo →
+meccanismo → **ingresso** nel salone, e dice che l'uscita non deve diventare
+definitiva «per inerzia tecnica». Ha ragione sul metodo: non l'ho scelto, l'ho
+ereditato dall'ordine delle sezioni.
+
+Le due versioni non costano lo stesso: l'inversione è mezza giornata, non
+un'ora, perché il salone diventerebbe il finale e le battute vanno riscritte.
+**Non la faccio senza che tu abbia visto questa.**
+
+### I cancelli nuovi, e cosa impediscono
+
+- **`collaudo-continuita`** — beccheggio nullo (l'invariante vero: una camera
+  livellata mette l'orizzonte a metà schermo da qualunque quota), nessun salto
+  della camera, **identità** di tela/scena/camera/renderer, zero `<video>`
+  visibili, e gli errori di shader che `npm run build` non può vedere. Rotto
+  apposta in tre modi;
+- **`peso --scrivi`** — i numeri pubblicati li scrive la misura. Ha già preso
+  un mio commit un'ora dopo averli resi veri;
+- **`collaudo-glb`** — ora copre anche la sovrastruttura, e **dichiara cosa
+  non controlla**: il verso delle normali, che da qui vorrebbe dire
+  decodificare meshopt. La difesa sta nel builder.
+
+### Cosa resta aperto, in ordine di peso
+
+1. **Il pass PBR.** UV e mappe cotte per vernice, vetro, metallo. Oggi teak e
+   finestre sono disegnati nello shader in coordinate oggetto — costa zero e
+   regge la media distanza, ma **non regge un primo piano**. È il rilievo che
+   separa «geometria nautica» da «fotorealismo»;
+2. **Il salone è un piano.** In un primo piano si legge «schermo dentro la
+   nave», non «stessa stanza». Serve o profondità (parallasse, strati) o una
+   transizione materica che renda onesta la sua natura bidimensionale;
+3. **Il telefono vero.** Fotogrammi, memoria e temperatura. Il livello
+   d'ombra ora scende a 1024 su schermo piccolo, ma è una prudenza, non una
+   misura;
+4. **I tre filmati del mare.** Senza, il contratto «mare → rollio → risposta»
+   resta incompleto a monte.
+
+---
+
 ### 1bis · Il registro di cosa e' uscito
 
 - `[x]` **il quadrilatero manovella–biella–leva**, 99 righe piu' `profiloPinna`
