@@ -1,4 +1,30 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+
+/**
+ * ─── SERVE ffmpeg, E VA DETTO PRIMA DI FALLIRE
+ *
+ * Questo cancello estrae i fotogrammi con ffmpeg. Se non c'e', `execFileSync`
+ * muore con un ENOENT che parla di «file o cartella inesistente» — e quel file
+ * inesistente e' il PROGRAMMA, non il filmato. Su un runner di CI, dove ffmpeg
+ * non e' piu' incluso da qualche versione, il messaggio manda a cercare il
+ * difetto negli asset.
+ *
+ * Tre esecuzioni rosse per questo. Costa due righe dirlo prima.
+ */
+try {
+  execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
+} catch {
+  console.error(`
+  ROTTO  manca ffmpeg.
+
+         Questo cancello estrae i fotogrammi dai filmati e ha bisogno di
+         ffmpeg nel PATH. Non e' incluso nelle immagini di CI recenti:
+
+             sudo apt-get install -y ffmpeg     (Linux)
+             winget install Gyan.FFmpeg         (Windows)
+`)
+  process.exit(1)
+}
 import { readFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

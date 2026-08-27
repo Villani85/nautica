@@ -38,6 +38,16 @@ jobs:
       # e' il caso classico in cui l'ambiente di sviluppo nasconde il guasto
       # proprio a chi lo ha creato. `playwright-core` non scarica browser di
       # proposito — e' quello che tiene `npm ci` leggero — quindi qui va detto.
+      # ffmpeg NON C'E' PIU' SUI RUNNER, e non da' un errore che lo dica.
+      #
+      # Era incluso nelle immagini `ubuntu-latest` e ne e' stato tolto. Il
+      # cancello dei filmati lo invoca per estrarre i fotogrammi: senza, muore
+      # con un ENOENT che parla di un file inesistente e non del programma
+      # mancante. E' costato tre esecuzioni rosse, perche' la catena diceva
+      # solo «lo step e' fallito».
+      - name: ffmpeg per il cancello dei filmati
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
       - name: Un browser per i collaudi
         run: npx playwright install --with-deps chromium
 
