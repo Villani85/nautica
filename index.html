@@ -234,10 +234,10 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path, fonts excluded (gzip)</dt><dd>13.3 KB</dd></div>
+      <div><dt>Critical path, fonts excluded (gzip)</dt><dd>14.6 KB</dd></div>
       <div><dt>— of which JavaScript</dt><dd>3.3 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39.7 KB</dd></div>
-      <div><dt>3D engine, loaded only on demand (gzip)</dt><dd>180.6 KB</dd></div>
+      <div><dt>3D engine, loaded only on demand (gzip)</dt><dd>180.7 KB</dd></div>
       <div><dt>3D models downloaded</dt><dd>280 KB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>223 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
@@ -268,14 +268,77 @@
     commercial demonstration: on your site, in the dealer presentation, on the
     monitor at the trade fair, on the agent’s tablet.</p>
 
+    <p>What follows is deliberately specific. A page that says “send us your
+    files” is asking you to guess; these are the files, the numbers and the
+    decisions that actually determine whether this can be built for your
+    product, and how long it takes.</p>
+
+    <h3>The CAD</h3>
+    <p><strong>STEP is the one that works.</strong> AP214 or AP242, solids
+    rather than surfaces. IGES and Parasolid are fine. A native file —
+    SolidWorks, CATIA, NX, Inventor, Creo — is also fine, but it gets converted
+    before anything else happens, and conversion loses the feature tree: what
+    arrives is geometry, not parameters. If the part is configurable and the
+    configuration matters, that has to be described separately.</p>
+    <p class="magra">Simplified is better than complete. What this needs is the
+    silhouette, the moving parts and their axes — not internal fasteners,
+    threads or supplier sub-assemblies. A model stripped down to those is
+    faster to work with and carries less of your intellectual property out of
+    your building.</p>
+
+    <h3>The numbers that make it move</h3>
+    <p>The physics here is driven by seven quantities. Without them the motion
+    is decoration:</p>
+    <ul>
+      <li><strong>fin area and maximum angle</strong> — they set the righting
+      moment, and the moment is the whole argument</li>
+      <li><strong>reduction ratio and rated torque</strong> at the output</li>
+      <li><strong>maximum angular rate of the fin</strong> — a stabiliser that
+      cannot keep up with the wave does not stabilise</li>
+      <li><strong>the vessel it is fitted to</strong>: displacement, beam,
+      metacentric height and natural roll period</li>
+      <li><strong>service speed range</strong> — fin authority goes with the
+      square of it, and that is the most counter-intuitive thing a buyer
+      learns here</li>
+      <li><strong>the sea states you are willing to be judged on</strong></li>
+      <li><strong>measured reduction, if you have it</strong>, and how it was
+      measured</li>
+    </ul>
+    <p class="magra">If a number is confidential, it can stay confidential: the
+    demonstration can run on normalised values, exactly as this one does, and
+    say so on the page. What it cannot do is invent them.</p>
+
+    <h3>Who has to be in the room</h3>
+    <p>One person on your side who can say <em>this may be shown, that may
+    not</em> — and who is authorised to say it. In practice that is rarely
+    marketing alone: markings, declarations of conformity, class approvals and
+    test data all have an owner, and the owner is usually in engineering or
+    quality. Deciding this at the start costs one meeting. Deciding it at the
+    end costs the project.</p>
+
+    <h3>How long</h3>
+    <ul>
+      <li><strong>Week 1</strong> — files, numbers, and the shown/not-shown
+      list. Nothing is modelled before this is agreed.</li>
+      <li><strong>Weeks 2–3</strong> — geometry: your part, reduced to what the
+      camera needs, with its real axes and real travel.</li>
+      <li><strong>Weeks 3–4</strong> — physics and gates: your numbers driving
+      the motion, and the tests that fail when they stop being true.</li>
+      <li><strong>Weeks 5–6</strong> — the four surfaces: site, dealer
+      presentation, trade-fair screen, tablet.</li>
+    </ul>
+    <p class="magra">Six weeks is the honest figure for a first product, not a
+    sales figure. The part that slips is never the geometry — it is the week
+    when nobody can decide what may be shown.</p>
+
     <div class="scambio">
       <div>
         <h3>What we need from you</h3>
         <ul>
-          <li>the CAD of the component, simplified or not</li>
-          <li>the operating data you are able to make public</li>
+          <li>the CAD, simplified, as STEP</li>
+          <li>the seven quantities above, or the ones you can release</li>
           <li>the technical documentation that already exists</li>
-          <li>whoever decides what may be shown and what may not</li>
+          <li>one person who decides what may be shown</li>
         </ul>
       </div>
       <div>
@@ -288,10 +351,6 @@
         </ul>
       </div>
     </div>
-
-    <p class="magra">Some sectors carry constraints on what may be shown —
-    markings, declarations of conformity, test data. Those get looked at before
-    starting, not after.</p>
   </div>
 </section>
 
