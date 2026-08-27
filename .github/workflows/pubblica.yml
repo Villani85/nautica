@@ -99,6 +99,18 @@ jobs:
         run: node strumenti/collaudo-ridotto.mjs
         env: { CHROMIUM: '1' }
 
+      # Un cancello fuori dalla CI protegge solo quando qualcuno si ricorda di
+      # eseguirlo. Questi due sono nati stanotte e guardano due promesse che
+      # nessun altro guarda: che la scia risponda all'andatura, e che il varco
+      # nel pelo si apra col taglio e si richiuda con lui.
+      - name: 'Cancello · la scia risponde all andatura'
+        run: node strumenti/collaudo-scia.mjs
+        env: { CHROMIUM: '1' }
+
+      - name: 'Cancello · il varco nel pelo si apre col taglio'
+        run: node strumenti/collaudo-varco.mjs
+        env: { CHROMIUM: '1' }
+
       # Layout, bersagli e raggiungibilita' su tre viewport da telefono. I
       # fotogrammi al secondo NON sono una misura qui (niente GPU): il
       # collaudo lo stampa in testa e in coda, e fallisce solo su cio' che sa

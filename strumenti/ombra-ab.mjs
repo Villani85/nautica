@@ -9,7 +9,7 @@
  * chiamata: la nave rolla e il mare si muove, e con due catture separate la
  * differenza cercata affogherebbe nel movimento.
  */
-import { chromium } from 'playwright-core'
+import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 const [px, py, pz, mx, my, mz, fuoco] = (process.env.CAMERA_SITO ||
@@ -17,7 +17,7 @@ const [px, py, pz, mx, my, mz, fuoco] = (process.env.CAMERA_SITO ||
 const PORTA = process.env.PORTA_COLLAUDO || 5192
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 await new Promise(r => setTimeout(r, 4000))
-const browser = await chromium.launch({ channel: 'chrome', headless: false })
+const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1000, height: 620 } })).newPage()
 await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })

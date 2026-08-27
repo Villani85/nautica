@@ -1,10 +1,10 @@
-import { chromium } from 'playwright-core'
+import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 const P = process.env.PORTA_COLLAUDO || 5194
 const pv = spawn('npx', ['vite', 'preview', '--port', P], { shell: true, stdio: 'ignore' })
 await new Promise(r => setTimeout(r, 4000))
-const b = await chromium.launch({ channel: 'chrome', headless: false })
+const b = await apriBrowser({ conGpu: true })
 const pg = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
 await pg.goto(`http://localhost:${P}/`, { waitUntil: 'load' })
 await pg.waitForTimeout(2500)

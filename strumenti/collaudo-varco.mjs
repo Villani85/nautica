@@ -20,7 +20,7 @@
  * il meccanismo e' il 3% del quadro e in un rettangolo diluisce sotto il
  * rumore. Ci ho perso un'ora per impararlo.
  */
-import { chromium } from 'playwright-core'
+import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 
 const GAMMA_MIN = 60      // col taglio aperto
@@ -29,7 +29,7 @@ const PORTA = process.env.PORTA_COLLAUDO || 5216
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 await new Promise(r => setTimeout(r, 4000))
-const browser = await chromium.launch({ channel: 'chrome', headless: false })
+const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
 await pg.goto(`http://localhost:${PORTA}/?ispeziona=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
