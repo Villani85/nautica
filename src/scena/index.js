@@ -228,7 +228,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
-  const { nave, agganci, guscio, tappo, spostaTappo, tuga, allestimento } = costruisciNave()
+  const { nave, agganci, guscio, tappo, spostaTappo, tuga, allestimento } = costruisciNave(base)
   const tugaQuota = tuga.quota
   const tugaZ = tuga.z
   scena.add(nave)

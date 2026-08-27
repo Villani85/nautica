@@ -1,6 +1,7 @@
 import {
   Group, Mesh, BoxGeometry,
-  EdgesGeometry, LineSegments, LineBasicMaterial, MeshBasicMaterial, DoubleSide
+  EdgesGeometry, LineSegments, LineBasicMaterial, MeshBasicMaterial, DoubleSide,
+  TextureLoader, NoColorSpace
 } from 'three'
 import { materiali } from './materiali.js'
 import { costruisciGuscio, costruisciPonte, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
@@ -72,7 +73,7 @@ export const TUGA = { z: 0.6, lung: 6.2, alt: 0.94, fattoreLarghezza: 1.16 }
  * fa stare la fotografia a scala dentro la larghezza della tuga.
  */
 
-export function costruisciNave () {
+export function costruisciNave (base = import.meta.env.BASE_URL) {
   const nave = new Group()
   // Il guscio e' cio' che il piano di sezione taglia via; il meccanismo no —
   // e' quello che resta, ed e' la tesi del sito resa visibile.
@@ -100,8 +101,38 @@ export function costruisciNave () {
    * `tappoA` la calcola con LA STESSA funzione che genera la superficie.
    * `strumenti/collaudo-scafo.mjs` lo prova a otto quote.
    */
+  /**
+   * --- L'OCCLUSIONE AMBIENTALE DI SCAFO E PONTE
+   *
+   * Misurata dalla stessa camera del render Cycles, la coperta AL RIPARO sotto
+   * la tuga era luminosa quanto quella scoperta: rapporto 1,02 dove il render
+   * da' 0,83. La luce arrivava da ogni parte uguale, e per questo niente
+   * sembrava stare dentro a niente.
+   *
+   * La mappa e' cotta da `riferimenti/blender/cuoci-ao-scafo.py` sulle UV
+   * NATURALI del loft -- le stesse che il browser usa, non uno srotolamento
+   * inventato in Blender, che darebbe una texture cotta su una mappa e letta
+   * su un'altra: un difetto che non da' errore, da' macchie.
+   *
+   * Il materiale si CLONA, e non e' pignoleria: il materiale `scafo` lo
+   * portano anche i due tappi di prua e poppa, che hanno UV loro nello stesso
+   * spazio 0-1. Dando l'occlusione al materiale condiviso i tappi
+   * leggerebbero la parte di atlante del guscio, cioe' un'ombra di un altro
+   * pezzo. Un clone costa un programma in piu' e toglie il dubbio.
+   */
+  const ao = new TextureLoader().load(base + 'modelli/scafo-ao.webp')
+  ao.colorSpace = NoColorSpace   // e' una quantita', non un colore
+  ao.flipY = true                // Blender e three concordano: v=0 sta in basso
+
+  const matScafo = materiali.scafo.clone()
+  matScafo.name = materiali.scafo.name
+  matScafo.aoMap = ao
+  const matPonte = materiali.coperta.clone()
+  matPonte.name = materiali.coperta.name
+  matPonte.aoMap = ao
+
   const geoScafo = costruisciGuscio(72)
-  const scafo = new Mesh(geoScafo, materiali.scafo)
+  const scafo = new Mesh(geoScafo, matScafo)
   nave.add(scafo); guscio.push(scafo)
   // La faccia interna, disegnata a parte e scura: vedi materiali.interno
   const dentro = new Mesh(geoScafo, materiali.interno)
@@ -122,7 +153,7 @@ export function costruisciNave () {
   }
 
   // E il terzo lato aperto: il ponte.
-  const ponte = new Mesh(costruisciPonte(72), materiali.coperta)
+  const ponte = new Mesh(costruisciPonte(72), matPonte)
   nave.add(ponte); guscio.push(ponte)
   // da DENTRO il salone il ponte e' il pavimento sotto i piedi, non una lastra
   // che attraversa la stanza a mezz'aria: si spegne insieme alle pareti

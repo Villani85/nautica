@@ -235,6 +235,7 @@ export function tappoA (z) {
 /** Il guscio: anelli di `contornoA` cuciti a quad. */
 export function costruisciGuscio (anelli = 64) {
   const pos = []
+  const uv = []
   const anello = []
   for (let a = 0; a <= anelli; a++) {
     const t = a / anelli
@@ -242,6 +243,28 @@ export function costruisciGuscio (anelli = 64) {
     const c = contornoA(t)
     anello.push(c)
     for (const [x, y] of c) pos.push(x, y, z)
+    /**
+     * --- LE UV ESISTONO GIA' NELLA COSTRUZIONE, BASTA SCRIVERLE
+     *
+     * Questa superficie e' un loft su una griglia regolare: `a` corre lungo la
+     * nave, `i` lungo il giro dell'ordinata. Sono gia' due coordinate fra 0 e
+     * 1, e srotolarla con un algoritmo sarebbe rifare peggio un lavoro che la
+     * geometria fa da se'.
+     *
+     * Servono per cuocere l'occlusione ambientale, che sullo scafo non c'era:
+     * misurata dalla stessa camera del render Cycles, la coperta AL RIPARO
+     * sotto la tuga era luminosa quanto quella scoperta -- rapporto 1,02 dove
+     * il render da' 0,83.
+     *
+     * E qui non costano un byte di trasferimento: la geometria si costruisce
+     * nel browser, quindi le UV nascono con lei.
+     */
+    // DUE SUPERFICI IN UN ATLANTE SOLO. Il guscio sta nella meta' bassa delle
+    // v, il ponte in quella alta: una texture invece di due richieste, e in
+    // mezzo resta un margine perche' la cottura non sanguini dall'una
+    // all'altra. I margini non sono decorativi -- a 512 px, quattro centesimi
+    // sono venti pixel, cioe' piu' del raggio del filtro bilineare a mip 1.
+    for (let i = 0; i < c.length; i++) uv.push(a / anelli, 0.02 + (i / c.length) * 0.44)
   }
 
   const idx = []
@@ -263,6 +286,7 @@ export function costruisciGuscio (anelli = 64) {
 
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
   g.setIndex(idx)
   g.computeVertexNormals()
   return g
@@ -282,6 +306,7 @@ export function costruisciGuscio (anelli = 64) {
  */
 export function costruisciPonte (anelli = 72) {
   const pos = []
+  const uv = []
   for (let a = 0; a <= anelli; a++) {
     const t = a / anelli
     const z = zDaT(t)
@@ -289,6 +314,8 @@ export function costruisciPonte (anelli = 72) {
     const dritta = c[GIRO]                 // ultimo punto del lato dritto: il trincarino
     const sinistra = c[c.length - GIRO]    // il suo speculare a sinistra
     pos.push(dritta[0], dritta[1], z, sinistra[0], sinistra[1], z)
+    // il ponte e' una striscia: u lungo la nave, v da un trincarino all'altro
+    uv.push(a / anelli, 0.54, a / anelli, 0.98)
   }
   const idx = []
   for (let a = 0; a < anelli; a++) {
@@ -300,6 +327,7 @@ export function costruisciPonte (anelli = 72) {
   }
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
+  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
   g.setIndex(idx)
   g.computeVertexNormals()
   return g

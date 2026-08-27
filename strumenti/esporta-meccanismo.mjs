@@ -192,6 +192,19 @@ const raccolto = await pg.evaluate((TETTO_TRI) => {
         return v
       })(),
       interlacciata: !!g.attributes.position.isInterleavedBufferAttribute,
+      /**
+       * LE UV, quando ci sono. Servono a cuocere l'occlusione ambientale sui
+       * pezzi che le hanno gia' -- lo scafo e il ponte le prendono dal loft --
+       * e vanno lette con `getX/getY` per la stessa ragione delle posizioni:
+       * su una geometria interlacciata l'array e' il buffer condiviso.
+       */
+      uv: (() => {
+        const a = g.attributes.uv
+        if (!a) return null
+        const v = new Array(a.count * 2)
+        for (let i = 0; i < a.count; i++) { v[i * 2] = a.getX(i); v[i * 2 + 1] = a.getY(i) }
+        return v
+      })(),
       idx: g.index ? Array.from(g.index.array) : null
     })
   })
