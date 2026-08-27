@@ -433,10 +433,15 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     nave.updateMatrixWorld(true)
     /* I varchi nel pelo: uno per impianto, misurati sul loro ingombro appena
        il modello e' caricato. */
-    Promise.all(impianti.map(i => i.caricato.catch(() => null))).then(() => {
-      nave.updateMatrixWorld(true)
-      acqua.seguiVarchi(impianti.map(i => i.gruppo))
-    })
+    // `?senzaVarco=1` non li imposta: serve a rompere apposta
+    // `collaudo-varco.mjs`, perche' un cancello che non puo' fallire non e' un
+    // cancello.
+    if (!new URLSearchParams(location.search).has('senzaVarco')) {
+      Promise.all(impianti.map(i => i.caricato.catch(() => null))).then(() => {
+        nave.updateMatrixWorld(true)
+        acqua.seguiVarchi(impianti.map(i => i.gruppo))
+      })
+    }
     // I due parametri della sagoma si possono spostare da URL: servono al banco
     // che li sceglie misurando, e costano una riga.
     const q = new URLSearchParams(location.search)
