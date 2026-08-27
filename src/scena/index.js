@@ -359,6 +359,30 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   if (!location.search.includes('senzaAcqua')) scena.add(acqua.gruppo)
 
+  /**
+   * LA NAVE SI SPECCHIA NEL MARE. La sagoma si misura sull'ingombro vero, non
+   * si scrive: se lo scafo cambia, il riflesso lo segue. `?senzaRiflesso=1` lo
+   * spegne, per misurare il costo e per il banco.
+   */
+  if (!new URLSearchParams(location.search).has('senzaRiflesso')) {
+    nave.updateMatrixWorld(true)
+    // I due parametri della sagoma si possono spostare da URL: servono al banco
+    // che li sceglie misurando, e costano una riga.
+    const q = new URLSearchParams(location.search)
+    acqua.seguiNave(nave, {
+      // Scelti misurando, non a occhio. Lo scarto fra acqua sotto lo scafo e
+      // acqua libera, al crescere dei due:
+      //     0    / 0,62   ->   0,0%
+      //     0,85 / 0,62   ->  -1,8%
+      //     1    / 0,85   ->  -4,5%
+      //     1    / 1,00   ->  -5,3%
+      // Si ferma a 0,85 perche' li' la curva si appiattisce e oltre la sagoma
+      // esce dallo scafo: il riflesso comincerebbe a sporgere dalla nave.
+      forza: q.has('rifForza') ? Number(q.get('rifForza')) : 1.0,
+      stretta: q.has('rifStretta') ? Number(q.get('rifStretta')) : 0.85
+    })
+  }
+
   const orologio = new Clock()
   let t = 0
   let frame = 0

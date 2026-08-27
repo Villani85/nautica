@@ -22,7 +22,7 @@ const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true
 await new Promise(r => setTimeout(r, 4000))
 const browser = await chromium.launch({ channel: 'chrome', headless: false })
 const pg = await (await browser.newContext({ viewport: { width: L, height: H } })).newPage()
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 
 // dentro la dimostrazione, dove il ciclo di disegno e' acceso

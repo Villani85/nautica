@@ -1,6 +1,6 @@
 import {
   Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial,
-  DoubleSide, Group, Color, Vector3
+  DoubleSide, Group, Color, Vector3, Matrix4, Box3
 } from 'three'
 
 const LARG = 46
@@ -100,6 +100,16 @@ uniform vec3  uColSchiuma;
 uniform vec3  uColScint;
 uniform vec3  uColCielo;
 uniform vec3  uColMare;
+/* La sagoma della nave dentro il riflesso. Le uniformi non basta metterle in
+   shader.uniforms: vanno DICHIARATE qui, o il programma non compila e il mare
+   SPARISCE -- che e' esattamente come si e' manifestato il difetto, e senza
+   leggere la console sembrava un problema di acqua e non di shader.
+   (E niente apici inversi in questi commenti: siamo dentro un template
+   literal, e un apice inverso lo chiude. Costata una compilazione.) */
+uniform mat4  uNaveInv;
+uniform vec3  uNaveSemi;
+uniform vec3  uNaveCol;
+uniform float uNaveForza;
 varying vec3 vMondo;
 
 /* Niente sin() qui dentro: la precisione di fract(sin(x)*k) crolla quando x
@@ -325,6 +335,35 @@ const INNESTO_SCINTILLE = /* glsl */`
      l'orizzonte c'e' la meta' chiara della pagina, sotto la meta' scura */
   vec3 acqRif = reflect(-acqV, acqNMondo);
   vec3 acqCielo = mix(uColMare, uColCielo, smoothstep(-0.06, 0.16, acqRif.y));
+
+  /* --- LA NAVE COPRE IL CIELO DOVE IL RAGGIO RIFLESSO LA INCONTRA.
+     Punto e direzione si portano nel sistema della nave e si dividono per i
+     semiassi: l'ellissoide diventa una sfera di raggio 1, e il test e' la
+     stessa quadratica di sempre. Si tiene solo l'intersezione DAVANTI al
+     punto (t > 0): un raggio che se ne va dalla parte opposta non incontra
+     niente, e senza questo controllo la nave si specchierebbe anche
+     dall'altro lato. */
+  if (uNaveForza > 0.0) {
+    vec3 o = (uNaveInv * vec4(vMondo, 1.0)).xyz / uNaveSemi;
+    vec3 d = (uNaveInv * vec4(acqRif, 0.0)).xyz / uNaveSemi;
+    float a = dot(d, d);
+    float b = 2.0 * dot(o, d);
+    float c = dot(o, o) - 1.0;
+    float disc = b * b - 4.0 * a * c;
+    if (disc > 0.0) {
+      float sq = sqrt(disc);
+      float t0 = (-b - sq) / (2.0 * a);
+      float t1 = (-b + sq) / (2.0 * a);
+      float t = t0 > 0.0 ? t0 : t1;
+      if (t > 0.0) {
+        /* il bordo non e' netto: piu' il raggio passa vicino al centro
+           dell'ellissoide, piu' e' sicuro che stia guardando lo scafo. Senza
+           sfumatura la sagoma disegna la propria silhouette invece della nave. */
+        float dentro = clamp(sq / (2.0 * sqrt(a)) * 1.6, 0.0, 1.0);
+        acqCielo = mix(acqCielo, uNaveCol, dentro * uNaveForza);
+      }
+    }
+  }
   totalEmissiveRadiance += acqCielo * (acqFres * uCielo * acqTaglio);
   }
 `
@@ -402,7 +441,36 @@ export function costruisciAcqua (opzioni = {}) {
     /* --aria e --acqua-viva del foglio di stile, cioe' i due colori che il
        sito ha gia': il mare riflette la pagina, non un cielo estraneo */
     uColCielo: { value: new Color(0xe9e5dd) },
-    uColMare: { value: new Color(0x0f3438) }
+    uColMare: { value: new Color(0x0f3438) },
+    /**
+     * --- LA NAVE DENTRO IL RIFLESSO
+     *
+     * Misurato sulla stessa camera del render Cycles, l'acqua SOTTO lo scafo:
+     *
+     *     Cycles   78,3 contro 131,8 di acqua libera    -40,6%
+     *     sito     99,8 contro 100,2                     -0,4%
+     *
+     * Nel render lo scafo si specchia e soprattutto BLOCCA il cielo; nel sito
+     * il mare sotto la nave e' identico a quello aperto. E' il divario piu'
+     * grande rimasto, ed e' anche il piu' facile da riconoscere: una nave
+     * senza riflesso non e' su un mare, e' davanti a un mare.
+     *
+     * La cura NON e' un passaggio di specchio -- rifare la scena in un
+     * bersaglio costa un secondo disegno della nave a ogni fotogramma, e qui
+     * il quadro e' quasi tutto acqua. Si CALCOLA: dal punto d'acqua parte il
+     * raggio riflesso, e si chiede se incontra la nave. Se la incontra, quel
+     * pixel non vede il cielo.
+     *
+     * La sagoma e' un ELLISSOIDE nel sistema della nave: e' una quadratica,
+     * dieci istruzioni, e di uno scafo approssima la forma affusolata molto
+     * meglio di una scatola -- che sarebbe larga di baglio da prua a poppa e
+     * darebbe un riflesso rettangolare. E' una sagoma, e come tutte le sagome
+     * sbaglia: quanto, sta scritto nel commit, misurato contro il render.
+     */
+    uNaveInv: { value: new Matrix4() },
+    uNaveSemi: { value: new Vector3(1, 1, 1) },
+    uNaveCol: { value: new Color(0x2a3338) },
+    uNaveForza: { value: 0 }
   }
 
   if (dettaglio) {
@@ -550,6 +618,37 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
     }
     superficie.attributes.position.needsUpdate = true
     if (frame % 2 === 0) superficie.computeVertexNormals()
+    /* La sagoma segue la nave che ROLLA: la matrice si riprende a ogni
+       fotogramma, o il riflesso resterebbe dritto mentre la nave si inclina --
+       che e' peggio di non averlo, perche' si vede che e' finto. */
+    if (nave) {
+      uni.uNaveInv.value.copy(nave.matrixWorld).invert()
+      uni.uNaveForza.value = forzaNave
+    }
+  }
+
+  /**
+   * --- CHI SI SPECCHIA, E CON CHE SAGOMA
+   *
+   * I semiassi si MISURANO sull'ingombro vero dell'oggetto, non si scrivono:
+   * se lo scafo cambia, la sagoma lo segue. Si stringe di un fattore perche'
+   * un ellissoide circoscritto a una nave e' molto piu' grosso della nave --
+   * il riflesso uscirebbe largo di baglio da prua a poppa.
+   */
+  let nave = null
+  let forzaNave = 0
+  function seguiNave (oggetto, { forza = 0.85, stretta = 0.62 } = {}) {
+    nave = oggetto
+    forzaNave = forza
+    if (!oggetto) { uni.uNaveForza.value = 0; return null }
+    const b = new Box3().setFromObject(oggetto)
+    const d = b.getSize(new Vector3())
+    uni.uNaveSemi.value.set(
+      Math.max(d.x / 2 * stretta, 0.05),
+      Math.max(d.y / 2 * stretta, 0.05),
+      Math.max(d.z / 2 * stretta, 0.05)
+    )
+    return uni.uNaveSemi.value.clone()
   }
 
   /** Il taglio schiarisce l'acqua: q va da 0 (nave intera) a 1 (sezione). */
@@ -557,5 +656,5 @@ const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
     materialeVolume.opacity = FONDA + (CHIARA - FONDA) * Math.max(0, Math.min(1, q))
   }
 
-  return { gruppo, anima, chiarisci }
+  return { gruppo, anima, chiarisci, seguiNave }
 }
