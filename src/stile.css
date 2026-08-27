@@ -770,9 +770,20 @@ html[data-unica="si"] .atto--demo{margin-top:0}
      il sito stesso, e togliendola la didascalia respira. */
   .pannello--energia{display:none}
 
+  /* ─── LA DICHIARAZIONE E LA BATTUTA SI PESTAVANO I PIEDI
+     `.patto` sta appena sotto la linea; qui la pila cominciava alla stessa
+     quota e le due righe finivano una sull'altra — «05 — THE SEQUENCE»
+     stampato dentro «ILLUSTRATIVE MODEL · GENERIC GEOMETRY». Misurato a
+     390x844.
+     Cede la PILA, non la dichiarazione: quella riga e' un impegno preso col
+     lettore e non si sposta per far posto a un'etichetta.
+     E la correzione era finita nel blocco sbagliato — `max-width:820` piu' in
+     su — dove una regola successiva la sovrascriveva. Un CSS con quattro
+     media query ha questa trappola: la riga giusta nel posto sbagliato non
+     da' errore, semplicemente non fa niente. */
   .pila{
     left:var(--u2);right:var(--u2);width:auto;
-    top:calc(50% + var(--u2));
+    top:calc(50% + var(--u2) + 20px);
     bottom:calc(var(--h-comandi) + var(--u3));
   }
   /* I CONTI, perche' qui non ci sta tutto e va deciso COSA cede.
