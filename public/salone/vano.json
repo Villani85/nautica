@@ -1,0 +1,4 @@
+{
+ "rientro_px": 16,
+ "perche": "di quanto la maschera rientra rispetto al vano misurato. collaudo-filmato.mjs ci deriva il proprio tetto: se il vano scivola di piu di questo, si apre un foro nel legno."
+}

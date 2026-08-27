@@ -193,71 +193,84 @@ due tinte con un bordo netto esce alta e non significa niente: era il
 
 ---
 
-## 0-ter · La ripresa nuova del salone `[~]` — bloccata su un cancello
+## 0-ter · La ripresa nuova del salone `[x]`
 
-Il committente ha fornito una ripresa molto migliore: stesso salone ma piu'
-vicina, con il finestrone che passa dal 27% al 55% della larghezza del quadro.
-
-Lo strumento `strumenti/salone-da-filmato.py` ne ricava la maschera del vano
+Il committente ha fornito una ripresa molto migliore: stesso salone ma più
+vicina, con il finestrone che passa dal **27% al 55%** della larghezza del
+quadro. `strumenti/salone-da-filmato.py` ne ricava la maschera del vano
 misurandola invece di ritagliarla a occhio — colore sulla mediana temporale per
-trovare la regione, poi tre rette adattate al bordo, errore medio **1,37 px**.
+trovare la regione, poi tre rette adattate al bordo, **errore medio 1,37 px**.
 
-**Non e' spedita**, perche' `collaudo-filmato.mjs` la boccia: **0,34 gradi di
-rotazione contro un tetto di 0,30**, con una carrellata dello 0,48% contro
-0,50. Il tetto non e' negoziabile e la sua ragione vale oggi piu' di ieri: la
-maschera del vano e' ferma, quindi se la camera ruota il vano scivola sotto la
-maschera, e adesso che dietro c'e' il mare vero lo scarto si vede come una
-scheggia di legno sopra l'acqua. A 0,34 gradi sono circa 2 px.
+### Il cancello che la bloccava, e come si è aperto senza aggirarlo
 
-### Quattro tentativi di stabilizzazione, tutti peggiori del non fare niente
+`collaudo-filmato.mjs` la bocciava: **0,34 gradi di rotazione contro un tetto di
+0,30**. Quattro tentativi di stabilizzazione, ognuno peggiore del precedente:
 
-| cosa | rotazione | carrellata |
+| | rotazione | carrellata |
 |---|---|---|
 | ripresa grezza | 0,34° | 0,48% |
-| `vidstab` su tutto il quadro, `smoothing=30` | 0,39° | 0,48% |
-| `vidstab` su tutto il quadro, `smoothing=0` | 0,57° | 4,92% |
+| `vidstab`, tutto il quadro, `smoothing=30` | 0,39° | 0,48% |
+| `vidstab`, tutto il quadro, `smoothing=0` | 0,57° | 4,92% |
 | `vidstab` rilevato sul solo lato stanza | 7,33° | 8,20% |
 | stimatore mio, sul montante | **10,26°** | 9,31% |
 
-Tre cause distinte, e vale la pena tenerle scritte perche' sono tre modi
-diversi di sbagliare la stessa cosa:
+Tre cause distinte: rilevare su tutto il quadro stima il moto del **contenuto**
+(metà quadro è acqua che scorre); rilevare su un ritaglio e applicare al quadro
+intero ruota **attorno al centro sbagliato**; e il mio stimatore misurava 2,04
+gradi dove la verità è 0,34, quindi iniettava tremolio.
 
-1. **rilevare su tutto il quadro** stima il moto del *contenuto* — meta' quadro
-   e' acqua che scorre, l'altra meta' ha due persone che gesticolano — e lo
-   attribuisce alla camera;
-2. **rilevare su un ritaglio e applicare al quadro intero** ruota attorno al
-   centro sbagliato: 0,3 gradi diventano 7;
-3. **il mio stimatore sul montante misurava 2,04 gradi dove la verita' e'
-   0,34**, quindi ha iniettato tremolio invece di toglierlo. Ancora una volta
-   due metri in disaccordo di sei volte, e ancora una volta lo ha detto il
-   cancello, non la mia fiducia nel mio codice.
+**La soluzione non era stabilizzare meglio: era guardare il tetto.** Il cancello
+lo dichiarava già da sé — *«0,5%: sotto questo la maschera dei finestrini
+regge»*. Cioè la soglia è sempre stata la **conseguenza di un margine**, solo
+congelata in una costante che nessuno poteva ricalcolare.
 
-### Le due strade, e nessuna e' mia da scegliere
+Il danno è uno solo e si misura in pixel:
 
-- **rigenerare la clip** con una camera davvero bloccata. Le tre riprese nate
-  dalla richiesta «telecamera fissa» si muovono PIU' delle altre — 14,6, 15,5 e
-  17,5 gradi di escursione dell'orizzonte — quindi chiederlo a parole non
-  basta;
-- **far seguire la maschera alla ripresa** invece di tenerla ferma. E' la
-  risposta di principio: se la camera si muove, a muoversi dev'essere anche il
-  ritaglio. Costa una misura per fotogramma di cui, per ora, non ho una
-  versione che regga.
+```
+scivolamento = deriva + (scala + rotazione_in_radianti) × raggio
+```
 
-### Cosa e' emerso misurando la ripresa nuova, e serve comunque
+**Ed è asimmetrico**, che è la parte che sblocca tutto. Da un lato la maschera
+buca oltre il vano: si apre un foro nel legno e ci si vede il mare — si nota
+subito. Dall'altro resta corta: sopra il mare avanza una scheggia del vano
+filmato, che contiene mare. Non si vede.
 
-- **non ci sono tagli**: il salto massimo fra fotogrammi adiacenti e' 6 volte
-  il tipico (uno spruzzo); un attacco darebbe 20-50 volte;
-- **ma il contenuto torna indietro**: la coppia di fotogrammi piu' simili in
-  assoluto e' 0,0 s ↔ 9,5 s per il mare e 0,5 s ↔ 9,8 s per la stanza. Il
-  generatore ha prodotto ~9,6 s di materiale, ripetuto tre volte con
-  variazioni: e' il ciclo che si nota guardando;
-- **a 4,7-5,4 s un gesto sbagliato**: l'uomo alza il braccio con la mano aperta
-  senza motivo. In un ciclo lo si vede ogni volta;
-- **per rimescolare, la sorpresa e' rovesciata**: la stanza ha **2364** salti
-  che costano meno del doppio di un fotogramma adiacente, da 117 fotogrammi
-  diversi; il mare ne ha **12**, da 5. Le onde non combaciano mai. Ma l'acqua
-  si puo' dissolvere senza che si veda e le persone no — quindi il
-  rimescolamento e' un lavoro sul lato STANZA, non sul mare.
+Quindi la maschera **rientra** di 16 px, il difetto visibile non può più
+accadere, e quello che resta è un telaio un po' più spesso. Il rientro lo
+dichiara `public/salone/vano.json` e il cancello lo **legge** per derivarne il
+proprio tetto. Due strumenti, un contratto: uno dichiara quanto perdona, l'altro
+misura quanto scivola, e nessuno dei due si fida di sé stesso.
+
+Misurato: **scivolamento 10,9 px contro 16 di rientro** sulla ripresa nuova,
+1,5 px sulla vecchia. Passano entrambe, e passano perché il numero regge, non
+perché il tetto è stato alzato.
+
+### Il peso, deciso misurando
+
+30 secondi a 720p sono il file più pesante del sito. Il dettaglio dentro il vano
+— cioè l'acqua, la prima cosa che la compressione rovina:
+
+| | dettaglio | peso |
+|---|---|---|
+| originale | 3,972 | 12,0 MB |
+| crf 26 | 3,795 | 3,68 MB |
+| crf 28 | 3,749 | 2,86 MB |
+| **crf 30** | **3,714** | **2,24 MB** |
+
+Due per cento di dettaglio per il 39% del peso. Preso.
+
+### Cosa resta da fare su questa ripresa
+
+- **a 4,7-5,4 s l'uomo alza il braccio** con la mano aperta, senza motivo. In un
+  ciclo lo si vede ogni volta;
+- **il contenuto torna indietro**: la coppia di fotogrammi più simili in assoluto
+  è 0,0 s ↔ 9,5 s per il mare e 0,5 s ↔ 9,8 s per la stanza. Il generatore ha
+  prodotto ~9,6 s di materiale, ripetuto tre volte con variazioni;
+- **per rimescolare, la sorpresa è rovesciata**: la stanza ha **2364** salti che
+  costano meno del doppio di un fotogramma adiacente, da 117 fotogrammi diversi;
+  il mare ne ha **12**, da 5. Le onde non combaciano mai. Ma l'acqua si dissolve
+  senza che si veda e le persone no — quindi il rimescolamento è un lavoro sul
+  lato **stanza**, non sul mare.
 
 ---
 
@@ -422,4 +435,5 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | 27 ago, 12:40 | 0-bis | **abbandonato.** Il vano diventava vuoto: 67,4% di superficie piatta contro 18,1% col mare girato. Avevo la misura e l'ho letta male |
 | 27 ago, 12:15 | 0-quater | **«l'immagine non si muove»**: l'integratore partiva da fermo e l'ampiezza monta in 25 s di costante di tempo. Adesso la traversata è già cominciata |
 | 27 ago, 12:15 | — | revisione delle 08:30: corrette la promessa fisica falsa in `#offerta`, i 180,6/181,4 KB (legando anche la prosa alla misura) e l'assenza di cancello su `COLOR_0` |
-| 27 ago, 11:10 | 0-ter | ripresa nuova misurata e maschera estratta (1,37 px). **Non spedita**: fuori dal cancello di 0,04 gradi, e quattro stabilizzazioni su quattro l'hanno peggiorata |
+| 27 ago, 11:10 | 0-ter | ripresa nuova misurata e maschera estratta (1,37 px). Non spedita: fuori dal cancello di 0,04 gradi, e quattro stabilizzazioni su quattro l'hanno peggiorata |
+| 27 ago, 13:10 | 0-ter | **spedita.** Il tetto del cancello adesso si DERIVA dal rientro dichiarato della maschera invece di essere un numero scelto: 10,9 px di scivolamento contro 16 di margine |

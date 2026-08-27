@@ -343,18 +343,69 @@ console.log(`  CARRELLATA  ${(100 * scala).toFixed(2)}%   tetto ${(100 * SCALA).
 console.log(`  DERIVA      ${deriva.toFixed(1)} px   tetto ${DERIVA}`)
 console.log(`  ROTAZIONE   ${rot.toFixed(2)} gradi di escursione   tetto ${ROTAZIONE}`)
 
+/**
+ * --- I TRE MOVIMENTI FANNO UN SOLO DANNO, E SI SOMMANO IN PIXEL
+ *
+ * I tre tetti qui sopra erano numeri scelti a mano, e uno di loro dichiarava
+ * gia' da dove veniva: "0,5%: sotto questo la maschera dei finestrini regge".
+ * Cioe' la soglia e' sempre stata la CONSEGUENZA di un margine -- solo,
+ * congelata in una costante che nessuno poteva ricalcolare.
+ *
+ * Il danno e' uno solo: il vano del finestrone, dentro il filmato, si sposta
+ * rispetto alla maschera, che sta ferma. Carrellata, deriva e rotazione ci
+ * contribuiscono tutte e tre, e in pixel si sommano:
+ *
+ *     scivolamento = deriva + (scala + rotazione_in_radianti) * raggio
+ *
+ * dove il raggio e' la distanza dal centro del quadro all angolo piu' lontano
+ * del vano -- il punto che si sposta di piu'.
+ *
+ * --- E IL DANNO E' ASIMMETRICO, che e' la parte che sblocca tutto
+ *
+ * Da un lato la maschera buca oltre il vano: si apre un foro NEL LEGNO e ci si
+ * vede il mare. Si nota subito, ed e' il difetto che il tetto proteggeva.
+ * Dall altro lato la maschera resta corta: sopra il mare rimane una scheggia
+ * del vano filmato, che contiene... mare. Non si vede.
+ *
+ * Quindi basta che la maschera RIENTRI del massimo scivolamento, e il difetto
+ * visibile non puo' piu' accadere. Il rientro non e' un numero che invento
+ * qui: lo scrive `salone-da-filmato.py` in `public/salone/vano.json` quando
+ * genera la maschera, e questo cancello lo LEGGE. Due strumenti, un contratto.
+ *
+ * Senza quel file si resta ai tetti vecchi: un filmato di cui non si sa con
+ * quale margine e' stata fatta la maschera non ha diritto a nessuna
+ * concessione.
+ */
+let rientro = null
+try {
+  rientro = JSON.parse(readFileSync('public/salone/vano.json', 'utf8')).rientro_px
+} catch {}
+
+const raggio = Math.hypot(W, H) / 2
+const scivola = deriva + (scala + rot * Math.PI / 180) * raggio
+console.log(`  SCIVOLAMENTO ${scivola.toFixed(1)} px al bordo del vano` +
+            (rientro === null ? '   (nessun rientro dichiarato)' : `   rientro della maschera ${rientro} px`))
+
 let rotto = false
-if (scala > SCALA) {
+if (rientro !== null) {
+  if (scivola > rientro) {
+    console.error(`  ROTTO  il vano scivola di ${scivola.toFixed(1)} px sotto una maschera che
+         ne perdona ${rientro}. Dove la maschera buca oltre il vano si apre un foro
+         nel legno e ci si vede il mare. O si stabilizza il filmato, o si
+         rigenera la maschera con un rientro maggiore.`)
+    rotto = true
+  }
+} else if (scala > SCALA) {
   console.error(`  ROTTO  la camera carrella. I finestrini escono da sotto la maschera, e non
          si corregge dopo: vidstab non tocca la scala. Va rigenerato, e il come
          sta in riferimenti/prompt/salone-filmati.md`)
   rotto = true
 }
-if (deriva > DERIVA) {
+if (rientro === null && deriva > DERIVA) {
   console.error('  ROTTO  la camera sale o scende: la maschera dei finestrini non la segue.')
   rotto = true
 }
-if (rot > ROTAZIONE) {
+if (rientro === null && rot > ROTAZIONE) {
   console.error(`  ROTTO  la stanza ruota da sola. L'inclinazione la deve dare la simulazione,
          altrimenti i due angoli si sommano a caso e l'orizzonte dentro i vetri
          si inclina insieme alla stanza — cioe' il contrario della tesi.`)
