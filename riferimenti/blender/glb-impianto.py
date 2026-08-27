@@ -482,9 +482,117 @@ print('PINNA apertura   %.3f m  (bersaglio %.2f)' % (punta, APERTURA))
 print('PINNA area       %.3f m2 (bersaglio %.2f), corda radice %.3f m'
       % (AREA_DISEGNATA, AREA_PINNA, CORDA_UNITA * CORDA))
 
+# ═══════════════════════════════════════════════════════════════════════════
+# L'OCCLUSIONE AMBIENTALE, COTTA NEI COLORI DEI VERTICI
+#
+# `docs/14 §7` chiede «normal/AO cotte per i dettagli minuti» e il §10 mette la
+# cottura fra i passi previsti. Delle due mappe, l'AO e' quella che si vede per
+# prima da vicino: e' l'ombra di contatto sotto la testa di un bullone, dentro
+# un foro, nell'angolo fra una nervatura e il carter. Senza, ogni pezzo sembra
+# appoggiato su niente — ed e' il difetto che resta anche quando materiali e
+# luci sono giusti.
+#
+# ─── PERCHE' NEI VERTICI E NON IN UNA TEXTURE
+#
+# Una texture vuole le UV, e questo assieme e' fatto di duecento pezzi
+# generati: srotolarli bene e' un lavoro a se'. I colori dei vertici non ne
+# hanno bisogno, glTF li porta in `COLOR_0`, e su 44.000 triangoli la
+# risoluzione e' quella della mesh — che qui e' fitta proprio dove serve,
+# perche' gli smussi hanno messo vertici sugli spigoli.
+#
+# E' un passo intermedio, non la meta: quando arriveranno le UV, l'AO cotto in
+# texture sostituira' questo. Il debito resta scritto in testa al file.
+#
+# ─── I MODIFICATORI VANNO APPLICATI PRIMA
+#
+# La cottura scrive sui vertici che ESISTONO. Gli smussi sono modificatori: i
+# loro vertici nascono al momento del disegno, e cuocendo prima si otterrebbe
+# un'occlusione su 3.528 facce invece che su 44.000 — cioe' niente sugli
+# spigoli, che sono l'unico posto in cui l'AO conta.
+print('COTTURA occlusione ambientale...')
+for o in list(bpy.data.objects):
+    if o.type != 'MESH':
+        continue
+    bpy.context.view_layer.objects.active = o
+    for m in list(o.modifiers):
+        try:
+            bpy.ops.object.modifier_apply(modifier=m.name)
+        except RuntimeError:
+            o.modifiers.remove(m)
+    if 'ao' not in o.data.color_attributes:
+        o.data.color_attributes.new(name='ao', type='BYTE_COLOR', domain='CORNER')
+    # LA COTTURA SCRIVE SULL'ATTRIBUTO ATTIVO, non su quello che si e' appena
+    # creato. Senza queste due righe il forno gira, non da' errore, e il file
+    # esce con i colori tutti a 255 — cioe' nessuna occlusione. Misurato:
+    # min 255, max 255, media 255 su 4.992 vertici.
+    i = o.data.color_attributes.find('ao')
+    o.data.color_attributes.active_color_index = i
+    o.data.color_attributes.render_color_index = i
+
+sc.render.engine = 'CYCLES'
+sc.cycles.samples = 48
+sc.cycles.use_denoising = False
+sc.render.bake.target = 'VERTEX_COLORS'
+sc.render.bake.use_selected_to_active = False
+sc.render.bake.use_clear = True
+# La scena nasce VUOTA — `read_factory_settings(use_empty=True)` — e quindi
+# senza mondo. L'occlusione ambientale ha bisogno di qualcosa da cui essere
+# occlusa: senza mondo, `light_settings` non esiste nemmeno.
+if sc.world is None:
+    sc.world = bpy.data.worlds.new('cottura')
+# ─── LA DISTANZA E' UN CONTATTO, NON UN'OMBRA
+#
+# A 0,45 m il risultato era una banda scura larga che attraversava le
+# superfici: con quel raggio i pezzi si oscurano a VICENDA, e su facce grandi
+# con pochi vertici l'occlusione viene interpolata su triangoli da dieci
+# centimetri — cioe' una sfumatura, non un contatto. A schermo sembrava una
+# macchia di sporco, non un'ombra.
+#
+# Sei centimetri e' la scala giusta per questo assieme: la testa di un bullone,
+# la gola fra una nervatura e il carter, il bordo di un foro. Oltre, l'ombra la
+# fa la luce della scena, che c'e' gia' e la fa meglio.
+sc.world.light_settings.distance = 0.06
+
+bpy.ops.object.select_all(action='DESELECT')
+mesh = [o for o in bpy.data.objects if o.type == 'MESH']
+for o in mesh:
+    o.select_set(True)
+bpy.context.view_layer.objects.active = mesh[0]
+bpy.ops.object.bake(type='AO')
+# ─── E SI SMORZA, PERCHE' L'AO NON E' UN'OMBRA VERA
+#
+# L'occlusione ambientale e' un'approssimazione: moltiplicarla a piena forza
+# annerisce cavita' che nella scena sono illuminate da qualcosa. Mezzo passo —
+# al piu' il 45% di scurimento — lascia leggere il contatto senza dipingere
+# sporco. Si fa qui e non nel sito perche' e' una proprieta' del modello: chi
+# lo apre altrove deve vedere la stessa cosa.
+FORZA = 0.45
+for o in mesh:
+    col = o.data.color_attributes.get('ao')
+    if not col:
+        continue
+    for d in col.data:
+        c = d.color
+        for i in range(3):
+            c[i] = 1.0 - (1.0 - c[i]) * FORZA
+        d.color = c
+print('COTTURA fatta su %d pezzi, forza %.2f, raggio %.2f m'
+      % (len(mesh), FORZA, sc.world.light_settings.distance))
+
 bpy.ops.object.select_all(action='SELECT')
 percorso = os.path.join(FUORI, 'impianto.glb')
 bpy.ops.export_scene.gltf(filepath=percorso, export_format='GLB',
-                          use_selection=True, export_apply=True,
+                          use_selection=True,
+                          # gia' applicati prima della cottura: riapplicarli
+                          # qui butterebbe via i colori appena cotti
+                          export_apply=False,
+                          # 'ACTIVE', non 'MATERIAL': con MATERIAL
+                          # l'esportatore scrive i colori SOLO se un nodo del
+                          # materiale li usa, e i nostri materiali sono
+                          # Principled puliti. Cuoceva, esportava, e avvisava
+                          # in una riga fra centinaia: «The active Vertex Color
+                          # will not be exported». Il file usciva con COLOR_0 a
+                          # 255 ovunque e sembrava che il forno non funzionasse.
+                          export_vertex_color='ACTIVE',
                           export_yup=True, export_extras=True)
 print('GLB %.0f KB' % (os.path.getsize(percorso) / 1024))
