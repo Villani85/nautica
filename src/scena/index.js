@@ -623,6 +623,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       MathUtils.lerp(tugaZ, miraZ, uscita))
 
     if (salone) {
+      // la crescita del piano del mare dipende dalla distanza VERA della
+      // camera, che si conosce solo qui: chiamarla piu' su costava un
+      // ReferenceError a ogni fotogramma, e lo schermo restava vuoto
+      salone.profondita(dist)
       // le pareti della tuga sono la faccia ESTERNA del salone: mentre si e'
       // dentro non ci sono, e tornano proprio quando la stanza diventa finestra
       // Tornano PRESTO — appena la camera ha varcato il piano del finestrino.

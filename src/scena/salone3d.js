@@ -60,6 +60,9 @@ const CALMA = 'filmati/salone-largo.mp4'
 const TESA = 'filmati/salone-teso.mp4'
 const MASCHERA = 'salone/finestrone.png'
 
+/** Quanto sta piu' indietro il mare rispetto alla stanza, in unita' di scena. */
+const PROFONDITA = 0.45
+
 /** Il mare copre gli angoli che l'inclinazione scopre. Vedi `composito.js`. */
 const INGRANDIMENTO = 1.55
 /** Quanto in alto sta l'orizzonte dentro la clip: 45,9% dall'alto. */
@@ -161,6 +164,31 @@ export function creaSalone3D (base, tuga) {
   mare.position.y = (ORIZZONTE - 0.5) * alt * INGRANDIMENTO
   perno.add(mare)
   perno.position.y = (0.5 - ORIZZONTE) * alt
+  /**
+   * ─── IL MARE STA PIU' INDIETRO, E QUESTO E' L'UNICO MODO DI NON LEGGERE
+   *     COME UNO SCHERMO
+   *
+   * Rilievo di una revisione, ed e' il piu' difficile da smentire: due piani
+   * alla stessa quota sono una fotografia, non una stanza. Quando la camera si
+   * muove, tutto si muove insieme — ed e' esattamente cio' che il cervello usa
+   * per riconoscere una superficie piatta.
+   *
+   * Una finestra vera ha una profondita': il vetro e' a mezzo metro, il mare a
+   * chilometri. Basta pochissimo perche' la differenza si veda — e' la
+   * parallasse, non la distanza, a raccontarla. Qui il mare arretra di 0,45
+   * unita' rispetto alla stanza: muovendosi, la cornice del finestrino scorre
+   * sopra l'orizzonte invece di restarci incollata.
+   *
+   * PIU' INDIETRO NON SI PUO'. La tuga e' larga 1,83 unita', e un piano
+   * arretrato deve crescere in proporzione per riempire lo stesso finestrino:
+   * a 0,45 la parte visibile misura 1,73 e ci sta, a 0,6 sfonda le murate e si
+   * vedrebbe spuntare dai fianchi della nave.
+   *
+   * La CRESCITA si calcola a ogni fotogramma sulla distanza vera della camera,
+   * perche' quella distanza cambia col rapporto dello schermo: fissarla
+   * andrebbe bene sulla scrivania e sbaglierebbe del 15% sul telefono.
+   */
+  perno.position.z = -PROFONDITA
   gruppo.add(perno)
 
   /** 2 · LA STANZA — stessa clip, il vetro bucato dalla maschera, ferma. */
@@ -239,6 +267,15 @@ export function creaSalone3D (base, tuga) {
    * @param {number} gradi  il rollio VERO, dallo stesso integratore della nave
    * @param {number} dt     secondi
    */
+  /**
+   * Il mare arretrato deve riempire lo stesso finestrino: cresce di quanto e'
+   * piu' lontano. La distanza vera la sa solo chi muove la camera.
+   */
+  function profondita (distanzaCamera) {
+    const k = (distanzaCamera + PROFONDITA) / Math.max(0.01, distanzaCamera)
+    perno.scale.setScalar(k)
+  }
+
   function aggiorna (gradi, dt) {
     const a = Math.abs(gradi)
     if (a > ACCENDE) calmoDa = 0
@@ -263,7 +300,7 @@ export function creaSalone3D (base, tuga) {
   }
 
   return {
-    gruppo, aggiorna, mostra, riproduci, ferma, smonta,
+    gruppo, aggiorna, mostra, riproduci, ferma, smonta, profondita,
     /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
     largo: larg,
     alto: alt,
