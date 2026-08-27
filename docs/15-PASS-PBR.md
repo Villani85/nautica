@@ -49,6 +49,54 @@ il file più leggero, non più pesante.** Meno geometria, più dettaglio.
 
 ---
 
+## 0 · Il salone deve potersi attraversare `[~]`
+
+**Messo in testa dopo una frase del committente**, e la frase è l'argomento
+intero: *«questi devono avere la possibilità di muoversi, altrimenti avrei
+fatto un filmato»*.
+
+Ha ragione, e smonta quello che avevo scritto qui sotto tre righe più giù —
+che il salone «resta due piani» e che dargli volume «è un lavoro diverso». Non
+è un lavoro diverso: **è la ragione per cui il salone sta dentro una scena 3D
+invece che dentro un `<video>`.** Un piano fotografico è un filmato con dei
+passi in più. Se la camera non ci si può muovere dentro, tanto valeva montarlo.
+
+### Cosa NON si fa
+
+Non si modella il salone. La fotografia è l'asset più forte del sito — legno,
+lampada accesa, due persone vere — e sostituirla con mobili costruiti a mano
+significherebbe buttare l'unica cosa che oggi *non* sembra CG.
+
+### Cosa si fa: la fotografia proiettata su un volume
+
+Si costruisce il guscio grezzo della stanza — pavimento, soffitto, le due
+murate, la paratia di fondo, il vano del finestrone — e ci si **proietta sopra
+la clip dalla posizione della camera che l'ha ripresa**. Da quel punto di vista
+l'immagine è identica a oggi, pixel per pixel. Spostandosi, ogni superficie si
+comporta come la superficie che è: il montante del finestrone copre il divano,
+il mare scorre dietro il vano, il pavimento fugge.
+
+È la stessa idea del resto del sito, applicata a un'immagine invece che a una
+carena: **cio' che è fotografia si guarda, ma deve stare dove starebbe.**
+
+### Il punto difficile, e come si verifica
+
+La proiezione vale solo se la camera che proietta è nella stessa posa di quella
+che ha ripreso. Sbagliarla di poco si vede subito: i bordi del finestrone
+proiettato non cadono su quelli modellati.
+
+Quindi **si tara sulle linee della fotografia** — gli spigoli del vano, la
+fuga del soffitto, il bordo del pavimento — e il collaudo confronta i due
+bordi: quelli dipinti e quelli costruiti. Se scostano più di qualche pixel, la
+posa è sbagliata e il volume non regge.
+
+E c'è un secondo cancello, che è quello vero: **muovendo la camera di mezza
+unità, le occlusioni devono cambiare.** Un billboard non cambia. Questo si
+misura contando i pixel che cambiano fra due pose vicine in una regione dove
+un oggetto vicino passa davanti a uno lontano.
+
+---
+
 ## 1 · Le UV `[ ]`
 
 **Un atlante solo per l'impianto**, non uno per pezzo e non uno per materiale.
@@ -138,8 +186,6 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 
 - La **sovrastruttura** riceve le UV e la cottura solo dopo l'impianto. È più
   lontana dalla camera e più grande: costa più atlante e rende meno.
-- Il **salone** resta due piani. Dargli volume è un lavoro diverso, e non è
-  questione di materiali.
 - I **filmati del mare** restano una dipendenza esterna.
 
 ---
@@ -149,3 +195,4 @@ giusta. Metterle prima vorrebbe dire sporcare un materiale sbagliato.
 | quando | passo | cosa è successo |
 |---|---|---|
 | 27 ago, 07:40 | — | piano scritto e versionato |
+| 27 ago, 07:50 | 0 | il salone entra nel pass, **in testa**: «altrimenti avrei fatto un filmato» |
