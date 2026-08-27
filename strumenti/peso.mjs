@@ -173,6 +173,47 @@ for (const [etichetta, byte] of ATTESI) {
   }
 }
 
+/**
+ * --- E I FILMATI, CHE NESSUNO PESAVA
+ *
+ * Rilievo di una revisione, e vero: il peso dei filmati veniva stampato ma non
+ * poteva far fallire niente. "Un futuro asset da 8-10 MB risulterebbe ancora
+ * verde" -- e sarebbe successo davvero: nell'arco di una mattina questo file e'
+ * passato da 1,1 a 3,7 MB senza che nessun cancello dicesse una parola, ed e'
+ * tornato giu' solo perche' me ne sono accorto io.
+ *
+ * Il tetto e' una DECISIONE, non una misura, e va detto: 4 MB per tutti i
+ * filmati messi insieme. La ragione e' che a circa 600 kbit/s sono una
+ * cinquantina di secondi di materiale, e oltre quella soglia il telefono paga
+ * due volte -- il trasferimento, e due decodificatori 720p accesi insieme
+ * mentre la scena 3D disegna.
+ *
+ * Non e' differito quanto sembra: il salone e' la PRIMA battuta, quindi il
+ * filmato della stanza sta nel percorso di chi apre la pagina.
+ */
+const TETTO_FILMATI = 4 * 1024 * 1024
+let pesoFilmati = 0
+const filmati = []
+try {
+  for (const f of readdirSync('public/filmati')) {
+    if (!f.endsWith('.mp4')) continue
+    const b = statSync('public/filmati/' + f).size
+    pesoFilmati += b
+    filmati.push(`${f} ${(b / 1e6).toFixed(2)} MB`)
+  }
+} catch { /* nessuna cartella: niente da pesare */ }
+if (filmati.length) {
+  const ok = pesoFilmati <= TETTO_FILMATI
+  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Filmati del salone'.padEnd(42)} ` +
+              `${(pesoFilmati / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_FILMATI / 1e6).toFixed(1)}` +
+              `   (${filmati.join(', ')})`)
+  if (!ok) {
+    scarti.push(`i filmati pesano ${(pesoFilmati / 1e6).toFixed(2)} MB contro un tetto di ` +
+                `${(TETTO_FILMATI / 1e6).toFixed(1)}. Il tetto e' una decisione, non una misura: ` +
+                'se va alzato, va alzato scrivendo perche in strumenti/peso.mjs')
+  }
+}
+
 if (SCRIVI && paginaNuova !== pagina) {
   writeFileSync('index.html', paginaNuova)
   console.log('\n  index.html riscritto coi numeri misurati')

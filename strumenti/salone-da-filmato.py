@@ -179,7 +179,7 @@ print('     scritto public/salone/finestrone.png   (vano = %.1f%% del quadro)' %
     'perche': ('di quanto la maschera rientra rispetto al vano misurato. '
                'collaudo-filmato.mjs ci deriva il proprio tetto: se il vano scivola '
                'di piu di questo, si apre un foro nel legno.')
-}, indent=1), encoding='utf-8')
+}, indent=1), encoding='utf-8', newline=chr(10))
 print('     scritto public/salone/vano.json          (rientro %d px)' % RIENTRO)
 
 # --- 2 - E L'ORIZZONTE NON SI MISURA PIU' QUI ------------------------------
@@ -509,7 +509,7 @@ print('     scritta: public/filmati/salone-mare.mp4  (%.2f MB)' % (pesoM / 1e6))
                'collaudo-filmato.mjs ci deriva il proprio tetto. '
                'orizzonte_mare: dove sta l orizzonte dentro salone-mare.mp4, '
                'frazione dall alto; e il perno attorno a cui il salone lo ruota.')
-}, indent=1), encoding='utf-8')
+}, indent=1), encoding='utf-8', newline=chr(10))
 print('     aggiornato public/salone/vano.json')
 
 print()
