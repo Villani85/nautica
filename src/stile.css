@@ -717,7 +717,11 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    taglia con i puntini invece di uscire di nascosto. Il titolo resta sempre —
    e' quello che dice a che punto sei. */
 @media (max-height:820px) and (min-width:821px){
-  .pila{top:calc(50% + var(--u3))}
+  /* Stessa ragione del blocco stretto: sotto la linea c'e' `.patto`, e la pila
+     non puo' cominciare alla sua stessa quota. A 1366x768 si sovrapponevano di
+     14 px in verticale — trovato dal cancello lo stesso minuto in cui `.patto`
+     e' entrato fra i riquadri sorvegliati, e mai prima. */
+  .pila{top:calc(50% + var(--u3) + 18px)}
   .battuta{overflow:hidden}
   .battuta h3{font-size:clamp(18px,2.2vw,22px)}
   .battuta p[data-ruolo="testo"]{

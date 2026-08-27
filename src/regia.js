@@ -48,9 +48,19 @@ const SALOTTO = {
    * riquadro — si dice la stessa cosa in meno parole, che qui e' anche meglio:
    * questa battuta va guardata, non letta.
    */
+  /**
+   * Accorciata due volte, e la seconda ha migliorato il testo invece di
+   * limitarsi a farlo stare. La frase sul costo — «e' costato una frazione
+   * della barca» — vive gia' nella battuta del meccanismo, che e' il posto
+   * dove significa qualcosa: li' si sta guardando il pezzo. Qui era una
+   * promessa fatta prima di aver mostrato di cosa si parla.
+   *
+   * A 1280x720 con la pila abbassata di 18 px traboccava di 1,4 righe:
+   * l'ha detto `collaudo-impaginato` nello stesso minuto in cui avevo
+   * corretto la collisione che quello spazio serviva a togliere.
+   */
   testo: 'Outside, the swell is running two metres. In here the glasses are ' +
-         'standing up. Somebody decided that, and it cost a fraction of what ' +
-         'the boat cost.'
+         'standing up. Somebody decided that.'
 }
 
 /** Le soglie della corsa, spostate per far posto al salone. */

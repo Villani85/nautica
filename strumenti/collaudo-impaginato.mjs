@@ -84,7 +84,24 @@ const VIEWPORT = [
 /** Le battute stanno in regia.js: qui bastano le loro posizioni centrali. */
 const PUNTI = [0.05, 0.18, 0.31, 0.50, 0.70, 0.92]
 
-const RIQUADRI = ['#battuta', '.pannello--letture', '.pannello--energia', '.comandi', '.richiamo']
+/**
+ * ─── COSA SI MISURA, E PERCHE' `.patto` E' ENTRATO DOPO
+ *
+ * `.patto` e' la riga «ILLUSTRATIVE MODEL · GENERIC GEOMETRY · NORMALISED
+ * VALUES»: sta appena sotto la linea, in posizione assoluta, ed e' un impegno
+ * preso col lettore — non si sposta per far posto a nient'altro.
+ *
+ * Non era in questo elenco, e a 390x844 l'etichetta della battuta le finiva
+ * sopra: «05 — THE SEQUENCE» stampato dentro «ILLUSTRATIVE MODEL». L'ho
+ * trovata guardando una schermata, non con un cancello, e una collisione
+ * trovata a occhio torna quando nessuno guarda.
+ *
+ * Aggiungerla e' costato una riga. Vale la pena dirlo perche' e' la domanda da
+ * farsi ogni volta che si corregge un difetto di impaginazione a mano:
+ * **l'elemento che ha sbagliato era fra quelli che il cancello guarda?**
+ */
+const RIQUADRI = ['#battuta', '.pannello--letture', '.pannello--energia',
+                  '.comandi', '.richiamo', '.patto']
 
 let guasti = 0
 const esito = (ok, testo) => {

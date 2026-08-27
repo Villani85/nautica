@@ -67,7 +67,13 @@ async function serviteci () {
     const r = await fetch(BASE, { redirect: 'manual' })
     if (r.status < 500) return null
   } catch {}
-  const s = spawn('npm', ['run', 'dev'], { shell: true, stdio: 'ignore' })
+  /**
+   * `preview`, non `dev`: si misura la BUILD. Rilievo di una revisione, ed era
+   * un'incoerenza vera — la continuita' provava `dist` e la cinematica il
+   * server di sviluppo, quindi la stessa suite verificava due rappresentazioni
+   * diverse dello stesso commit.
+   */
+  const s = spawn('npm', ['run', 'preview'], { shell: true, stdio: 'ignore' })
   for (let i = 0; i < 60; i++) {
     try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
     await new Promise(r => setTimeout(r, 500))

@@ -51,10 +51,46 @@ export async function apriBrowser ({ visibile = false } = {}) {
    * sistema, cosi' una differenza fra le due macchine si puo' riprodurre
    * invece di discuterla. In CI e' l'unico disponibile.
    */
-  if (process.env.CHROMIUM) return await chromium.launch({ headless, args })
-  try { return await chromium.launch({ channel: 'chrome', headless, args }) } catch {}
-  try { return await chromium.launch({ headless, args }) } catch {}
+  /**
+   * ─── UNA DIAGNOSI INTENZIONALE, NON VENTICINQUE RIGHE DI STACK
+   *
+   * Quando l'avvio fallisce, Playwright stampa una traccia lunga e la prima
+   * riga — quella che dice davvero cosa manca, per esempio l'assenza di uno
+   * schermo — sta in CIMA. In CI il referto arriva come annotazioni, e le
+   * annotazioni le prendo dalla CODA: la riga che serve viene tagliata via.
+   *
+   * E' successo: la corsa diceva `browser.mjs:54` e niente altro. Quindi qui
+   * l'errore si riassume da soli, con i tre fatti che distinguono i casi
+   * possibili — headless, quale browser, e se c'e' uno schermo.
+   */
+  let primo = null
+  const prova = async (opzioni) => {
+    try { return await chromium.launch(opzioni) } catch (e) {
+      primo = primo || String(e).split('\n')[0]
+      return null
+    }
+  }
 
-  console.error('nessun browser disponibile: `npx playwright install chromium`')
+  if (process.env.CHROMIUM) {
+    const b = await prova({ headless, args })
+    if (b) return b
+  } else {
+    const b = await prova({ channel: 'chrome', headless, args }) ||
+              await prova({ headless, args })
+    if (b) return b
+  }
+
+  console.error([
+    '',
+    '  NESSUN BROWSER AVVIATO.',
+    `    headless: ${headless}`,
+    `    CHROMIUM: ${process.env.CHROMIUM ? 'si (solo quello di Playwright)' : 'no (prima il Chrome di sistema)'}`,
+    `    DISPLAY:  ${process.env.DISPLAY || '(nessuno)'}`,
+    `    primo errore: ${primo || '(nessuno)'}`,
+    '',
+    '  Se headless e false e non c e DISPLAY, la causa e quella: si sta',
+    '  chiedendo una finestra a una macchina senza schermo.',
+    ''
+  ].join('\n'))
   process.exit(2)
 }
