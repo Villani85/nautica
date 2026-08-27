@@ -1,6 +1,7 @@
 import { Group, MathUtils } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { lavorazione, LAVORAZIONI } from './materia.js'
 
 /**
  * L'IMPIANTO — il modello vero, comandato dalla simulazione.
@@ -168,6 +169,27 @@ export function creaImpianto (base, ambiente = null) {
        * un riduttore in sentina non riflette il cielo come una prua. Il valore
        * pieno l'ho guardato e legge come cromatura da concessionaria.
        */
+      /**
+       * ─── LA MATERIA, prima dell'ambiente
+       *
+       * §7 mette in cima alle regole di resa la variazione di rugosita', e il
+       * GLB la porta costante — debito dichiarato nel builder, in attesa della
+       * cottura delle mappe. Nel frattempo il capitolo fa un primo piano vero,
+       * a 2,6 unita', e li' una rugosita' uniforme e' l'indizio numero uno di
+       * sintetico. Si applica per NOME, perche' non tutti i pezzi sono torniti:
+       * vedi `materia.js`.
+       */
+      radice.traverse(o => {
+        const m = o.material
+        if (!m) return
+        for (const mat of Array.isArray(m) ? m : [m]) {
+          // `?materia=0` la spegne: serve a poterla CONFRONTARE invece che
+          // dichiararla, ed e' cosi' che si e' misurato che fa qualcosa
+          const ricetta = LAVORAZIONI[mat.name]
+          if (ricetta && !location.search.includes('materia=0')) lavorazione(mat, ricetta)
+        }
+      })
+
       if (ambiente) {
         radice.traverse(o => {
           const m = o.material
