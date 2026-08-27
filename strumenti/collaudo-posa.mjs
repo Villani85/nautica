@@ -103,7 +103,21 @@ if (!(await risponde(INDIRIZZO))) {
 const browser = await apriBrowser()
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 const pg = await ctx.newPage()
-await pg.goto(INDIRIZZO, { waitUntil: 'domcontentloaded' })
+/**
+ * --- QUESTO CANCELLO COLLAUDA L'ARCHITETTURA DOPPIA, E ADESSO LO DICE
+ *
+ * Cercava `#stab-salone` e `.palco--salone` e li trovava spariti. Non era il
+ * sito a essersi rotto: `main.js` RIMUOVE la sezione `#salone` quando la scena
+ * e' una, perche' il salone non e' piu' un capitolo a parte ma la prima
+ * battuta della dimostrazione, nella stessa scena e con la stessa camera.
+ *
+ * Il cancello misurava quindi un capitolo che nella pagina normale non esiste
+ * piu', e usciva rosso da giorni per una ragione che sembrava un guasto e non
+ * lo era. L'architettura doppia pero' e' ancora spedita, dietro `?doppia=1`,
+ * finche' la nuova non ha girato su un telefono vero: finche' c'e', va
+ * collaudata -- ma va collaudata DOVE VIVE.
+ */
+await pg.goto(INDIRIZZO + (INDIRIZZO.includes('?') ? '&' : '?') + 'doppia=1', { waitUntil: 'domcontentloaded' })
 await pg.waitForTimeout(1200)
 await pg.evaluate(() => document.querySelector('#salone')?.scrollIntoView())
 await pg.waitForTimeout(1500)

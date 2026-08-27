@@ -152,9 +152,24 @@ _dati = json.load(open(SORGENTE, encoding='utf-8'))
 # e lo si DICE: un fasciame non tagliato e' una paratia che nella pagina non
 # c'e'.
 if isinstance(_dati, dict):
-    pezzi, SEZIONE = _dati['pezzi'], _dati.get('sezione')
+    pezzi, SEZIONE, POSE = _dati['pezzi'], _dati.get('sezione'), _dati.get('pose')
 else:
-    pezzi, SEZIONE = _dati, None
+    pezzi, SEZIONE, POSE = _dati, None, None
+
+# --- LA POSA. La forma sta nel file una volta sola; le matrici tante.
+# Scegliere un fotogramma vuol dire scambiare sedici numeri per pezzo, non
+# ricaricare la geometria: e' cio' che rende la sequenza affrontabile.
+POSA = int(os.environ.get('POSA', '-1'))
+if POSA >= 0:
+    if not POSE:
+        raise SystemExit('POSA=%d ma il file non porta pose: riesporta con POSE=N.' % POSA)
+    if POSA >= len(POSE):
+        raise SystemExit('POSA=%d fuori dalle %d pose del file.' % (POSA, len(POSE)))
+    if len(POSE[POSA]) != len(pezzi):
+        raise SystemExit('posa %d: %d matrici per %d pezzi.' % (POSA, len(POSE[POSA]), len(pezzi)))
+    for q, m in zip(pezzi, POSE[POSA]):
+        q['m'] = m
+    print('POSA %d di %d' % (POSA, len(POSE)))
 
 """
 --- CHI ENTRA NEL RENDER SI DECIDE CON LA GEOMETRIA, NON CON UNA LISTA DI NOMI
@@ -546,7 +561,7 @@ sc.render.film_transparent = False
 sc.render.image_settings.file_format = 'PNG'
 sc.render.image_settings.color_mode = 'RGBA'
 sc.view_settings.view_transform = 'AgX'
-sc.render.filepath = os.path.join(FUORI, 'meccanismo.png')
+sc.render.filepath = os.path.join(FUORI, 'meccanismo.png' if POSA < 0 else 'fotogramma-%03d.png' % POSA)
 
 t = time.time()
 bpy.ops.render.render(write_still=True)

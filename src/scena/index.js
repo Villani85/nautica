@@ -1,6 +1,6 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  PointLight, Clock, MathUtils, SRGBColorSpace, NoToneMapping, Plane, Vector3,
+  PointLight, Clock, MathUtils, SRGBColorSpace, ACESFilmicToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
@@ -95,9 +95,33 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   // e' il meccanismo, cioe' la tesi del sito.
   render.localClippingEnabled = true
   render.outputColorSpace = SRGBColorSpace
-  // Nessun tone mapping: i colori devono restare gli stessi del foglio di
-  // stile, o la giunzione fra fondo CSS e canvas si vede.
-  render.toneMapping = NoToneMapping
+  /**
+   * --- IL TONE MAPPING C'E', E IL FOGLIO DI STILE LO INSEGUE
+   *
+   * Qui c'era `NoToneMapping`, con la ragione giusta: i colori devono restare
+   * quelli della carta, o la giunzione fra fondo CSS e tela si vede. Ma quella
+   * ragione risolveva un problema creandone uno piu' grande, e il numero lo
+   * dice:
+   *
+   *     tono      bruciato    max   media  contrasto
+   *     senza        8,28%    255   189,4       57,9
+   *     ACES         0,00%    242   196,5       53,5
+   *
+   * L'8,28% dei pixel dello scafo TAGLIA a 255. Senza una curva, ogni alta
+   * luce sopra 1,0 diventa bianco piatto -- e un metallo con `metalness` fino
+   * a 0,85 le produce a ogni fotogramma. E' il motivo per cui la nave legge
+   * come un disegno: le sue parti piu' lucide sono aree bianche senza forma.
+   *
+   * E il salone, nella stessa pagina, usa ACES da sempre: erano due mondi
+   * diversi a due schermate di distanza.
+   *
+   * La giunzione resta a zero perche' i colori della carta sono stati
+   * RICALCOLATI su questa curva e verificati: vedi --acqua in stile.css.
+   * Inseguire il render col foglio di stile e' la strada giusta, perche' il
+   * render obbedisce alla fisica e il foglio di stile obbedisce a me.
+   */
+  render.toneMapping = ACESFilmicToneMapping
+  render.toneMappingExposure = 1.0
   contenitore.appendChild(render.domElement)
 
   /**

@@ -29,8 +29,24 @@
  * `?doppia=1` riporta alla vecchia architettura — resta finche' la nuova non
  * ha girato su un telefono vero.
  */
-export const LA_SCENA_E_UNA =
-  typeof location === 'undefined' || !location.search.includes('doppia')
+/**
+ * --- SI LEGGE IL VALORE, NON LA PRESENZA DELLA PAROLA
+ *
+ * Qui c'era `!location.search.includes('doppia')`: un confronto di
+ * SOTTOSTRINGA. Conseguenza, e non e' teorica -- **`?doppia=0` accendeva
+ * l'architettura doppia**, cioe' l'opposto di quello che zero significa
+ * ovunque. E lo stesso valeva per qualunque parametro che contenesse quelle
+ * sei lettere.
+ *
+ * Un interruttore che si accende quando gli dici di spegnersi non e' un
+ * interruttore: e' una trappola per chi verra' dopo, incluso me fra un mese.
+ * `URLSearchParams` legge il VALORE, e solo '1', 'si' e 'true' accendono.
+ */
+export const LA_SCENA_E_UNA = (() => {
+  if (typeof location === 'undefined') return true
+  const v = new URLSearchParams(location.search).get('doppia')
+  return !(v !== null && ['1', 'si', 'true', ''].includes(v))
+})()
 
 /**
  * La prima battuta del vecchio ordine era «la nave emerge»: serviva perche'
