@@ -488,6 +488,21 @@ print('LIVELLI SOPRA LA TUGA  %d  (%.2f + %.2f m); la tuga resta nel sito, ha un
       % (len(LIVELLI), H_SUPERIORE, H_FLY))
 
 """
+--- ATTENZIONE: QUESTA E' UNA SECONDA STRADA, E LO DICO INVECE DI NASCONDERLO
+
+`uv-sovrastruttura.py` e `cottura.py` sono il pass PBR vero: atlante a 2048 col
+pareggio delle densita', cancelli sul bleed e sul rapporto, e cottura di
+NORMALE + ORM dall'alta alla bassa. Esistevano prima di questo blocco, e io ho
+messo uno `smart_project` qui dentro senza saperlo. Una seconda implementazione
+della stessa cosa e' esattamente cio' che questo progetto si vieta.
+
+Non l'ho rifatta subito su quel pass per una ragione misurabile: **l'occlusione
+e' a bassa frequenza**, 512 px bastano contro i 2048 che una mappa di normali
+pretende, e il pareggio delle densita' quasi non la tocca. Quando `cottura.py`
+arrivera' sulla sovrastruttura, l'AO va presa da li' e QUESTO blocco va tolto:
+e' questo file a doversi arrendere, non quel pass. Sta scritto anche in
+docs/15-PASS-PBR.md, perche' chi legge uno dei due deve trovare l'altro.
+
 --- L'OCCLUSIONE AMBIENTALE, COTTA, E IL NUMERO CHE L'HA CHIESTA
 
 Confrontando la stessa nave dalla stessa camera -- cotta in Cycles e disegnata
