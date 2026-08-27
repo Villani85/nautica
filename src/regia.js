@@ -215,8 +215,8 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio }) {
     /**
      * L'USCITA DAL SALONE occupa la prima battuta. Con la scena unica non c'e'
      * piu' un capitolo che finisce e uno che comincia: c'e' una camera che si
-     * alza dalla poltrona e esce dallo scafo. Senza `?doppia=1` (che la spegne) questa chiamata
-     * non fa niente e la corsa resta quella di sempre.
+     * alza dalla poltrona e esce dallo scafo. Con `?doppia=1` questa chiamata
+     * non fa niente e la corsa resta quella di prima.
      */
     scena.impostaUscita(dolce(fra(p, S.uscita[0], Math.max(S.uscita[1], 1e-6))))
 

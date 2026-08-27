@@ -128,68 +128,41 @@ export function creaSalone3D (base, tuga) {
   const geo = new PlaneGeometry(larg, alt)
 
   /** 1 · IL MARE — la clip intera, ingrandita, che ruota sull'orizzonte. */
-  const perno = new Group()
   /**
-   * IL MARE INGRANDITO VA RITAGLIATO AL RIQUADRO DELLA STANZA.
+   * 1 · IL MARE — la stessa clip, dietro, e a ruotare e' l'IMMAGINE.
    *
-   * E' grande 1,55 volte perche' ruotando di dodici gradi un rettangolo
-   * scopre gli angoli. Ma quel di piu' non deve VEDERSI: fuori dal riquadro
-   * della fotografia comparivano una seconda volta il divano e la donna, come
-   * un fotogramma incollato accanto a se stesso.
+   * ─── PERCHE' NON RUOTA IL PIANO
    *
-   * Nel DOM lo risolveva `overflow:hidden` sull'apertura. Qui non c'e' nessun
-   * riquadro che ritagli, quindi il ritaglio si mette nel materiale: una
-   * maschera bianca al centro esattamente quanto la stanza, nera intorno.
-   * Ruotando, e' la MASCHERA a girare col piano — che e' giusto: e' la finestra
-   * a essere ferma rispetto alla stanza, non rispetto al mondo.
+   * Prima ruotava la mesh, ingrandita 1,55 volte per coprire gli angoli che
+   * l'inclinazione scopre, e una maschera le ritagliava il riquadro della
+   * stanza. Funziona finche' la maschera e' ferma — ma la maschera e' una
+   * texture del piano, e **ruota col piano**. Inclinandosi, il rettangolo
+   * visibile si inclina con lui e i suoi angoli escono dal riquadro della
+   * fotografia: oltre il bordo destro comparivano il divano e la donna una
+   * seconda volta.
+   *
+   * L'ho corretto due volte dalla parte sbagliata — prima accorciando la
+   * maschera, poi facendola seguire alla scala — e tutte e due le volte e'
+   * tornato appena la camera si muoveva. La domanda giusta non era «quanto
+   * grande dev'essere il ritaglio», era **chi deve ruotare**.
+   *
+   * Nel DOM a ritagliare era l'apertura, che sta ferma. Qui l'equivalente e'
+   * far ruotare la TEXTURE dentro un piano fermo: `map.rotation` con il centro
+   * sull'orizzonte. Il piano ha esattamente la misura della stanza, non ha
+   * bisogno di nessuna maschera, e non puo' uscire dal riquadro perche' il
+   * riquadro E' il piano.
+   *
+   * L'ingrandimento di 1,55 resta, ma nello spazio della texture: `repeat`
+   * minore di uno mostra una porzione piu' piccola della clip, ingrandita.
+   * E' quello che copre gli angoli quando l'immagine gira.
    */
-  const LATO_MASCHERA = 256
-  const tela = document.createElement('canvas')
-  tela.width = tela.height = LATO_MASCHERA
-  const cx = tela.getContext('2d')
-  cx.fillStyle = '#000'
-  cx.fillRect(0, 0, LATO_MASCHERA, LATO_MASCHERA)
-  const dentro = LATO_MASCHERA / INGRANDIMENTO
-  cx.fillStyle = '#fff'
-  cx.fillRect((LATO_MASCHERA - dentro) / 2, (LATO_MASCHERA - dentro) / 2, dentro, dentro)
-  const ritaglio = new CanvasTexture(tela)
+  const mareTex = tex(vCalma)
+  mareTex.center.set(0.5, 1 - ORIZZONTE)   // il PIVOT E' L'ORIZZONTE
+  mareTex.repeat.set(1 / INGRANDIMENTO, 1 / INGRANDIMENTO)
 
-  const mare = new Mesh(
-    new PlaneGeometry(larg * INGRANDIMENTO, alt * INGRANDIMENTO),
-    new MeshBasicMaterial({
-      map: tex(vCalma), alphaMap: ritaglio, transparent: true, toneMapped: false
-    })
-  )
-  // il piano nasce centrato: lo si sposta perche' il PERNO cada sull'orizzonte
-  mare.position.y = (ORIZZONTE - 0.5) * alt * INGRANDIMENTO
-  perno.add(mare)
-  perno.position.y = (0.5 - ORIZZONTE) * alt
-  /**
-   * ─── IL MARE STA PIU' INDIETRO, E QUESTO E' L'UNICO MODO DI NON LEGGERE
-   *     COME UNO SCHERMO
-   *
-   * Rilievo di una revisione, ed e' il piu' difficile da smentire: due piani
-   * alla stessa quota sono una fotografia, non una stanza. Quando la camera si
-   * muove, tutto si muove insieme — ed e' esattamente cio' che il cervello usa
-   * per riconoscere una superficie piatta.
-   *
-   * Una finestra vera ha una profondita': il vetro e' a mezzo metro, il mare a
-   * chilometri. Basta pochissimo perche' la differenza si veda — e' la
-   * parallasse, non la distanza, a raccontarla. Qui il mare arretra di 0,45
-   * unita' rispetto alla stanza: muovendosi, la cornice del finestrino scorre
-   * sopra l'orizzonte invece di restarci incollata.
-   *
-   * PIU' INDIETRO NON SI PUO'. La tuga e' larga 1,83 unita', e un piano
-   * arretrato deve crescere in proporzione per riempire lo stesso finestrino:
-   * a 0,45 la parte visibile misura 1,73 e ci sta, a 0,6 sfonda le murate e si
-   * vedrebbe spuntare dai fianchi della nave.
-   *
-   * La CRESCITA si calcola a ogni fotogramma sulla distanza vera della camera,
-   * perche' quella distanza cambia col rapporto dello schermo: fissarla
-   * andrebbe bene sulla scrivania e sbaglierebbe del 15% sul telefono.
-   */
-  perno.position.z = -PROFONDITA
-  gruppo.add(perno)
+  const mare = new Mesh(geo, new MeshBasicMaterial({ map: mareTex, toneMapped: false }))
+  mare.position.z = -PROFONDITA
+  gruppo.add(mare)
 
   /** 2 · LA STANZA — stessa clip, il vetro bucato dalla maschera, ferma. */
   const stanza = new Mesh(geo, new MeshBasicMaterial({
@@ -269,11 +242,16 @@ export function creaSalone3D (base, tuga) {
    */
   /**
    * Il mare arretrato deve riempire lo stesso finestrino: cresce di quanto e'
-   * piu' lontano. La distanza vera la sa solo chi muove la camera.
+   * piu' lontano. La distanza VERA la sa solo chi muove la camera — passargli
+   * quella d'inquadratura, che cambia solo al ridimensionamento, lasciava il
+   * fondale ingrandito com'era da seduti anche dopo essere usciti.
+   *
+   * E crescendo non puo' piu' uscire dal riquadro, perche' il riquadro e' il
+   * piano stesso: e' il guadagno vero di aver tolto la maschera.
    */
   function profondita (distanzaCamera) {
     const k = (distanzaCamera + PROFONDITA) / Math.max(0.01, distanzaCamera)
-    perno.scale.setScalar(k)
+    mare.scale.setScalar(k)
   }
 
   function aggiorna (gradi, dt) {
@@ -284,8 +262,10 @@ export function creaSalone3D (base, tuga) {
     q += (vuole - q) * Math.min(1, dt * VELOCITA)
     tesa.material.opacity = q
 
-    // il mare si inclina, la stanza no: da dentro, il proprio salotto sta fermo
-    perno.rotation.z = MathUtils.degToRad(-gradi)
+    // Il mare si inclina, la stanza no: da dentro, il proprio salotto sta
+    // fermo. E a inclinarsi e' l'IMMAGINE dentro il piano, non il piano —
+    // altrimenti gli angoli escono dal riquadro. Vedi la nota sopra.
+    mareTex.rotation = MathUtils.degToRad(-gradi)
     ultimo = gradi
   }
 

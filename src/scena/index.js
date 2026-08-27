@@ -345,9 +345,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let spaccato = 0
   let emersione = 0
   let avvicinamento = 0
+  /** Riusato a ogni fotogramma: allocare un vettore per giro e' spazzatura. */
+  const dovEilSalone = new Vector3()
   /**
    * QUANTO SI E' USCITI DAL SALONE. 0 = seduti dentro, 1 = l'inquadratura di
-   * sempre, la nave intera da 19,5 unita'. Vive solo con `?doppia=1` (che la spegne).
+   * sempre, la nave intera da 19,5 unita'. Con `?doppia=1` resta fissa a 1.
    */
   let uscita = LA_SCENA_E_UNA ? 0 : 1
 
@@ -520,7 +522,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     /**
      * ─── DA DENTRO IL SALONE ALLA NAVE INTERA, IN UN MOVIMENTO SOLO
      *
-     * Con `?doppia=1` (che la spegne) la camera comincia SEDUTA nel salone e ne esce
+     * La camera comincia SEDUTA nel salone e ne esce
      * attraversando il fasciame. Non e' un effetto: e' cio' che rende una sola
      * esperienza due capitoli che prima erano due scene.
      *
@@ -637,7 +639,29 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // la crescita del piano del mare dipende dalla distanza VERA della
       // camera, che si conosce solo qui: chiamarla piu' su costava un
       // ReferenceError a ogni fotogramma, e lo schermo restava vuoto
-      salone.profondita(dist)
+      /**
+       * ─── LA DISTANZA VERA, NON QUELLA D'INQUADRATURA
+       *
+       * Qui passavo `dist`, che e' la distanza calcolata per far riempire il
+       * fotogramma alla fotografia: dipende da campo visivo e rapporto dello
+       * schermo, e **non cambia mai finche' non si ridimensiona la finestra**.
+       * Il commento diceva «distanza vera della camera» e l'implementazione
+       * non la seguiva: rilievo di una revisione, verificato leggendo le due
+       * righe una accanto all'altra.
+       *
+       * La conseguenza non era teorica. Il fondale e' PROFONDITA piu' indietro
+       * della stanza e viene ingrandito di `(d + PROFONDITA) / d` per riempire
+       * lo stesso finestrino: con `d` congelato al valore di partenza, uscendo
+       * restava ingrandito com'era da seduti — cioe' un fondale teatrale che
+       * segue la camera invece di restare dov'e'.
+       *
+       * Con la distanza VERA il rapporto tende a uno mentre ci si allontana, e
+       * il fondale smette da solo di essere corretto: e' quello che fa un
+       * orizzonte lontano. Si limita anche da solo — piu' ci si allontana, meno
+       * cresce — quindi non puo' piu' sfondare le murate.
+       */
+      salone.gruppo.getWorldPosition(dovEilSalone)
+      salone.profondita(camera.position.distanceTo(dovEilSalone))
       // le pareti della tuga sono la faccia ESTERNA del salone: mentre si e'
       // dentro non ci sono, e tornano proprio quando la stanza diventa finestra
       // Tornano PRESTO — appena la camera ha varcato il piano del finestrino.
