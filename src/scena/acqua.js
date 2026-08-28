@@ -1,5 +1,5 @@
 import {
-  Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial,
+  Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial, BackSide,
   DoubleSide, Group, Color, Vector3, Vector4, Matrix4, Box3
 } from 'three'
 
@@ -467,6 +467,79 @@ const INNESTO_SCINTILLE = /* glsl */`
  *   perche' vale per tutti e due i rami.
  * @param {number[]} opzioni.sole      la direzione del sole della scena.
  */
+/**
+ * ─── SOTTO LA LINEA NON C'ERA ACQUA: C'ERA UNA TINTA
+ *
+ * Il volume sommerso era una scatola con un `MeshBasicMaterial` opaco al 72%
+ * messa DAVANTI a tutto. Da qualunque angolo, quindi, la meta' bassa era un
+ * campo verde uniforme con una sagoma dietro: la stessa quantita' di verde su
+ * un pezzo a due metri e su uno a venti.
+ *
+ * L'acqua vera non fa cosi'. Assorbe, e assorbe in proporzione a QUANTA se ne
+ * attraversa: `L = L0 * exp(-sigma * d)`. E' la legge di Beer-Lambert, ed e'
+ * il motivo per cui in una foto subacquea la prua a due metri si legge e la
+ * poppa a venti e' gia' quasi solo acqua.
+ *
+ * Qui la si applica alla GEOMETRIA sommersa invece che con un velo davanti, e
+ * il sito ha un regalo che rende il conto esatto: **la camera sta a quota
+ * zero**. E' l'invariante da cui discende tutto, e significa che il cammino
+ * dentro l'acqua di un frammento sommerso E' la sua distanza dalla camera --
+ * non serve intersecare niente.
+ *
+ * Tre uniformi, nessuna texture, nessun passaggio in piu'.
+ */
+const NEBBIA_GLSL = `
+uniform vec3  acquaColore;
+uniform float acquaSigma;
+uniform float acquaAttiva;
+varying float vQuotaMondo;
+`
+
+/** Quanto assorbe: a 1/sigma metri resta 1/e della luce. */
+export const ACQUA_SIGMA = 0.085
+export const ACQUA_COLORE = [0.031, 0.145, 0.157]
+
+/**
+ * Applica l'estinzione a un materiale, COMPONENDOSI con la patch che ha gia'.
+ * Scavalcare `onBeforeCompile` invece di comporlo e' un difetto gia' pagato in
+ * questo repo, con lo scafo rimasto senza buccia d'arancia per mezza giornata.
+ */
+export function nebbiaAcqua (m, uni) {
+  const prima = m.onBeforeCompile
+  const chiave = m.customProgramCacheKey
+  m.onBeforeCompile = function (s, r) {
+    if (prima) prima.call(this, s, r)
+    // lo shader d'ombra non ha `<dithering_fragment>`: li' non si applica, ed
+    // e' giusto -- una mappa di profondita' non si tinge
+    if (!s.fragmentShader.includes('#include <dithering_fragment>')) return
+    s.uniforms.acquaColore = uni.colore
+    s.uniforms.acquaSigma = uni.sigma
+    s.uniforms.acquaAttiva = uni.attiva
+    s.vertexShader = s.vertexShader
+      .replace('#include <common>', `#include <common>
+varying float vQuotaMondo;`)
+      .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+{ vec4 qm = modelMatrix * vec4( transformed, 1.0 ); vQuotaMondo = qm.y; }`)
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>' + NEBBIA_GLSL)
+      .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+{
+  // sotto la linea, e solo sotto: il cammino nell'acqua e' la distanza dalla
+  // camera, perche' la camera sta a quota zero
+  float sotto = smoothstep( 0.02, -0.08, vQuotaMondo ) * acquaAttiva;
+  if ( sotto > 0.0 ) {
+    float d = length( vViewPosition );
+    float resta = exp( -acquaSigma * d );
+    gl_FragColor.rgb = mix( acquaColore, gl_FragColor.rgb, mix( 1.0, resta, sotto ) );
+  }
+}`)
+  }
+  m.customProgramCacheKey = () => 'nebbia-acqua|' + (chiave ? chiave.call(m) : '')
+  m.needsUpdate = true
+  return m
+}
+
+
 export function costruisciAcqua (opzioni = {}) {
   const {
     dettaglio = true,
@@ -610,8 +683,26 @@ const FONDA = 0.72      // a nave intera: il sotto e' un altro mondo
    sagoma, non come un pezzo. */
 const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
 
+  /**
+   * ─── LA SCATOLA E' IL FONDO, NON UN VELO DAVANTI
+   *
+   * Era `FrontSide` e trasparente al 72%: da qualunque angolo la sua faccia
+   * vicina passava DAVANTI a tutto cio' che sta sott'acqua, e tingeva della
+   * stessa quantita' di verde un pezzo a due metri e uno a venti. Il risultato
+   * era un campo uniforme con delle sagome dentro -- il contrario di una
+   * fotografia subacquea, dove la distanza si legge proprio dal verde.
+   *
+   * Adesso l'assorbimento lo fa ANCHE `nebbiaAcqua` sulla geometria, con la
+   * legge di Beer-Lambert. Il velo pero' resta `FrontSide`, e non e' un
+   * ripiego: e' lui che NASCONDE il meccanismo quando il varco e' chiuso.
+   * Provato a metterlo `BackSide` -- il fondale invece del filtro -- e
+   * `collaudo-varco` e' diventato rosso subito: «col taglio chiuso il
+   * meccanismo ha gia' gamma 114, il varco resta aperto». Il velo e'
+   * un'occlusione, non solo una tinta.
+   */
   const materialeVolume = new MeshBasicMaterial({
-    color: 0x061518, transparent: true, opacity: FONDA, depthWrite: false
+    color: 0x061518, transparent: true, opacity: FONDA,
+    depthWrite: false
   })
   // Terzo materiale anonimo che mi fa perdere tempo stanotte: senza nome,
   // una sonda che cerca 'il velo' pesca il primo trasparente che passa.

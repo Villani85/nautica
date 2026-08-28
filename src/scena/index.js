@@ -5,7 +5,7 @@ import {
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z } from '../scafo/ordinate.js'
-import { costruisciAcqua } from './acqua.js'
+import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
@@ -241,6 +241,40 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
   const { nave, agganci, guscio, tappo, spostaTappo, tuga, allestimento } = costruisciNave(base)
+
+  /**
+   * ─── CHI FINISCE SOTT'ACQUA SE NE ACCORGE
+   *
+   * `nebbiaAcqua` spegne il colore in proporzione al cammino nell'acqua, e va
+   * dato a OGNI materiale che puo' trovarsi sotto la linea -- lo scafo, la sua
+   * faccia interna, il meccanismo, i tappi di sezione. Non all'acqua stessa,
+   * che l'acqua non si assorbe addosso.
+   *
+   * Si riapplica a ogni caricamento perche' sovrastruttura e impianto arrivano
+   * in differita: un materiale che arriva dopo, senza questa riga, resterebbe
+   * l'unico pezzo luminoso di un fondale scuro -- e si vedrebbe.
+   */
+  const uniAcqua = {
+    colore: { value: new Vector3(...ACQUA_COLORE) },
+    sigma: { value: ACQUA_SIGMA },
+    attiva: { value: 1 }
+  }
+  const immergi = (radice) => {
+    const visti = new Set()
+    radice.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])
+      for (const m of ms) {
+        if (!m || visti.has(m.uuid)) continue
+        if (m.name === 'pelo' || m.name === 'velo') continue
+        if (m.userData && m.userData.immerso) continue
+        visti.add(m.uuid)
+        m.userData = m.userData || {}
+        m.userData.immerso = true
+        nebbiaAcqua(m, uniAcqua)
+      }
+    })
+  }
+  immergi(nave)
   const tugaQuota = tuga.quota
   const tugaZ = tuga.z
   scena.add(nave)
@@ -392,6 +426,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
   sovra.caricato
+    .then(() => immergi(nave))
     .then(({ parti }) => {
       for (const m of parti) { m.castShadow = true; m.receiveShadow = true }
       /**
@@ -438,6 +473,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // cancello.
     if (!new URLSearchParams(location.search).has('senzaVarco')) {
       Promise.all(impianti.map(i => i.caricato.catch(() => null))).then(() => {
+        immergi(nave)
         nave.updateMatrixWorld(true)
         acqua.seguiVarchi(impianti.map(i => i.gruppo))
       })
