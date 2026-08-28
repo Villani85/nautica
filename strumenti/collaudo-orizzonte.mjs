@@ -53,11 +53,16 @@ import { apriBrowser } from './browser.mjs'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5223
 /**
- * Il minimo sta FRA i due valori misurati, non e' un gusto: col difetto la
- * fascia ha struttura 7,8, senza ha 51,4. Serve a
- * distinguere una campitura da un'immagine, non a decidere quanto e' bello.
+ * Il minimo sta FRA i due valori misurati SUL MARE, ed e' stato spostato una
+ * volta: con la camera dentro il piano dell'acqua il mare sta a **8,6**, con
+ * la camera alta a **18,3**. Nove lasciava solo il 4% di margine sul difetto
+ * -- una soglia che un po' di rumore avrebbe fatto passare. Tredici sta in
+ * mezzo col 40% da entrambe le parti.
+ *
+ * I vecchi 7,8 e 51,4 erano presi su tutta la fascia, nave compresa, e non
+ * valgono piu' come riferimento.
  */
-const STRUTTURA_MINIMA = 30
+const STRUTTURA_MINIMA = 13
 const BATTUTA = 0.3
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
@@ -91,21 +96,88 @@ const chiaroSotto = (sotto[0] + sotto[1] + sotto[2]) / 3
 
 /* --- 2. quanto pelo c'e' davvero sotto la linea */
 /**
- * LA STRUTTURA TONALE della fascia subito sotto l'orizzonte. Si misura li' e
- * non piu' in basso perche' il velo CSS scende fino al 62% e schiaccerebbe la
- * misura: nei primi 160 px sotto la linea il velo e' quasi trasparente.
+ * LA STRUTTURA TONALE del MARE, e non di tutta la fascia.
+ *
+ * Si misura subito sotto l'orizzonte e non piu' in basso perche' il velo CSS
+ * scende fino al 62% e schiaccerebbe la misura: nei primi 160 px sotto la
+ * linea il velo e' quasi trasparente.
+ *
+ * ─── PERCHE' NON SU TUTTA LA LARGHEZZA, e me l'ha trovato una revisione
+ *
+ * La prima versione misurava `crop=1400:160`, cioe' l'intera fascia. Il numero
+ * passava largo -- 52,8 contro una soglia di 30 -- ma misurato per colonne si
+ * scopre da dove veniva:
+ *
+ *     intera             struttura 48,8
+ *     300-600  la NAVE             65,8
+ *     600-900  nave e scia         52,7
+ *     900-1200 mare aperto         17,6   <- sotto la soglia 30
+ *     1100-1400 mare aperto        18,6   <- sotto la soglia 30
+ *
+ * Il cancello certificava che c'e' una nave bianca illuminata dentro
+ * l'inquadratura, non che il mare e' un'immagine.
+ *
+ * Va detto per intero, perche' il sospetto piu' duro della revisione e' stato
+ * verificato ed era FALSO: «basta la nave a tenerlo verde» no -- rimettendo la
+ * camera sul pelo la fascia intera crolla a 8,4 e il cancello diventa rosso lo
+ * stesso, perche' a quota zero si appiattisce anche la nave. Il cancello
+ * proteggeva davvero dalla regressione per cui e' nato. Ma un cancello che
+ * POTREBBE passare per la ragione sbagliata va stretto prima che quella
+ * ragione si presenti -- per esempio una battuta senza nave in campo.
+ *
+ * ─── COME SI TROVA IL MARE SENZA SAPERE DOV'E' LA NAVE
+ *
+ * Non con un ritaglio fisso: la nave si sposta col trascinamento, e una
+ * finestra scelta oggi sarebbe sulla nave domani. Si divide la fascia in sette
+ * colonne, si misura ognuna e si prende la MEDIANA. La nave ne occupa al
+ * massimo tre, quindi la mediana e' mare per costruzione, e resta mare
+ * qualunque sia l'azimut.
  */
+const COLONNE = 7
 const fascia = grigio(scatto, 'crop=1400:160:0:460')
-let somma = 0, quanti = 0
-const luci = []
-for (let i = 0; i < fascia.length; i += 3) {
-  const l = (fascia[i] + fascia[i + 1] + fascia[i + 2]) / 3
-  luci.push(l); somma += l; quanti++
+const statistica = (da, a) => {
+  const luci = []
+  for (let y = 0; y < 160; y++) {
+    for (let x = da; x < a; x++) {
+      const i = (y * 1400 + x) * 3
+      luci.push((fascia[i] + fascia[i + 1] + fascia[i + 2]) / 3)
+    }
+  }
+  const m = luci.reduce((s, v) => s + v, 0) / luci.length
+  let q = 0
+  for (const v of luci) q += (v - m) ** 2
+  return { m, s: Math.sqrt(q / luci.length) }
 }
-const media = somma / quanti
-let vv = 0
-for (const l of luci) vv += (l - media) ** 2
-const struttura = Math.sqrt(vv / quanti)
+const perColonna = []
+for (let k = 0; k < COLONNE; k++) {
+  perColonna.push(statistica(Math.round(k * 1400 / COLONNE), Math.round((k + 1) * 1400 / COLONNE)))
+}
+/**
+ * QUALI COLONNE SONO MARE. La mediana delle strutture non basta -- provata: la
+ * nave e la sua scia occupano QUATTRO colonne su sette e la mediana cadeva su
+ * di loro (42). Nemmeno la piu' scura va bene: la prua e' un cuneo nero, media
+ * 46, con struttura 54.
+ *
+ * Il mare pero' e' la popolazione piu' NUMEROSA e piu' OMOGENEA della fascia.
+ * Misurato su questa inquadratura:
+ *
+ *     media per colonna    55  46 103 132  71  53  54
+ *     struttura            29  54  70  48  42  15  18
+ *                          ^^          ^^^^^^  ^^  ^^
+ *                          mare        nave    mare
+ *
+ * Le tre colonne di mare aperto stanno a 53, 54, 55 -- vicinissime fra loro --
+ * mentre la nave sta a 103 e 132 e la prua a 46. Quindi si prende la mediana
+ * delle MEDIE e si tengono le tre colonne che le stanno piu' vicino: e' mare
+ * per costruzione, e resta mare a qualunque azimut, perche' non dipende da
+ * dove si trova la nave ma da quanto e' diversa dal mare.
+ */
+const medie = perColonna.map(c => c.m).sort((x, y) => x - y)
+const centro = medie[COLONNE >> 1]
+const mare = [...perColonna].sort((a, b) => Math.abs(a.m - centro) - Math.abs(b.m - centro)).slice(0, 3)
+const struttura = [...mare].sort((a, b) => a.s - b.s)[1].s
+const media = [...mare].sort((a, b) => a.s - b.s)[1].m
+const tutta = statistica(0, 1400)
 
 await browser.close()
 preview.kill()
@@ -113,7 +185,10 @@ preview.kill()
 console.log('\nIL MARE E LA GIUNZIONE\n')
 console.log(`  sopra la mezzeria  rgb ${sopra.join(',')}   (luce ${chiaroSopra.toFixed(0)})`)
 console.log(`  sotto la mezzeria  rgb ${sotto.join(',')}   (luce ${chiaroSotto.toFixed(0)})`)
-console.log(`  fascia sotto l'orizzonte: media ${media.toFixed(1)}  struttura ${struttura.toFixed(1)}  (minimo ${STRUTTURA_MINIMA})`)
+console.log(`  per colonna, media:     ${perColonna.map(c => c.m.toFixed(0).padStart(4)).join('')}`)
+console.log(`  per colonna, struttura: ${perColonna.map(c => c.s.toFixed(0).padStart(4)).join('')}`)
+console.log(`  IL MARE (mediana): media ${media.toFixed(1)}  struttura ${struttura.toFixed(1)}  (minimo ${STRUTTURA_MINIMA})`)
+console.log(`  tutta la fascia, per confronto: ${tutta.s.toFixed(1)} -- e' il numero che includeva la nave`)
 
 const guai = []
 if (struttura < STRUTTURA_MINIMA) {
