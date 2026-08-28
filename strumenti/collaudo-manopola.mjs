@@ -445,17 +445,33 @@ const naturale = (n, durata = 3000) => pagina.evaluate(([n, durata]) => new Prom
 
 const attraverso = async (sel, etichetta) => {
   // si campiona SENZA INTERRUZIONE mentre il clic arriva
-  const promessa = pagina.evaluate((n) => new Promise((res) => {
+  /**
+   * --- ANCHE QUI LA FINESTRA E' UN TEMPO
+   *
+   * Erano 150 fotogrammi. Su questa macchina sono due secchi e mezzo; in CI,
+   * dove si disegna in software a 1,2 fotogrammi al secondo, sono **due
+   * minuti** -- per quattro prove, otto minuti su un solo cancello. E' la
+   * stessa ragione per cui `collaudo-ridotto` e `collaudo-cinematica` erano
+   * gia' stati curati: nessun cancello deve misurare la velocita' della
+   * macchina, nemmeno nel proprio tempo di esecuzione.
+   *
+   * Il salto che si cerca arriva subito dopo il clic, quindi tre secondi
+   * bastano e avanzano: quello che si perde e' solo la coda in cui non
+   * succede niente.
+   */
+  const promessa = pagina.evaluate(([n, durata]) => new Promise((res) => {
+    const t0 = performance.now()
     let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
     const passo = () => {
       const v = window.__nautica.stato.rollio
       const d = Math.abs(v - prec)
       if (d > max) { max = d; quando = i }
       prec = v
-      if (++i < n) requestAnimationFrame(passo); else res({ max, quando })
+      if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
+      else res({ max, quando })
     }
     requestAnimationFrame(passo)
-  }), 150)
+  }), [150, 3000])
   await new Promise(r => setTimeout(r, 250))
   await tocca(sel)
   const { max, quando } = await promessa

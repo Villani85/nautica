@@ -11,19 +11,27 @@ il perché.
 
 ## Bloccato sull'umano — non provare a farlo
 
-- [ ] **GitHub → Settings → Pages → Source: GitHub Actions.** — **è l'unica
-      cosa che manca perché il sito esista.** Dalla notte del 27 agosto la
-      pipeline è verde da capo a fondo: compila, installa ffmpeg e il browser,
-      passa tutti e nove i cancelli — compresi i due che aprono una pagina
-      vera — misura il peso e carica l'artefatto. L'ultimo passo,
-      `deploy-pages`, fallisce e basta, perché Pages non è acceso. Non è un
-      difetto del codice: è un interruttore nel pannello, e non posso premerlo
-      io. Il workflow è già
-      in `.github/workflows/pubblica.yml` e i cancelli girano prima di
-      pubblicare. **Finché non è acceso, nessuna misura reale è possibile**:
-      niente LCP, niente INP, niente telefono vero, niente persone che lo
-      aprono. Tutto l'ordine qui sotto è deciso su ipotesi invece che su misure,
-      ed è la cosa che questo progetto non fa mai.
+- [x] **GitHub Pages è acceso** — fatto dal committente il 27 agosto. Per un
+      giorno intero però il sito **ha continuato a non pubblicarsi**, e la
+      causa non era Pages: era la CI che falliva o restava appesa su tre
+      cancelli, tutti per la stessa ragione. Misuravano il sito in
+      **fotogrammi** invece che in **tempo**, e la CI disegna in software a
+      **1,2 fotogrammi al secondo**:
+      - `collaudo-ridotto` confrontava l'ampiezza su 90 fotogrammi, «1,5 s a
+        60 Hz» — che là diventano 75 secondi, in cui la nave ridotta e quella
+        piena arrivano entrambe al massimo. Il picco-picco satura, il rapporto
+        tende a 1, e il cancello dichiarava «la preferenza non riduce niente»;
+      - `collaudo-cinematica` aspettava un giro d'albero campionando fino a
+        160 volte per punto: due minuti a punto, per tre punti. Sembrava
+        appeso perché lo era;
+      - e la prima correzione ne aveva spostato uno invece di toglierlo: il
+        tetto era passato da 90 a 600 fotogrammi ma il controllo chiedeva
+        ancora «almeno un terzo del tetto», cioè 200 fotogrammi a una macchina
+        che ne fa 1,2 al secondo.
+      Curati tutti e tre la notte del 28: finestre in secondi, RMS invece di
+      picco-picco, e un ramo che **dice** «non misurato» quando la macchina non
+      dà abbastanza campioni, invece di inventare un verdetto. **La regola:
+      nessun cancello misura la velocità della macchina.**
 - [ ] **Il profilo Awwwards.** Conta dal giorno in cui esiste. Serve il 6,5
       **dagli utenti** già per l'Honorable Mention, ed è il voto che matura solo
       col tempo.

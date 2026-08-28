@@ -413,9 +413,22 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     if (rViva < 1e-6 || rNuda < 1e-6) return
     // spegnendo si va all'orbita della nave nuda; accendendo si torna a cio'
     // che il sistema lascia, cioe' la stessa orbita ridotta
-    const resta = Math.max(0.02, 1 - S.riduzione)
-    const bersaglio = v ? rNuda * resta : rNuda
-    const k = bersaglio / rViva
+    /**
+     * --- SI RISCALA SOLO SPEGNENDO, E LA RAGIONE E' FISICA
+     *
+     * Spegnendo, la nave deve ARRIVARE all'ampiezza nuda, e ci mette venticinque
+     * secondi di costante di tempo: e' li' che serve accorciare l'attesa.
+     *
+     * Accendendo no. Con le pinne attive lo smorzamento e' alto e la nave si
+     * calma da sola in pochi secondi -- quello e' il lavoro del sistema, ed e'
+     * esattamente la cosa che il sito ha da mostrare. Riscalare anche in quel
+     * verso la spegneva di colpo: misurato, il cancello della manopola trovava
+     * l'albero d'ingresso FERMO subito dopo l'accensione, perche' senza rollio
+     * la pinna non ha piu' niente da correggere. Guardare una nave calmarsi e'
+     * il punto; vederla gia' calma non lo e'.
+     */
+    if (v) return
+    const k = rNuda / rViva
     if (!Number.isFinite(k) || k <= 0) return
     // un tetto: se qualcosa va storto nei rapporti, meglio una transizione
     // lenta che una nave rovesciata
