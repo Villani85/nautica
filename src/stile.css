@@ -1169,3 +1169,32 @@ html[data-unica="si"] .atto--demo{margin-top:0}
   bottom:22vh;opacity:.35;
 }
 .palco[data-battuta="meccanismo"] .nota{opacity:.35}
+
+
+/* --- I NUDGE
+
+   Uno alla volta, addosso al comando di cui parlano. Il fondo e' pieno e non
+   trasparente: da quando la camera si e' alzata la meta' bassa e' un mare
+   fotografato, e un testo tenue su quello non si legge -- misurato, il fondo
+   sotto i comandi passa da scarto tipo 20,2 a 43,4.
+
+   `position: fixed` e non `absolute`: le coordinate vengono da
+   `getBoundingClientRect`, che e' relativa alla finestra. Con `absolute` il
+   nudge si sarebbe spostato con lo scorrimento mentre il comando resta fermo. */
+.nudge{
+  position:fixed; z-index:40; pointer-events:none;
+  padding:7px 12px; border-radius:3px;
+  background:var(--carico, #071a1d); color:var(--aria, #ece8e0);
+  font-size:13px; letter-spacing:.04em; white-space:nowrap;
+  border:1px solid rgba(236,232,224,.22);
+  box-shadow:0 6px 22px rgba(7,26,29,.45);
+  opacity:0; transform:translateY(4px);
+  transition:opacity .35s, transform .35s;
+}
+.nudge[data-visibile="si"]{opacity:1; transform:none}
+@media (prefers-reduced-motion: reduce){
+  /* compare comunque: si toglie il movimento, non l'informazione */
+  .nudge{transition:none; transform:none}
+}
+/* la voce di menu della scena in corso */
+.nav--qui{color:var(--carico); text-decoration:underline; text-underline-offset:4px}

@@ -281,15 +281,39 @@ const vaiA = (f) => pagina.evaluate(async (f) => {
   }
 }, f)
 
+/**
+ * ─── LA FINESTRA DI RICERCA SI RICAVA DALLA SEZIONE, non e' 20%-70%
+ *
+ * Erano due frazioni fisse del documento, e hanno smesso di funzionare il
+ * giorno in cui il documento e' cambiato: togliendo §04 e §05 la pagina si e'
+ * accorciata di meta', la dimostrazione e' scivolata piu' in basso in
+ * proporzione, e la battuta del meccanismo e' finita OLTRE il 70%. Il cancello
+ * ha detto «il primo piano non esiste» su un primo piano che c'era.
+ *
+ * E' lo stesso difetto che questo repo si e' gia' dato per regola due volte:
+ * nessuna soglia in frazioni di pagina. La dimostrazione sa dove sta -- ha un
+ * rettangolo -- e da quello si ricava l'intervallo di scorrimento in cui vive,
+ * con un margine. Se domani si aggiunge o si toglie una sezione, questo
+ * continua a funzionare senza che nessuno se ne ricordi.
+ */
+const finestra = await pagina.evaluate(() => {
+  const sez = document.querySelector('#dimostrazione')
+  const h = document.documentElement.scrollHeight - window.innerHeight
+  const r = sez.getBoundingClientRect()
+  const cima = (window.scrollY + r.top) / h
+  const fondo = (window.scrollY + r.bottom - window.innerHeight) / h
+  return { da: Math.max(0, cima - 0.02), a: Math.min(1, fondo + 0.02) }
+})
 const dentro = []
-for (let f = 0.20; f <= 0.70001; f += 0.01) {
+for (let f = finestra.da; f <= finestra.a + 1e-9; f += 0.01) {
   const r = await vaiA(f)
   if (r.battuta === 'meccanismo' && r.inQuadro) dentro.push(f)
 }
 if (!dentro.length) {
   console.error('')
   console.error('  IL PRIMO PIANO DEL MECCANISMO NON ESISTE.')
-  console.error('  Nessuna posizione di scorrimento fra il 20% e il 70% ha insieme')
+  console.error(`  Nessuna posizione di scorrimento fra il ${(finestra.da * 100).toFixed(0)}% e il ` +
+                `${(finestra.a * 100).toFixed(0)}% -- cioe' in tutta la dimostrazione -- ha insieme`)
   console.error('  la battuta "meccanismo" e il palco dentro la finestra.')
   console.error('')
   await finisci(2)

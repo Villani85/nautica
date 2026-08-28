@@ -7,6 +7,13 @@ import { collegaModale } from './ui/modale.js'
  * stare in un posto solo.
  */
 import { LA_SCENA_E_UNA } from './regia.js'
+/**
+ * Il menu delle scene sta nel percorso critico -- e' l'intestazione, si vede
+ * subito -- ma non costa niente: importa `BATTUTE` da `regia.js`, che e' gia'
+ * qui, e non tira dentro three.
+ */
+import { creaMenu } from './ui/menu.js'
+import { creaNudge } from './ui/nudge.js'
 
 /**
  * Questo modulo non importa three. Deve restare cosi'.
@@ -15,6 +22,9 @@ import { LA_SCENA_E_UNA } from './regia.js'
  * 1, 3, 4 e 5 sono testo e composizione. Il motore arriva quando serve —
  * vedi in fondo — e finche' non serve non sta fra l'utente e il contenuto.
  */
+
+creaMenu()
+creaNudge()
 
 collegaModale({
   apri: document.querySelector('#apri-chiusura'),

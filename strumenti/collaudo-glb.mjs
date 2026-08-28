@@ -583,24 +583,26 @@ for (const altro of ALTRI) {
  * dieci secondi. Da qui in poi non puo' piu' divergere senza fermare i
  * cancelli.
  */
+/**
+ * ─── LA RIGA IN PAGINA NON C'E' PIU', E IL CONTROLLO E' USCITO CON LEI
+ *
+ * Qui si verificava che «3D models downloaded» in `index.html` descrivesse
+ * ancora i byte sul disco. Quella riga stava dentro la tabella «The numbers,
+ * measured», tolta insieme a tutta la prosa di §04 e §05 su richiesta
+ * dell'utente: «togli tutto questo testo, nessuno te lo ha chiesto».
+ *
+ * Il controllo se n'e' andato **col suo soggetto**, non e' stato aggirato: non
+ * c'e' nessuna condizione ammorbidita per far tornare verde un cancello. Se un
+ * giorno il peso torna scritto in pagina, torna anche questo confronto -- il
+ * modo di farlo e' tre righe e sta nella storia di questo file.
+ *
+ * Resta il resto del collaudo, che non dipendeva dalla pagina: geometria,
+ * quote, materiali, UV, tangenti, occlusione e peso del file.
+ */
 const modelli = readdirSync('public/modelli').filter(f => f.endsWith('.glb'))
 const totaleKB = Math.round(
   modelli.reduce((s, f) => s + statSync(`public/modelli/${f}`).size, 0) / 1024)
-const pagina = readFileSync('index.html', 'utf8')
-const riga = pagina.match(/3D models downloaded<\/dt><dd>([^<]+)<\/dd>/)
-if (!riga) {
-  guasti.push('in `index.html` non trovo piu\' la riga «3D models downloaded»: ' +
-              'se e\' stata rinominata, questo controllo va aggiornato invece che perso')
-} else {
-  const dichiarato = parseFloat(riga[1].replace(',', '.'))
-  note.push(`PAGINA    dichiara ${riga[1].trim()}, sul disco ci sono ${totaleKB} KB in ${modelli.length} modelli`)
-  if (!(Math.abs(dichiarato - totaleKB) <= 3)) {
-    guasti.push(
-      `la pagina dichiara "${riga[1].trim()}" di modelli 3D, ma sul disco ce ne sono ` +
-      `${totaleKB} KB. Il sito misura tutto: se questo numero e' falso, non c'e' ` +
-      'ragione di credere agli altri.')
-  }
-}
+note.push(`MODELLI   ${totaleKB} KB in ${modelli.length} file sul disco`)
 
 // ─── esito ────────────────────────────────────────────────────────────────
 console.log(FILE)

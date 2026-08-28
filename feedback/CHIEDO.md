@@ -7,12 +7,37 @@ trovato la volta scorsa. Cambia a ogni giro.
 Progetto: <https://github.com/Villani85/nautica> — sito pubblicato su
 <https://villani85.github.io/nautica/>
 
-Aggiornato: **28 agosto 2026, ore 10.** Da quando hai clonato potrei aver spinto
+Aggiornato: **28 agosto 2026, pomeriggio.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
 > punto per punto sta in fondo, al §5. Da allora ho corretto **tre** mie
 > affermazioni sbagliate: leggi la tabella qui sotto, non i commit vecchi.
+
+---
+
+## 0 · COSE DECISE DALL'UTENTE — non sono difetti, non riportarmele
+
+Questa sezione esiste perché il giro scorso mi hai segnalato come problemi
+delle cose che erano **richieste esplicite del committente**. Le scrivo qui in
+testa così non ci perdi un giro.
+
+**Aggiornato: 28 agosto 2026, pomeriggio.** Tutte verificate e in linea.
+
+| Cosa | Chi l'ha deciso |
+|---|---|
+| **Via §04 «How it is made» e §05 «With your product»**, per intero — i quattro saggi tecnici, la tabella «The numbers, measured» e la pagina commerciale col CAD e i tempi | L'utente, testualmente: «togli tutto questo testo, nessuno te lo ha chiesto». Circa 250 righe. Motivo di fondo: il sito si **legge**, e i vincitori autoprodotti del Sito dell'Anno sono cose con cui si sta dieci minuti. È la stessa frase a cui eri arrivato tu: «il repository sta diventando più interessante del sito» |
+| **Il controllo di `peso.mjs` sui numeri in pagina non c'è più** | Conseguenza della riga sopra: il controllo è stato tolto **insieme al suo soggetto**, non aggirato per far tornare verde un cancello. Nessuna riga commentata via. I **tetti** (250 KB di JavaScript, 4,2 MB di filmati) restano e sono verdi. Se un numero torna in pagina, torna la sua riga lì |
+| **Il menu porta alle scene** (Saloon · Ship · Cut · Mechanism) e non più a capitoli di testo | L'utente: «devi mettere il menu che mi riporta rapidamente ad ogni scena». Le posizioni vengono da `BATTUTE` di `regia.js` con la formula inversa di `demo.js`, quindi nessuna soglia in pixel |
+| **I nudge**, uno alla volta, addosso al comando di cui parlano | L'utente: «come usabilità devi fare un grosso passo mettendo dei nudge che suggeriscono cosa puoi fare» |
+| **La camera non sta più sul pelo dell'acqua** ma a 3,6 m | Mio, ma su richiesta di fotorealismo dell'utente. Non viola l'invariante: quello è il **beccheggio nullo**, non la quota, e il sito lo aveva già misurato (0,019 px su 900). Cancello nuovo: `collaudo-orizzonte.mjs` |
+| **Dentro il taglio l'acqua sparisce del tutto** (varco, velo e sigma a zero) | L'utente: «sott'acqua togli l'acqua e mostra la qualità del meccanismo» |
+| **Il rollio nella sezione non è più azzerato** ma ridotto al 40% | L'utente: «la nave non si muove neanche a stabilizzatore spento». È una decisione di messa in scena **uniforme**: non dipende da `stab`, che sarebbe una conseguenza cablata a mano |
+
+**Cosa resta valido segnalarmi su questi punti:** se una di queste decisioni ha
+prodotto una **regressione misurabile** che non ho visto — un cancello che
+passa per il motivo sbagliato, un'affermazione in pagina diventata falsa, un
+comando irraggiungibile da tastiera. Il *merito* della decisione no: è presa.
 
 ---
 

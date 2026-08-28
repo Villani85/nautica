@@ -138,47 +138,26 @@ const jsCritico = senzaFont.filter(v => v.p.endsWith('.js'))
 const font = critico.filter(v => /\.woff2$/.test(v.p))
 const jsDopo = dopo.filter(v => v.p.endsWith('.js'))
 
-const ATTESI = [
-  ['Critical path to first text, fonts excluded (gzip)', somma(senzaFont, 'gz')],
-  ['— of which JavaScript', somma(jsCritico, 'gz')],
-  ['Fonts, self-hosted and subset', somma(font, 'gz')],
-  ['3D engine, loaded on approach (gzip)', somma(jsDopo, 'gz')],
-  /**
-   * --- LE DUE RIGHE CHE MANCAVANO, ED ERANO IL 70% DEL CONTO
-   *
-   * Un collaudo ha misurato i byte veri sul filo fino al primo fotogramma
-   * DISEGNATO: 2,03 MiB, di cui 1,44 di filmati. La tabella si intitolava
-   * "the numbers, measured" e i filmati non comparivano da nessuna parte --
-   * la parola "video" non era in tutto il documento.
-   *
-   * Il numero pubblicato non era falso: descriveva un'altra cosa, cioe' il
-   * percorso fino al primo TESTO dipinto. Ma un sito che pubblica il proprio
-   * peso come prova di onesta' non puo' lasciare fuori la voce piu' pesante e
-   * chiamare "critical path" il 0,7% del conto.
-   *
-   * Il totale si somma da cio' che gia' si misura: percorso critico, font,
-   * motore, modelli, filmati. Non e' il numero del browser -- che dipende
-   * anche dalla compressione del server -- ed e' per questo che la riga dice
-   * "before the first rendered frame" e non "measured in Chrome".
-   */
-  ['Saloon footage, two clips', byteFilmati],
-  /**
-   * --- DUE RIGHE CHE STAVANO FUORI DAL CANCELLO
-   *
-   * «3D models downloaded» e «of which the mechanism» erano pubblicate ma non
-   * controllate, e la seconda era invecchiata in silenzio: diceva 310 KB, che
-   * e' il meccanismo di PRIMA dello scambio fra smussi geometrici e mappa
-   * normale -- un modello che il sito non spedisce piu' da parecchi commit.
-   * Nessuno se n'e' accorto perche' l'unico a controllare era questo file, e
-   * qui non c'erano. Una cifra pubblicata che nessun cancello legge non e'
-   * "misurata": e' dichiarata, cioe' esattamente cio' che il sito rimprovera
-   * agli altri.
-   */
-  ['3D models downloaded', byteModelli],
-  ['— of which the mechanism', byteImpianto],
-  ['Total before the first rendered frame',
-    somma(critico, 'gz') + somma(jsDopo, 'gz') + byteModelli + byteFilmati]
-]
+/**
+ * ─── LA TABELLA DEI NUMERI NON E' PIU' IN PAGINA
+ *
+ * `index.html` pubblicava «The numbers, measured» e questo elenco verificava
+ * riga per riga che ogni cifra descrivesse ancora la build. La sezione e'
+ * stata tolta su richiesta dell'utente insieme a tutta la prosa di §04 e §05.
+ *
+ * Il controllo e' stato tolto INSIEME AL SUO SOGGETTO, non aggirato: non c'e'
+ * nessuna riga commentata via per far tornare verde un cancello. Se un numero
+ * torna in pagina, torna anche la sua riga qui -- la macchina che li confronta
+ * e' rimasta intatta sotto, compreso `npm run numeri`.
+ *
+ * Quello che resta e' cio' che non dipende dalla pagina: i TETTI. Il budget
+ * del JavaScript e quello dei filmati non erano dichiarazioni pubbliche, erano
+ * vincoli del progetto, e valgono ancora.
+ *
+ * Va detto chiaro perche' e' una perdita vera: «measured, not declared» era
+ * la prova di onesta' del sito, e adesso vive solo nel repository.
+ */
+const ATTESI = []
 
 const TOLLERANZA = 0.3
 const SCRIVI = process.argv.includes('--scrivi')

@@ -17,10 +17,24 @@
 
 <header class="testata" data-lato="sopra">
   <p class="occhiello"><b>Technical study</b> <span>Fin stabiliser system</span></p>
-  <nav aria-label="Sections">
-    <a href="#dimostrazione">Demonstration</a>
-    <a href="#fattura">How it is made</a>
-    <a href="#offerta">With your product</a>
+  <!--
+    IL MENU PORTA ALLE SCENE, non ai capitoli.
+
+    Prima erano quattro ancore a sezioni di testo, due delle quali non esistono
+    piu'. Adesso ogni voce salta dentro la dimostrazione, alla battuta che
+    nomina: sono le stesse battute di `regia.js`, prese da li' e non ricopiate,
+    perche' due liste divergono e una lista sola no.
+
+    `data-scena` porta l'id della battuta; `src/ui/menu.js` lo traduce in una
+    posizione di scorrimento leggendo `BATTUTE`. Restano `<a href>` veri con
+    un'ancora che esiste, cosi' senza JavaScript il menu porta comunque alla
+    dimostrazione invece di non fare niente.
+  -->
+  <nav aria-label="Scenes">
+    <a href="#dimostrazione" data-scena="salotto">Saloon</a>
+    <a href="#dimostrazione" data-scena="invito">Ship</a>
+    <a href="#dimostrazione" data-scena="taglio">Cut</a>
+    <a href="#dimostrazione" data-scena="meccanismo">Mechanism</a>
     <a href="#contatto">Contact</a>
   </nav>
 </header>
@@ -187,266 +201,32 @@
   <p id="ripiego" class="ripiego" hidden>
     This demonstration draws a stabiliser system in real time and needs WebGL,
     which this browser does not expose. The rest of the page still works: the
-    section <a href="#fattura">How it is made</a> describes the mechanism in full.
   </p>
   </div>
 </section>
 
-<!-- 4 · HOW IT IS MADE -->
-<section id="fattura" class="atto atto--testo" data-lato="sopra" aria-labelledby="tit-fattura">
-  <div class="colonna">
-    <p class="et">04 — How it is made</p>
-    <h2 id="tit-fattura">The cut is not a picture.<br>It is a camera decision.</h2>
+<!--
+  ─── QUI STAVANO §04 «HOW IT IS MADE» E §05 «WITH YOUR PRODUCT»
 
-    <p>The camera never pitches. It looks dead level at the horizon, and that
-    single constraint is what puts the waterline at exactly half the screen,
-    whatever the proportions of the window. The page background can therefore
-    split at 50% with a hard stop and meet the real-time drawing without
-    anything being synchronised.</p>
+  Tolte su richiesta esplicita dell'utente: «togli tutto questo testo, nessuno
+  te lo ha chiesto». Erano circa 250 righe di prosa: i quattro saggi tecnici,
+  la tabella dei numeri misurati e la pagina commerciale col CAD e i tempi.
 
-    <p>We had this wrong in writing for weeks, and the correction is worth more
-    than the original claim. Everywhere in our own notes it said <em>the camera
-    sits at height zero</em>, as though the height were the cause. It is not.
-    Point a camera level and the plane of the water projects onto the centre
-    line of the frame from <em>any</em> height — measured: at 1.28 units up, the
-    horizon lands 0.019 px off centre on a 900 px canvas. Drop the camera back
-    to zero and tilt it slightly, and the line leaves immediately.</p>
+  La ragione non e' solo di chi comanda, ed e' scritta nel piano approvato: i
+  vincitori autoprodotti del Sito dell'Anno sono cose con cui si sta dieci
+  minuti, non pagine che spiegano. Il difetto da curare era che il sito si
+  LEGGE, e allungarlo lo peggiorava. La revisione esterna era arrivata alla
+  stessa frase per conto suo: «il repository sta diventando piu' interessante
+  del sito».
 
-    <p>The half-truth cost us a night. Believing the height was the invariant,
-    we never tried raising the camera; believing height alone was sufficient, we
-    then raised it and found the second half of the rule the hard way. The
-    geometry survives any height. The <em>tone</em> does not: lift the camera
-    and you start looking down onto a lit sea surface, the lower half stops
-    reading as deep water, and the split dies anyway — for a completely
-    different reason.</p>
+  COSA SI PERDE, detto invece che taciuto: la tabella «measured, not declared»
+  era la prova di onesta' del sito, e `peso.mjs` la verificava a ogni build --
+  quel controllo e' stato tolto insieme al suo soggetto, non aggirato. E la
+  pagina commerciale era l'unica superficie che vende. Tutte e due restano nel
+  repository e tornano con un revert di questo commit.
+-->
 
-    <p>No code keeps the two halves aligned, because none is needed. That is the
-    difference between an effect and a geometry.</p>
 
-    <h3>The hull is a loft between stations</h3>
-    <p>Nine sections along the length, interpolated. The hull, the deck and the
-    section cap are curves described in code. The mechanism and the two upper
-    decks are modelled in Blender by the scripts in this repository and shipped
-    as glTF — <b data-peso="3D models downloaded">352,9 KB</b>, meshopt-compressed. That figure moved twice, and the second
-    move was a correction. The mechanism used to ship its chamfers as geometry,
-    43,152 triangles of them; it now ships 12,448 and carries them in a baked
-    normal map. Measured at the distance the camera actually reaches, the map
-    recovers 62% of what the coarse mesh loses, and what it cannot fake — the
-    silhouette — costs 632 pixels, 1.41% of the mechanism. The first version of
-    that trade shipped the map at 2048 and read as a saving, which it was in raw
-    bytes and was not on the wire: meshopt geometry compresses a further 2.4×,
-    a WebP texture not at all, so the model went from 130 KB to 343 over the
-    connection. The map at 512 recovers the same 62% for 161 KB. Still no third-party model, and
-    still nothing downloaded that we did not author; but they are files now,
-    not curves, and the page said <em>zero bytes</em> for one night longer than
-    it was true. And the section cap at any station is <em>the same
-    function</em> that generates the surface — not a second implementation that
-    would silently drift apart. A test proves the two coincide to within
-    7.2 × 10⁻⁸, the precision of a 32-bit float.</p>
-
-    <h3>The reduction is measured, not declared</h3>
-    <p>Two simulations run in parallel, identical except that one has no fin
-    authority. The number on screen is <em>one minus the ratio of the two RMS
-    roll amplitudes</em>, taken at steady state and averaged over five
-    independent draws of the sea. It changes with the speed, because fins produce
-    lift only when the ship is making way &mdash; at anchor the reduction is
-    zero. With the sea it is stranger, and worth saying because the eye would not
-    guess it: at service speed the five sea states give the <em>same</em> 91%, to
-    within two hundredths of a point. That is not the model failing to notice the
-    weather. It is what a linear system does &mdash; the fin angle is
-    proportional to roll rate, so doubling the sea doubles both the roll and the
-    correction, and the ratio holds. The sea starts to matter only when the fin
-    runs out of travel: below about eleven knots the stall bites, and at four
-    knots the same ship drops from 44% in a slight sea to 3% in a heavy one.
-    Drag the speed, not the sea, to see the number move.</p>
-    <p>And the figure belongs to that forcing, not to the ship alone. Replacing
-    the three harmonics with a spectrum of the same energy but a different
-    shape moves it a long way: a single wave train exactly on the roll period
-    gives 98%, because all the energy sits where the fins add damping, while a
-    broad sea spread across shorter periods gives 83%. The three harmonics used
-    here land at 91%. So 91% is a measurement of this ship in <em>this</em> sea,
-    and the honest reading of it is a property of the pair, not a rating.</p>
-    <p>It reads RMS rather than peak, and it is worth saying why. The forcing is
-    a sum of three harmonics whose periods do not divide into one another, so
-    they never come back into phase: the largest roll inside any finite window
-    depends on where in that beat you happened to look, and converges on
-    nothing. We measured it — the peak ratio moved by 5.6 points between page
-    loads. The RMS ratio moves by 0.2. RMS is also the quantity the industry
-    quotes, which we found out after choosing it for the other reason.</p>
-    <p>The live readings above — roll, and peak over ten seconds — stay
-    instantaneous. Being tied to the frame you are looking at is the whole point
-    of a reading. A ratio is not a reading, and needs steady state.</p>
-
-    <h3>The energy model is declared illustrative</h3>
-    <p>The two bars show an index from 0 to 100, not kilowatts. The multipliers
-    are ours, chosen so the reading is legible, and putting a physical unit on
-    them would be a lie told well.</p>
-
-    <h3>The numbers, measured</h3>
-    <p class="magra">Measured on the production build, not on localhost and not
-    by eye. Entries with a dash have not been measured yet, and they keep the
-    dash until they are.</p>
-
-    <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,8 KB</dd></div>
-      <div><dt>— of which JavaScript</dt><dd>3,2 KB</dd></div>
-      <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
-      <!--
-        QUESTA RIGA MANCAVA, ED ERA IL 70% DI QUELLO CHE SI PAGA.
-        La tabella si intitola "the numbers, measured" e i due filmati del
-        salone non comparivano da nessuna parte: in tutto il documento la
-        parola "video" non c'era. Un sito che pubblica il proprio peso come
-        prova di onesta' non puo' omettere la voce piu' pesante.
-      -->
-      <div><dt>Saloon footage, two clips</dt><dd>1,38 MB</dd></div>
-      <!--
-        E "loaded only on demand" era falso: l'osservatore in `src/main.js` ha
-        `rootMargin: '200% 0px'`, e la dimostrazione e' la seconda sezione
-        utile, quindi il motore parte da solo a scorrimento fermo. Il numero
-        era giusto, l'aggettivo no.
-      -->
-      <div><dt>3D engine, loaded on approach (gzip)</dt><dd>193,0 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>352,9 KB</dd></div>
-      <!--
-        E il totale, che e' la riga che un giurato verifica in dieci secondi.
-        Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
-        cose diverse e la differenza e' 134 volte.
-      -->
-      <div><dt>Total before the first rendered frame</dt><dd>1,97 MB</dd></div>
-      <div><dt>— of which the mechanism</dt><dd>225,9 KB</dd></div>
-      <div><dt>CDN dependencies</dt><dd>none</dd></div>
-      <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
-      <div><dt>Largest Contentful Paint, lab Slow 4G with CPU ×4</dt><dd>2,9 s</dd></div>
-      <div><dt>— of which the network alone costs</dt><dd>0,76 s</dd></div>
-      <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
-    </dl>
-
-    <p>The paint figure is a <b>lab</b> measurement, not a field one, and the
-    recipe is part of the number: 1.6 Mbit/s down, 750 kbit/s up, 150 ms
-    round trip, CPU slowed four times — the profile Lighthouse calls mobile, so
-    the figure is comparable with the ones published elsewhere. Measured on the
-    live site with <code>strumenti/misura-lcp.mjs</code>, median of five loads.
-    The split is the interesting part: throttling the network alone gives
-    <b>0.76 s</b>, the CPU alone <b>0.80 s</b>, and together <b>2.9 s</b>. The
-    two do not add — a slow processor cannot work the bytes while they arrive.
-    The site is light; the cost is compute.</p>
-
-    <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">193,0 KB</b>
-    compressed and is not on the critical path:
-    it is requested only when the demonstration comes near. That is the real
-    reason the code was moved to ES modules — <em>not</em> the total weight,
-    which measured was already inside the budget, but the fact that 180 KB of
-    engine no longer sit between someone opening the page and the first thing
-    they read.</p>
-
-    <p class="magra">The method, the mistakes made and how they were found are
-    in the public repository, commit history included.</p>
-  </div>
-</section>
-
-<!-- 5 · WITH YOUR PRODUCT -->
-<section id="offerta" class="atto atto--testo" data-lato="sotto" aria-labelledby="tit-offerta">
-  <div class="colonna">
-    <p class="et">05 — With your product</p>
-    <h2 id="tit-offerta">This model is generic.<br><em>Yours</em> is not.</h2>
-
-    <p>With your CAD, your data and your product, the same interaction becomes a
-    commercial demonstration: on your site, in the dealer presentation, on the
-    monitor at the trade fair, on the agent’s tablet.</p>
-
-    <p>What follows is deliberately specific. A page that says “send us your
-    files” is asking you to guess; these are the files, the numbers and the
-    decisions that actually determine whether this can be built for your
-    product, and how long it takes.</p>
-
-    <h3>The CAD</h3>
-    <p><strong>STEP is the one that works.</strong> AP214 or AP242, solids
-    rather than surfaces. IGES and Parasolid are fine. A native file —
-    SolidWorks, CATIA, NX, Inventor, Creo — is also fine, but it gets converted
-    before anything else happens, and conversion loses the feature tree: what
-    arrives is geometry, not parameters. If the part is configurable and the
-    configuration matters, that has to be described separately.</p>
-    <p class="magra">Simplified is better than complete. What this needs is the
-    silhouette, the moving parts and their axes — not internal fasteners,
-    threads or supplier sub-assemblies. A model stripped down to those is
-    faster to work with and carries less of your intellectual property out of
-    your building.</p>
-
-    <h3>The numbers that would make it yours</h3>
-    <!-- Diceva "the physics here is driven by seven quantities": falso, e
-         verificato prima di correggere. `src/scena/simulazione.js` gira su
-         costanti d'autore. Perche' conta, in docs/15-PASS-PBR.md. -->
-    <p>These are the quantities a model <em>of your product</em> would run on.
-    This demonstration does not have them, and says so: it runs on author's
-    constants — a 7-second roll period, a fixed damping ratio, a stall angle —
-    with only sea state and speed under your hand. That is why the recovery
-    figure here is normalised and carries no units.</p>
-    <ul>
-      <li><strong>fin area and maximum angle</strong> — with speed, lift
-      coefficient and lever arm they set the righting moment. Area alone does
-      not: authority goes with the square of speed, which is why a stabiliser
-      that works at twelve knots can be useless at three</li>
-      <li><strong>reduction ratio and rated torque</strong> at the output</li>
-      <li><strong>maximum angular rate of the fin</strong> — a stabiliser that
-      cannot keep up with the wave does not stabilise</li>
-      <li><strong>the vessel it is fitted to</strong>: displacement, beam,
-      metacentric height and natural roll period</li>
-      <li><strong>service speed range</strong> — fin authority goes with the
-      square of it, and that is the most counter-intuitive thing a buyer
-      learns here</li>
-      <li><strong>the sea states you are willing to be judged on</strong></li>
-      <li><strong>measured reduction, if you have it</strong>, and how it was
-      measured</li>
-    </ul>
-    <p class="magra">If a number is confidential, it can stay confidential: the
-    demonstration can run on normalised values, exactly as this one does, and
-    say so on the page. What it cannot do is invent them.</p>
-
-    <h3>Who has to be in the room</h3>
-    <p>One person on your side who can say <em>this may be shown, that may
-    not</em> — and who is authorised to say it. In practice that is rarely
-    marketing alone: markings, declarations of conformity, class approvals and
-    test data all have an owner, and the owner is usually in engineering or
-    quality. Deciding this at the start costs one meeting. Deciding it at the
-    end costs the project.</p>
-
-    <h3>How long</h3>
-    <ul>
-      <li><strong>Week 1</strong> — files, numbers, and the shown/not-shown
-      list. Nothing is modelled before this is agreed.</li>
-      <li><strong>Weeks 2–3</strong> — geometry: your part, reduced to what the
-      camera needs, with its real axes and real travel.</li>
-      <li><strong>Weeks 3–4</strong> — physics and gates: your numbers driving
-      the motion, and the tests that fail when they stop being true.</li>
-      <li><strong>Weeks 5–6</strong> — the four surfaces: site, dealer
-      presentation, trade-fair screen, tablet.</li>
-    </ul>
-    <p class="magra">Six weeks is the honest figure for a first product, not a
-    sales figure. The part that slips is never the geometry — it is the week
-    when nobody can decide what may be shown.</p>
-
-    <div class="scambio">
-      <div>
-        <h3>What we need from you</h3>
-        <ul>
-          <li>the CAD, simplified, as STEP</li>
-          <li>the quantities above, or the ones you can release</li>
-          <li>the technical documentation that already exists</li>
-          <li>one person who decides what may be shown</li>
-        </ul>
-      </div>
-      <div>
-        <h3>What you get</h3>
-        <ul>
-          <li>the demonstration, on your own site</li>
-          <li>the same thing, as a dealer presentation</li>
-          <li>a full-screen version for the trade fair monitor</li>
-          <li>a touch version for the agent’s tablet</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- 6 · CONTACT -->
 <section id="contatto" class="atto atto--contatto" data-lato="sopra" aria-labelledby="tit-contatto">
@@ -470,7 +250,6 @@
     <li>Handling gear</li><li>Below-deck systems</li>
   </ul>
   <div class="foglio__piede">
-    <a href="#offerta" class="richiamo richiamo--pieno">Go to the full section</a>
     <button type="button" id="chiudi">Back to the demonstration</button>
   </div>
 </dialog>
