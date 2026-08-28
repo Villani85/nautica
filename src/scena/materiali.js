@@ -60,8 +60,45 @@ export const materiali = {
    * Il colore non cambia: la tavolozza e' una decisione presa, e questa e' una
    * correzione sulla materia, non sul progetto.
    */
+  /**
+   * --- SI DISEGNA DA UN LATO SOLO, MA NON PER LA RAGIONE CHE AVEVO SCRITTO
+   *
+   * Qui c'era `side: DoubleSide` senza una ragione accanto. Lo scafo e' un
+   * GUSCIO -- un loft fra le ordinate, spesso zero -- quindi con due lati three
+   * ne disegna anche la parete interna e la illumina come se fosse esposta al
+   * cielo. L'interno pero' ce l'ha gia' `interno`, una mesh sua in `BackSide`
+   * e apposta scura: con due lati la stessa superficie e' disegnata due volte,
+   * e vince la piu' chiara. Disegnare l'interno di un guscio illuminato dal
+   * cielo e' sbagliato, e questa riga lo toglie.
+   *
+   * --- MA NON CURA IL 2x, E LA CORREZIONE VALE PIU' DELLA CURA
+   *
+   * Avevo scritto che questo era la causa dello scafo «2,5 volte piu' luminoso
+   * del path tracer». **Non lo e'.** La misura che me lo faceva credere prendeva
+   * una maschera del materiale che comprendeva ANCHE i pixel delle facce
+   * posteriori: passando a FrontSide quei pixel li prende `interno`, che e'
+   * scuro, e la media scendeva. Scendeva perche' cambiava CHI li dipinge, non
+   * perche' lo scafo fosse illuminato diversamente.
+   *
+   * Sui pixel della superficie ESTERNA, misurati sulla stessa maschera prima e
+   * dopo la build: **53,07 e 53,09**. Il `side` non li tocca, e il 2x resta.
+   *
+   * Quello che questa riga fa davvero, misurato: cambia 12.077 pixel nella zona
+   * bassa, di cui solo **263** hanno materia anche in Cycles (che per il
+   * ritratto della nave salta `interno` apposta). Su quei 263: Cycles 59,0,
+   * prima 70,8 (1,20x), dopo 56,7 (0,96x). Un miglioramento piccolo su una base
+   * sottile -- si tiene perche' e' fisicamente coerente, non perche' quel
+   * numero da solo lo giustifichi.
+   *
+   * **Da dove venga il 2x sulla superficie esterna resta aperto.** Escluso:
+   * la buccia d'arancia (2,62x spegnendola), `interno` (2,51x nascondendolo),
+   * i parametri del materiale (identici a quelli che Blender legge dal JSON),
+   * e adesso anche il `side`. Il sospetto rimasto e' l'irradianza prefiltrata
+   * di three -- PMREM su un equirettangolare di soli 512x256 -- contro il
+   * campionamento diretto di Cycles a rugosita' 0,13.
+   */
   scafo: new MeshStandardMaterial({
-    color: 0x707c82, metalness: 0.0, roughness: 0.13, side: DoubleSide
+    color: 0x707c82, metalness: 0.0, roughness: 0.13, side: FrontSide
   }),
   coperta: new MeshStandardMaterial({
     color: 0xcfc9bc, metalness: 0.05, roughness: 0.72
