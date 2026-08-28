@@ -111,6 +111,7 @@ uniform vec3  uNaveSemi;
 uniform vec3  uNaveCol;
 uniform float uNaveForza;
 uniform float uNaveVel;
+uniform float uNaveOmbra;
 uniform float uSpaccato;
 /* I VARCHI: dove il pelo si apre. Ognuno e' centro (xyz) e raggio (w) in
    coordinate del mondo. Sono i meccanismi, non la nave: aprire su tutta la
@@ -424,6 +425,42 @@ const INNESTO_SCINTILLE = /* glsl */`
   vec3 acqRif = reflect(-acqV, acqNMondo);
   vec3 acqCielo = mix(uColMare, uColCielo, smoothstep(-0.06, 0.16, acqRif.y));
 
+  /**
+   * ─── LA NAVE FA OMBRA SULL'ACQUA, e senza non ha peso
+   *
+   * SINTOMO, misurato sullo scatto della battuta principale: l'acqua sotto la
+   * carena sta a 64,4/255 e quella lontana a 60,7 -- e' PIU' CHIARA di cinque
+   * livelli. In una fotografia e' il contrario e di molto: uno scafo bianco
+   * copre il cielo all'acqua che gli sta sotto. Senza quella fascia la nave
+   * galleggia SOPRA il mare invece che dentro, ed e' uno dei segni con cui
+   * l'occhio riconosce un montaggio.
+   *
+   * Il riflesso della nave c'era gia' -- ed e' lui a spiegare i +5 -- ma dice
+   * cosa si VEDE nell'acqua, non quanta luce le ARRIVA.
+   *
+   * DOVE VA, ed e' il punto: qui, sul cielo, PRIMA che il riflesso della nave
+   * lo sostituisca. Messo in coda smorzava anche il riflesso, cioe' cancellava
+   * l'immagine della nave insieme alla sua ombra -- che e' il contrario di una
+   * fotografia, dove sotto la murata bianca si vede la murata bianca dentro una
+   * fascia scura.
+   *
+   * COME. La stessa geometria del riflesso, per un'altra domanda: quanto cielo
+   * vede questo punto d'acqua. Il punto si porta nel sistema della nave diviso
+   * per i semiassi -- dove l'ellissoide e' una sfera di raggio uno -- e conta
+   * quanto e' lontano dall'asse.
+   *
+   * E' un'approssimazione DICHIARATA: l'occlusione vera dipende dall'altezza
+   * della murata e dall'angolo, questa solo dalla distanza. E' monotona nel
+   * verso giusto e costa una radice, mentre quella esatta costerebbe un
+   * secondo tracciamento per fotogramma.
+   */
+  if (uNaveForza > 0.0 && uNaveOmbra > 0.0) {
+    vec3 op = (uNaveInv * vec4(vMondo, 1.0)).xyz / uNaveSemi;
+    float occ = smoothstep(1.9, 0.75, length(op.xz)) * uNaveOmbra;
+    acqCielo *= (1.0 - occ);
+    diffuseColor.rgb *= (1.0 - occ * 0.55);
+  }
+
   /* --- LA NAVE COPRE IL CIELO DOVE IL RAGGIO RIFLESSO LA INCONTRA.
      Punto e direzione si portano nel sistema della nave e si dividono per i
      semiassi: l'ellissoide diventa una sfera di raggio 1, e il test e' la
@@ -722,6 +759,18 @@ export function costruisciAcqua (opzioni = {}) {
     uNaveCol: { value: new Color(0x2a3338) },
     uNaveForza: { value: 0 },
     uNaveVel: { value: 0 },
+    /**
+     * Quanto la nave scurisce l'acqua che le sta vicino. Scelto guardando il
+     * confronto affiancato a 0,45 / 0,85 / 2,0 sulla stessa inquadratura: sotto
+     * 0,5 non si legge, sopra 1 la fascia diventa una macchia. A 0,85 lo scafo
+     * smette di stare SOPRA il mare e comincia a starci dentro.
+     *
+     * Non e' un numero derivato da una grandezza fisica, ed e' giusto dirlo:
+     * l'occlusione vera dipende dall'altezza della murata e dall'angolo del
+     * sole. Questa e' una scelta di messa in scena su un termine che ha il
+     * verso giusto.
+     */
+    uNaveOmbra: { value: 0.85 },
     uSpaccato: { value: 0 },
     uVarchi: { value: [new Vector4(), new Vector4()] },
     uQuantiVarchi: { value: 0 }
