@@ -450,6 +450,30 @@ const INNESTO_SCINTILLE = /* glsl */`
     }
   }
   totalEmissiveRadiance += acqCielo * (acqFres * uCielo * acqTaglio);
+
+  /**
+   * ─── E LA SUPERFICIE NASCONDE SOLO QUANTO RIFLETTE
+   *
+   * Il pelo era opaco all'88% da ogni angolo, quindi lo scafo finiva netto
+   * sulla linea d'acqua e sotto non c'era piu' nave. In una fotografia
+   * marina non succede: lo scafo continua sott'acqua e si spegne piano.
+   *
+   * La ragione fisica e' la stessa Fresnel gia' calcolata qui sopra. Una
+   * superficie d'acqua nasconde cio' che sta sotto **nella misura in cui
+   * riflette**: di scorcio riflette quasi tutto e fa da specchio, guardata
+   * ripida riflette il 2% e si vede attraverso. Quindi l'opacita' non e' una
+   * costante: e' acqFres.
+   *
+   * Non si va fino in fondo (alfa = acqFres) perche' l'acqua non e' solo
+   * un'interfaccia, e' anche un corpo che diffonde: resta un fondo del 30%
+   * anche a picco. Sotto la linea l'assorbimento vero lo fa gia' nebbiaAcqua
+   * sulla geometria, con Beer-Lambert e sigma in metri.
+   *
+   * Alla nave, che alla battuta principale sta a una trentina di metri con la
+   * camera a 3,6, l'incidenza e' 6,8 gradi: acqFres 0,54, quindi passa circa
+   * il 40%. E' esattamente il regime in cui uno scafo si vede e si spegne.
+   */
+  diffuseColor.a *= mix(1.0, 0.30, (1.0 - acqFres) * acqTaglio);
   }
 `
 
