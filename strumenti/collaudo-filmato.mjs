@@ -125,10 +125,31 @@ if (!file) {
    * Se la camera si muove, si muove in tutte e due.
    */
   const SENZA_GEOMETRIA = ['salone-mare.mp4']
+  /**
+   * --- E UNA CLIP CHE SI MUOVE APPOSTA NON VA STABILIZZATA
+   *
+   * Questo cancello nasce per il salone, e il salone ha una regola sola: la
+   * camera non si muove, perche' il finestrone e' bucato da una maschera fissa
+   * e se il vano scivola sotto la maschera si apre un foro nel legno e ci si
+   * vede il mare. Misurato su `discesa.mp4`: scivola di 321,8 px contro i 24
+   * che la maschera perdona.
+   *
+   * Ma `discesa.mp4` NON sta sotto nessuna maschera. E' la discesa dal salone
+   * al meccanismo, e la camera si muove perche' e' quello il suo mestiere:
+   * esce dal finestrone, scende, arriva sul pezzo. Chiedergli di stare ferma
+   * vorrebbe dire non averla capita.
+   *
+   * Il cancello che le tocca e' un altro, e c'e': `strumenti/consegna.mjs`,
+   * che verifica che il suo ULTIMO fotogramma combaci col PRIMO del 3D. Per
+   * una clip di transizione l'unica cosa che deve stare ferma e' il punto in
+   * cui consegna.
+   */
+  const CAMERA_CHE_SI_MUOVE = ['discesa.mp4']
   try {
     elenco = readdirSync(dir)
       .filter(f => f.endsWith('.mp4'))
       .filter(f => !SENZA_GEOMETRIA.includes(f))
+      .filter(f => !CAMERA_CHE_SI_MUOVE.includes(f))
   } catch { /* cartella assente */ }
   if (!elenco.length) {
     console.error('  ROTTO  nessun filmato in public/filmati: il capitolo del salone non ha i suoi asset.')
