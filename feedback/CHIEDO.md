@@ -146,37 +146,37 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
    più luminosa dopo la vernice bianca. **Chi sbaglia: l'ambiente o il modello
    del vetro?** (`src/scena/vetro.js`, `creaVetroLeggero`.)
 
-3. **Perché lo scafo è più chiaro del 29%?** Con camera (0,05 px), cielo,
-   curva tonale **e luci** tutti allineati — nel confronto si spengono con
-   `SENZA_LUCI=1`, in Blender con `LUCE=0` — la sovrastruttura combacia col
-   path tracer entro dieci livelli. Lo scafo no: sulle sole facce anteriori,
-   **Cycles 39,0 contro sito 50,4, cioè 1,29×**.
+3. **Lo scafo è più chiaro del 29%, e adesso so perché: mi serve la cura, non
+   la diagnosi.** Con camera (0,05 px), cielo, curva tonale e luci allineati,
+   la sovrastruttura combacia col path tracer entro dieci livelli; lo scafo è
+   **1,29×** (Cycles 39,0, sito 50,4, sulle sole facce anteriori).
 
-   Ho già escluso, ognuno con una misura: la **buccia d'arancia**
-   (`materiali.js`, spegnendola resta 2,62× sulla vecchia maschera), il guscio
-   **`interno`** (nascondendolo non cambia), i **parametri del materiale**
-   (`#707c82`, metalness 0, roughness 0,13, envMap a intensità 1 — identici a
-   quelli che Blender legge dal JSON), e il **`side`** (da DoubleSide a
-   FrontSide: 53,07 → 53,09 sulle facce anteriori).
+   Sei sospetti esclusi, ognuno con una misura: buccia d'arancia, guscio
+   `interno`, parametri del materiale, `side`, **risoluzione dell'ambiente**
+   (da 512×256 a 2048×1024, ri-renderizzando anche Blender: 1,292 → 1,315, non
+   si muove) e **speculare a incidenza radente**:
 
-   Sospetto rimasto, non verificato: l'**irradianza prefiltrata di three** —
-   PMREM su un equirettangolare di soli **512×256** — contro il campionamento
-   diretto di Cycles a roughness 0,13. A roughness 1 il rapporto resta ~2,4
-   sulla vecchia maschera, quindi sembra la parte **diffusa**, non lo speculare.
-
-   **Avvertimento, perché ti farebbe perdere tempo come l'ha fatto perdere a
-   me:** una maschera ottenuta dipingendo il materiale di emissivo include
-   anche le sue facce POSTERIORI. Su un guscio aperto quelle sono l'interno, e
-   lì Cycles non disegna niente. Misurando così avevo concluso «2,51×, causa il
-   DoubleSide» — ed era falso in tutte e due le metà.
-
-   **Da riprodurre:**
    ```
-   node strumenti/esporta-ambiente.mjs
-   SOGGETTO=nave ALFA=1 SENZA_PIANO=1 AMBIENTE_SITO=1 LUCE=0 CUOCI_CPU=1      blender -b -P riferimenti/blender/cuoci.py -- meccanismo.json <cartella>
-   SENZA_LUCI=1 SENZA_MARE=1 FUORI=<cartella> ETICHETTA=x      node strumenti/confronto-cotto.mjs
-   node strumenti/varianti.mjs
+   come sta (rugosita 0,13)   50,0   1,28x
+   rugosita 0,5               58,0   1,49x    <- irruvidire PEGGIORA
+   rugosita 1                 55,1   1,41x
+   SOLO speculare (colore 0)  13,1   0,34x    <- e solo il 26% del totale
+   senza ambiente              1,8   0,05x
    ```
+
+   **Resta la parte diffusa.** `getIBLIrradiance` legge l'ultimo livello del
+   PMREM, che è un'approssimazione dell'integrale coseno-pesato; su un ambiente
+   a forte contrasto — carta chiara sopra la linea, acqua scura sotto, che è il
+   nostro per decisione scritta — sovrastima. Cycles lo integra esatto.
+
+   **La domanda non è più «da dove viene», è «come si cura in three».** Un
+   materiale con `envMap` prende il diffuso da lì e quel solo termine non si
+   spegne; un `LightProbe` con armoniche sferiche darebbe l'irradianza giusta
+   ma coesiste male con `envMap`; compensare con `envMapIntensity` toccherebbe
+   anche lo speculare, che è già giusto. **C'è una strada che non conosco?** E
+   quanto costa per fotogramma, perché il budget di questo sito è misurato e
+   pubblicato.
+
 
 ### 3.5 · Due seguiti al tuo giro delle 07:00
 
