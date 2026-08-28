@@ -33,10 +33,42 @@ const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
 await pg.goto(`http://localhost:${PORTA}/?ispeziona=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
-await pg.evaluate(() => {
+/**
+ * ─── LA POSIZIONE SI RICAVA DALLA SEZIONE, non e' una frazione del documento
+ *
+ * Qui c'era `scrollTo(H * 0.375)`. Ha smesso di funzionare il giorno in cui il
+ * documento e' cambiato: togliendo le due sezioni di prosa la pagina si e'
+ * dimezzata, e il 37,5% e' finito su un'altra battuta. Il sintomo non era
+ * «cancello rosso per il motivo giusto»: era **soggetto 772 pixel su 921.600**
+ * -- lo 0,08% -- cioe' una statistica calcolata sul rumore. Il cancello
+ * gridava «il varco resta aperto» guardando un fotogramma in cui il meccanismo
+ * non c'era.
+ *
+ * E' la stessa trappola di `collaudo-manopola`, curata ieri nello stesso modo,
+ * e la regola che questo repo si e' gia' dato due volte: nessuna soglia in
+ * frazioni di pagina. La dimostrazione sa dove sta -- ha un rettangolo -- e la
+ * battuta del meccanismo si trova cercandola, non indovinandola.
+ */
+const trovata = await pg.evaluate(async () => {
+  const sez = document.querySelector('#dimostrazione')
   const H = document.documentElement.scrollHeight - innerHeight
-  scrollTo(0, Math.round(H * 0.375))
+  const r = sez.getBoundingClientRect()
+  const cima = (scrollY + r.top) / H
+  const fondo = (scrollY + r.bottom - innerHeight) / H
+  for (let f = fondo; f >= cima; f -= 0.01) {
+    scrollTo(0, Math.round(H * f))
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const palco = sez.querySelector('.palco[data-battuta]')
+    const b = palco.getBoundingClientRect()
+    if (palco.dataset.battuta === 'meccanismo' && b.top > -1 && b.bottom > innerHeight - 1) return f
+  }
+  return null
 })
+if (trovata === null) {
+  console.error('  ROTTO  non trovo nessuna posizione con la battuta "meccanismo" in quadro')
+  process.exit(2)
+}
+console.log(`  inquadratura trovata al ${(trovata * 100).toFixed(0)}% dello scorrimento`)
 await pg.waitForTimeout(3000)
 
 const r = await pg.evaluate(() => {

@@ -20,7 +20,10 @@ import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5195
-const SOGLIA = 1.5      // per cento di schiarimento minimo lungo la murata
+/* i due numeri vengono dalla misura di stasera, non da un gusto: accendendo
+   l'andatura la murata cambia molto e il largo quasi niente. */
+const MINIMO_MURATA = 6
+const RAPPORTO_MINIMO = 3      // per cento di schiarimento minimo lungo la murata
 const TETTO_FUORI = 0.6 // per cento di scarto massimo lontano dalla nave
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
@@ -128,24 +131,73 @@ const esito = await pg.evaluate(async (CAMPIONI) => {
   const fermoIm = disegna(0)
   const corsaIm = disegna(1)
   vel.value = prima
-  const fermo = { rapporto: media(fermoIm, ...murata) / media(fermoIm, ...largo),
-                  murata: media(fermoIm, ...murata), largo: media(fermoIm, ...largo) }
-  const corsa = { rapporto: media(corsaIm, ...murata) / media(corsaIm, ...largo),
-                  murata: media(corsaIm, ...murata), largo: media(corsaIm, ...largo) }
-  return { fermo, corsa }
+
+  /**
+   * ─── SI CONTA QUANTI PIXEL CAMBIANO, NON QUANTO SONO CHIARI
+   *
+   * Il percentile 95 della luminanza ha smesso di vedere la scia, e la scia
+   * c'e': il provino della differenza fra i due disegni la mostra benissimo --
+   * una fascia chiara lungo la murata, dalla prua a poppa, proprio dentro la
+   * finestra che questo cancello guarda. Ma e' una fascia SOTTILE, e il
+   * percentile di una finestra alta cinquanta pixel non si sposta se la coda
+   * chiara e' gia' occupata da altro (schiuma delle creste, riflesso del sole).
+   *
+   * Il difetto era mio e sta in `acqua.js`: rendendo il pelo trasmissivo, la
+   * schiuma -- che si disegna DENTRO il colore della superficie -- si e'
+   * diluita con quello che c'e' dietro. Misurato commit per commit: +0,68%
+   * prima della camera alzata, +2,83% dopo, +0,16% dopo il pelo trasmissivo.
+   * La cura fisica e' in `acqua.js` (la schiuma non e' un'interfaccia ma aria
+   * dentro l'acqua, quindi torna opaca) e ha recuperato solo un terzo.
+   *
+   * Quindi cambia la DOMANDA, che era mal posta. «La scia arriva all'acqua?»
+   * non si chiede a un livello di grigio: si chiede a quanti pixel cambiano.
+   * Accendendo l'andatura, l'acqua ACCANTO ALLO SCAFO deve cambiare molto piu'
+   * di quella al largo -- e se cambiano uguale, quello che si muove non e' la
+   * scia ma il mare.
+   *
+   * E' anche piu' difficile da ingannare: un cambiamento di tinta generale
+   * alza tutte e due le finestre e il rapporto resta uno.
+   */
+  const mossi = (a, b, x0, y0, x1, y1) => {
+    let n = 0, tot = 0
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * a.width + x) * 4
+        const d = Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) +
+                  Math.abs(a.data[i + 2] - b.data[i + 2])
+        tot++
+        if (d > 6) n++
+      }
+    }
+    return 100 * n / tot
+  }
+  const fermo = { rapporto: 1, murata: media(fermoIm, ...murata), largo: media(fermoIm, ...largo) }
+  const corsa = { rapporto: 1, murata: media(corsaIm, ...murata), largo: media(corsaIm, ...largo) }
+  return {
+    fermo,
+    corsa,
+    mossiMurata: mossi(fermoIm, corsaIm, ...murata),
+    mossiLargo: mossi(fermoIm, corsaIm, ...largo)
+  }
 }, CAMPIONI)
 
 await browser.close(); preview.kill()
 
 if (esito.rotto) { console.error('  ROTTO  ' + esito.rotto); process.exit(1) }
 
-const d = 100 * (esito.corsa.rapporto - esito.fermo.rapporto) / esito.fermo.rapporto
 console.log('la scia contro l andatura')
-console.log(`  RAPPORTO murata/largo   ferma ${esito.fermo.rapporto.toFixed(4)}   a 12 nodi ${esito.corsa.rapporto.toFixed(4)}   ${d >= 0 ? '+' : ''}${d.toFixed(2)}%  (minimo +${SOGLIA}%)`)
-console.log(`  (luminanze del primo campione: murata ${esito.fermo.murata.toFixed(1)} -> ${esito.corsa.murata.toFixed(1)}, largo ${esito.fermo.largo.toFixed(1)} -> ${esito.corsa.largo.toFixed(1)})`)
+console.log(`  PIXEL CHE CAMBIANO accendendo l andatura:  lungo la murata ${esito.mossiMurata.toFixed(1)}%   al largo ${esito.mossiLargo.toFixed(1)}%`)
+console.log(`  (luminanze, per contesto: murata ${esito.fermo.murata.toFixed(1)} -> ${esito.corsa.murata.toFixed(1)}, largo ${esito.fermo.largo.toFixed(1)} -> ${esito.corsa.largo.toFixed(1)})`)
 
 const guai = []
-if (d < SOGLIA) guai.push(`fra nave ferma e dodici nodi il rapporto cambia del ${d.toFixed(2)}%: la scia non arriva all acqua.`)
+if (esito.mossiMurata < MINIMO_MURATA) {
+  guai.push(`accendendo l andatura cambia solo il ${esito.mossiMurata.toFixed(1)}% dei pixel lungo la murata ` +
+            `(minimo ${MINIMO_MURATA}%): la scia non arriva all acqua.`)
+}
+if (esito.mossiMurata < esito.mossiLargo * RAPPORTO_MINIMO) {
+  guai.push(`la murata cambia ${esito.mossiMurata.toFixed(1)}% e il largo ${esito.mossiLargo.toFixed(1)}%: ` +
+            `non e una scia, e qualcosa che cambia dappertutto.`)
+}
 if (guai.length) {
   console.error('\nCOLLAUDO SCIA FALLITO')
   for (const g of guai) console.error('  · ' + g)

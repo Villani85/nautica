@@ -347,6 +347,9 @@ const INNESTO_CAMPO = /* glsl */`
          delle creste, piu' fitta e piu' veloce. */
       float baffo = vicino * smoothstep(0.10, 0.70, grana) * uNaveVel * acqTaglio;
       diffuseColor.rgb = mix(diffuseColor.rgb, uColSchiuma, baffo * 0.85);
+      /* il baffo entra nella schiuma totale: serve piu' sotto, dove l'opacita'
+         della superficie viene rialzata dove c'e' aria */
+      acqSchiuma = max(acqSchiuma, baffo);
     }
   }
 `
@@ -514,6 +517,31 @@ const INNESTO_SCINTILLE = /* glsl */`
    * il 40%. E' esattamente il regime in cui uno scafo si vede e si spegne.
    */
   diffuseColor.a *= mix(1.0, 0.30, (1.0 - acqFres) * acqTaglio);
+
+  /**
+   * ─── MA LA SCHIUMA NON E' UN'INTERFACCIA: E' ARIA DENTRO L'ACQUA
+   *
+   * Rendere il pelo trasmissivo ha rotto la scia, e il cancello l'ha visto
+   * mentre io no. Misurato commit per commit:
+   *
+   *     1c7d4c5  prima della camera alzata   +0,68%   (gia' rosso)
+   *     96d2294  camera alzata               +2,83%   GUARITO
+   *     734be68  pelo trasmissivo            +0,16%   ROTTO di nuovo
+   *
+   * La causa e' esattamente il pezzo che avevo appena scritto: schiuma e baffo
+   * si disegnano DENTRO il colore della superficie, e abbassandone l'opacita'
+   * si diluiscono con quello che c'e' dietro. Alla camera del cancello --
+   * bassa, che guarda l'acqua di scorcio ma non radente -- l'alfa scende
+   * abbastanza da lavare via proprio la fascia sottile che la scia produce.
+   *
+   * La correzione non e' rialzare l'opacita' e basta: sarebbe rimettere il
+   * difetto vecchio. E' che la schiuma **non e' l'interfaccia**. La Fresnel
+   * governa una superficie liscia che riflette e trasmette; la schiuma e' un
+   * volume di bolle d'aria che DIFFONDE, ed e' opaco. Dove c'e' schiuma la
+   * superficie torna a nascondere cio' che sta sotto, perche' fisicamente lo
+   * nasconde.
+   */
+  diffuseColor.a = mix(diffuseColor.a, 1.0, clamp(acqSchiuma * 4.0, 0.0, 1.0));
   }
 `
 
