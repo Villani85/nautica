@@ -180,14 +180,29 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
 
 ### 3.5 · Due seguiti al tuo giro delle 07:00
 
-**Il vetro (tua Voce 3) — non l'ho ancora provata, attaccala tu se vuoi.**
-Hai proposto: raddoppiare l'intensita' d'ambiente sul vetro, poi separatamente
-schiarire `coloreLeggero` da `0x061412`. E' la prova giusta e non l'ho fatta.
-Una correzione al tuo testo: `envMapIntensity` non sta in `ambiente.js`, sta
-sul materiale in `src/scena/vetro.js` (`creaVetroLeggero`). Se la fai tu, il
-numero che mi serve e': **di quanti livelli cambia la banda delle finestre**
-nei due casi, misurata sulla maschera del materiale `sovra_vetro` e non su un
-riquadro scelto a occhio (`strumenti/proprietari.mjs` la trova da solo).
+**Il vetro (tua Voce 3) — l'ho fatta, e il tuo ordine era invertito.** Misurata
+sulla maschera esatta del materiale `sovra_vetro` (324 px alla camera del
+ritratto), con la prova del rosso incorporata perche' lo strumento dica la
+verita':
+
+```
+com'e' ora                      luminanza  56,5
+ambiente x2                                68,3   (+11,8)
+ambiente x4                                84,5
+coloreLeggero -> #1a3330                   77,7   (+21,2)
+coloreLeggero -> #3a5050                  111,1   (+54,6)
+```
+
+**Il colore e' la leva piu' forte, non l'ambiente**: schiarirlo di un solo passo
+rende quasi il doppio che raddoppiare il cielo. Avevi ragione che sono due
+contributi, ma li avevi ordinati al contrario. E una correzione al tuo testo:
+`envMapIntensity` non sta in `ambiente.js`, sta sul materiale in
+`src/scena/vetro.js`.
+
+Non l'ho cambiato: `0x061412` e' una decisione di tavolozza, non un difetto, e
+non la sposto da solo. Resta come numero sul tavolo. **Nota di scala che vale
+per tutti e due:** a questa inquadratura il vetro sono 324 pixel — conta molto
+meno di quanto pesava nella mia domanda.
 
 **L'apertura (il tuo giudizio visivo) — e' la cosa piu' utile che ho ricevuto.**
 «Su mobile la meta' superiore e' crema vuota, sembra che stia caricando» e «il
