@@ -22,17 +22,34 @@
  * `gl.readPixels`, e c'e' una variante `PROVA_ROSSO` che DEVE spostare il
  * numero: se non lo sposta, lo strumento e' rotto e il resto non vale niente.
  *
+ * ─── E UNA TERZA, LA PIU' COSTOSA: UNA MASCHERA NON E' UNA SUPERFICIE
+ *
+ * Dipingere il materiale di emissivo da i pixel che sono SUOI -- comprese le
+ * facce POSTERIORI. Su un guscio aperto quelle sono l'interno visto da fuori,
+ * e li' il confronto non ha senso: Cycles per il ritratto della nave salta
+ * `interno` apposta, quindi non disegna niente.
+ *
+ * Misurato sulla maschera intera lo scafo usciva **2,51 volte** il path
+ * tracer, e con `FrontSide` **1,02** -- da cui avevo concluso che il difetto
+ * fosse il `DoubleSide`. Falso: quei pixel cambiavano di padrone, non di luce.
+ * Sulla maschera delle sole facce ANTERIORI, prima e dopo la modifica:
+ * **53,07 e 53,09**, cioe' il `side` non li tocca.
+ *
+ * Il numero vero, sulle sole anteriori: Cycles 39,0, sito 50,4, **1,29x**.
+ *
  * ─── COSA HA TROVATO
  *
- * Con camera, cielo, curva tonale e luci allineati fra sito e Blender, lo
- * scafo del sito era **2,51 volte** piu' luminoso del path tracer. La causa e'
- * `side: DoubleSide` in `materiali.js:63`: lo scafo e' un GUSCIO aperto -- un
- * loft, non un solido -- quindi three ne disegna anche la parete interna
- * lontana, che si somma alla vicina. Con `FrontSide` il sito va a **1,02
- * volte**, cioe' combacia entro il 2%.
+ * Con camera, cielo, curva tonale e luci allineati fra sito e Blender, la
+ * sovrastruttura combacia col path tracer entro dieci livelli, e lo scafo no:
+ * sulle sole facce anteriori e' **1,29 volte** piu' luminoso (Cycles 39,0,
+ * sito 50,4). La causa **non e' nota**. Escluso per misura: la buccia
+ * d'arancia, il guscio `interno`, i parametri del materiale, e il `side`.
  *
- * Ma il DoubleSide non si puo' togliere e basta: portando il piano di sezione
- * DENTRO lo scafo, `FrontSide` apre **9.786 pixel di buco**. Regge il taglio.
+ * Il `DoubleSide` e' stato tolto lo stesso, ma per una ragione diversa da
+ * quella che credevo: disegnare l'interno di un guscio come se fosse
+ * illuminato dal cielo e' sbagliato, e `interno` esiste apposta. Non apre
+ * nessun buco nella sezione -- zero pixel, misurati sull'ALFA e non sulla
+ * luminosita'.
  */
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'

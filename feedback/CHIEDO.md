@@ -93,7 +93,7 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | Con camera, ambiente e curva tonale allineati, il residuo fra sito e Blender è **14,2 livelli** sulla sovrastruttura | ultimo giro del confronto, `docs/15` |
 | Il corredo PBR costa **+122 KB** ma fa risparmiare 220 KB di geometria | `git show` del commit «Il meccanismo viaggia come bassa» |
 | Allineando anche cielo e curva tonale, sopra la linea d'acqua l'esposizione fra sito e Blender coincide a **+0,8 livelli** | `node strumenti/esporta-ambiente.mjs`, poi `AMBIENTE_SITO=1 SOGGETTO=nave` in `cuoci.py`, poi `confronto-cotto.mjs` |
-| Il residuo **non e' la sovrastruttura (14,2) ma lo scafo (39,9 livelli di struttura)** | stesso giro del confronto |
+| Con luci, cielo, camera e curva allineati, la sovrastruttura combacia entro 10 livelli e lo scafo e' **1,29x** piu' chiaro | `strumenti/varianti.mjs` |
 | L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
 
 ### 3.2 · Il giudizio che io non posso dare
@@ -134,48 +134,36 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
    più luminosa dopo la vernice bianca. **Chi sbaglia: l'ambiente o il modello
    del vetro?** (`src/scena/vetro.js`, `creaVetroLeggero`.)
 
-3. **Da dove vengono 38 livelli sullo scafo?** È la domanda migliore che ho, e
-   la metto per ultima solo perché è la più lunga. Con camera (0,05 px), cielo,
+3. **Perché lo scafo è più chiaro del 29%?** Con camera (0,05 px), cielo,
    curva tonale **e luci** tutti allineati — nel confronto si spengono con
-   `SENZA_LUCI=1`, in Blender con `LUCE=0`, e resta la sola risposta
-   all'ambiente — il risultato è:
+   `SENZA_LUCI=1`, in Blender con `LUCE=0` — la sovrastruttura combacia col
+   path tracer entro dieci livelli. Lo scafo no: sulle sole facce anteriori,
+   **Cycles 39,0 contro sito 50,4, cioè 1,29×**.
 
-   ```
-   sovrastruttura   scarto  9,7 livelli   esposizione  -1,2   struttura 12,3
-   scafo emerso     scarto 32,6           esposizione +20,5   struttura 35,4
-   ```
+   Ho già escluso, ognuno con una misura: la **buccia d'arancia**
+   (`materiali.js`, spegnendola resta 2,62× sulla vecchia maschera), il guscio
+   **`interno`** (nascondendolo non cambia), i **parametri del materiale**
+   (`#707c82`, metalness 0, roughness 0,13, envMap a intensità 1 — identici a
+   quelli che Blender legge dal JSON), e il **`side`** (da DoubleSide a
+   FrontSide: 53,07 → 53,09 sulle facce anteriori).
 
-   La sovrastruttura **combacia col path tracer entro dieci livelli**. Lo scafo
-   no, ed è più chiaro. Campionando sei zone:
+   Sospetto rimasto, non verificato: l'**irradianza prefiltrata di three** —
+   PMREM su un equirettangolare di soli **512×256** — contro il campionamento
+   diretto di Cycles a roughness 0,13. A roughness 1 il rapporto resta ~2,4
+   sulla vecchia maschera, quindi sembra la parte **diffusa**, non lo speculare.
 
-   ```
-   tuga faccia sx    -3  -1  +2      scafo fiancata alta   +37 +37 +38
-   tuga faccia dx    +7  +6  +7      scafo fiancata bassa  +40 +43 +46
-                                     scafo prua            +33 +31 +31
-                                     scafo poppa           +44 +40 +37
-   ```
-
-   Un sollevamento **uniforme sui tre canali**, senza spostamento di tinta, su
-   **un solo materiale**.
-
-   Ho già escluso due cose. **Non è la buccia d'arancia** (`materiali.js:242`):
-   spegnendola il residuo va da 41,2 a 40,8, anche se da sola cambia 3.249 px
-   di 50 livelli — è rumore ad alta frequenza sopra una differenza sistematica.
-   **Non è il materiale**, letto dal vivo nel browser: `scafo` è `#707c82`,
-   metalness 0, roughness 0,13, envMap a intensità 1, emissivo nero, nessuna
-   lightmap — e il JSON che Blender legge porta gli stessi identici numeri.
-
-   I due sospetti che non ho ancora escluso: il **`side: DoubleSide`** dello
-   scafo contro l'`interno` che `cuoci.py` salta apposta per la nave
-   (riga ~330), e la differenza fra l'**irradianza prefiltrata di three**
-   (PMREM su un equirettangolare di soli 512×256) e il campionamento diretto di
-   Cycles a roughness 0,13.
+   **Avvertimento, perché ti farebbe perdere tempo come l'ha fatto perdere a
+   me:** una maschera ottenuta dipingendo il materiale di emissivo include
+   anche le sue facce POSTERIORI. Su un guscio aperto quelle sono l'interno, e
+   lì Cycles non disegna niente. Misurando così avevo concluso «2,51×, causa il
+   DoubleSide» — ed era falso in tutte e due le metà.
 
    **Da riprodurre:**
    ```
    node strumenti/esporta-ambiente.mjs
    SOGGETTO=nave ALFA=1 SENZA_PIANO=1 AMBIENTE_SITO=1 LUCE=0 CUOCI_CPU=1      blender -b -P riferimenti/blender/cuoci.py -- meccanismo.json <cartella>
    SENZA_LUCI=1 SENZA_MARE=1 FUORI=<cartella> ETICHETTA=x      node strumenti/confronto-cotto.mjs
+   node strumenti/varianti.mjs
    ```
 
 ---
