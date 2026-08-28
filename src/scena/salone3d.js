@@ -208,7 +208,19 @@ export function creaSalone3D (base, tuga) {
   mareTex.center.set(0.5, 1 - ORIZZONTE)   // il PIVOT E' L'ORIZZONTE
   mareTex.repeat.set(1 / INGRANDIMENTO, 1 / INGRANDIMENTO)
 
-  const mare = new Mesh(geo, new MeshBasicMaterial({ map: mareTex, toneMapped: false }))
+  const mare = new Mesh(geo, new MeshBasicMaterial({ map: mareTex, toneMapped: false, transparent: true }))
+  /* stessa cura della stanza, e per lo stesso difetto: durante l'uscita anche
+     questo piano mostrava il proprio bordo, ed era il taglio netto in alto che
+     restava dopo aver curato la stanza */
+  mare.material.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <map_fragment>', `#include <map_fragment>
+{
+  vec2 b = min(vMapUv, 1.0 - vMapUv);
+  diffuseColor.a *= smoothstep(0.0, 0.06, min(b.x, b.y));
+}`)
+  }
+  mare.material.customProgramCacheKey = () => 'salone-mare-bordo-1'
   mare.position.z = -PROFONDITA
   gruppo.add(mare)
 
@@ -256,8 +268,55 @@ export function creaSalone3D (base, tuga) {
   const stanza = new Mesh(geo, new MeshBasicMaterial({
     map: stanzaTex, alphaMap: mascheraRuota, transparent: true, toneMapped: false
   }))
+  /**
+   * Il bordo si spegne negli ultimi 6% della lastra. Sotto il 3% non copre il
+   * taglio; sopra il 10% comincia a mangiare il divano, che sta vicino al
+   * bordo destro della fotografia.
+   *
+   * Si moltiplica `diffuseColor.a` DOPO `alphamap_fragment`, o la maschera del
+   * finestrone -- che arriva li' -- sovrascriverebbe la sfumatura.
+   */
+  stanza.material.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <alphamap_fragment>', `#include <alphamap_fragment>
+{
+  vec2 b = min(vMapUv, 1.0 - vMapUv);
+  float bordo = smoothstep(0.0, 0.06, min(b.x, b.y));
+  diffuseColor.a *= bordo;
+}`)
+  }
+  stanza.material.customProgramCacheKey = () => 'salone-bordo-1'
   stanza.position.z = 0.004
   gruppo.add(stanza)
+
+  /**
+   * ─── LA LASTRA NON DEVE FINIRE DI TAGLIO
+   *
+   * SINTOMO, dal video del sito: durante l'uscita la camera indietreggia, la
+   * fotografia rimpicciolisce e il suo RETTANGOLO entra nell'inquadratura --
+   * un bordo netto in alto contro la carta della pagina, e i lati che leggono
+   * come il margine di una scheda. In quei secondi chi guarda capisce come e'
+   * costruito il trucco. Segnalato da una revisione esterna guardando il
+   * video, e riprodotto qui: a scorrimento 0,10 il bordo alto sta a meta'
+   * schermo con la pagina sopra.
+   *
+   * PERCHE' `DEBORDO` NON BASTA: quella costante tiene la camera abbastanza
+   * vicina da far debordare la fotografia del 32%, ma vale mentre si sta
+   * DENTRO. Durante l'uscita la camera va oltre.
+   *
+   * COSA HO PROVATO PRIMA, e non funziona: un piano scuro molto piu' grande
+   * dietro la lastra, a fare da interno dello scafo. Misurato dipingendolo di
+   * rosso e contando i pixel: copre lo **0,0% dello schermo**, perche' la
+   * geometria della nave sta proprio li' attorno e lo occlude. Un piano
+   * dietro non risolve niente, e senza il provino rosso l'avrei spedito
+   * credendo di aver curato qualcosa.
+   *
+   * QUELLO CHE FUNZIONA a prescindere dagli occlusori e' agire sui pixel della
+   * lastra stessa: l'alfa si spegne verso il bordo. Non c'e' piu' un taglio --
+   * c'e' una stanza che sfuma nel buio, che e' anche cio' che si vede
+   * davvero guardando dentro un ambiente da fuori.
+   */
+
 
   /** 3 · LA POSA PUNTELLATA, sopra la calma quando la stanza rolla davvero. */
   const tesa = vTesa
