@@ -37,7 +37,15 @@ export function creaLetture (el) {
      * Niente e' scritto a mano: se la fisica cambia, cambia la frase.
      */
     if (el.pinna) el.pinna.textContent = grad(S.pinna * 180 / Math.PI)
-    if (el.nudo) el.nudo.textContent = grad(Math.abs(S.rollioNudo))
+    /**
+     * IL PICCO, NON L'ISTANTE. La frase e' «senza, X gradi di rollio», che e'
+     * un'affermazione di grandezza; con il valore istantaneo si leggeva
+     * «ROLL 16,4» accanto a «without it, 2,8» -- il controfattuale piu'
+     * piccolo del fatto, che sembra un errore e non lo era. Le due grandezze
+     * oscillano e venivano campionate a fasi diverse. Verificato sulle
+     * escursioni: acceso 1,34 contro 14,60, spento 16,48 contro 16,97.
+     */
+    if (el.nudo) el.nudo.textContent = grad(Math.abs(S.piccoNudo))
     if (el.rollio2) el.rollio2.textContent = grad(Math.abs(S.rollio))
 
     /**

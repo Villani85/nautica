@@ -255,6 +255,8 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     pinna: 0,
     pinnaVel: 0,
     picco: 0,
+    /* il picco della corsa NUDA, sulla stessa finestra: vedi la nota in `passo` */
+    piccoNudo: 0,
     riduzione: 0,       // MISURATA, non dichiarata
     carico: 0,
     recupero: 0,
@@ -299,6 +301,27 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     S.rollio = MathUtils.radToDeg(viva.c.theta)
     S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)
     S.picco = MathUtils.radToDeg(viva.c.picco)
+    /**
+     * ─── IL PICCO ANCHE DELLA NAVE NUDA, e serve a non contraddirsi
+     *
+     * In pagina la frase e' «fin 0,0 gradi -- without it, X gradi of roll»,
+     * accanto alla lettura «ROLL Y». Erano tutti e due ISTANTANEI, e due
+     * grandezze che oscillano campionate nello stesso momento stanno a fasi
+     * diverse: si vedeva «ROLL 16,4» accanto a «without it, 2,8», che a chi
+     * guarda sembra un errore -- il controfattuale piu' piccolo del fatto.
+     *
+     * Non era un errore. Verificato misurando le ESCURSIONI su nove secondi
+     * invece dei valori istantanei: impianto acceso, viva 1,34 gradi contro
+     * 14,60 della nuda; spento, 16,48 contro 16,97, cioe' coincidono. Il
+     * modello e' giusto e lo era gia'.
+     *
+     * Ma la frase «senza, X gradi di rollio» e' un'affermazione di GRANDEZZA,
+     * non un'istantanea, e va detta con una grandezza: il picco sulla stessa
+     * finestra con cui il sito misura gia' quello della nave viva. Cosi' le due
+     * letture diventano confrontabili e smettono di sembrare in contraddizione
+     * senza che nessun numero venga addolcito.
+     */
+    S.piccoNudo = MathUtils.radToDeg(nuda.c.picco)
     S.pinna = viva.c.alfa
     S.pinnaVel = dt > 0 ? (viva.c.alfa - viva.c.alfaPrec) / dt : 0
 
