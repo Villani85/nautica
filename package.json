@@ -8,7 +8,7 @@
     "preview": "vite preview --port 5180",
     "peso": "node strumenti/peso.mjs",
     "riduzioni": "node strumenti/genera-riduzioni.mjs",
-    "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs && node strumenti/collaudo-fantasma.mjs && node strumenti/collaudo-filmato.mjs && node strumenti/collaudo-normali.mjs && node strumenti/collaudo-glb.mjs && node strumenti/collaudo-gltf.mjs && node strumenti/collaudo-continuita.mjs && node strumenti/collaudo-cinematica.mjs && node strumenti/collaudo-manopola.mjs && node strumenti/collaudo-ridotto.mjs && node strumenti/collaudo-telefono.mjs && node strumenti/peso.mjs",
+    "collaudo": "node strumenti/collaudo-rollio.mjs && node strumenti/collaudo-scafo.mjs && node strumenti/collaudo-mare.mjs && node strumenti/collaudo-fantasma.mjs && node strumenti/collaudo-filmato.mjs && node strumenti/collaudo-normali.mjs && node strumenti/collaudo-glb.mjs && node strumenti/collaudo-gltf.mjs && node strumenti/collaudo-continuita.mjs && node strumenti/collaudo-orizzonte.mjs && node strumenti/collaudo-cinematica.mjs && node strumenti/collaudo-manopola.mjs && node strumenti/collaudo-ridotto.mjs && node strumenti/collaudo-telefono.mjs && node strumenti/peso.mjs",
     "collaudo:impaginato": "node strumenti/collaudo-impaginato.mjs",
     "collaudo:posa": "node strumenti/collaudo-posa.mjs",
     "sagome": "node strumenti/sagoma.mjs",

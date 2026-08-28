@@ -301,13 +301,20 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 }
 .scena{position:absolute;inset:0}
 
-/* ─── UN VELO SOTTO LA LINEA, SOLO NELLA BATTUTA DEL SALONE
+/* ─── UN VELO SOTTO LA LINEA, IN TUTTE LE BATTUTE
 
-   Nelle altre battute la meta' bassa e' acqua scura e le letture ci si
-   staccano sopra. Nella prima, da quando il salone e' entrato nella scena, la
-   meta' bassa e' una FOTOGRAFIA — divani chiari, una lampada accesa — e sopra
-   quella «SEA STATE», «SPEED» e l'interruttore si perdono. Misurato guardando
-   la prima schermata: il testo tenue su un cuscino avorio non si legge.
+   Qui c'era scritto «solo nella battuta del salone», con questa ragione:
+   «nelle altre battute la meta' bassa e' acqua scura e le letture ci si
+   staccano sopra». Era vera, e l'ho resa falsa io alzando la camera sopra il
+   pelo: la meta' bassa non e' piu' una campitura scura, e' un mare fotografato
+   con schiuma e scintille.
+
+   Misurato sotto la fascia dei comandi, prima e dopo l'alzata: la media del
+   fondo passa da 41,5 a 101,9 e lo scarto tipo da 20,2 a **43,4** -- il testo
+   tenue e' finito su un fondo di mezzo tono che si agita. Nella prima battuta
+   il problema era gia' lo stesso per un'altra ragione (la meta' bassa e' una
+   FOTOGRAFIA: divani chiari, una lampada accesa), e la cura era gia' scritta:
+   basta smettere di restringerla a quella battuta.
 
    Il velo parte dalla linea e si spegne scendendo, quindi al 50% e' a zero: la
    giunzione col fondo CSS resta quella che era, e non si aggiunge nessun
@@ -316,7 +323,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    Solo in questa battuta: `data-battuta` sul palco funziona da stanotte, prima
    puntava all'elemento sbagliato e nessuna di queste regole aveva mai
    funzionato. */
-.palco[data-battuta="salotto"] .scena::after{
+.palco .scena::after{
   content:'';position:absolute;left:0;right:0;top:50%;bottom:0;
   pointer-events:none;
   background:linear-gradient(to bottom,

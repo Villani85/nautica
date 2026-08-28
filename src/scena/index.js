@@ -815,7 +815,58 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     const fuoriZ = miraZ + Math.cos(azimut) * raggio
 
     camera.position.x = MathUtils.lerp(scarto, fuoriX, uscita)
-    camera.position.y = MathUtils.lerp(dentroY, 0, uscita)
+    /**
+     * ─── LA CAMERA NON SCENDE PIU' A ZERO, E IL MARE E' COMPARSO
+     *
+     * SINTOMO: sotto la linea d'acqua si vedeva una campitura piatta. Misurata
+     * riga per riga alla battuta della nave: **28/255, senza gradiente**. Un
+     * mare di scorcio non e' cosi' -- e' chiaro all'orizzonte, dove riflette il
+     * cielo di Fresnel, e scuro sotto.
+     *
+     * CAUSA: la camera stava DENTRO il piano dell'acqua. Da li' il mare si
+     * guarda cosi' radente che ogni onda proietta pochi pixel e tutto si media
+     * in un tono solo. Lo shader del pelo -- Fresnel, scintille, schiuma,
+     * riflesso della nave, scia -- era sano e disegnava; semplicemente non
+     * aveva area su cui farsi vedere.
+     *
+     * COME L'HO ISOLATO, e la strada e' stata piu' storta di cosi'. Prima ho
+     * accusato il velo: tolto, 40,5 -> 40,4. Non era lui. Poi ho dipinto il
+     * pelo di rosso e contato i pixel rossi: **0,0% sotto la linea**, e ho
+     * concluso -- e scritto qui, e detto fuori -- che il mare non veniva
+     * disegnato affatto. Era falso: il `pelo` ha uno shader suo che si calcola
+     * il colore e di `m.color` non sa che farsene, quindi la vernice non
+     * arrivava. La misura onesta e' spegnere il pelo e contare i pixel che
+     * cambiano: **98,9%**. Il mare c'era, su quasi tutta la meta' bassa, e non
+     * si vedeva lo stesso.
+     *
+     * Quindi il difetto non era la copertura, era la STRUTTURA: la fascia sotto
+     * l'orizzonte aveva scarto tipo 7,8 su 255. Una campitura.
+     *
+     * CURA. Non si abbassa piu' la camera al pelo: resta alla quota che ha gia'
+     * dentro il salone, 3,6 m. L'uscita diventa un volo livellato, il che e'
+     * anche piu' continuo -- il racconto non ha nessun motivo per tuffare la
+     * camera in acqua.
+     *
+     * E LA GIUNZIONE REGGE, perche' l'invariante non e' mai stata la quota: e'
+     * il BECCHEGGIO nullo (D56, ed e' scritto anche in pagina). Il sito lo
+     * aveva gia' misurato e poi non se n'era servito: a camera livellata la
+     * linea d'acqua cade al centro del fotogramma **da qualunque quota** --
+     * 0,019 px di scarto su una tela da 900. Qui quella misura smette di essere
+     * una curiosita' e diventa il permesso di alzare la camera. Verificato
+     * dopo: carta fino a y=449, il filo del taglio a 450, mare da 451.
+     *
+     * RISULTATO, stessa battuta e stesso shader: la struttura della fascia
+     * passa da 7,8 a 51,4. Da campitura a immagine.
+     *
+     * E il commit precedente era il prerequisito: con la camera in aria il
+     * cammino nell'acqua non e' piu' la distanza dal frammento, e senza quella
+     * correzione lo scafo sommerso sarebbe stato assorbito troppo ovunque,
+     * non solo all'apertura.
+     *
+     * `strumenti/collaudo-orizzonte.mjs` adesso tiene ferme tutte e due le
+     * cose, e fallisce se questa riga torna a interpolare verso zero.
+     */
+    camera.position.y = dentroY
     camera.position.z = MathUtils.lerp(tugaZ + dist, fuoriZ, uscita)
     camera.lookAt(
       MathUtils.lerp(scarto, miraX, uscita),
