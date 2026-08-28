@@ -55,7 +55,34 @@ const ZETA = 0.045               // carena nuda: smorzamento bassissimo. E' il m
                                  // gli stabilizzatori esistono. Guadagno di risonanza 1/(2ζ) = 11,1
 const A1 = 0.002851               // forzante, TARATA numericamente (vedi collaudo-rollio.mjs).
                                  // Scelta a occhio dava 162 gradi, cioe' una nave capovolta
-const K = 17.0                   // guadagno sulla velocita' di rollio
+/**
+ * Guadagno sulla velocita' di rollio. Il controllore e' proporzionale puro:
+ * niente integrale, quindi niente anti-windup da progettare.
+ *
+ * --- E NON SATURA, AL PUNTO DI LAVORO. Misurato nel sito, a regime:
+ *
+ *     come si apre (mare 4, 12 nodi)   fondo corsa 0,0%   picco pinna  9,1 gradi
+ *     mare 5, 12 nodi                  fondo corsa 0,0%   picco pinna 16,0
+ *
+ * su un fine corsa di 25. Il conto torna: con una riduzione del 90,8% a mare 5
+ * il rollio residuo e' circa 1,4 gradi, la velocita' angolare di picco 1,24
+ * gradi/s, e la soglia di saturazione e' A_MAX/K = 25/17 = 1,47 gradi/s.
+ *
+ * La saturazione esiste solo sotto i ~10 nodi, dove pero' l'autorita' della
+ * pinna va gia' col QUADRATO della velocita' ed e' comunque piccola: il
+ * controllore tenta tutto senza destabilizzare, perche' con zeta = 0,045 il
+ * sistema resta dissipativo anche a fondo corsa. E K costante non e' una
+ * mancanza di gain scheduling: l'autorita' scala gia' con v², quindi il
+ * prodotto scala con v² lo stesso.
+ *
+ * Questo commento nasce da un feedback esterno che ha attaccato un mio numero
+ * -- «la pinna sta a fondo corsa nel 94% dei fotogrammi» -- e aveva ragione.
+ * Quel 94% lo stampa `collaudo-manopola`, che misura SUBITO DOPO aver spento e
+ * riacceso l'interruttore, cioe' dentro la rampa che gonfia l'ampiezza al
+ * livello della carena nuda. Era un transitorio dentro una prova, e l'avevo
+ * riportato come il comportamento del sito.
+ */
+const K = 17.0
 const C0 = 0.2422                // autorita' delle pinne alla velocita' di riferimento
 
 const A_STALLO = MathUtils.degToRad(20)   // oltre questa incidenza la portanza CALA

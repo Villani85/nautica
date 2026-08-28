@@ -442,7 +442,7 @@ const misura = async (dove) => {
   nota(`      strada ${c.strada.toFixed(1)} rad in ${(c.durata / 1000).toFixed(1)} s = ` +
        `${(c.strada / (c.durata / 1000)).toFixed(1)} rad/s medi`)
   nota(`${dove}: albero p-p ${c.albero.toFixed(3)} rad, velocita p95 ${c.vMax.toFixed(1)} rad/s, ` +
-       `pinna a fondo corsa il ${(c.satura * 100).toFixed(0)}% ` +
+       `pinna a fondo corsa il ${(c.satura * 100).toFixed(0)}% del transitorio ` +
        `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.disegnati} fotogrammi disegnati]`)
   if (c.pinnaMax > A_MAX_DICHIARATO + 1e-3) {
     guai.push(`la pinna supera il fine corsa dichiarato: ${(c.pinnaMax * 180 / Math.PI).toFixed(1)} gradi ` +

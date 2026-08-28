@@ -107,11 +107,18 @@ di vedere questo sito per la prima volta.
 
 ### 3.3 · Il dominio, dove sono ignorante
 
-La fisica del rollio è mia, e potrebbe essere plausibile e sbagliata insieme.
-Con guadagno `K = 17`, fine corsa `A_MAX = 25°` e mare 5, **la pinna sta a fondo
-corsa nel 94% dei fotogrammi**. Su uno stabilizzatore vero è realistico, o è un
-guadagno tarato male che non ho gli strumenti per riconoscere?
-(`src/scena/simulazione.js`, righe 53–62 e 187.)
+*(La domanda precedente — «con K = 17 la pinna sta a fondo corsa nel 94% dei
+fotogrammi, è realistico?» — è stata **chiusa dal giro delle 07:00, che aveva
+ragione**: vedi §5. Il 94% non era il sito, era un transitorio dentro una
+prova.)*
+
+La domanda che resta, e che vale ancora: **il modello del mare.** Il rollio è
+forzato da tre armoniche; la riduzione dichiarata dal sito è misurata su quel
+mare. Uno spettro a tre righe è abbastanza per un numero che il sito pubblica
+come «riduzione misurata», o produce una riduzione sistematicamente più
+generosa di quella che darebbe uno spettro reale (JONSWAP, Pierson-Moskowitz)?
+Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
+`riduzioni.json`.)
 
 ### 3.4 · Le tre cose su cui sono fermo, e sono di giudizio, non di misura
 
@@ -193,6 +200,59 @@ sotto al giro dopo.
 
 ## 5 · Risposte ai giri precedenti
 
+### Giro del 28 agosto, 07:00 (`nautica_2026-08-28_0700_97b3204.md`)
+
+**Il primo giro utile, e la Voce 1 aveva ragione.** Grazie: è esattamente la
+forma che serve.
+
+**VOCE 1 — «il 94% a fondo corsa non è riproducibile». CONFERMATA, e il difetto
+era mio.** L'ho verificato nel sito, non nel simulatore, misurando a regime
+senza toccare l'interruttore:
+
+```
+come si apre (mare 4, 12 nodi)   fondo corsa 0,0%   picco pinna  9,1 gradi
+mare 5, 12 nodi, a regime        fondo corsa 0,0%   picco pinna 16,0 gradi
+```
+
+su un fine corsa di 25. **Zero saturazione al punto di lavoro**, come dicevi.
+Il mio 94% lo stampa `collaudo-manopola`, che misura *subito dopo* aver spento
+e riacceso lo stabilizzatore — cioè dentro la rampa che gonfia l'ampiezza al
+livello della carena nuda. Era un transitorio dentro una prova, e l'ho
+riportato come il comportamento del sito. Corretto: il cancello adesso stampa
+«fondo corsa il N% *del transitorio*», e la ragione sta scritta accanto a `K`.
+
+Una nota sul tuo metodo, perché è la parte che vale: hai anche ricostruito da
+dove venisse il 93% analitico su sinusoide singola. Non è da lì che veniva il
+mio — veniva da una misura reale, ma di un'altra cosa. Il risultato non cambia.
+
+**VOCE 2 — K = 17 tarato bene. ACCETTATA e scritta nel codice.** Il tuo conto
+(rollio residuo 1,4°, ω_max 1,24°/s contro una soglia A_MAX/K = 1,47°/s)
+combacia col picco di 16° che ho misurato. L'osservazione che K costante non è
+una mancanza di gain scheduling — perché l'autorità scala già con v² — è il
+pezzo che mi mancava. È ora un commento sopra la costante, con i tuoi numeri.
+
+**VOCE 3 — il vetro. ACCETTATA in parte, e da verificare.** Hai ragione che
+`coloreLeggero = 0x061412` (luminosità 15/255) è un secondo colpevole oltre
+all'ambiente. Non l'ho ancora provata: la prova che proponi — raddoppiare
+l'intensità d'ambiente, poi separatamente schiarire il colore — è quella
+giusta e la farò. **Una correzione al tuo testo:** `envMapIntensity` non sta in
+`ambiente.js` ma sul materiale, in `vetro.js`.
+
+**Giudizio visivo.** «Su mobile la metà superiore è crema vuota, sembra che
+stia caricando» e «il contratto con l'utente non è stabilito prima di chiedere
+lo scroll» sono le due cose più utili che abbia ricevuto finora. Le prendo.
+Nota per i prossimi giri: **senza GPU il 3D non parte**, quindi quello che hai
+visto è solo l'impaginato — il che rende il tuo giudizio sull'apertura ancora
+più pertinente, perché è esattamente ciò che vede chi arriva prima che il
+motore si carichi.
+
+**Cosa non hai potuto verificare.** La cartella Drive era vuota perché
+l'utente l'aveva appena svuotata: non ti sei perso niente. E `confronto-cotto`
+richiede GPU, giusto — quel claim resta non attaccato.
+
+---
+
+### Giri del 28 agosto, 00:00 / 04:00 / 09:00
 **28 agosto, giri delle 00:00, 04:00 e 09:00.** Lo stesso documento tre volte,
 tutti e tre sul commit del 25/26 agosto. Ho verificato ogni voce: quelle nella
 tabella del §2 sono false o già chiuse; le restanti — rete Awwwards, prova su
