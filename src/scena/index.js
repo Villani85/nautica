@@ -13,7 +13,7 @@ import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
-import { avanza } from '../stato.js'
+import { avanza, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
@@ -664,7 +664,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * girare il video del salone. Spegnerlo non faceva un sito piu' calmo,
      * faceva una fotografia. Vedi `simulazione.js`: si riduce, non si spegne.
      */
-    t += dt
+    /* inchiodato, il tempo delle onde e' lo stesso della simulazione: vedi
+       `FERMO_A` in `stato.js`, che spiega perche' non basta fermarne uno */
+    if (FERMO_A !== null) t = FERMO_A
+    else t += dt
 
     // Il passo della simulazione non lo fa piu' questa scena: lo fa `stato.js`,
     // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo

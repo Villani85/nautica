@@ -24,7 +24,62 @@ import { creaSimulazione } from './scena/simulazione.js'
 const preferenza = window.matchMedia('(prefers-reduced-motion: reduce)')
 const forzato = location.search.includes('ridotto=1')
 
-export const sim = creaSimulazione({ ridotto: preferenza.matches || forzato })
+/**
+ * ─── FERMARE LA SCENA SU UN ISTANTE PRECISO, e perche' non se ne poteva piu'
+ * fare a meno
+ *
+ *     ?fermo=12.5
+ *
+ * La scena e' viva: la nave rolla, la pinna oscilla, e due fotogrammi presi
+ * allo stesso scorrimento a venti minuti di distanza mostrano pose diverse.
+ * Finche' e' cosi', **nessuna misura fatta su un fotogramma si puo' rifare**.
+ * L'ho pagata: lo stesso identico programma mi ha dato 8,50 e 1,96 misurando
+ * la grana della pinna, e da quei numeri avevo gia' tirato due conclusioni.
+ * Un metro che risponde due cose diverse alla stessa domanda non e' un metro.
+ *
+ * ─── E NON E' UNA POSA FINTA
+ *
+ * La strada facile sarebbe scrivere a mano un angolo di rollio e uno di pinna.
+ * Sarebbe una bugia della stessa famiglia di quelle che questo sito rifiuta: si
+ * misurerebbe una posa che la fisica non produce.
+ *
+ * Qui invece si INTEGRA davvero, da zero fino all'istante chiesto, a passo
+ * fisso. Lo stato che si ottiene e' uno stato vero della simulazione -- solo,
+ * sempre lo stesso. Poi il tempo smette di avanzare.
+ *
+ * Il passo e' 1/120 e non il dt del disegno perche' il dt del disegno dipende
+ * da quanto e' carica la macchina, ed e' proprio quello che rende la posa
+ * irripetibile.
+ */
+const FERMO = Number(new URLSearchParams(
+  typeof location === 'undefined' ? '' : location.search).get('fermo'))
+/**
+ * L'istante a cui la scena e' inchiodata, o `null` se il tempo scorre. Lo
+ * legge anche `scena/index.js` per le onde, che hanno un orologio loro: se ne
+ * fermasse uno solo il fotogramma resterebbe irripetibile e non si capirebbe
+ * perche'. Un parametro letto in due posti diverge; letto qui e importato, no.
+ */
+export const FERMO_A = (Number.isFinite(FERMO) && FERMO > 0) ? FERMO : null
+const PASSO_FERMO = 1 / 120
+let inchiodata = false
+
+/**
+ * ─── E CON `?fermo` ANCHE IL MARE HA UN SEME
+ *
+ * Senza seme le fasi delle onde sono casuali a ogni visita, ed e' voluto: due
+ * persone non incontrano la stessa onda. Ma allora due fotogrammi presi allo
+ * stesso istante in due caricamenti diversi mostrano DUE MARI DIVERSI, e
+ * fermare il tempo non basta -- l'ho scoperto cosi': avevo inchiodato la
+ * simulazione, l'orologio delle onde e la dimostrazione automatica, e lo stato
+ * continuava a uscire diverso. Non era un terzo cronometro: era il caso, che
+ * sta nella COSTRUZIONE e non nel passo.
+ *
+ * Il seme esisteva gia', per il cancello del fantasma. Qui si riusa.
+ */
+export const sim = creaSimulazione({
+  ridotto: preferenza.matches || forzato,
+  seme: FERMO_A !== null ? 20260829 : undefined
+})
 
 /**
  * LA CONDIZIONE DI PARTENZA DELLA VISITA — mare quattro, sistema ACCESO.
@@ -84,7 +139,19 @@ sim.scalda()
  */
 let ultimaMarca = -1
 let tempo = 0
+
+
 export function avanza (dt, marca) {
+  if (FERMO_A !== null) {
+    if (!inchiodata) {
+      inchiodata = true
+      for (let t = 0; t < FERMO_A; t += PASSO_FERMO) {
+        tempo = Math.min(t + PASSO_FERMO, FERMO_A)
+        sim.passo(PASSO_FERMO, tempo)
+      }
+    }
+    return tempo
+  }
   if (marca !== undefined && marca === ultimaMarca) return tempo
   ultimaMarca = marca
   tempo += dt

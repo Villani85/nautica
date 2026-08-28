@@ -1,5 +1,5 @@
 import { creaScena } from './scena/index.js'
-import { sim, statoCambiato } from './stato.js'
+import { sim, statoCambiato, FERMO_A } from './stato.js'
 import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
 import { creaRegia } from './regia.js'
@@ -136,8 +136,14 @@ export function avviaDimostrazione () {
         vivo.closest('.battuta')?.setAttribute('data-vivo', acceso ? 'si' : 'no')
       }
       /* `?senzaDimostra=1` la spegne: serve ai cancelli che misurano i salti
-         al clic, dove una dimostrazione che parte da sola e' rumore. */
-      if (acceso && !new URLSearchParams(location.search).has('senzaDimostra')) {
+         al clic, dove una dimostrazione che parte da sola e' rumore.
+         E la spegne anche `?fermo`, che e' la stessa esigenza portata fino in
+         fondo: una scena inchiodata a un istante non puo' avere un cronometro
+         che le cambia l'interruttore sotto. E' il pezzo che mancava -- avevo
+         fermato la simulazione e l'orologio delle onde, e due fotogrammi
+         restavano diversi perche' in uno lo stabilizzatore era acceso e
+         nell'altro no. */
+      if (acceso && FERMO_A === null && !new URLSearchParams(location.search).has('senzaDimostra')) {
         setTimeout(() => comandi?.mostraCheSiSpegne?.(), 1400)
       }
     }

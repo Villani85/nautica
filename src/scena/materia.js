@@ -127,6 +127,33 @@ varying vec3 vPezzo;
   // una seconda scala, più larga: la lavorazione non è uniforme sul pezzo,
   // e senza questo il motivo si legge come un reticolo
   d = mix(d, disturbo(p * 0.23), 0.45);
+  /**
+   * ─── E QUI SI SPEGNE QUANDO NON CI STA PIU' NEL PIXEL
+   *
+   * Una texture ha le mipmap: quando il motivo diventa piu' fitto del pixel,
+   * la GPU restituisce la MEDIA invece di un campione a caso. Un motivo
+   * procedurale non ce le ha. Nessuno gliele da', e allora sotto Nyquist non
+   * sfuma: **alias**, cioe' puntini bianchi sparsi -- e su una superficie
+   * illuminata da un ambiente quei puntini diventano scintille.
+   *
+   * E' il difetto che sulla pinna leggeva come carta vetrata nel fotogramma in
+   * cui il sito consegna il 3D. Misurato con la scena inchiodata (?fermo=):
+   * la grana passa da **7,88 a 4,10** spegnendo la lavorazione con
+   * ?materia=0, cioe' meta' del difetto e' questa.
+   *
+   * fwidth dice di quanto cambia la coordinata del rumore da un pixel al
+   * successivo -- ed e' il terzo apostrofo inverso che chiude uno di questi
+   * template a mia insaputa, per questo qui dentro non ce n'e' nessuno.
+   * Quando cambia di piu' di mezzo periodo si e' sotto Nyquist e
+   * la perturbazione si spegne: sopra si tiene tutta. Non e' una taratura a
+   * occhio, e' la stessa soglia che governa qualunque campionamento.
+   *
+   * Il pezzo NON perde niente da lontano: da lontano il motivo non era
+   * visibile, era solo rumore che fingeva di essere dettaglio.
+   */
+  float passo = max(length(fwidth(p.xy)), length(fwidth(p.yz)));
+  float nitido = 1.0 - smoothstep(0.35, 1.0, passo);
+  d *= nitido;
   roughnessFactor = clamp(roughnessFactor + d * ${forza.toFixed(3)}, 0.03, 1.0);
 ${fasciame > 0 ? `
   /**
@@ -204,7 +231,7 @@ ${fasciame > 0 ? `
   }
   // La chiave dipende dai parametri: due materiali con lavorazioni diverse
   // devono compilare due programmi, non condividerne uno.
-  const chiave = `lavorazione-${scala}-${forza}-${direzione}-${rilievo}-${fasciame}-${assefasciame}`
+  const chiave = `lavorazione2-${scala}-${forza}-${direzione}-${rilievo}-${fasciame}-${assefasciame}`
   /* anche la chiave si compone: due patch diverse sullo stesso materiale devono
      dare due programmi diversi, e scartare la chiave di chi c'era prima
      rimetterebbe insieme cose che non lo sono */
