@@ -127,9 +127,49 @@ guadagno tarato male che non ho gli strumenti per riconoscere?
    più luminosa dopo la vernice bianca. **Chi sbaglia: l'ambiente o il modello
    del vetro?** (`src/scena/vetro.js`, `creaVetroLeggero`.)
 
-3. Con camera, ambiente e curva tonale finalmente allineati, il residuo fra sito
-   e Blender è **14,2 livelli sulla sovrastruttura e circa 40 sullo scafo**.
-   **Dove guarderesti per primo?**
+3. **Da dove vengono 38 livelli sullo scafo?** È la domanda migliore che ho, e
+   la metto per ultima solo perché è la più lunga. Con camera (0,05 px), cielo,
+   curva tonale **e luci** tutti allineati — nel confronto si spengono con
+   `SENZA_LUCI=1`, in Blender con `LUCE=0`, e resta la sola risposta
+   all'ambiente — il risultato è:
+
+   ```
+   sovrastruttura   scarto  9,7 livelli   esposizione  -1,2   struttura 12,3
+   scafo emerso     scarto 32,6           esposizione +20,5   struttura 35,4
+   ```
+
+   La sovrastruttura **combacia col path tracer entro dieci livelli**. Lo scafo
+   no, ed è più chiaro. Campionando sei zone:
+
+   ```
+   tuga faccia sx    -3  -1  +2      scafo fiancata alta   +37 +37 +38
+   tuga faccia dx    +7  +6  +7      scafo fiancata bassa  +40 +43 +46
+                                     scafo prua            +33 +31 +31
+                                     scafo poppa           +44 +40 +37
+   ```
+
+   Un sollevamento **uniforme sui tre canali**, senza spostamento di tinta, su
+   **un solo materiale**.
+
+   Ho già escluso due cose. **Non è la buccia d'arancia** (`materiali.js:242`):
+   spegnendola il residuo va da 41,2 a 40,8, anche se da sola cambia 3.249 px
+   di 50 livelli — è rumore ad alta frequenza sopra una differenza sistematica.
+   **Non è il materiale**, letto dal vivo nel browser: `scafo` è `#707c82`,
+   metalness 0, roughness 0,13, envMap a intensità 1, emissivo nero, nessuna
+   lightmap — e il JSON che Blender legge porta gli stessi identici numeri.
+
+   I due sospetti che non ho ancora escluso: il **`side: DoubleSide`** dello
+   scafo contro l'`interno` che `cuoci.py` salta apposta per la nave
+   (riga ~330), e la differenza fra l'**irradianza prefiltrata di three**
+   (PMREM su un equirettangolare di soli 512×256) e il campionamento diretto di
+   Cycles a roughness 0,13.
+
+   **Da riprodurre:**
+   ```
+   node strumenti/esporta-ambiente.mjs
+   SOGGETTO=nave ALFA=1 SENZA_PIANO=1 AMBIENTE_SITO=1 LUCE=0 CUOCI_CPU=1      blender -b -P riferimenti/blender/cuoci.py -- meccanismo.json <cartella>
+   SENZA_LUCI=1 SENZA_MARE=1 FUORI=<cartella> ETICHETTA=x      node strumenti/confronto-cotto.mjs
+   ```
 
 ---
 
