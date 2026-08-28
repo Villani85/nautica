@@ -685,6 +685,25 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
     acqua.chiarisci(spaccato)
+    /**
+     * ─── E ANCHE L'ASSORBIMENTO E' UNA QUOTA, DENTRO IL TAGLIO
+     *
+     * `chiarisci` fa questo da mesi sul velo, con una ragione scritta li':
+     * «dentro il taglio l'acqua e' una QUOTA, non un ambiente: piu' si entra,
+     * meno deve pesare», perche' il meccanismo leggeva come una sagoma e non
+     * come un pezzo.
+     *
+     * Da quando sigma e' derivato dal disco di Secchi -- 0,23 al metro, sette
+     * volte piu' del valore di prima -- lo stesso problema e' tornato dalla
+     * porta di Beer-Lambert: alla battuta del meccanismo la camera sta a
+     * qualche metro e resta il 16% della luce, quindi la pinna e' di nuovo una
+     * sagoma. Il difetto e' identico, la cura deve essere la stessa.
+     *
+     * Si dichiara invece di nasconderlo: fuori dal taglio l'acqua e' un mezzo
+     * fisico e assorbe come in mare; dentro il taglio e' una notazione, e il
+     * sito sta mostrando un pezzo, non una fotografia subacquea.
+     */
+    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - 0.88 * spaccato)
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)
@@ -865,8 +884,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      *
      * `strumenti/collaudo-orizzonte.mjs` adesso tiene ferme tutte e due le
      * cose, e fallisce se questa riga torna a interpolare verso zero.
+     *
+     * ─── MA LA QUOTA SCENDE COL TAGLIO, e la prima versione lo sbagliava
+     *
+     * Tenendola alta per tutto il racconto ho rotto la battuta del meccanismo:
+     * la camera restava sopra il ponte e inquadrava la fiancata, col
+     * meccanismo fuori campo. Non e' un caso -- quella battuta non ha mai
+     * avuto una quota propria, si appoggiava allo zero, ed e' scritto venti
+     * righe piu' su: «la camera resta a quota zero anche mentre si avvicina
+     * [...] il meccanismo sta a y = -0,34, cioe' compare appena SOTTO la
+     * linea». Alzando la camera quel "appena sotto" diventa "molto sotto".
+     *
+     * Quindi la quota non segue l'uscita dal salone: segue lo SPACCATO. A nave
+     * intera sta in alto, dove serve il mare; man mano che la sezione si apre
+     * torna sul pelo, dove serve il meccanismo. Ed e' anche il movimento
+     * giusto da raccontare: si esce, si guarda il mare, poi si scende.
      */
-    camera.position.y = dentroY
+    camera.position.y = dentroY * (1 - spaccato)
     camera.position.z = MathUtils.lerp(tugaZ + dist, fuoriZ, uscita)
     camera.lookAt(
       MathUtils.lerp(scarto, miraX, uscita),
