@@ -266,6 +266,17 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       for (const m of ms) {
         if (!m || visti.has(m.uuid)) continue
         if (m.name === 'pelo' || m.name === 'velo') continue
+        /**
+         * SOLO i materiali ILLUMINATI. `nebbiaAcqua` legge `vViewPosition`,
+         * che esiste nello shader di un materiale con luci e NON in quello di
+         * una linea o di un `MeshBasicMaterial`. Applicandolo a tutto, il
+         * programma di un `LineBasicMaterial` non compilava
+         * (`VALIDATE_STATUS false`, «'vViewPosition' undeclared») e la pagina
+         * sollevava sei errori -- portandosi dietro anche il caricamento della
+         * sovrastruttura, che moriva su un `undefined` a valle. Un difetto in
+         * un posto, tre sintomi in altri tre.
+         */
+        if (!(m.isMeshStandardMaterial || m.isMeshPhysicalMaterial)) continue
         if (m.userData && m.userData.immerso) continue
         visti.add(m.uuid)
         m.userData = m.userData || {}
@@ -426,7 +437,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
   sovra.caricato
-    .then(() => immergi(nave))
+    // il valore si RESTITUISCE: il passo dopo lo destruttura, e con un
+    // `then` che torna undefined la sovrastruttura moriva su
+    // «Cannot destructure property 'parti' of 'undefined'»
+    .then((v) => { immergi(nave); return v })
     .then(({ parti }) => {
       for (const m of parti) { m.castShadow = true; m.receiveShadow = true }
       /**

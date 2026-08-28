@@ -511,7 +511,12 @@ export function nebbiaAcqua (m, uni) {
     if (prima) prima.call(this, s, r)
     // lo shader d'ombra non ha `<dithering_fragment>`: li' non si applica, ed
     // e' giusto -- una mappa di profondita' non si tinge
+    // lo shader d'ombra non ha il pezzo di uscita, e uno shader senza luci non
+    // ha `vViewPosition`: in tutti e due i casi non si applica, e non e' un
+    // errore -- una mappa di profondita' non si tinge, e una linea non ha
+    // spessore d'acqua
     if (!s.fragmentShader.includes('#include <dithering_fragment>')) return
+    if (!s.fragmentShader.includes('vViewPosition')) return
     s.uniforms.acquaColore = uni.colore
     s.uniforms.acquaSigma = uni.sigma
     s.uniforms.acquaAttiva = uni.attiva
