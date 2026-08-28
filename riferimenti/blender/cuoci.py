@@ -671,6 +671,7 @@ def al_sito(v):
 print('CAMERA_SITO pos %.4f %.4f %.4f  mira %.4f %.4f %.4f  fuoco %d'
       % (al_sito(cam.location) + al_sito(centro) + (fuoco,)))
 
+
 sc.render.engine = 'CYCLES'
 
 # ─── OPTIX si VERIFICA, non si spera. Qui prima c'era un try/except che non
@@ -707,6 +708,52 @@ sc.cycles.use_denoising = True
 sc.cycles.samples = int(os.environ.get('CAMPIONI', '140'))
 sc.render.resolution_x = 1000
 sc.render.resolution_y = 620
+
+# La risoluzione va fissata PRIMA di proiettare: `world_to_camera_view` legge
+# `scene.render.resolution_x/y` per l'aspetto e per la scala. Con questo blocco
+# messo piu' in alto -- dove sembrava naturale, subito dopo la camera -- usava
+# ancora il default 1920x1080, e i pixel uscivano moltiplicati per **2,065
+# esatti su tutti e due gli assi**. Una scala isotropa pura e' la firma di un
+# errore di unita', non di un disallineamento: un disallineamento sposta, non
+# ingrandisce.
+# --- E LA CAMERA SI VERIFICA, NON SI DICHIARA
+#
+# Che le due camere coincidano finora era un'ASSUNZIONE: si passavano posizione
+# e mira, e si dava per scontato che il resto (lente, sensore, aspetto,
+# orientamento) portasse alla stessa immagine. Misurato, non ci portava: le due
+# sagome della stessa nave uscivano traslate di 15,5 px in orizzontale e 9 in
+# verticale, a scala identica (0,993).
+#
+# Una traslazione rigida non e' un difetto di resa, ed e' il modo piu'
+# silenzioso di rovinare un confronto di fotorealismo: i numeri escono, sono
+# precisi, e misurano l'inquadratura invece del render.
+#
+# Quindi si stampano i PIXEL in cui questa camera vede gli otto vertici
+# dell'ingombro. Il sito proietta gli stessi otto e li confronta: se non
+# combaciano, il confronto si ferma invece di produrre numeri belli e falsi.
+from bpy_extras.object_utils import world_to_camera_view
+bpy.context.view_layer.update()
+#
+# I punti sono FISSI, non i vertici dell'ingombro. Con l'ingombro non
+# funzionava, e la ragione vale piu' della cura: **l'ingombro del sito cambia
+# fra un giro e l'altro**, perche' la sovrastruttura arriva in differita. Due
+# giri consecutivi hanno dato `max y` 4,382 e 1,997, quindi i due lati
+# proiettavano punti diversi e lo scarto usciva 815 px.
+#
+# Coordinate del SITO; `da_sito` e' l'inversa di `al_sito`.
+def da_sito(v):
+    return Vector((v[0], -v[2], v[1]))
+
+PROVA = [(-1.9, -0.9, -8), (1.9, -0.9, -8), (-1.9, -0.9, 8), (1.9, -0.9, 8),
+         (-1.9, 4.3, -8), (1.9, 4.3, -8), (-1.9, 4.3, 8), (1.9, 4.3, 8)]
+_ang = []
+for _p in PROVA:
+    _c = world_to_camera_view(sc, cam, da_sito(_p))
+    _ang.append('%.1f,%.1f' % (_c.x * sc.render.resolution_x,
+                               (1.0 - _c.y) * sc.render.resolution_y))
+print('CAMERA_VERTICI ' + ' '.join(_ang))
+print('CAMERA_INGOMBRO_SITO min %.4f %.4f %.4f  max %.4f %.4f %.4f'
+      % (al_sito(minimo) + al_sito(massimo)))
 # `ALFA=1` rende il fondo trasparente: il canale alfa diventa la MASCHERA
 # esatta del soggetto, e serve a confrontare il render col sito sui soli pixel
 # della nave. Un rettangolo scelto a occhio non funziona -- misurato stanotte,
