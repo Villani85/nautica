@@ -70,6 +70,34 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    * tutto il pass di fotorealismo: i numeri escono, sono precisi, e misurano
    * un'altra cosa.
    */
+  /**
+   * --- E LA CURVA TONALE DEV'ESSERE LA STESSA, O SI CONFRONTANO DUE OCCHI
+   *
+   * Terzo strato dello stesso errore, dopo l'angolo di campo e l'ambiente. Il
+   * sito disegna con `ACESFilmicToneMapping` a esposizione 1; `cuoci.py` rende
+   * con `view_transform = 'AgX'` a **-1 EV**. Sono due curve diverse e uno stop
+   * di differenza, e nessuno dei due e' sbagliato: sono solo due occhi.
+   *
+   * Misurato prima di accorgersene, sulla sovrastruttura: il sito usciva
+   * **+27,3 livelli piu' chiaro** (185,6 contro 158,2), e tolto quello
+   * scostamento uniforme restavano 18,2 livelli. Cioe' il 60% di quel che
+   * sembrava «dove il tempo reale perde» era la curva.
+   *
+   * three ha AgX anche lui, quindi i due lati si fanno combaciare invece di
+   * correggere a posteriori. -1 EV vale un fattore 0,5 sull'esposizione.
+   *
+   * Si verifica il valore di partenza: se three rinumerasse le costanti, si
+   * spegne invece di misurare in silenzio con la curva sbagliata.
+   */
+  const ACES = 4, AGX = 6
+  if (n.render.toneMapping !== ACES) {
+    return { errore: 'toneMapping del sito e ' + n.render.toneMapping + ', non ACESFilmic (' +
+                     ACES + '): le costanti di three sono cambiate e questo confronto ' +
+                     'userebbe una curva a caso' }
+  }
+  n.render.toneMapping = AGX
+  n.render.toneMappingExposure = 0.5
+
   n.nave.rotation.z = 0
 
   /**
@@ -181,6 +209,8 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
 
 writeFileSync(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`,
   Buffer.from(dati.url.split(',')[1], 'base64'))
+if (dati.errore) { console.error('  ' + dati.errore); await browser.close(); preview.kill(); process.exit(1) }
+console.log('  curva tonale allineata a Blender: AgX, esposizione 0,5 (cioe -1 EV)')
 console.log(`  taglio a ${dati.sezione.toFixed(3)} - fov ${dati.fov.toFixed(2)} gradi`)
 const f3 = (a) => a.map(x => x.toFixed(3)).join(', ')
 console.log('  VERTICI (sito): ' + dati.vertici.map(v => v.map(x => x.toFixed(1)).join(',')).join(' '))

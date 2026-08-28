@@ -35,3 +35,11 @@ riferimenti/blender/meccanismo.json
 # vanno spediti a nessuno. Si riscarica con riferimenti/blender/hdri/DOVE.md
 riferimenti/blender/hdri/*.hdr
 meccanismo.json
+
+# L'ambiente del sito esportato per Blender: DERIVATO, e va rigenerato ogni
+# volta con `node strumenti/esporta-ambiente.mjs`. Committarlo significherebbe
+# che, cambiando la tavolozza in `stile.css`, il confronto con Cycles
+# continuerebbe a girare su un cielo vecchio senza dirlo -- e un confronto che
+# misura due mondi diversi senza accorgersene e' il difetto piu' caro di questo
+# pass. `cuoci.py` si ferma con un errore se manca.
+riferimenti/blender/hdri/ambiente-sito.png

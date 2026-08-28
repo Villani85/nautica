@@ -10,7 +10,7 @@ import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
-import { creaAmbiente } from './ambiente.js'
+import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente } from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
 import { avanza } from '../stato.js'
@@ -841,6 +841,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // La simulazione arriva a `disegna` come parametro, quindi qui si legge
       // l'ultima vista — scritta ogni fotogramma, non catturata alla nascita.
       get stato () { return ultimoStato },
+      /**
+       * LA TELA DELL'AMBIENTE, per darla a Blender.
+       *
+       * `cuoci.py` costruiva un gradiente SUO con la stessa idea -- carta
+       * sopra la linea, acqua sotto -- e col commento giusto: «cosi' il
+       * confronto misura il RENDER e non due mondi diversi». Ma erano due
+       * implementazioni della stessa cosa, e la seconda non aveva il disco
+       * del sole. Misurato col confronto alla stessa camera, sui pixel in
+       * comune: **scarto medio 56,85 livelli**, con lo scafo praticamente
+       * nero nella differenza. Non era il tempo reale che perdeva: erano due
+       * illuminazioni.
+       *
+       * Da qui esce la tela VERA, quella che il sito da' in pasto al
+       * PMREMGenerator. `strumenti/esporta-ambiente.mjs` la scrive su file e
+       * `cuoci.py` la riceve con AMBIENTE_HDR.
+       */
+      telaAmbiente,
       /**
        * Quanti fotogrammi sono stati DISEGNATI. Serve a distinguere due cose
        * che si leggono identiche: un meccanismo fermo e una scena che non

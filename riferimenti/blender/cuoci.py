@@ -524,19 +524,61 @@ AMBIENTE = next((x for x in _dove if x and os.path.exists(x)), _dove[1])
 # tavolozza del sito -- carta sopra la linea, acqua sotto -- che e' anche cio'
 # che il tempo reale riflette, quindi il confronto misura il RENDER e non due
 # mondi diversi. Con AMBIENTE_HDR si forza comunque.
-if SOGGETTO == 'nave' and not os.environ.get('AMBIENTE_HDR'):
+if SOGGETTO == 'nave' and not os.environ.get('AMBIENTE_HDR') and not os.environ.get('AMBIENTE_SITO'):
     AMBIENTE = ''
+
+# --- L'AMBIENTE DEL SITO, QUELLO VERO, NON UNO UGUALE
+#
+# Sotto c'e' un gradiente costruito qui con l'idea giusta -- carta sopra la
+# linea, acqua sotto -- ma era una SECONDA implementazione dell'ambiente che il
+# sito costruisce in `ambiente.js`, e non aveva il disco del sole.
+#
+# Quanto costava, misurato col confronto alla stessa camera (esatto a 0,05 px
+# da quando le due camere si verificano): sui 53.594 pixel in comune, **scarto
+# medio 56,85 livelli**, e nella mappa delle differenze lo scafo era quasi
+# nero. Attribuirlo alla resa sarebbe stato l'errore piu' costoso di tutto il
+# pass: non erano due renderer, erano due illuminazioni.
+#
+# `AMBIENTE_SITO=1` prende la tela vera, scritta da
+# `node strumenti/esporta-ambiente.mjs`.
+ROTAZIONE = math.radians(-55)
+if os.environ.get('AMBIENTE_SITO') and not os.environ.get('AMBIENTE_HDR'):
+    _sito = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         'hdri', 'ambiente-sito.png')
+    if not os.path.exists(_sito):
+        raise SystemExit('AMBIENTE_SITO=1 ma manca %s. '
+                         'Si scrive con: node strumenti/esporta-ambiente.mjs'
+                         % _sito)
+    AMBIENTE = _sito
+    # --- E LA ROTAZIONE E' ZERO, DERIVATA, NON PROVATA
+    #
+    # I -55 gradi qui sotto orientano l'HDRI dell'officina, che e' una
+    # fotografia e va girata a occhio. La tela del sito no: e' costruita nelle
+    # coordinate del sito, e le due convenzioni si incontrano da sole.
+    #
+    #   three   u = atan2(z, x)/2pi + 0.5      v = asin(y)/pi + 0.5
+    #   Blender u = -atan2(y, x)/2pi + 0.5     v = atan2(z, hypot(x,y))/pi + 0.5
+    #
+    # Con la conversione d'assi che questo file gia' usa -- sito (x,y,z) ->
+    # Blender (x,-z,y) -- la u di Blender diventa -atan2(-z,x)/2pi+0.5, cioe'
+    # ESATTAMENTE la u di three; e per un versore atan2(y, hypot(x,z)) e'
+    # asin(y), quindi anche la v. Girarla di -55 gradi metterebbe il sole da
+    # un'altra parte, e il confronto tornerebbe a misurare due mondi.
+    ROTAZIONE = 0.0
+
 if os.path.exists(AMBIENTE):
     env = wn.nodes.new('ShaderNodeTexEnvironment')
     env.image = bpy.data.images.load(AMBIENTE)
     rot = wn.nodes.new('ShaderNodeMapping')
-    rot.inputs['Rotation'].default_value = (0, 0, math.radians(-55))
+    rot.inputs['Rotation'].default_value = (0, 0, ROTAZIONE)
     cc = wn.nodes.new('ShaderNodeTexCoord')
     wn.links.new(cc.outputs['Generated'], rot.inputs['Vector'])
     wn.links.new(rot.outputs['Vector'], env.inputs['Vector'])
     wn.links.new(env.outputs['Color'], sf.inputs[0])
     sf.inputs[1].default_value = 1.0
-    print('AMBIENTE officina: ' + AMBIENTE)
+    print('AMBIENTE %s: %s (rotazione %.1f gradi)'
+          % ('del sito' if ROTAZIONE == 0.0 else 'officina', AMBIENTE,
+             math.degrees(ROTAZIONE)))
 else:
     gr = wn.nodes.new('ShaderNodeTexGradient'); gr.gradient_type = 'EASING'
     cc = wn.nodes.new('ShaderNodeTexCoord')
