@@ -286,6 +286,31 @@ export function creaSalone3D (base, tuga) {
 }`)
   }
   stanza.material.customProgramCacheKey = () => 'salone-bordo-1'
+
+  /**
+   * ─── L'IMBOTTO DEL FINESTRONE: PROVATO E NON SPEDITO
+   *
+   * L'idea era dare spessore al montante che separa il vetro dalla stanza --
+   * una scatola di 55 cm che sporge verso la camera -- perche' e' l'unico
+   * imbotto che esiste davvero: la maschera dice che il finestrone occupa
+   * x 0,000-0,551 a tutta altezza, cioe' e' un'apertura a filo, non una
+   * finestra incorniciata. Il colore era misurato sul fotogramma (rgb 30,18,12,
+   * media della colonna del montante), non scelto.
+   *
+   * NON LO SPEDISCO perche' non sono riuscito a verificarlo dove conta. Il
+   * confronto con e senza, alla battuta del salone, dava due fotogrammi
+   * identici: la mia sonda inquadrava un punto in cui il salone non e' ancora
+   * in scena. Un pezzo di geometria che entra nel campo visivo di una
+   * fotografia puo' rovinarla in modo evidente, e spedirlo senza aver visto la
+   * differenza sarebbe la stessa cosa che ho appena rimproverato a me stesso
+   * col piano scuro dietro la lastra -- che copriva lo 0,0% dello schermo.
+   *
+   * Resta qui come nota perche' la strada e' giusta: la revisione chiede
+   * imbotti, pavimento, soffitto e montanti che occludano davvero, e questo e'
+   * il primo pezzo. Va fatto quando c'e' il tempo di verificarlo, non a fine
+   * turno.
+   */
+
   stanza.position.z = 0.004
   gruppo.add(stanza)
 
