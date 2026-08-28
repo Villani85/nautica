@@ -2,7 +2,7 @@ import { Group } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { creaVetroLeggero } from './vetro.js'
-import { lavorazione, LAVORAZIONI } from './materia.js'
+import { lavorazione, LAVORAZIONI, campionamento } from './materia.js'
 
 /**
  * LA SOVRASTRUTTURA — i due ponti sopra la tuga, la coperta e la battagliola.
@@ -54,6 +54,7 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
           parti.push(o)
           for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
             if (!m) continue
+            campionamento(m)
             if (m.name === 'sovra_teak') fughe(m)
             if (m.name === 'sovra_guscio') vernice(m)
             /**

@@ -18,6 +18,14 @@ import { avanza } from '../stato.js'
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
+/**
+ * QUANTO SI ALZA LA CAMERA SUL PRIMO PIANO DEL MECCANISMO, in unita' di scena
+ * (una unita' = 2,5 m). **Zero**, e non e' un segnaposto: e' il risultato di
+ * uno spazzolamento (vedi il commento sulla quota, piu' sotto). La leva resta
+ * perche' serve a rifare quella prova in due minuti quando arrivera' il
+ * filmato definitivo, non perche' ci sia un numero da trovare qui.
+ */
+const QUOTA_MECCANISMO = 0
 const RAGGIO_MECCANISMO = 2.6
 // La decisione «una scena o due» sta in un posto solo, `regia.js`: due
 // definizioni della stessa condizione sono due condizioni che un giorno
@@ -535,6 +543,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let spaccato = 0
   let emersione = 0
   let avvicinamento = 0
+  /* Le due leve della consegna, per lo spazzolamento: valgono solo con
+     `?ispeziona`, che e' gia' la porta di tutto il resto. */
+  const q = new URLSearchParams(location.search)
+  const quotaMeccanismo = Number(q.get('quota') ?? QUOTA_MECCANISMO)
+  const raggioMeccanismo = Number(q.get('raggio') ?? RAGGIO_MECCANISMO)
   /** Riusato a ogni fotogramma: allocare un vettore per giro e' spazzatura. */
   const dovEilSalone = new Vector3()
   /**
@@ -758,7 +771,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      */
     const raggio = MathUtils.lerp(
       MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato),
-      RAGGIO_MECCANISMO, avvicinamento)
+      raggioMeccanismo, avvicinamento)
     const miraX = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
     // La camera insegue la sezione anche IN LUNGHEZZA: da mezzanave al
     // meccanismo. La quota resta zero — e' quello che tiene la linea a meta'
@@ -940,7 +953,30 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * torna sul pelo, dove serve il meccanismo. Ed e' anche il movimento
      * giusto da raccontare: si esce, si guarda il mare, poi si scende.
      */
-    camera.position.y = dentroY * (1 - spaccato)
+    /**
+     * ─── HO PROVATO AD ALZARLA SUL MECCANISMO, E NON SI PUO'. Misurato.
+     *
+     * L'ultimo fotogramma del filmato della discesa mostra la pinna larga
+     * uguale alla mia e ALTA IL DOPPIO: 158 px di altezza proiettata contro 52.
+     * E' una pinna vista da piu' in alto, e qui la camera sta sul pelo -- 0,34
+     * unita' sopra il meccanismo su 2,6 di distanza fanno sette gradi e mezzo,
+     * e a sette gradi una pinna e' un'asse.
+     *
+     * Alzare la camera sembrava la leva giusta, e l'invariante lo permette: non
+     * e' la quota zero, e' il beccheggio zero. Spazzolate cinque quote da 0 a
+     * 1,2 e due raggi, fotografando e misurando: **non funziona**, e la ragione
+     * e' geometrica. Con beccheggio zero il bersaglio sta alla QUOTA DELLA
+     * CAMERA, quindi alzandosi non si guarda meglio la pinna: si guarda un
+     * altro pezzo di nave. A 0,9 unita' l'inquadratura e' gia' sopra la
+     * coperta, e a 1,2 la pinna esce dal fotogramma. L'altezza misurata sale a
+     * 99 px, ma di un'altra cosa.
+     *
+     * Se quel fotogramma deve somigliare al filmato, la leva non e' la quota:
+     * e' l'assetto della pinna e la distanza. Resta da fare, e le due manopole
+     * per provarlo -- `?quota=` e `?raggio=` -- restano qui accese sotto
+     * `ispeziona`, coi valori di serie che riproducono l'inquadratura di oggi.
+     */
+    camera.position.y = dentroY * (1 - spaccato) + quotaMeccanismo * avvicinamento
     camera.position.z = MathUtils.lerp(tugaZ + dist, fuoriZ, uscita)
     camera.lookAt(
       MathUtils.lerp(scarto, miraX, uscita),
@@ -1100,17 +1136,37 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       get impiantoDati () { return impianti[0]?.dati ?? null },
       tugaPareti: tuga.pareti,
       ombre: TESSITURA_OMBRA,
-      /** Chi c'e' a questo punto dello schermo? Coordinate 0-1. */
+      /**
+       * Chi c'e' a questo punto dello schermo? Coordinate 0-1.
+       *
+       * ─── E ANCHE: CHE COSA STA PESCANDO LI'
+       *
+       * Torna il MATERIALE e le UV del punto colpito, non solo il nome
+       * dell'oggetto. E' l'aggiunta che ha chiuso una caccia lunga una notte
+       * alla grana della pinna: sapere che l'oggetto si chiama X non basta
+       * quando il sospetto e' una mappa, perche' la domanda vera e' *quali
+       * texel* pesca quel pixel. Con le UV la si va a guardare nell'atlante e
+       * si smette di indovinare.
+       */
       chi (u, v) {
         raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)
-        return raggio.intersectObjects(scena.children, true).slice(0, 4).map(i => ({
-          nome: i.object.nome || i.object.name || '(senza nome)',
-          tipo: i.object.type,
-          colore: i.object.material && i.object.material.color ? '#' + i.object.material.color.getHexString() : '?',
-          lato: i.object.material ? i.object.material.side : '?',
-          distanza: +i.distance.toFixed(2),
-          punto: [i.point.x, i.point.y, i.point.z].map(x => +x.toFixed(2))
-        }))
+        return raggio.intersectObjects(scena.children, true).slice(0, 10).map((i) => {
+          const m = i.object.material
+          return {
+            nome: i.object.nome || i.object.name || '(senza nome)',
+            tipo: i.object.type,
+            materiale: m ? (m.name || '(senza nome)') : '?',
+            mappe: m ? ['map', 'aoMap', 'normalMap', 'roughnessMap', 'metalnessMap']
+              .filter((k) => m[k]).join('+') || '(nessuna)' : '?',
+            ruvidita: m && m.roughness !== undefined ? +m.roughness.toFixed(2) : '?',
+            metallo: m && m.metalness !== undefined ? +m.metalness.toFixed(2) : '?',
+            uv: i.uv ? [+i.uv.x.toFixed(4), +i.uv.y.toFixed(4)] : null,
+            colore: m && m.color ? '#' + m.color.getHexString() : '?',
+            lato: m ? m.side : '?',
+            distanza: +i.distance.toFixed(2),
+            punto: [i.point.x, i.point.y, i.point.z].map((x) => +x.toFixed(2))
+          }
+        })
       }
     }
   }

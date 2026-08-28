@@ -6,6 +6,7 @@ import {
 import { materiali } from './materiali.js'
 import { costruisciGuscio, costruisciPonte, tappoA, sezioneA, tDaZ, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
 import { costruisciAllestimento } from './allestimento.js'
+import { campionamento } from './materia.js'
 
 /** L'opacita' dello spigolo dello scafo: dice dove finisce il pezzo. */
 const OPACITA_SPIGOLO = 0.22
@@ -153,6 +154,11 @@ export function costruisciNave (base = import.meta.env.BASE_URL) {
   matScafo.aoMap = ao
   const matPonte = clonaConPatch(materiali.coperta)
   matPonte.aoMap = ao
+  /* Stesso campionamento del meccanismo, e per la stessa ragione: una murata
+     lunga sedici unita' si guarda quasi sempre di taglio, ed e' li' che il
+     filtro isotropo o sfoca o alias. Vedi `campionamento` in `materia.js`. */
+  campionamento(matScafo)
+  campionamento(matPonte)
 
   const geoScafo = costruisciGuscio(72)
   const scafo = new Mesh(geoScafo, matScafo)

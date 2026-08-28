@@ -1,7 +1,7 @@
 import { Group, MathUtils } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
-import { lavorazione, LAVORAZIONI } from './materia.js'
+import { lavorazione, LAVORAZIONI, campionamento } from './materia.js'
 
 /**
  * L'IMPIANTO — il modello vero, comandato dalla simulazione.
@@ -182,6 +182,7 @@ const CORSA_CHIUDE = 0.42      // e quella, piu' bassa, che comanda la chiusura
 const CORSA_DT_MAX = 0.05      // stesso tetto del ciclo di disegno: una scheda nascosta non salta
 
 /** §4.2 · il profilo della corsa. Vedi la nota sopra per il perche' di questa forma. */
+
 export function profiloCorsa (u, n = CORSA_ORDINE) {
   const q = u <= 0 ? 0 : u >= 1 ? 1 : u
   return 1 - Math.pow(1 - q, n) * (1 + n * q)
@@ -409,6 +410,7 @@ export function creaImpianto (base, ambiente = null, opzioni = {}) {
           // dichiararla, ed e' cosi' che si e' misurato che fa qualcosa
           const ricetta = LAVORAZIONI[mat.name]
           if (ricetta && !location.search.includes('materia=0')) lavorazione(mat, ricetta)
+          campionamento(mat)
         }
       })
 

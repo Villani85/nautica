@@ -1,3 +1,4 @@
+import { ClampToEdgeWrapping } from 'three'
 /**
  * LA MATERIA — variazione di rugosità, direzionale, senza texture.
  *
@@ -252,4 +253,59 @@ export const LAVORAZIONI = {
   /* la coperta in teak: i corsi ci sono gia' come geometria, qui serve solo
      che il legno non sia una lastra uniforme */
   coperta:        { scala: 30, forza: 0.06, direzione: 3, rilievo: 0.04 }
+}
+
+/**
+ * COME SI CAMPIONANO LE MAPPE COTTE, e due cose erano sbagliate.
+ *
+ * Sta qui e non nei due caricatori perche' l'atlante cotto e' lo stesso
+ * problema per il meccanismo e per la sovrastruttura, e in questo repo la
+ * stessa correzione copiata due volte diverge il giorno in cui si tocca una
+ * delle due copie. E' la regola per cui esiste `browser.mjs`.
+ *
+ * 1 · L'ATLANTE NON SI RIPETE. `GLTFLoader` porta `wrapS/wrapT` da quello che
+ *     dice il file, e il file dice RIPETI perche' l'esportatore mette quello
+ *     di serie. Ma un atlante cotto NON e' una texture piastrellabile: ogni
+ *     isola e' un pezzo diverso, e una UV che esce di un texel dal proprio
+ *     bordo non deve pescare dal LATO OPPOSTO dell'atlante -- dove, in questo
+ *     file, c'e' la fascia fittissima delle bullonerie. Misurata: scarto tipo
+ *     91-105 su 255, con minimi a 0 e massimi a 255. Ripetere qui non e' un
+ *     dettaglio di filtro, e' pescare i texel di un altro pezzo.
+ *
+ *     E c'e' un moltiplicatore: `gltfpack` quantizza le UV e compensa con una
+ *     trasformazione della texture, quindi questi materiali arrivano con
+ *     `repeat` fra 8 e 16. Il prodotto e' corretto, ma il margine per uscire
+ *     dal proprio riquadro e' sedici volte piu' stretto.
+ *
+ * 2 · L'ANISOTROPIA ERA A UNO, e la macchina ne offre sedici. Su una superficie
+ *     guardata quasi di taglio -- e la pinna, dalla camera del primo piano,
+ *     lo e' -- il filtro isotropo sceglie il livello di mipmap sulla derivata
+ *     PIU' GRANDE: o sfoca lungo la corda, o campiona sotto e alias. E'
+ *     esattamente il caso in cui l'anisotropia esiste.
+ *
+ * ─── E VA DETTO COSA NON SO
+ *
+ * Queste due sono giuste di per se': un atlante non si piastrella, e una
+ * superficie di taglio vuole l'anisotropia. NON ho la prova che curino la
+ * grana della pinna. Ho provato a misurarla e il metro non regge: lo stesso
+ * identico programma ha dato 8,50 e 1,96 in due corse a venti minuti di
+ * distanza, perche' la scena e' viva -- la nave rolla, la pinna oscilla, e la
+ * finestra di pixel su cui misuravo non inquadra sempre la stessa cosa. Un
+ * numero che cambia di quattro volte a parita' di codice non e' una misura, e
+ * ogni conclusione tirata da quella tabella andava buttata: ne avevo gia'
+ * tirate due.
+ *
+ * Quindi qui si spedisce la correzione che si difende da sola, e la grana
+ * resta aperta finche' non c'e' un metro che si possa rifare.
+ */
+export function campionamento (mat) {
+  for (const chiave of ['map', 'aoMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) {
+    const t = mat[chiave]
+    if (!t) continue
+    t.wrapS = t.wrapT = ClampToEdgeWrapping
+    /* three lo taglia gia' al massimo della macchina: sedici e' un tetto, non
+       una richiesta che possa fallire */
+    t.anisotropy = 16
+    t.needsUpdate = true
+  }
 }
