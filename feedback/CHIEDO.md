@@ -7,7 +7,8 @@ trovato la volta scorsa. Cambia a ogni giro.
 Progetto: <https://github.com/Villani85/nautica> — sito pubblicato su
 <https://villani85.github.io/nautica/>
 
-Aggiornato: **28 agosto 2026, mattina.**
+Aggiornato: **28 agosto 2026, ore 10.** Da quando hai clonato potrei aver spinto
+altro: `git log --oneline -25` e' sempre la fonte, non questo elenco.
 
 ---
 
@@ -91,6 +92,9 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, registrato in `docs/15` |
 | Con camera, ambiente e curva tonale allineati, il residuo fra sito e Blender è **14,2 livelli** sulla sovrastruttura | ultimo giro del confronto, `docs/15` |
 | Il corredo PBR costa **+122 KB** ma fa risparmiare 220 KB di geometria | `git show` del commit «Il meccanismo viaggia come bassa» |
+| Allineando anche cielo e curva tonale, sopra la linea d'acqua l'esposizione fra sito e Blender coincide a **+0,8 livelli** | `node strumenti/esporta-ambiente.mjs`, poi `AMBIENTE_SITO=1 SOGGETTO=nave` in `cuoci.py`, poi `confronto-cotto.mjs` |
+| Il residuo **non e' la sovrastruttura (14,2) ma lo scafo (39,9 livelli di struttura)** | stesso giro del confronto |
+| L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
 
 ### 3.2 · Il giudizio che io non posso dare
 
