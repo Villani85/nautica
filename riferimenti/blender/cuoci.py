@@ -588,6 +588,12 @@ else:
     pb.inputs['Base Color'].default_value = (0.055, 0.06, 0.065, 1)
     pb.inputs['Roughness'].default_value = 0.38
 piano.data.materials.append(mp)
+# Con `SENZA_PIANO=1` il piano non si rende: insieme ad `ALFA=1` il canale alfa
+# diventa la maschera della SOLA nave, che e' cio' che serve per confrontarla
+# col sito pixel per pixel. Col piano dentro, la maschera comprendeva anche il
+# mare -- il 60% del quadro contro il 12% del sito, cioe' due cose diverse.
+if os.environ.get('SENZA_PIANO') == '1':
+    piano.hide_render = True
 
 # VERSO IL CENTRO NAVE, non verso il mare aperto: la x dell'attuatore e' piu'
 # piccola di quella del telaio, quindi la camera va a x MINORE per averlo
@@ -701,7 +707,11 @@ sc.cycles.use_denoising = True
 sc.cycles.samples = int(os.environ.get('CAMPIONI', '140'))
 sc.render.resolution_x = 1000
 sc.render.resolution_y = 620
-sc.render.film_transparent = False
+# `ALFA=1` rende il fondo trasparente: il canale alfa diventa la MASCHERA
+# esatta del soggetto, e serve a confrontare il render col sito sui soli pixel
+# della nave. Un rettangolo scelto a occhio non funziona -- misurato stanotte,
+# il soggetto era il 3% di quello che stavo misurando.
+sc.render.film_transparent = os.environ.get('ALFA') == '1'
 sc.render.image_settings.file_format = 'PNG'
 sc.render.image_settings.color_mode = 'RGBA'
 sc.view_settings.view_transform = 'AgX'
