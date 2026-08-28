@@ -803,7 +803,10 @@ print('CAMERA_INGOMBRO_SITO min %.4f %.4f %.4f  max %.4f %.4f %.4f'
 sc.render.film_transparent = os.environ.get('ALFA') == '1'
 sc.render.image_settings.file_format = 'PNG'
 sc.render.image_settings.color_mode = 'RGBA'
-sc.view_settings.view_transform = 'AgX'
+# `LINEARE=1`: niente curva, cosi' i rapporti col sito si prendono su valori
+# sRGB invertibili invece che dopo AgX, che e' non lineare e rende i rapporti
+# non confrontabili fra livelli di luminosita' diversi.
+sc.view_settings.view_transform = 'Standard' if os.environ.get('LINEARE') else 'AgX'
 sc.render.filepath = os.path.join(FUORI, 'meccanismo.png' if POSA < 0 else 'fotogramma-%03d.png' % POSA)
 
 t = time.time()

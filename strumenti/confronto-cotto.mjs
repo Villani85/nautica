@@ -44,7 +44,7 @@ const PROVA = [
 ]
 
 const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare, PROVA,
-                                senzaLuci]) => {
+                                senzaLuci, lineare]) => {
   const n = window.__nautica
   // Il ciclo del sito riscrive la camera a ogni fotogramma: si disegna UNA
   // volta a mano, subito dopo averla messa, e si legge la tela prima che il
@@ -90,14 +90,30 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    * Si verifica il valore di partenza: se three rinumerasse le costanti, si
    * spegne invece di misurare in silenzio con la curva sbagliata.
    */
-  const ACES = 4, AGX = 6
-  if (n.render.toneMapping !== ACES) {
+  /* --- E I RAPPORTI SI PRENDONO IN LINEARE, NON DOPO LA CURVA
+   *
+   * AgX e' fortemente non lineare: lo stesso rapporto di radianza produce
+   * rapporti diversi a luminosita' diverse. Misurato accorgendosene: sostituendo
+   * il cielo con uno PIATTO -- che abbassa tutta la scena -- il rapporto della
+   * sovrastruttura passava da 0,988 a 1,138, cioe' peggiorava una zona che
+   * prima combaciava. Un cambiamento che tocca anche cio' che era giusto non e'
+   * un difetto del soggetto: e' il metro.
+   *
+   * `LINEARE=1` spegne la curva da tutte e due le parti (qui NoToneMapping,
+   * in `cuoci.py` il view transform 'Standard'): restano valori sRGB, che si
+   * invertono esattamente, e i rapporti tornano confrontabili fra loro. */
+  const ACES = 4, AGX = 6, NESSUNA = 0
+  if (lineare) {
+    n.render.toneMapping = NESSUNA
+    n.render.toneMappingExposure = 1
+  } else if (n.render.toneMapping !== ACES) {
     return { errore: 'toneMapping del sito e ' + n.render.toneMapping + ', non ACESFilmic (' +
                      ACES + '): le costanti di three sono cambiate e questo confronto ' +
                      'userebbe una curva a caso' }
+  } else {
+    n.render.toneMapping = AGX
+    n.render.toneMappingExposure = 0.5
   }
-  n.render.toneMapping = AGX
-  n.render.toneMappingExposure = 0.5
 
   /* `SENZA_LUCI=1`: si spengono le luci della scena e resta la sola risposta
    * all'ambiente. E' l'unico confronto che isola la RESA, perche' i due
@@ -221,12 +237,14 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
            rollio: n.stato.rollio, rotZ: n.nave.rotation.z,
            navePos: [n.nave.position.x, n.nave.position.y, n.nave.position.z] }
 }, [px, py, pz, mx, my, mz, fuoco, L, H, process.env.SENZA_MARE === '1', PROVA,
-    process.env.SENZA_LUCI === '1'])
+    process.env.SENZA_LUCI === '1', process.env.LINEARE === '1'])
 
 writeFileSync(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`,
   Buffer.from(dati.url.split(',')[1], 'base64'))
 if (dati.errore) { console.error('  ' + dati.errore); await browser.close(); preview.kill(); process.exit(1) }
-console.log('  curva tonale allineata a Blender: AgX, esposizione 0,5 (cioe -1 EV)')
+console.log(process.env.LINEARE === '1'
+  ? '  curva tonale SPENTA da tutte e due le parti: i rapporti sono in lineare'
+  : '  curva tonale allineata a Blender: AgX, esposizione 0,5 (cioe -1 EV)')
 console.log(`  taglio a ${dati.sezione.toFixed(3)} - fov ${dati.fov.toFixed(2)} gradi`)
 const f3 = (a) => a.map(x => x.toFixed(3)).join(', ')
 console.log('  VERTICI (sito): ' + dati.vertici.map(v => v.map(x => x.toFixed(1)).join(',')).join(' '))
