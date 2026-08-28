@@ -62,28 +62,79 @@ console.log(`  ${W}x${H} · ${N} fotogrammi campionati`)
 if (N < 6) { console.error('  ROTTO  troppo pochi fotogrammi per misurare il movimento.'); process.exit(1) }
 
 /**
- * Il movimento di ogni pixel: lo scarto massimo fra due fotogrammi qualsiasi.
- * Il massimo e non la media, perche' un'onda passa e torna — e la media di una
- * cosa che va e viene la sottostima.
+ * ─── IL VETRO SI TROVA DAL COLORE E DAL BORDO, NON DAL MOVIMENTO
+ *
+ * Questo file ha cambiato criterio due volte, e le due volte la ragione e'
+ * stata la stessa: **il discriminante buono dipende dal girato, e va guardato
+ * prima di sceglierlo.**
+ *
+ *   1. COLORE, prima versione. Il mare e' freddo, il legno e' caldo. Si e'
+ *      rotto su un salone con noce lucido e lampade: la regione "fredda"
+ *      copriva meta' fotogramma.
+ *   2. MOVIMENTO, seconda versione. Fuori si muove, dentro no. Si e' rotto sul
+ *      girato nuovo, dove le due persone si muovono molto e **il mare quasi
+ *      niente**: cielo e orizzonte sono fermi, si agita solo un po' di schiuma
+ *      in basso a sinistra. La maschera ha ritagliato la COPPIA. Il numero non
+ *      lo diceva -- diceva «finestrone 8,4%», che sembra poco ma plausibile.
+ *      L'ho visto guardando la mappa del moto ingrandita (`PROVINO=`), non
+ *      leggendo una statistica.
+ *   3. COLORE + STRUTTURA, questa. Il colore da solo non basta, ma non e'
+ *      solo: il finestrone **tocca il bordo sinistro in ogni riga in cui
+ *      esiste**, ed e' delimitato a destra dal montante di noce. Quindi non si
+ *      cerca "tutto il freddo dell'immagine" -- si cammina da sinistra finche'
+ *      il pixel resta freddo, e ci si ferma al legno. La stessa tinta fredda
+ *      dall'altra parte della stanza non puo' piu' entrare, perche' non e'
+ *      collegata al bordo.
+ *
+ * Freddo o caldo si decide su B - R, che sul noce e' molto negativo e sul mare
+ * grigio-azzurro e' positivo o quasi nullo. Non su una tinta assoluta: una
+ * soglia sul blu si sposta col bilanciamento del bianco, una differenza fra
+ * canali molto meno.
  */
-const min = new Uint8Array(W * H).fill(255)
-const max = new Uint8Array(W * H)
-for (let k = 0; k < N; k++) {
-  const g = d.subarray(k * W * H, (k + 1) * W * H)
-  for (let p = 0; p < W * H; p++) {
-    if (g[p] < min[p]) min[p] = g[p]
-    if (g[p] > max[p]) max[p] = g[p]
-  }
-}
-const moto = new Uint8Array(W * H)
-for (let p = 0; p < W * H; p++) moto[p] = max[p] - min[p]
+const colori0 = join(tmpdir(), 'mf-col-' + Date.now() + '.rgb')
+execFileSync('ffmpeg', ['-loglevel', 'error', '-i', filmato, '-frames:v', '1',
+  '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-y', colori0])
+const rgb0 = readFileSync(colori0)
+unlinkSync(colori0)
 
-/** La soglia si sceglie dai dati: fra il mare e la stanza c'e' un abisso. */
+/** Quanto un pixel e' freddo: positivo = mare, negativo = legno. */
+const freddoPx = new Int16Array(W * H)
+for (let p = 0; p < W * H; p++) freddoPx[p] = rgb0[p * 3 + 2] - rgb0[p * 3]
+
+/* il legno vero e' molto caldo; si prende un margine, non lo zero esatto */
+const CALDO = -10
+/* quanti pixel caldi di fila chiudono la finestra: uno solo sarebbe rumore */
+const MURO = 6
+
+const moto = new Uint8Array(W * H)   // riusa il nome: 255 dove c'e' vetro
+for (let y = 0; y < H; y++) {
+  let caldi = 0
+  for (let x = 0; x < W; x++) {
+    const p = y * W + x
+    if (freddoPx[p] < CALDO) {
+      if (++caldi >= MURO) break     // siamo nel montante: la riga finisce qui
+    } else {
+      caldi = 0
+      moto[p] = 255
+    }
+  }
+  /* i pixel caldi contati prima di accorgersi del muro erano gia' stati
+     lasciati a zero, quindi non serve tornare indietro */
+}
 const ord = [...moto].sort((a, b) => a - b)
 const q = (f) => ord[Math.floor(f * ord.length)]
-console.log(`  movimento: mediana ${q(0.5)} · 75% ${q(0.75)} · 90% ${q(0.9)} · massimo ${ord[ord.length - 1]}`)
-const SOGLIA = Math.max(18, Math.round(q(0.55) + (q(0.95) - q(0.55)) * 0.25))
-console.log(`  soglia scelta: ${SOGLIA}`)
+const quanti = moto.reduce((s, v) => s + (v ? 1 : 0), 0)
+console.log(`  freddo attaccato al bordo sinistro: ${(100 * quanti / (W * H)).toFixed(1)}% dell'immagine`)
+
+if (process.env.PROVINO) {
+  const { writeFileSync: wf } = await import('node:fs')
+  const g = join(tmpdir(), 'moto.gray')
+  wf(g, Buffer.from(moto))
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'gray',
+    '-s', `${W}x${H}`, '-i', g, process.env.PROVINO])
+  console.log('  provino: ' + process.env.PROVINO)
+}
+const SOGLIA = 128
 
 const vivo = new Uint8Array(W * H)
 for (let p = 0; p < W * H; p++) vivo[p] = moto[p] > SOGLIA ? 1 : 0
