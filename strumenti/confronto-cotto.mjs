@@ -43,7 +43,8 @@ const PROVA = [
   [-1.9, 4.3, -8], [1.9, 4.3, -8], [-1.9, 4.3, 8], [1.9, 4.3, 8]
 ]
 
-const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare, PROVA]) => {
+const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare, PROVA,
+                                senzaLuci]) => {
   const n = window.__nautica
   // Il ciclo del sito riscrive la camera a ogni fotogramma: si disegna UNA
   // volta a mano, subito dopo averla messa, e si legge la tela prima che il
@@ -97,6 +98,19 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
   }
   n.render.toneMapping = AGX
   n.render.toneMappingExposure = 0.5
+
+  /* `SENZA_LUCI=1`: si spengono le luci della scena e resta la sola risposta
+   * all'ambiente. E' l'unico confronto che isola la RESA, perche' i due
+   * impianti di luce sono due -- il sito ha emisferica, sole, controluce e una
+   * puntiforme; `cuoci.py` due luci ad area. Dal lato Blender si spengono con
+   * LUCE=0. Finche' restano accesi, ogni scarto e' attribuibile alle luci
+   * prima che al renderer. */
+  const spente = []
+  if (senzaLuci) {
+    n.scena.traverse((o) => {
+      if (o.isLight && o.intensity > 0) { spente.push([o, o.intensity]); o.intensity = 0 }
+    })
+  }
 
   n.nave.rotation.z = 0
 
@@ -200,12 +214,14 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
   })
 
   for (const o of nascosti) o.visible = true
+  for (const [o, i] of spente) o.intensity = i
   return { url: n.render.domElement.toDataURL('image/png'), fov: n.camera.fov,
-           nascosti: nascosti.length, ingombro: B, vertici,
+           nascosti: nascosti.length, ingombro: B, vertici, spente: spente.length,
            sezione: n.sezione.costante,
            rollio: n.stato.rollio, rotZ: n.nave.rotation.z,
            navePos: [n.nave.position.x, n.nave.position.y, n.nave.position.z] }
-}, [px, py, pz, mx, my, mz, fuoco, L, H, process.env.SENZA_MARE === '1', PROVA])
+}, [px, py, pz, mx, my, mz, fuoco, L, H, process.env.SENZA_MARE === '1', PROVA,
+    process.env.SENZA_LUCI === '1'])
 
 writeFileSync(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`,
   Buffer.from(dati.url.split(',')[1], 'base64'))
@@ -228,6 +244,7 @@ if (process.env.VERTICI_BLENDER) {
   }
 }
 console.log(`  ingombro nave (sito): min (${f3(dati.ingombro.min)})  max (${f3(dati.ingombro.max)})`)
+console.log(`  luci spente: ${dati.spente}`)
 console.log(`  mare ${dati.nascosti ? 'nascosto (' + dati.nascosti + ' nodi)' : 'presente'}`)
 console.log(`  rollio ${dati.rollio.toFixed(3)} gradi, nave.rotation.z ${dati.rotZ.toFixed(5)} rad, ` +
             `posizione (${dati.navePos.map(v => v.toFixed(3)).join(', ')})`)
