@@ -95,21 +95,101 @@ const BASE = `http://localhost:${PORTA}/nautica/`
  * periodo di rollio dichiarato e' 7 secondi, quindi 1,5 s ne sono un quinto.
  * Segnalato da una revisione che ha confrontato il commento col numero.
  *
- * La finestra va bene lo stesso, ma per un'altra ragione, e vale la pena
- * scriverla giusta: non si misura il rollio, si misura L'ALBERO D'INGRESSO,
- * che gira 29 volte piu' in fretta per via del riduttore. In un quinto di
- * periodo di rollio l'albero fa quasi sei giri -- piu' che abbastanza per
- * un'escursione picco-picco che significhi qualcosa.
+ * E anche la ragione che l'aveva salvata era sbagliata. Diceva: non si misura
+ * il rollio, si misura l'albero, che gira 29 volte piu' in fretta -- quindi in
+ * un quinto di periodo fa quasi sei giri. **Il riduttore moltiplica
+ * l'ampiezza, non la frequenza.** `impianto.js:454` scrive
+ * `ingresso = -rapporto * S.pinna`: l'albero non gira di suo, e' PROPORZIONALE
+ * all'angolo di pinna, quindi il suo periodo e' quello del rollio. In un
+ * quinto di periodo si vede un quinto dell'escursione, moltiplicata per 29.
+ *
+ * E c'e' un caso in cui in quel quinto non si vede NIENTE, che e' come il
+ * difetto e' saltato fuori. `simulazione.js:187` da'
+ * `alfa = clamp(-K·omega, ±A_MAX)`: a nave lanciata la pinna sta al FINE CORSA
+ * finche' `omega` non cambia segno, e `omega` cambia segno ogni mezzo periodo,
+ * cioe' **3,5 s**. Una finestra da 1,5 s che cade dentro un tratto saturo
+ * legge `alfa` costante, quindi albero p-p **0,0000 rad** -- e il cancello
+ * accusava la catena di essere scollegata mentre la pinna era semplicemente
+ * a fondo corsa, che e' cio' che fa una pinna vera col mare grosso.
+ *
+ * Misurato: un rosso su otto, sempre a mare 5 acceso, con mare 2 che nello
+ * stesso giro dava 19,2 rad. Un guasto che compare solo dove il moto e' PIU'
+ * forte e' il ritratto di una saturazione, non di una catena rotta.
+ *
+ * Quindi la finestra e' **un tempo, e non un numero di fotogrammi**: piu' di
+ * mezzo periodo di rollio, o l'escursione non puo' esserci per costruzione.
+ * Un conteggio di fotogrammi misurerebbe anche la velocita' della macchina --
+ * 90 fotogrammi sono 1,5 s qui e 75 s in CI, dove si disegna in software.
  */
-const FOTOGRAMMI = 90
+const FINESTRA = 8000        // ms: un periodo di rollio INTERO (7 s) piu' margine
+const CAMPIONI_MIN = 12      // sotto, un picco-picco non significa niente
+const ATTESA_MAX = 30000     // ms: oltre, non e' una scena lenta, e' una scena ferma
 
 /**
- * Da mare 2 (6 gradi nominali) a mare 5 (15) il rollio nudo cresce di 2,5
- * volte. L'escursione della pinna cresce meno, perche' il controllore satura.
- * La soglia sta sotto il valore misurato ma ben sopra 1: deve poter fallire
- * se qualcuno ricongela i comandi o scollega la catena.
+ * --- LA SOGLIA ERA GIUSTA, ERA LA MISURA CHE NON POTEVA REGGERLA
+ *
+ * Questo numero e' stato rosso per una giornata, e ho cambiato il criterio
+ * due volte prima di accorgermi che il criterio non c'entrava. Vale la pena
+ * scrivere tutta la catena, perche' l'errore e' ripetibile.
+ *
+ * **Sintomo.** «L'escursione dell'albero cresce solo 1,22 volte (minimo
+ * 1,30)», intermittente, e ogni tanto invece «l'albero non si muove, 0,0000
+ * rad p-p: la catena e' scollegata».
+ *
+ * **Prima spiegazione, sbagliata.** A mare 5 l'albero misurava 25,307 rad che,
+ * diviso il rapporto 29, fa 50,00 gradi esatti: la corsa piena fra i due
+ * arresti di `A_MAX = 25` gradi. Sembrava una dimostrazione -- il fine corsa
+ * taglia l'escursione, quindi il rapporto non puo' superare 1,22 ed e'
+ * irraggiungibile per costruzione. Ho riscritto il cancello per misurare la
+ * VELOCITA' dell'albero, che il fine corsa non tocca.
+ *
+ * **Perche' era sbagliata.** La velocita' ha peggiorato le cose: col massimo
+ * su singolo fotogramma leggeva il rumore di temporizzazione, e col
+ * novantacinquesimo percentile leggeva **zero** -- perche' con la pinna a
+ * fondo corsa nel 96% dei fotogrammi il 95% dei campioni di velocita' e' nullo.
+ * Due statistiche opposte, tutte e due rotte: il segno che il guasto stava a
+ * monte di quale statistica si prendeva.
+ *
+ * **Causa vera, due difetti nello stesso posto.**
+ *
+ *   - la finestra era 90 fotogrammi, cioe' 1,5 s, contro un periodo di rollio
+ *     di **7 s**. Si campionava un quinto di ciclo, e ogni statistica
+ *     dipendeva da QUALE quinto: da qui sia l'1,22 sia lo 0,0000, che e'
+ *     semplicemente una finestra caduta dentro un tratto in cui la pinna
+ *     stava ferma a fondo corsa;
+ *   - si misurava SUBITO dopo il clic, mentre la rampa dichiarata da 1,6 s
+ *     stava ancora riscalando: a mare 2 si leggeva una nave che rollava
+ *     ancora da mare 5.
+ *
+ * **La prova.** Con la finestra a un periodo intero e 2,2 s di assestamento,
+ * su cinque giri:
+ *
+ *                    albero p-p        strada        pinna a fondo corsa
+ *     mare 2      5,0 - 6,3 rad    8,4 - 11,7 rad          **0%**
+ *     mare 5     25,307 (corsa piena)  43 - 61 rad        53 - 83%
+ *
+ * A mare 2 la pinna **non satura affatto**: il 46% che avevo misurato prima
+ * era il transitorio. E l'escursione cresce di **4,6 volte**, non di 1,22.
+ * Il criterio originale andava benissimo; non poteva reggere una misura presa
+ * su un quinto di ciclo, a transitorio aperto.
+ *
+ * La regola che ne esce, e che vale oltre questo file: **prima di cambiare il
+ * criterio, guarda se la finestra puo' contenere la cosa che misuri.** Un
+ * periodo non entra in un quinto di periodo, per nessuna statistica.
+ *
+ * La soglia resta 1,30: sta molto sotto il 4,6 misurato ma ben sopra 1,
+ * quindi puo' ancora fallire se qualcuno ricongela i comandi o scollega la
+ * catena. Velocita', strada e frazione satura restano STAMPATE ma non
+ * giudicano: sono i tre numeri che hanno spiegato il difetto, e la prossima
+ * volta lo spiegheranno di nuovo senza doverli riscrivere.
  */
 const CRESCITA_MIN = 1.30
+
+/** Il fine corsa dell'attuatore, come lo dichiara `simulazione.js:62`. E'
+ *  duplicato qui perche' il cancello ne ha bisogno per dire quanto la pinna
+ *  sta al fondo -- e ogni misura verifica che il sito non l'abbia superato,
+ *  cosi' una costante cambiata di la' non passa inosservata di qua. */
+const A_MAX_DICHIARATO = 25 * Math.PI / 180
 
 /** Sotto questa escursione (radianti sull'albero veloce) il meccanismo e' fermo. */
 const FERMO = 0.02
@@ -164,7 +244,22 @@ const finisci = async (codice) => {
   process.exit(codice)
 }
 
-await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+/**
+ * --- `senzaDimostra=1`, E NON E' UNA COMODITA'
+ *
+ * Il sito, entrando nella battuta del meccanismo, SPEGNE da solo lo
+ * stabilizzatore per due secondi e mezzo: e' la dimostrazione che fa vedere la
+ * differenza a chi non sa cosa premere. Ma questo cancello misura proprio i
+ * clic sull'interruttore, e le due cose si accavallano: misurato, due giri
+ * rossi su sei con «acceso l interruttore, l albero d ingresso non si muove
+ * (0,0000 rad p-p)» -- perche' il sito lo aveva rispento sotto la misura.
+ *
+ * Un cancello che fallisce una volta su tre e' peggio di nessun cancello, e la
+ * causa non era ne' il sito ne' il cancello: erano due cose giuste che si
+ * pestavano i piedi. Qui la dimostrazione si spegne, e cosi' il cancello
+ * misura la mano invece del sito.
+ */
+await pagina.goto(BASE + '?ispeziona=1&senzaDimostra=1', { waitUntil: 'load' })
 await pagina.waitForFunction(() => window.__nautica && window.__nautica.scena, null, { timeout: 60000 })
 await pagina.waitForFunction(
   () => !!window.__nautica.scena.getObjectByName('RIG_INPUT'),
@@ -275,17 +370,46 @@ const tocca = async (sel) => {
  * numero di fotogrammi DISEGNATI nello stesso intervallo: senza quello,
  * "meccanismo fermo" e "scena non aggiornata" sono lo stesso numero.
  */
-const campiona = (n) => pagina.evaluate((n) => new Promise((res) => {
+const campiona = () => pagina.evaluate(([finestra, minimo, tetto, fondo]) => new Promise((res) => {
   const nodo = window.__nautica.scena.getObjectByName('RIG_INPUT')
   const primo = window.__nautica.fotogrammi
+  const t0 = performance.now()
   let aMin = Infinity, aMax = -Infinity, i = 0
+  let prec = nodo.rotation.x, tPrec = t0, saturi = 0, pinnaMax = 0
+  const vel = []
+  let strada = 0
   const passo = () => {
     const a = nodo.rotation.x
+    const ora = performance.now(), passoMs = ora - tPrec
+    if (i > 0) strada += Math.abs(a - prec)
+    if (i > 0 && passoMs > 0) vel.push(Math.abs(a - prec) / (passoMs / 1000))
+    const pinna = Math.abs(window.__nautica.stato.pinna)
+    if (pinna > pinnaMax) pinnaMax = pinna
+    if (pinna >= fondo - 1e-4) saturi++
+    prec = a; tPrec = ora
     if (a < aMin) aMin = a
     if (a > aMax) aMax = a
-    if (++i < n) requestAnimationFrame(passo)
+    i++
+    const trascorso = performance.now() - t0
+    // si campiona per un TEMPO, non per un numero di fotogrammi; e se la
+    // macchina ne disegna pochi si aspetta di piu', invece di fallire
+    if ((trascorso < finestra || i < minimo) && trascorso < tetto) requestAnimationFrame(passo)
     else res({
       albero: aMax - aMin,
+      strada,
+      durata: performance.now() - t0,
+      vMax: (() => {
+        /* Il novantacinquesimo percentile, non il massimo. Un massimo su
+         * singolo fotogramma legge il rumore di temporizzazione: misurato, a
+         * mare 2 usciva 126,9 rad/s contro i 62-83 degli altri nove giri, e il
+         * cancello diventava rosso per un fotogramma corto. E' la stessa
+         * lezione che questo file aveva gia' imparato per il fondo naturale. */
+        if (!vel.length) return 0
+        vel.sort((x, y) => x - y)
+        return vel[Math.min(vel.length - 1, Math.floor(vel.length * 0.95))]
+      })(),
+      satura: saturi / Math.max(i, 1),
+      pinnaMax,
       disegnati: window.__nautica.fotogrammi - primo,
       rollio: window.__nautica.stato.rollio,
       stab: window.__nautica.stato.stab,
@@ -293,16 +417,38 @@ const campiona = (n) => pagina.evaluate((n) => new Promise((res) => {
     })
   }
   requestAnimationFrame(passo)
-}), n)
+}), [FINESTRA, CAMPIONI_MIN, ATTESA_MAX, A_MAX_DICHIARATO])
+
+/**
+ * Prima di misurare si aspetta che il transitorio finisca. `simulazione.js`
+ * riscala l'ampiezza su una rampa dichiarata di 1,6 s: misurando subito dopo
+ * un clic si legge la nave a meta' strada fra i due stati. Misurato, a mare 2
+ * la velocita' dell'albero usciva 126,9 rad/s invece di 62 perche' la nave
+ * rollava ancora da mare 5.
+ *
+ * Non e' un cancello che misura millisecondi: e' un'attesa pari alla durata
+ * che il sito dichiara per la propria transizione.
+ */
+const ASSESTAMENTO = 2200
 
 const misura = async (dove) => {
-  const c = await campiona(FOTOGRAMMI)
-  if (c.disegnati < FOTOGRAMMI / 2) {
-    guai.push(`campione "${dove}": la scena ha disegnato ${c.disegnati} fotogrammi su ${FOTOGRAMMI}. ` +
-              'Non si sta misurando il meccanismo, si sta misurando una scena ferma')
+  await new Promise(r => setTimeout(r, ASSESTAMENTO))
+  const c = await campiona()
+  if (c.disegnati < CAMPIONI_MIN) {
+    guai.push(`campione "${dove}": la scena ha disegnato ${c.disegnati} fotogrammi in ` +
+              `${(ATTESA_MAX / 1000).toFixed(0)} s. Non si sta misurando il meccanismo, ` +
+              'si sta misurando una scena ferma')
   }
-  nota(`${dove}: albero p-p ${c.albero.toFixed(3)} rad ` +
+  nota(`      strada ${c.strada.toFixed(1)} rad in ${(c.durata / 1000).toFixed(1)} s = ` +
+       `${(c.strada / (c.durata / 1000)).toFixed(1)} rad/s medi`)
+  nota(`${dove}: albero p-p ${c.albero.toFixed(3)} rad, velocita p95 ${c.vMax.toFixed(1)} rad/s, ` +
+       `pinna a fondo corsa il ${(c.satura * 100).toFixed(0)}% ` +
        `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.disegnati} fotogrammi disegnati]`)
+  if (c.pinnaMax > A_MAX_DICHIARATO + 1e-3) {
+    guai.push(`la pinna supera il fine corsa dichiarato: ${(c.pinnaMax * 180 / Math.PI).toFixed(1)} gradi ` +
+              `contro ${(A_MAX_DICHIARATO * 180 / Math.PI).toFixed(0)}. O il sito e cambiato, o questo ` +
+              'cancello sta leggendo una costante che non e piu vera')
+  }
   return c
 }
 
@@ -351,7 +497,8 @@ const acceso2 = await misura('stab. acceso, mare 2')
 if (acceso2.mare !== 2) guai.push(`il clic sulla manopola non ha cambiato lo stato del mare (e ${acceso2.mare})`)
 
 const crescita = acceso2.albero > 1e-6 ? acceso5.albero / acceso2.albero : Infinity
-nota(`girando la manopola da 2 a 5 il meccanismo lavora ${crescita.toFixed(2)} volte di piu`)
+nota(`girando la manopola da 2 a 5 il meccanismo lavora ${crescita.toFixed(2)} volte di piu ` +
+     `(albero p-p ${acceso2.albero.toFixed(1)} -> ${acceso5.albero.toFixed(1)} rad)`)
 
 if (!(crescita >= CRESCITA_MIN)) {
   guai.push('la manopola non comanda il meccanismo: da mare 2 a mare 5 l escursione ' +
@@ -404,6 +551,32 @@ const VOLTE_MAX = 6
  * E' la terza volta in questa sessione che un rapporto mi inganna perche' il
  * denominatore era piccolo. La regola che ne esce: **un rapporto ha bisogno di
  * un pavimento**, o misura il rumore del proprio denominatore.
+ *
+ * --- E POI IL METRO ERA SBAGLIATO LO STESSO, NELL'ALTRO VERSO
+ *
+ * Spostare il riferimento da PRIMA a DOPO non ha curato il difetto: l'ha
+ * girato. Da mare 5 a mare 2 il denominatore torna a essere quello piccolo --
+ * la nave calma -- e ogni transizione verso un mare tranquillo esce rossa per
+ * costruzione, perche' nei fotogrammi subito dopo il clic la nave si muove
+ * ancora alla velocita' del mare grosso.
+ *
+ * Misurato, campionando il fondo naturale su TUTTI E DUE i lati del clic:
+ *
+ *     naturale prima (mare 5)    0,216 gradi/fotogramma
+ *     salto misurato al clic     0,102          <- META' del naturale di prima
+ *     naturale dopo  (mare 2)    0,015
+ *     verdetto del cancello      "6,8 volte", rosso
+ *
+ * La nave al clic si muove **meno della meta'** di quanto facesse da sola un
+ * attimo prima, e il cancello la accusava di un salto temporale. E il dt di
+ * quel fotogramma era 16,0 ms contro 16,9 mediani: nemmeno un fotogramma
+ * lungo, che era l'altra spiegazione plausibile ed e' stata esclusa misurando.
+ *
+ * Il fondo giusto e' **il maggiore dei due**. Durante una transizione la nave
+ * ha diritto di muoversi come lo stato piu' mosso fra quello da cui viene e
+ * quello in cui va; un salto temporale e' cio' che supera **entrambi**. Preso
+ * uno solo dei due, il cancello e' rosso per costruzione in un verso -- e
+ * quale dei due verso dipende solo da quale si e' scelto.
  */
 const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
 
@@ -459,6 +632,7 @@ const attraverso = async (sel, etichetta) => {
    * bastano e avanzano: quello che si perde e' solo la coda in cui non
    * succede niente.
    */
+  const natPrima = await naturale(600)
   const promessa = pagina.evaluate(([n, durata]) => new Promise((res) => {
     const t0 = performance.now()
     let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
@@ -477,7 +651,9 @@ const attraverso = async (sel, etichetta) => {
   const { max, quando } = await promessa
 
   // il metro si prende DOPO, quando la nave e' nello stato nuovo
-  const nat = await naturale(600)
+  /* Il fondo si prende sui DUE lati del clic e si tiene il maggiore: preso da
+   * un lato solo, il cancello e' rosso per costruzione nell'altro verso. */
+  const nat = Math.max(natPrima, await naturale(600))
   const volte = max / Math.max(1e-6, nat)
   nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
        `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)

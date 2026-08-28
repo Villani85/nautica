@@ -356,9 +356,7 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     S.mare = n
     const dopo = AMPIEZZA_MARE[n]
     if (prima <= 0 || dopo <= 0) return
-    versoK = dopo / prima
-    versoT = 1.6
-    versoChi = [viva.c, nuda.c]   // il mare e' cambiato per tutte e due
+    avvia(MARE, dopo / prima, [viva.c, nuda.c])   // il mare e' cambiato per tutte e due
   }
 
   /**
@@ -427,19 +425,93 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
      * la pinna non ha piu' niente da correggere. Guardare una nave calmarsi e'
      * il punto; vederla gia' calma non lo e'.
      */
-    if (v) return
+    // Riaccendendo la rampa dello spegnimento DECADE: non si applica il suo
+    // residuo, si ferma dov'e'. Vedi la nota sull'albero piantato a 0,0000 rad.
+    if (v) { annulla(STAB, [viva.c]); return }
     const k = rNuda / rViva
     if (!Number.isFinite(k) || k <= 0) return
     // un tetto: se qualcosa va storto nei rapporti, meglio una transizione
     // lenta che una nave rovesciata
-    versoK = Math.min(Math.max(k, 0.05), 20)
-    versoT = 1.6
-    versoChi = [viva.c]           // lo stabilizzatore non esiste per la nuda
+    // lo stabilizzatore non esiste per la nave nuda
+    avvia(STAB, Math.min(Math.max(k, 0.05), 20), [viva.c])
   }
 
-  let versoK = 1
-  let versoT = 1.6
-  let versoChi = []
+
+  /**
+   * --- IL TETTO AL SALTO E' UN GOVERNATORE, NON UNA DURATA INDOVINATA
+   *
+   * `cambiaMare` e `cambiaStab` scrivevano tutte e due sullo stesso slot: la
+   * seconda ABBANDONAVA la prima a meta', e la nave restava a un'ampiezza che
+   * non e' ne' quella di prima ne' quella di dopo. `collaudo-manopola` --
+   * cinque rossi su otto, con tre sintomi diversi.
+   *
+   * Tre tentativi, tutti misurati, e i primi due sbagliati:
+   *
+   * 1. **Chi arriva chiude la precedente applicandone il residuo in un colpo.**
+   *    Sei rossi su sei, salti da 2,75 a 4,35 gradi per fotogramma -- fino a
+   *    319 volte il naturale. Applicare un residuo in un colpo E' il
+   *    teletrasporto che il sito vieta: avevo scritto il difetto come cura.
+   *
+   * 2. **Due slot indipendenti.** Salti giu' a 0,21-0,41 gradi, ancora rosso:
+   *    due rampe sulla stessa corsa **si moltiplicano**, e la variazione per
+   *    fotogramma raddoppia.
+   *
+   * Il conto che nessuno dei due aveva fatto: da mare 5 (circa 6 gradi) a mare
+   * 2 in 1,6 s a 60 fps sono 96 fotogrammi, fattore (1/6)^(1/96) = 0,9815, cioe'
+   * 1,85% -- su 6 gradi fa **0,11 gradi per fotogramma**, contro una soglia di
+   * 0,10. **La rampa del mare era gia' fuori da sola**, prima ancora che
+   * l'interruttore ne aggiungesse una seconda. Una durata scelta a occhio non
+   * puo' garantire un tetto che dipende dall'ampiezza: quindi non si sceglie
+   * la durata, **si impone il tetto** e la durata viene di conseguenza.
+   *
+   * `riscala` somma i logaritmi di tutte le rampe attive su una corsa, taglia
+   * la somma a quello che tiene il passo sotto SALTO_CIECO, e **allunga le
+   * rampe della stessa frazione** che ha tagliato. Nessuna combinazione di
+   * cause puo' produrre un salto: non perche' le si sia previste, ma perche' il
+   * tetto sta a valle di tutte.
+   *
+   * --- E IL VERO GUASTO ERA UN ALTRO, PIU' IN BASSO
+   *
+   * Sistemati i salti, restava un rosso su tre: «l'albero d'ingresso non si
+   * muove (0,0000 rad p-p)». Il numero che l'ha spiegato non era lo zero ma il
+   * suo vicino -- **15,249 rad a mare 2**, che non e' un guasto: l'albero fa
+   * quasi sei giri per periodo di rollio, quindi su 90 fotogrammi quella e'
+   * la rotazione giusta. Lo zero e' invece un meccanismo **fermo**.
+   *
+   * Causa: spegnendo, la rampa gonfia il rollio fino a venti volte per
+   * riportarlo a carena nuda. Se si RIACCENDE mentre sale, il regolatore chiede
+   * una pinna oltre il fine corsa, la pinna ci sbatte e l'albero si pianta a un
+   * angolo costante. Da qui l'intermittenza: dipende da dove cade la misura
+   * dentro la rampa.
+   *
+   * Cura: riaccendere **annulla** la rampa dello spegnimento. Non ne applica il
+   * residuo -- si ferma e basta, che e' quello che fa un transitorio
+   * interrotto. La rampa del mare, che ha un'altra causa, resta dov'e'.
+   */
+  const MARE = 'mare', STAB = 'stab'
+
+  /** Il salto che nessuno vede, in gradi per fotogramma. Il cancello taglia a
+   *  0,10: si sta a meta' strada, perche' il fondo naturale ci si somma. */
+  const SALTO_CIECO = 0.05
+
+  const rampe = new Map()          // corsa -> Map(causa -> { k, t })
+
+  const ampiezza = (r) => Math.hypot(r.theta, r.omega / W)
+
+  function avvia (causa, k, chi) {
+    if (!Number.isFinite(k) || k <= 0) return
+    for (const r of chi) {
+      let m = rampe.get(r)
+      if (!m) rampe.set(r, m = new Map())
+      m.set(causa, { k, t: 1.6 })
+    }
+  }
+
+  /** Ferma una rampa senza applicarne il residuo: l'ampiezza resta dov'e'
+   *  arrivata, che e' esattamente cio' che e' un transitorio interrotto. */
+  function annulla (causa, chi) {
+    for (const r of chi) rampe.get(r)?.delete(causa)
+  }
 
   /** Applica un pezzo del riscalamento, proporzionale al passo. */
   /**
@@ -457,13 +529,30 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
    * Adesso chi si riscala si dichiara.
    */
   function riscala (dt) {
-    if (versoT <= 0) return
-    const quota = Math.min(dt, versoT) / versoT
-    const f = Math.pow(versoK, quota)
-    for (const r of versoChi) { r.theta *= f; r.omega *= f }
-    versoK /= f
-    versoT -= dt
-    if (versoT <= 1e-6) { versoK = 1; versoT = 0; versoChi = [] }
+    for (const [r, m] of rampe) {
+      if (!m.size) { rampe.delete(r); continue }
+
+      // quanto vorrebbero fare, tutte insieme, in logaritmo
+      let L = 0
+      for (const p of m.values()) L += Math.log(p.k) * (Math.min(dt, p.t) / p.t)
+      if (!Number.isFinite(L)) { m.clear(); continue }
+
+      // il tetto: |ampiezza · (e^L − 1)| <= SALTO_CIECO
+      const a = Math.max(ampiezza(r), 1e-6)
+      const Lmax = Math.log1p(SALTO_CIECO / a)
+      const s = Math.abs(L) > Lmax ? Lmax / Math.abs(L) : 1
+
+      const f = Math.exp(L * s)
+      r.theta *= f; r.omega *= f
+
+      // si consuma solo la frazione applicata, e le rampe si allungano
+      for (const [causa, p] of m) {
+        const speso = Math.log(p.k) * (Math.min(dt, p.t) / p.t) * s
+        p.k /= Math.exp(speso)
+        p.t -= dt * s
+        if (p.t <= 1e-6) m.delete(causa)
+      }
+    }
   }
 
   /**
