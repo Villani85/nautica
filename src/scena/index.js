@@ -26,7 +26,35 @@ const RAGGIO_SEZIONE = 7.2
  * filmato definitivo, non perche' ci sia un numero da trovare qui.
  */
 const QUOTA_MECCANISMO = 0
-const RAGGIO_MECCANISMO = 2.6
+/**
+ * QUANTO STA VICINO LA CAMERA AL MECCANISMO. Era 2,6 e ora e' 2,1, e il numero
+ * viene da una misura, non dall'occhio.
+ *
+ * L'ultimo fotogramma del filmato della discesa e' il bersaglio: li' la pinna
+ * e' alta **158,5 px** (media su quattro colonne, su una tela 1280x720). A 2,6
+ * la mia era alta fra 25 e 94 a seconda della posa -- non e' una differenza di
+ * inquadratura, e' una differenza di SCALA, e si vedrebbe come uno stacco nel
+ * punto in cui il sito prende il comando.
+ *
+ * Spazzolati quattro raggi per tre istanti, con la scena inchiodata
+ * (`strumenti/consegna.mjs`):
+ *
+ *     raggio 2,6  ->  93,8 px      raggio 1,7  ->  profilo rotto
+ *     raggio 2,1  -> 144,5 px      raggio 1,4  ->  profilo rotto
+ *
+ * A 2,1 il profilo per colonne e' 152 153 141 132 contro 181 165 152 136 del
+ * filmato: stessa forma, 9% piu' piccola. A 1,7 e 1,4 la media si avvicina
+ * ancora ma il profilo si sfascia (239 82 77 77): le colonne pescano lo scafo
+ * invece della pinna, e la media diventa un numero che risponde a un'altra
+ * domanda. Il valore piu' vicino non e' quello giusto: quello giusto e'
+ * l'ultimo in cui il metro misura ancora la pinna.
+ *
+ * Avvicinarsi non tocca l'invariante: il beccheggio resta zero e la linea
+ * d'acqua resta sulla mezzeria. E' l'unica leva di scala che non mente --
+ * inclinare la pinna a mano sarebbe una posa che la fisica non produce, e
+ * alzare la camera, provato e misurato, guarda un altro pezzo di nave.
+ */
+const RAGGIO_MECCANISMO = 2.1
 // La decisione «una scena o due» sta in un posto solo, `regia.js`: due
 // definizioni della stessa condizione sono due condizioni che un giorno
 // divergono, e qui divergerebbero fra la corsa della camera e le battute.

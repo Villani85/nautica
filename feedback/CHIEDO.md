@@ -396,3 +396,42 @@ documenti e dipendono dall'utente, non da me. **Nessuna correzione al codice ne
 è uscita.**
 
 Non è un rimprovero: è la ragione per cui esiste questo file.
+
+---
+
+### 29 agosto — la discesa la fa un filmato, e il 3D riprende sul meccanismo
+
+**Deciso dal committente, non da me.** Non segnalatelo come difetto: è una
+scelta, ed è motivata.
+
+Le sue parole: *«non va bene più in profondità, lo faccio per evitare che si
+veda quel modellino che sembra plastica»*. Ha ragione, ed è misurato più volte
+in questi documenti: a trenta metri la nave in tempo reale non regge il
+confronto con una fotografia. Quindi la discesa dal salone al meccanismo la fa
+un video generato, e **il 3D prende il comando sul primo piano del
+meccanismo** — dove è vero, si muove, e si comanda.
+
+Conseguenze che si vedranno nel repo e che sono volute:
+
+- **`strumenti/consegna.mjs`** confronta l'ultimo fotogramma del filmato col
+  primo del 3D. Non con un PSNR — il filmato è una ricostruzione generativa
+  del mio fotogramma, quindi differisce ovunque di poco e da nessuna parte in
+  modo utile. Misura le tre grandezze con cui l'occhio si accorge di uno
+  stacco: la riga della linea d'acqua, l'altezza proiettata della pinna, i toni;
+- **`RAGGIO_MECCANISMO` è passato da 2,6 a 2,1.** Non è un ritocco estetico:
+  a 2,6 la pinna era alta 94 px contro i 158 del filmato, cioè uno stacco di
+  scala. A 2,1 è 144, stessa forma. Le prove a 1,7 e 1,4 avvicinano ancora la
+  media e **sfasciano il profilo**, perché le colonne pescano lo scafo invece
+  della pinna: il valore più vicino non è quello giusto;
+- **`?fermo=<secondi>`** inchioda la scena a un istante. Serve a poter *rifare*
+  una misura su un fotogramma, e non è un espediente da collaudo: senza, ogni
+  numero letto su uno screenshot è irripetibile. Vedi il commit che lo
+  introduce per le quattro cose che sono servite;
+- **la posa puntellata resta spenta.** `salone-teso.mp4` è notturno e di
+  un'altra inquadratura — 72 livelli su 255 di differenza dalla clip calma.
+  Il committente fornirà la clip mancante. Fino ad allora, uno strato che
+  mostra un'altra stanza è peggio di nessuno strato.
+
+E una cosa che **non** è ancora fatta, così non la scoprite come se fosse
+nascosta: il filmato della discesa non è ancora montato dentro il sito. C'è,
+è misurato, e il fotogramma di arrivo combacia. Il montaggio no.

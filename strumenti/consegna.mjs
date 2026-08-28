@@ -41,6 +41,33 @@ import { join } from 'node:path'
 import { apriBrowser } from './browser.mjs'
 
 const [filmato, cartella = 'consegna'] = process.argv.slice(2)
+/**
+ * ─── L'ISTANTE DELLA CONSEGNA E' UNA LEVA, ed e' l'unica onesta
+ *
+ * La pinna nel filmato e' alta il doppio della mia. Ho provato ad alzare la
+ * camera: non si puo', con beccheggio zero alzarsi vuol dire guardare un altro
+ * pezzo di nave (misurato, sta scritto in `scena/index.js`). E inclinare la
+ * pinna a mano sarebbe una posa che la fisica non produce -- la bugia che
+ * questo sito rifiuta.
+ *
+ * Ma la posa della pinna cambia da sola nel tempo, perche' e' l'uscita di un
+ * integratore. Allora la leva e' QUALE ISTANTE si consegna: si spazzolano gli
+ * istanti, si misura la pinna in ciascuno, e si prende quello che somiglia al
+ * filmato. Nessuna geometria toccata, nessun numero inventato.
+ *
+ * Serve pero' che il fotogramma sia ripetibile, o si misura il caso: da qui
+ * `?fermo=`, che inchioda simulazione, onde, dimostrazione automatica e seme
+ * del mare. Vedi `stato.js`.
+ */
+const ISTANTI = process.env.ISTANTI
+  ? process.env.ISTANTI.split(',').map(Number)
+  : [12]
+/**
+ * E LA SECONDA LEVA E' LA DISTANZA, che l'invariante non tocca. Avvicinarsi
+ * non inclina niente: il beccheggio resta zero e la linea d'acqua resta sulla
+ * mezzeria. Si spazzola con `?raggio=`, di serie il valore spedito.
+ */
+const RAGGI = process.env.RAGGI ? process.env.RAGGI.split(',').map(Number) : [null]
 if (!filmato) { console.error('uso: consegna.mjs <filmato.mp4> [cartella]'); process.exit(2) }
 mkdirSync(cartella, { recursive: true })
 
@@ -60,12 +87,16 @@ const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true
 const browser = await apriBrowser({ conGpu: true })
 const pg = await browser.newPage()
 await pg.setViewportSize({ width: L, height: A })
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
-await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
+async function allaConsegna (t, raggio) {
+  const r = raggio === null ? '' : `&raggio=${raggio}`
+  await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&fermo=${t}${r}`, { waitUntil: 'load' })
+  await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
+  return cerca()
+}
 
 /* la battuta si CERCA, non si indovina: la pagina ha gia' cambiato altezza una
  * volta e ogni frazione fissa scritta a mano e' finita su un'altra scena */
-const dove = await pg.evaluate(async () => {
+const cerca = () => pg.evaluate(async () => {
   const sez = document.querySelector('#dimostrazione')
   const H = document.documentElement.scrollHeight - innerHeight
   const r = sez.getBoundingClientRect()
@@ -80,12 +111,6 @@ const dove = await pg.evaluate(async () => {
   }
   return null
 })
-if (dove === null) { console.error('  non trovo la battuta del meccanismo'); process.exit(2) }
-await pg.waitForTimeout(2500)
-const daSito = join(cartella, 'sito-consegna.png')
-writeFileSync(daSito, await pg.screenshot())
-await browser.close()
-preview.kill()
 
 /* ─── LE LETTURE */
 const pixel = (f) => execFileSync('ffmpeg', ['-v', 'error', '-i', f,
@@ -115,68 +140,66 @@ function linea (b) {
 }
 
 /**
- * IL RIQUADRO DELLA PINNA: sott'acqua e' l'unica cosa CHIARA. Si prende tutto
- * cio' che sta sotto la linea ed e' piu' chiaro della mediana dell'acqua piu'
- * un margine, e se ne legge il rettangolo.
+ * LA PINNA: quanto e' ALTA a schermo, e si misura per colonne.
+ *
+ * Il rettangolo che contiene tutti i pixel chiari non serve: sott'acqua ci sono
+ * anche il martinetto, le staffe, il bordo dello scafo -- e nel fotogramma del
+ * sito anche i riquadri dell'interfaccia. Su quattro colonne che cadono in
+ * mezzo alla pinna in entrambi i fotogrammi si contano invece i pixel chiari
+ * sotto la linea: e' l'altezza proiettata, che e' proprio la grandezza in cui i
+ * due fotogrammi differiscono.
  */
-function pinna (b, y0) {
+const COLONNE = [800, 850, 900, 950]
+const X1 = 660
+const X2 = 1160
+function altezzaPinna (b, y0) {
   const acqua = []
-  for (let y = y0 + 10; y < A; y += 3) for (let x = 0; x < L; x += 3) acqua.push(lum(b, x, y))
+  for (let y = y0 + 12; y < A; y += 3) for (let x = X1; x < X2; x += 3) acqua.push(lum(b, x, y))
   acqua.sort((p, q) => p - q)
   const soglia = acqua[Math.floor(acqua.length / 2)] + 25
-  let x1 = L
-  let x2 = 0
-  let a1 = A
-  let a2 = 0
-  let n = 0
-  for (let y = y0 + 6; y < A; y++) {
-    for (let x = 0; x < L; x++) {
-      if (lum(b, x, y) > soglia) {
-        n++
-        if (x < x1) x1 = x
-        if (x > x2) x2 = x
-        if (y < a1) a1 = y
-        if (y > a2) a2 = y
-      }
-    }
-  }
-  return { x1, x2, y1: a1, y2: a2, larg: x2 - x1, alt: a2 - a1, pixel: n, soglia }
+  const alt = COLONNE.map((x) => {
+    let n = 0
+    for (let y = y0 + 8; y < A; y++) if (lum(b, x, y) > soglia) n++
+    return n
+  })
+  return { alt, media: alt.reduce((p, q) => p + q, 0) / alt.length }
 }
 
 const bf = pixel(daFilmato)
-const bs = pixel(daSito)
 const lf = linea(bf)
-const ls = linea(bs)
-const pf = pinna(bf, lf.y)
-const ps = pinna(bs, ls.y)
+const pf = altezzaPinna(bf, lf.y)
 
-const mostra = (n, a, b, u = '') => {
-  const d = (Number(b) - Number(a)).toFixed(1)
-  console.log(`  ${n.padEnd(20)} filmato ${String(a).padStart(8)}   sito ${String(b).padStart(8)}   scarto ${String(d).padStart(8)}${u}`)
+console.log('')
+console.log('IL BERSAGLIO — l ultimo fotogramma del filmato')
+console.log(`  linea d acqua      riga ${lf.y}   tono sopra ${lf.sopra.toFixed(1)}  sotto ${lf.sotto.toFixed(1)}`)
+console.log(`  pinna              altezza per colonna ${pf.alt.join(' ')}   media ${pf.media.toFixed(1)} px`)
+console.log('')
+console.log('E GLI ISTANTI DEL SITO')
+console.log('  istante  raggio   linea   pinna              media    scarto sul bersaglio')
+
+let migliore = null
+for (const raggio of RAGGI) for (const t of ISTANTI) {
+  const dove = await allaConsegna(t, raggio)
+  if (dove === null) { console.error(`  ${t}s: non trovo la battuta del meccanismo`); continue }
+  await pg.waitForTimeout(2200)
+  const f = join(cartella, `sito-${t}s-r${raggio ?? 'x'}.png`)
+  writeFileSync(f, await pg.screenshot())
+  const b = pixel(f)
+  const ls = linea(b)
+  const ps = altezzaPinna(b, ls.y)
+  const scarto = Math.abs(ps.media - pf.media)
+  console.log(`  ${String(t).padStart(6)}s  ${String(raggio ?? 'spedito').padStart(7)}   ${String(ls.y).padStart(5)}   ${ps.alt.join(' ').padEnd(18)} ${ps.media.toFixed(1).padStart(6)}   ${(ps.media - pf.media).toFixed(1).padStart(8)} px`)
+  if (!migliore || scarto < migliore.scarto) migliore = { t, raggio, scarto, f, dove }
 }
+await browser.close()
+preview.kill()
 
-console.log('')
-console.log(`IL FOTOGRAMMA DELLA CONSEGNA — battuta del meccanismo a scorrimento ${(dove * 100).toFixed(1)}%`)
-console.log('')
-console.log('LA LINEA D ACQUA')
-mostra('riga', lf.y, ls.y, ' px')
-mostra('quanto e netta', lf.salto.toFixed(1), ls.salto.toFixed(1))
-mostra('tono sopra', lf.sopra.toFixed(1), ls.sopra.toFixed(1))
-mostra('tono sotto', lf.sotto.toFixed(1), ls.sotto.toFixed(1))
-console.log('')
-console.log('IL RIQUADRO DELLA PINNA')
-mostra('sinistra', pf.x1, ps.x1, ' px')
-mostra('destra', pf.x2, ps.x2, ' px')
-mostra('cima', pf.y1, ps.y1, ' px')
-mostra('fondo', pf.y2, ps.y2, ' px')
-mostra('larghezza', pf.larg, ps.larg, ' px')
-mostra('altezza', pf.alt, ps.alt, ' px')
-mostra('pixel chiari', pf.pixel, ps.pixel)
-console.log('')
-
-/* affiancati, da guardare */
-execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', daFilmato, '-i', daSito,
-  '-lavfi', 'hstack', join(cartella, 'affiancati.png')])
-console.log(`  scritti: ${daFilmato}`)
-console.log(`           ${daSito}`)
-console.log(`           ${join(cartella, 'affiancati.png')}`)
+if (migliore) {
+  console.log('')
+  console.log(`  il piu' vicino e ${migliore.t}s a raggio ${migliore.raggio ?? 'spedito'}, a ${migliore.scarto.toFixed(1)} px dal bersaglio`)
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', daFilmato, '-i', migliore.f,
+    '-lavfi', 'vstack', join(cartella, 'affiancati.png')])
+  console.log(`  scritti: ${daFilmato}`)
+  console.log(`           ${migliore.f}`)
+  console.log(`           ${join(cartella, 'affiancati.png')}   (filmato sopra, sito sotto)`)
+}
