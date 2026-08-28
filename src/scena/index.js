@@ -649,10 +649,29 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // fotogramma. Il `t` locale resta per le onde, che sono roba di scena.
     avanza(dt, marca)
 
-    // Non si seziona un oggetto in movimento: mentre il piano entra, il
-    // rollio si acquieta. Non e' un vezzo — un disegno tecnico e' fermo, ed e'
-    // il registro in cui il taglio riporta il pezzo.
-    nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - spaccato)
+    /**
+     * ─── IL ROLLIO NON SI SPEGNE PIU' DEL TUTTO NELLA SEZIONE
+     *
+     * Qui c'era `* (1 - spaccato)`, con una ragione buona: «non si seziona un
+     * oggetto in movimento, un disegno tecnico e' fermo». Ma portava a zero, e
+     * a zero il sito perde la cosa che deve dimostrare: alla battuta del
+     * meccanismo **spegnere lo stabilizzatore non produceva nessuna
+     * conseguenza visibile**. Segnalato dall'utente guardando quella battuta,
+     * e vero: misurato, la nave li' si muoveva di 0,00 gradi con l'impianto
+     * acceso e 0,00 con l'impianto spento.
+     *
+     * Che il rollio funzioni e' fuori discussione, e l'ho verificato prima di
+     * toccare qualcosa: alla battuta della nave, spegnendo l'interruttore, il
+     * rollio passa da 0,83 a 43,8 gradi di escursione. Non era rotto: era
+     * spento apposta proprio dove serviva.
+     *
+     * Adesso resta il 40%: abbastanza perche' l'interruttore abbia una
+     * conseguenza sotto gli occhi, poco abbastanza perche' il pezzo non esca
+     * dall'inquadratura. E' una decisione di messa in scena, uniforme: NON
+     * dipende da `stab`. Legarla allo stato sarebbe una conseguenza cablata a
+     * mano, che in questo sito e' la bugia peggiore possibile.
+     */
+    nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - 0.6 * spaccato)
 
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.

@@ -190,7 +190,19 @@ export function collegaPuntoDiVista ({ tela, ruota, suggerimento }) {
   })
   tela.addEventListener('pointermove', (e) => {
     if (!trascina) return
-    ruota((e.clientX - xPrec) * 0.006)
+    /**
+     * IL SEGNO E' NEGATIVO, e non e' una preferenza.
+     *
+     * Trascinando la mano a destra la nave andava a SINISTRA. Misurato invece
+     * che discusso: si proietta la punta di prua sullo schermo prima e dopo un
+     * trascinamento di 260 px verso destra, e la x passava da 314 a 41.
+     *
+     * La convenzione che tutti si aspettano e' che l'oggetto SEGUA la mano,
+     * come se lo si spingesse. Qui la camera orbita attorno alla nave, e far
+     * seguire l'oggetto vuol dire far girare la camera dalla parte opposta:
+     * quindi il delta del puntatore entra in `ruota` col segno cambiato.
+     */
+    ruota(-(e.clientX - xPrec) * 0.006)
     xPrec = e.clientX
     // il gesto conta come tale solo dopo che la mano si e' mossa davvero
     if (Math.abs(e.clientX - xGiu) > SPOSTAMENTO_VERO) {
@@ -239,7 +251,11 @@ export function collegaPuntoDiVista ({ tela, ruota, suggerimento }) {
   tela.setAttribute('role', 'application')
   tela.setAttribute('aria-label', 'Section view. Left and right arrow keys rotate the point of view.')
   tela.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') { ruota(-0.12); haTrascinato = true; nascondiSuggerimento(); e.preventDefault() }
-    if (e.key === 'ArrowRight') { ruota(0.12); haTrascinato = true; nascondiSuggerimento(); e.preventDefault() }
+    // scambiate insieme al segno del trascinamento: la freccia destra deve
+    // mandare la nave a destra, come la mano. Lasciarle com'erano avrebbe
+    // dato due comandi che girano in verso opposto, che e' peggio di uno
+    // sbagliato.
+    if (e.key === 'ArrowLeft') { ruota(0.12); haTrascinato = true; nascondiSuggerimento(); e.preventDefault() }
+    if (e.key === 'ArrowRight') { ruota(-0.12); haTrascinato = true; nascondiSuggerimento(); e.preventDefault() }
   })
 }
