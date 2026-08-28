@@ -163,7 +163,33 @@ body::after{
     radial-gradient(120vmax 34vmax at 76% 6%,  rgba(255,253,247,.85), rgba(255,252,244,0) 62%),
     radial-gradient(90vmax 22vmax at 18% 20%,  rgba(206,200,187,.55), rgba(214,208,196,0) 66%),
     radial-gradient(150vmax 18vmax at 55% 34%, rgba(216,210,197,.58), rgba(224,219,207,0) 70%),
-    radial-gradient(70vmax 14vmax at 88% 30%,  rgba(198,192,180,.42), rgba(206,200,188,0) 68%);
+    radial-gradient(70vmax 14vmax at 88% 30%,  rgba(198,192,180,.42), rgba(206,200,188,0) 68%),
+    /* ─── LE BANDE, perche' una rampa non e' un cielo
+
+       I quattro gradienti qui sopra sono da 120-150vmax: su uno schermo da
+       1440 fanno 1700-2200 px, cioe' piu' larghi della finestra. Sul
+       fotogramma non sono forme, sono RAMPE. Misurato dopo che una revisione
+       esterna me l'ha fatto notare, e riprodotto: la colonna destra e'
+       spiegata da una retta all'85% (R2 0,854), con zero picchi interni.
+
+       Il numero con cui avevo dichiarato chiuso il cielo -- lo scarto tipo di
+       colonna, da 0,23 a 8,4 -- e' vero e certifica la cosa sbagliata: dice
+       «c'e' un gradiente», non «c'e' un cielo», e una rampa liscia lo supera
+       senza nessuna delle tre cose che volevo. E' lo stesso errore che questo
+       repo ha gia' fatto piu' volte: un numero giusto che risponde a un'altra
+       domanda.
+
+       Queste sono a MEDIA frequenza -- 26-44vmax, un terzo di finestra:
+       abbastanza strette da essere forme, abbastanza larghe da non leggersi
+       come un motivo. E sfalsate in orizzontale, cosi' il cielo smette di
+       essere uguale da sinistra a destra a quota fissa.
+
+       Il metro giusto e' l'R2 della retta sulla colonna, non lo scarto tipo. */
+    radial-gradient(38vmax 5vmax at 30% 13%, rgba(255,252,245,.50), rgba(255,252,245,0) 72%),
+    radial-gradient(30vmax 4vmax at 62% 9%,  rgba(196,190,178,.40), rgba(196,190,178,0) 74%),
+    radial-gradient(44vmax 6vmax at 84% 19%, rgba(255,251,243,.44), rgba(255,251,243,0) 70%),
+    radial-gradient(26vmax 3vmax at 46% 24%, rgba(190,185,173,.34), rgba(190,185,173,0) 76%),
+    radial-gradient(34vmax 4vmax at 12% 30%, rgba(255,250,241,.34), rgba(255,250,241,0) 72%);
   -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 44%,transparent 48%);
           mask-image:linear-gradient(to bottom,#000 0%,#000 44%,transparent 48%);
 }

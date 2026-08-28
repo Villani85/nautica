@@ -36,6 +36,25 @@ const PAUSA = 5200
 const DURATA = 7000
 
 /**
+ * ─── E NON BASTA L'ORDINE: CONTA DOVE E QUANDO
+ *
+ * La prima versione sceglieva solo per priorita' e visibilita' del comando.
+ * Guardando un video del sito, una revisione esterna ha trovato tre errori di
+ * REGIA che nessuna misura di contrasto poteva vedere:
+ *
+ *   · «Jump to any scene» compariva sull'apertura, a otto secondi, sopra la
+ *     frase principale: invitava a saltare una storia non ancora cominciata;
+ *   · «Change the sea» arrivava mentre le persone stavano ancora reagendo allo
+ *     spegnimento dello stabilizzatore -- cioe' nel momento in cui chi guarda
+ *     deve guardare loro;
+ *   · «Drag the speed» compariva nella vista esterna della nave, dove il
+ *     legame fra andatura e autorita' della pinna non si vede.
+ *
+ * Quindi ogni nudge dichiara adesso DOVE ha senso (`battute`), COSA deve essere
+ * gia' successo (`dopo`) e quante scene servono prima (`scene`). La sequenza
+ * che ne esce: apertura niente, salone lo stabilizzatore, dopo l'esperimento il
+ * mare, al meccanismo la velocita', il menu buon ultimo.
+ *
  * L'ordine E' la priorita'. Il primo non ancora soddisfatto e visibile vince.
  * Non e' alfabetico e non e' l'ordine sullo schermo: e' l'ordine in cui una
  * persona scopre il sito.
@@ -49,46 +68,58 @@ const DURATA = 7000
 const NUDGE = [
   {
     id: 'stab',
-    bersaglio: '#stab',
-    /**
-     * «Turn it off» era ambiguo: dice il gesto e non il motivo, e su un sito
-     * che non vuole essere un manuale il motivo e' tutto. Questa versione
-     * promette una conseguenza, che e' esattamente cio' che il sito dimostra.
-     */
+    bersaglio: '#stab-salone, #stab',
     testo: 'See what happens without it',
-    /**
-     * SOLO `click`, e non piu' anche `keydown`. Un bottone emette `click`
-     * anche da tastiera con Invio o barra, quindi non si perde niente --
-     * mentre `keydown` scattava su QUALUNQUE tasto, `Tab` e `Shift`
-     * compresi: bastava tabulare sopra il comando perche' il suggerimento
-     * si considerasse gia' seguito. Un nudge che sparisce senza che tu abbia
-     * fatto la cosa e' peggio di nessun nudge.
-     */
-    eventi: ['click']
+    eventi: ['click'],
+    /* dove ha senso: dove l'interruttore e' in scena e la conseguenza si vede */
+    battute: ['salotto', 'emerge', 'mare', 'invito', 'calma']
   },
   {
     id: 'mare',
     bersaglio: '#mare',
     testo: 'Change the sea',
-    eventi: ['click']
+    eventi: ['click'],
+    battute: ['emerge', 'mare', 'invito', 'calma'],
+    /* NON prima che l'esperimento dello stabilizzatore sia finito: arrivava
+       mentre le persone stavano ancora reagendo allo spegnimento, e in quel
+       momento chi guarda deve guardare loro, non ricevere un'altra istruzione */
+    dopo: 'stab'
   },
   {
     id: 'velocita',
     bersaglio: '#velocita',
-    /* La cosa piu' controintuitiva del sito, e stava in un paragrafo tolto:
-       sotto lo stallo il rapporto e' una proprieta' del sistema, non del mare.
-       Qui torna addosso al comando che la dimostra. `input` scatta anche con
-       le frecce, quindi la tastiera e' coperta senza `keydown`. */
     testo: 'Drag the speed - the number moves',
-    eventi: ['input']
+    eventi: ['input'],
+    /* al MECCANISMO, non alla nave: il legame fra andatura e autorita' della
+       pinna e' quello che il primo piano mostra, e nella vista esterna non si
+       vede niente di quel rapporto */
+    battute: ['taglio', 'meccanismo']
   },
   {
     id: 'menu',
     bersaglio: 'nav [data-scena]',
     testo: 'Jump to any scene',
-    eventi: ['click']
+    eventi: ['click'],
+    /* dopo che almeno due scene sono state viste. Compariva sull'apertura, a
+       otto secondi, sopra la frase principale: invitava a saltare una storia
+       non ancora cominciata */
+    scene: 2
   }
 ]
+
+/**
+ * IL PRIMO BERSAGLIO VISIBILE, non il primo del documento.
+ *
+ * `document.querySelector` restituisce il primo in ordine di documento, e per
+ * lo stabilizzatore ce ne sono DUE -- quello del salone e quello della
+ * dimostrazione -- di cui uno solo e' in scena alla volta. Prendendo il primo
+ * si finiva a giudicare la visibilita' di un bottone che non c'entrava, e il
+ * suggerimento non compariva mai.
+ */
+const primoVisibile = (sel) => {
+  for (const el of document.querySelectorAll(sel)) if (visibile(el)) return el
+  return null
+}
 
 const visibile = (el) => {
   if (!el) return false
@@ -146,6 +177,33 @@ export function creaNudge () {
     window.addEventListener(ev, () => { ultimoGesto = performance.now() }, { passive: true })
   }
 
+  /**
+   * QUANTE SCENE SONO STATE VISTE. Si legge dal palco della dimostrazione, che
+   * porta gia' `data-battuta` scritto dalla regia: non si ricalcola qui una
+   * seconda volta quale battuta sia in corso.
+   *
+   * Il palco si cerca DENTRO la sezione: nel documento ce ne sono due -- salone
+   * e dimostrazione -- e `document.querySelector` prende il primo, che con la
+   * scena unica viene poi rimosso. E' la stessa trappola gia' pagata in
+   * `menu.js`.
+   */
+  const sezione = document.querySelector('#dimostrazione')
+  const palco = sezione ? sezione.querySelector('.palco') : null
+  const sceneViste = new Set()
+  const battutaOra = () => (palco && palco.dataset.battuta) || ''
+  if (palco) {
+    const segnaScena = () => { const b = battutaOra(); if (b) sceneViste.add(b) }
+    new MutationObserver(segnaScena).observe(palco, { attributes: true, attributeFilter: ['data-battuta'] })
+    segnaScena()
+  }
+
+  const suoTurno = (n) => {
+    if (n.dopo && !fatti.has(n.dopo)) return false
+    if (n.scene && sceneViste.size < n.scene) return false
+    if (n.battute && !n.battute.includes(battutaOra())) return false
+    return true
+  }
+
   function mostra (n, el) {
     const r = el.getBoundingClientRect()
     bolla.textContent = n.testo
@@ -168,8 +226,9 @@ export function creaNudge () {
     if (!acceso && performance.now() - ultimoGesto > PAUSA) {
       for (const n of NUDGE) {
         if (fatti.has(n.id) || giaMostrati.has(n.id)) continue
-        const el = document.querySelector(n.bersaglio)
-        if (!visibile(el)) continue
+        if (!suoTurno(n)) continue
+        const el = primoVisibile(n.bersaglio)
+        if (!el) continue
         mostra(n, el)
         break
       }
@@ -178,7 +237,7 @@ export function creaNudge () {
        con lui invece di restare appeso a un punto vuoto */
     if (acceso) {
       const n = NUDGE.find((x) => x.id === acceso)
-      if (!visibile(document.querySelector(n.bersaglio))) nascondi()
+      if (!primoVisibile(n.bersaglio)) nascondi()
     }
   }
   /**
