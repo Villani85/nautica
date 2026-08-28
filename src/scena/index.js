@@ -11,7 +11,7 @@ import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
-import { applicaAmbiente } from './materiali.js'
+import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
 import { avanza } from '../stato.js'
 
@@ -292,6 +292,15 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       }
     })
   }
+  /**
+   * LA MATERIA DELLO SCAFO VA DOPO `immergi`, e l'ordine e' il punto: la
+   * lavorazione si COMPONE con chi ha gia' patchato il materiale, quindi
+   * l'assorbimento dell'acqua deve essere gia' li'. Al contrario funzionerebbe
+   * lo stesso ma per caso, e il giorno che qualcuno inverte due righe lo scafo
+   * smetterebbe di spegnersi sott'acqua senza un errore.
+   */
+  materiaDelloScafo()
+
   immergi(nave)
   const tugaQuota = tuga.quota
   const tugaZ = tuga.z

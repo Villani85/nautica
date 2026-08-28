@@ -1,4 +1,5 @@
 import { MeshStandardMaterial, DoubleSide, BackSide, FrontSide } from 'three'
+import { lavorazione, LAVORAZIONI } from './materia.js'
 
 /**
  * I colori sono scritti in esadecimale e three li interpreta come sRGB
@@ -216,6 +217,27 @@ export function applicaAmbiente (mappa) {
   for (const nome of ['scafo', 'coperta', 'acciaio', 'bronzo', 'accento', 'vetro']) {
     materiali[nome].envMap = mappa
     materiali[nome].needsUpdate = true
+  }
+}
+
+/**
+ * ─── LA MATERIA DELLO SCAFO, che non c'era
+ *
+ * `LAVORAZIONI` aveva una voce `carena` da mesi e non la applicava nessuno: le
+ * lavorazioni erano collegate ai soli materiali del meccanismo, che arrivano
+ * dal GLB. Lo scafo -- costruito qui in codice -- non aveva nessun trattamento
+ * di superficie, e misurato ingrandendo un ritaglio pulito a contrasto sette
+ * volte usciva bianco assoluto: zero variazione.
+ *
+ * Si chiama da fuori e non qui dentro perche' `nebbiaAcqua` deve arrivare
+ * PRIMA: la lavorazione si compone con chi c'era, ma solo se chi c'era c'e'
+ * gia'. L'ordine lo tiene `index.js`.
+ */
+export function materiaDelloScafo () {
+  if (location.search.includes('materia=0')) return
+  for (const nome of ['scafo', 'coperta']) {
+    const r = LAVORAZIONI[nome]
+    if (r) lavorazione(materiali[nome], r)
   }
 }
 

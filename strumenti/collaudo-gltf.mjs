@@ -607,12 +607,42 @@ function lavorazioniSenzaMateriale (nomiVisti) {
     return
   }
   const chiavi = [...blocco[1].matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)].map(m => m[1])
-  const orfane = chiavi.filter(k => !nomiVisti.has(k))
+
+  /**
+   * ─── NON TUTTI I MATERIALI ARRIVANO DA UN GLB
+   *
+   * Questo controllo assumeva che ogni lavorazione si applicasse a un
+   * materiale del modello, e per mesi e' stato vero: le lavorazioni erano
+   * collegate ai soli pezzi del meccanismo, che vengono da Blender.
+   *
+   * Da quando la NAVE ha una sua materia non lo e' piu': lo scafo e la coperta
+   * sono costruiti in codice in `materiali.js`, e per loro «nessun modello ha
+   * un materiale con quel nome» e' la risposta giusta, non un difetto.
+   *
+   * Il controllo NON si allenta: si allarga la domanda. Una lavorazione deve
+   * corrispondere a un materiale che esiste DA QUALCHE PARTE -- in un GLB
+   * oppure fra le chiavi di `materiali` in `materiali.js`. Una chiave che non
+   * si trova in nessuno dei due posti resta un errore, ed e' il caso che
+   * questo cancello e' nato per prendere: una ricetta scritta per un materiale
+   * che non esiste, che non rompe niente e lascia la superficie uniforme.
+   */
+  const SORGENTE_MATERIALI = join(dirname(SORGENTE_MATERIA), 'materiali.js')
+  const inCodice = new Set()
+  try {
+    const src = readFileSync(SORGENTE_MATERIALI, 'utf8')
+    const b2 = src.match(/const materiali\s*=\s*\{([\s\S]*?)\n\}/)
+    if (b2) for (const m of b2[1].matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)) inCodice.add(m[1])
+  } catch { /* se non c'e', restano solo i modelli */ }
+
+  const orfane = chiavi.filter(k => !nomiVisti.has(k) && !inCodice.has(k))
+  const daCodice = chiavi.filter(k => !nomiVisti.has(k) && inCodice.has(k))
   dice(`LAVORAZIONI ${chiavi.length} dichiarate in materia.js, ` +
-       `${chiavi.length - orfane.length} trovate nei modelli`)
+       `${chiavi.filter(k => nomiVisti.has(k)).length} trovate nei modelli` +
+       (daCodice.length ? `, ${daCodice.length} su materiali costruiti in codice (${daCodice.join(', ')})` : ''))
   if (orfane.length) {
-    rompe(`le lavorazioni ${orfane.join(', ')} si applicano per NOME di materiale, e nessun ` +
-          'modello ha un materiale con quel nome: non verranno mai applicate. §7 mette la ' +
+    rompe(`le lavorazioni ${orfane.join(', ')} si applicano per NOME di materiale, e quel nome ` +
+          'non esiste ne fra i materiali dei modelli ne fra quelli costruiti in codice in ' +
+          '`materiali.js`: non verranno mai applicate. §7 mette la ' +
           'variazione di rugosità in cima alle regole di resa, e questa è la via silenziosa ' +
           'per perderla — nessun errore, solo una superficie uniforme.')
   }

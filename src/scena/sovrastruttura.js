@@ -2,6 +2,7 @@ import { Group } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { creaVetroLeggero } from './vetro.js'
+import { lavorazione, LAVORAZIONI } from './materia.js'
 
 /**
  * LA SOVRASTRUTTURA — i due ponti sopra la tuga, la coperta e la battagliola.
@@ -86,6 +87,15 @@ export function creaSovrastruttura (base, { ambiente = null, pianoSezione = null
               }
               continue
             }
+            /**
+             * LA MATERIA DELLA NAVE. Le lavorazioni erano collegate solo ai
+             * materiali del meccanismo: la sovrastruttura -- la massa piu'
+             * grande dell'inquadratura -- non aveva nessun trattamento di
+             * superficie, e misurata a contrasto sette volte era bianco
+             * assoluto, zero variazione.
+             */
+            const ricetta = LAVORAZIONI[m.name]
+            if (ricetta && !location.search.includes('materia=0')) lavorazione(m, ricetta)
             if (pianoSezione) m.clippingPlanes = [pianoSezione]
             if (ambiente && 'envMap' in m) {
               m.envMap = ambiente

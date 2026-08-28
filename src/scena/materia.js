@@ -75,10 +75,27 @@ float disturbo (vec3 p) {
  * @param {number} opzioni.direzione  quanto e' piu' fitta LUNGO l'asse che
  *                                  attorno. 1 = nessuna direzione (verniciato)
  */
-export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 15 } = {}) {
+export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 15,
+  rilievo = 0, fasciame = 0, assefasciame = 'y' } = {}) {
   if (!m || !('roughness' in m)) return m
 
-  m.onBeforeCompile = (s) => {
+  /**
+   * SI COMPONE, NON SI SOVRASCRIVE.
+   *
+   * Qui c'era `m.onBeforeCompile = (s) => {...}`, che funzionava finche' le
+   * lavorazioni toccavano solo i materiali del meccanismo, dove nessun altro
+   * scriveva. Dandola allo SCAFO diventa un difetto grosso e muto: lo scafo ha
+   * gia' `nebbiaAcqua`, e assegnare qui cancellerebbe l'assorbimento
+   * dell'acqua senza un errore -- si vedrebbe solo che sotto la linea lo scafo
+   * non si spegne piu'.
+   *
+   * E' la stessa regola gia' scritta in `acqua.js`, dove e' costata mezza
+   * giornata di scafo senza buccia d'arancia.
+   */
+  const prima = m.onBeforeCompile
+  const chiavePrima = m.customProgramCacheKey
+  m.onBeforeCompile = function (s, r) {
+    if (prima) prima.call(this, s, r)
     s.vertexShader = s.vertexShader
       .replace('#include <common>', ['#include <common>', 'varying vec3 vPezzo;'].join('\n'))
       .replace('#include <begin_vertex>', ['#include <begin_vertex>', '  vPezzo = transformed;'].join('\n'))
@@ -103,12 +120,89 @@ export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 15 } = {}
   // e senza questo il motivo si legge come un reticolo
   d = mix(d, disturbo(p * 0.23), 0.45);
   roughnessFactor = clamp(roughnessFactor + d * ${forza.toFixed(3)}, 0.03, 1.0);
+${fasciame > 0 ? `
+  /**
+   * ─── IL GIUNTO SI VEDE PERCHE' E' PIU' SCURO, non perche' e' inclinato
+   *
+   * Prima il fasciame perturbava solo la NORMALE. Provato e misurato: a questa
+   * distanza non produce niente. Una inclinazione di 0,06 su una vernice bianca
+   * quasi diffusa, sotto un cielo a due tinte, cambia l'ombreggiatura di
+   * qualche percento -- cioe' sotto il rumore. Ingrandito a contrasto 14 il
+   * fianco mostrava la buccia della vernice ma nessuna riga.
+   *
+   * Un giunto vero non si legge per la sua geometria: si legge perche' e' una
+   * riga PIU' SCURA. Ci si ferma lo sporco, ci si raccoglie l'ombra, e il
+   * sigillante non ha la stessa vernice sopra. E' un fatto di albedo, e un
+   * albedo si vede a qualunque distanza e con qualunque cielo.
+   *
+   * Il passo e' in unita' di scena: 0,68 sono 1,7 metri, la fasciatura vera.
+   */
+  {
+    float qq = fract(vPezzo.${assefasciame} / ${fasciame.toFixed(4)}) - 0.5;
+    float riga = smoothstep(0.038, 0.006, abs(qq));
+    diffuseColor.rgb *= 1.0 - riga * 0.22;
+    roughnessFactor = clamp(roughnessFactor + riga * 0.10, 0.03, 1.0);
+  }` : ''}
 }`)
+
+    /**
+     * ─── LA RUGOSITA' DA SOLA NON SI VEDE, E QUESTO E' IL PUNTO
+     *
+     * Una variazione di rugosita' cambia COME una superficie riflette. Se non
+     * c'e' niente da riflettere non cambia niente: l'ambiente di questo sito e'
+     * due tinte -- carta sopra la linea, acqua sotto -- e su una vernice bianca
+     * quasi diffusa il risultato e' invisibile.
+     *
+     * Misurato, ed e' il numero che ha aperto questo lavoro: ingrandito a
+     * contrasto sette volte, il fianco della sovrastruttura e' **bianco
+     * assoluto**. Zero variazione. I 42,85 di "struttura" che avevo letto
+     * prima erano il bordo di un finestrino dentro il ritaglio, non la
+     * superficie -- un numero che misura i contorni e non la materia.
+     *
+     * La normale invece cambia l'ANGOLO con cui la superficie prende la luce,
+     * e quello si vede anche con un cielo povero, perche' non ha bisogno di
+     * riflettere niente: basta la diffusa.
+     *
+     * ─── E IL FASCIAME, che e' l'unica cosa che si legge a trenta metri
+     *
+     * Un raccordo da dodici millimetri su uno scafo di quaranta metri guardato
+     * da trenta e' sotto il pixel: la normale cotta in Blender conta da vicino
+     * e alla luce radente, non qui. Quello che si vede a quella distanza sono
+     * i GIUNTI DEI PANNELLI -- righe lunghe, dritte, a basso contrasto, ogni
+     * paio di metri -- perche' sono grandi quanto la nave, non quanto il
+     * dettaglio.
+     *
+     * Il passo e' in unita' di scena e va dichiarato in metri da chi chiama:
+     * una fasciatura vera sta fra 1,5 e 2 m, cioe' 0,6-0,8 unita'.
+     */
+    if (rilievo > 0 || fasciame > 0) {
+      s.fragmentShader = s.fragmentShader
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec3 pr = vPezzo * ${(scala * 0.55).toFixed(3)};
+  float e = 0.35;
+  /* la pendenza del disturbo per differenze finite: tre campioni, non una
+     derivata analitica, perche' il disturbo e' una somma di seni annidati e
+     la sua derivata a mano sarebbe una seconda implementazione da tenere
+     allineata */
+  float d0 = disturbo(pr);
+  vec3 grad = vec3(disturbo(pr + vec3(e, 0.0, 0.0)) - d0,
+                   disturbo(pr + vec3(0.0, e, 0.0)) - d0,
+                   disturbo(pr + vec3(0.0, 0.0, e)) - d0);
+
+  normal = normalize(normal - grad * ${rilievo.toFixed(4)});
+}`)
+    }
   }
   // La chiave dipende dai parametri: due materiali con lavorazioni diverse
   // devono compilare due programmi, non condividerne uno.
-  const chiave = `lavorazione-${scala}-${forza}-${direzione}`
-  m.customProgramCacheKey = () => chiave
+  const chiave = `lavorazione-${scala}-${forza}-${direzione}-${rilievo}-${fasciame}-${assefasciame}`
+  /* anche la chiave si compone: due patch diverse sullo stesso materiale devono
+     dare due programmi diversi, e scartare la chiave di chi c'era prima
+     rimetterebbe insieme cose che non lo sono */
+  m.customProgramCacheKey = function () {
+    return chiave + '|' + (chiavePrima ? chiavePrima.call(this) : '')
+  }
   m.needsUpdate = true
   return m
 }
@@ -130,5 +224,25 @@ export const LAVORAZIONI = {
   // buccia d'arancia dello spruzzo, non una lavorazione
   carter:  { scala: 26, forza: 0.045, direzione: 1 },
   motore:  { scala: 26, forza: 0.045, direzione: 1 },
-  carena:  { scala: 20, forza: 0.05, direzione: 1 }
+  carena:  { scala: 20, forza: 0.05, direzione: 1 },
+
+  /**
+   * ─── LE RICETTE DELLA NAVE, che prima non esistevano
+   *
+   * `carena` era definita qui e non veniva applicata da nessuno: le
+   * lavorazioni erano collegate solo ai materiali del meccanismo. La nave --
+   * cioe' la cosa piu' grande dell'inquadratura -- non aveva nessun
+   * trattamento di superficie.
+   *
+   * `fasciame` e' in unita' di scena: 0,68 sono 1,7 metri, il passo di una
+   * fasciatura vera. Sullo SCAFO i corsi corrono lungo la nave e si ripetono
+   * in ALTEZZA, quindi l'asse e' y; sulla sovrastruttura i pannelli sono
+   * verticali e si ripetono in LUNGHEZZA, quindi z.
+   */
+  scafo:          { scala: 16, forza: 0.05, direzione: 1, rilievo: 0.10, fasciame: 0.68, assefasciame: 'y' },
+  sovra_guscio:   { scala: 22, forza: 0.04, direzione: 1, rilievo: 0.07, fasciame: 0.80, assefasciame: 'z' },
+  sovra_montante: { scala: 22, forza: 0.04, direzione: 1, rilievo: 0.06 },
+  /* la coperta in teak: i corsi ci sono gia' come geometria, qui serve solo
+     che il legno non sia una lastra uniforme */
+  coperta:        { scala: 30, forza: 0.06, direzione: 3, rilievo: 0.04 }
 }
