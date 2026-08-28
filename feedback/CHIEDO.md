@@ -132,51 +132,42 @@ generosa di quella che darebbe uno spettro reale (JONSWAP, Pierson-Moskowitz)?
 Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
 `riduzioni.json`.)
 
-### 3.4 · Le tre cose su cui sono fermo, e sono di giudizio, non di misura
+### 3.4 · Quello su cui sono ancora fermo
 
-1. **Il cielo è procedurale per decisione scritta** (`src/scena/ambiente.js`):
-   usa i colori del foglio di stile, perché una fotografia porterebbe un azzurro
-   che nel sito non esiste e toglierebbe senso alla giunzione fra fondo CSS e
-   canvas — che è l'unica idea meccanica del progetto. Conseguenza: le superfici
-   bianche riflettono due tinte piatte e leggono plastica.
-   **C'è un modo di dare struttura a quel cielo senza tradire la decisione?**
+*(Due delle tre domande che stavano qui sono chiuse dal giro delle 10:17 —
+il cielo e la cura del diffuso. Vedi §5.)*
 
-2. **Il vetro esce a 29/255**, cioè quasi nero. È fisicamente corretto — riflette
-   un ambiente scuro — ma le finestre di uno yacht vero, di giorno, sono la cosa
-   più luminosa dopo la vernice bianca. **Chi sbaglia: l'ambiente o il modello
-   del vetro?** (`src/scena/vetro.js`, `creaVetroLeggero`.)
+**Perché lo scafo è più chiaro del 37% e la sovrastruttura più scura del 20%?**
+Con camera (0,05 px), cielo, curva tonale **e luci** allineati, e i rapporti
+presi **in lineare** a esposizione 0 da tutte e due le parti:
 
-3. **Lo scafo è più chiaro del 29%, e adesso so perché: mi serve la cura, non
-   la diagnosi.** Con camera (0,05 px), cielo, curva tonale e luci allineati,
-   la sovrastruttura combacia col path tracer entro dieci livelli; lo scafo è
-   **1,29×** (Cycles 39,0, sito 50,4, sulle sole facce anteriori).
+```
+scafo           Cycles 0,0564   sito 0,0772   = 1,370x   (sito piu chiaro)
+sovrastruttura  Cycles 0,3267   sito 0,2605   = 0,797x   (sito piu SCURO)
+```
 
-   Sei sospetti esclusi, ognuno con una misura: buccia d'arancia, guscio
-   `interno`, parametri del materiale, `side`, **risoluzione dell'ambiente**
-   (da 512×256 a 2048×1024, ri-renderizzando anche Blender: 1,292 → 1,315, non
-   si muove) e **speculare a incidenza radente**:
+Due errori di **segno opposto**. Sette sospetti esclusi, ognuno con una misura:
+buccia d'arancia, guscio `interno`, parametri del materiale, `side`,
+risoluzione dell'ambiente, speculare a incidenza radente, e — dal giro
+scorso — **l'irradianza in armoniche sferiche**, che ho costruito e che non
+cambia niente (§5).
 
-   ```
-   come sta (rugosita 0,13)   50,0   1,28x
-   rugosita 0,5               58,0   1,49x    <- irruvidire PEGGIORA
-   rugosita 1                 55,1   1,41x
-   SOLO speculare (colore 0)  13,1   0,34x    <- e solo il 26% del totale
-   senza ambiente              1,8   0,05x
-   ```
+Sospetto rimasto, non provato: three **non ha occlusione dell'ambiente**.
+Cycles ombreggia il cielo con lo sbalzo della coperta e la curvatura dello
+scafo; three no. Spiegherebbe lo scafo più chiaro — ma **non** la sovrastruttura
+più scura, quindi le cause sono due e ne conosco zero.
 
-   **Resta la parte diffusa.** `getIBLIrradiance` legge l'ultimo livello del
-   PMREM, che è un'approssimazione dell'integrale coseno-pesato; su un ambiente
-   a forte contrasto — carta chiara sopra la linea, acqua scura sotto, che è il
-   nostro per decisione scritta — sovrastima. Cycles lo integra esatto.
+**Da riprodurre:**
+```
+node strumenti/esporta-ambiente.mjs
+SOGGETTO=nave ALFA=1 SENZA_PIANO=1 AMBIENTE_SITO=1 LUCE=0 LINEARE=1   ESPOSIZIONE=0 CUOCI_CPU=1 blender -b -P riferimenti/blender/cuoci.py   -- meccanismo.json <cartella>
+LINEARE=1 SENZA_LUCI=1 SENZA_MARE=1 FUORI=<cartella> ETICHETTA=x   node strumenti/confronto-cotto.mjs
+```
 
-   **La domanda non è più «da dove viene», è «come si cura in three».** Un
-   materiale con `envMap` prende il diffuso da lì e quel solo termine non si
-   spegne; un `LightProbe` con armoniche sferiche darebbe l'irradianza giusta
-   ma coesiste male con `envMap`; compensare con `envMapIntensity` toccherebbe
-   anche lo speculare, che è già giusto. **C'è una strada che non conosco?** E
-   quanto costa per fotogramma, perché il budget di questo sito è misurato e
-   pubblicato.
-
+**Avvertimento che ti farebbe perdere un giro:** una maschera ottenuta
+dipingendo il materiale di emissivo comprende anche le sue facce POSTERIORI, e
+su un guscio aperto lì Cycles non disegna niente. Misurando così avevo
+concluso «2,51×, causa il DoubleSide»: falso in tutte e due le metà.
 
 ### 3.5 · Due seguiti al tuo giro delle 07:00
 
@@ -236,6 +227,88 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 28 agosto, 10:17 (`nautica_2026-08-28_1017_3c87e66.md`)
+
+**Il giro più utile finora. Due voci su tre erano vere, e la terza mi ha
+corretto una premessa.**
+
+**VOCE 1 — «il corredo PBR ha reso il modello più pesante di 213 KB sul filo».
+CONFERMATA, ed era un mio errore di metodo.** Verificata con lo stesso metodo
+di `peso.mjs` sui due file, entrambi già meshopt:
+
+```
+prima (ALTA)        grezzo 309,4 KB   gzip 140,4   brotli 129,9
+dopo  (BASSA+2048)  grezzo 432,1 KB   gzip 350,5   brotli 343,4
+```
+
+Misuravo l'uscita grezza di gltfpack, che non è il byte che parte. Le tue due
+cause sono esatte: la geometria meshopt si comprime **ancora 2,4 volte**, una
+texture webp per niente.
+
+**Curata, e la via d'uscita l'ho misurata invece di sceglierla.** Il recupero
+della normale è lo **stesso** alle tre risoluzioni:
+
+```
+2048   61,7% di recupero   modello 343,4 KB brotli
+1024   63,6%                       210,0
+ 512   62,5%                       160,7
+```
+
+Differenze dentro il rumore del render, byte no. Si cuoce a 2048 (dove i
+cancelli sono tarati) e si **spedisce a 512**, come già per l'occlusione. Netto
+contro l'alta: **+30,8 KB**, non +213. La tua opzione (b) era quella giusta, e
+si può spingere oltre il 1024 che proponevi.
+
+**VOCE 2 — i «223 KB» e la soglia dell'attesa. CONFERMATA, ed era la più
+seria.** `guasto.js` tara `ATTESA = 6000` su quel numero: 223 KB a 400 kbit/s
+sono 4,46 s. Coi 343,4 diventavano **6,87 s**, cioè la spia si sarebbe accesa
+proprio sulla connessione per cui è scritta per NON accendersi. Adesso sono
+161 KB = **3,21 s**: margine più largo di quando quel commento fu scritto. I
+tre riferimenti sono aggiornati e il commento dichiara che quel numero è un
+**vincolo**, non una nota.
+
+**VOCE 3 — lo spettro del mare. Non ancora verificata**, e lo dico invece di
+fingere: la tua replica dell'integratore che torna a 0,04 punti da
+`riduzioneVera` è un pezzo di lavoro serio, e la direzione (conservativo, non
+generoso) mi sorprende. La verifico e rispondo al giro dopo. Se nel frattempo
+vuoi rafforzarla: quanto cambia la **riduzione dichiarata in pagina** — non la
+mia replica — se il periodo modale è quello di un mare 5 vero?
+
+**§3.4.1 — hai ragione, la mia premessa era vecchia.** Verificato:
+`ambiente.js:94-98` ha il gradiente verticale (zenit +35% verso il bianco,
+orizzonte scaldato del 55%) e `:126-136` il disco solare con alone a raggio
+`L*0.085`. Non sono «due tinte piatte». La domanda era mal posta e la ritiro.
+
+**§3.4.3 — la cura che hai progettato l'ho costruita, ed è la cosa più utile
+che posso restituirti: NON funziona.** Ho fatto esattamente quello che
+descrivi — armoniche sferiche dall'equirettangolare, sostituzione del solo
+termine diffuso in `onBeforeCompile` lasciando intatto `getIBLRadiance`, senza
+toccare `envMapIntensity`. Verificata due volte:
+
+- contro l'integrale coseno-pesato a forza bruta: scarto **0,1–0,2%** su
+  quattro normali su cinque;
+- **viva**: azzerando le nove uniformi lo scafo crolla da 73,1 a 33,2.
+
+Risultato: scafo **1,368×** contro 1,370×, sovrastruttura 0,801× contro 0,797×.
+**Le due formulazioni coincidono entro lo 0,15%.** Su questo cielo
+l'approssimazione `E = π·L` di three è già giusta, e la diagnosi — mia, non
+tua — era sbagliata. Non spedita.
+
+Tre trappole pagate costruendola, che ti risparmio se ci riprovi:
+`onBeforeCompile` riceve gli `#include` **non espansi**; viene chiamato **anche
+per lo shader di profondità** delle ombre, dove `lights_fragment_maps` non c'è
+e non deve esserci; e `this` dentro `onBeforeCompile` è il materiale **vero**,
+che sui cloni non è quello catturato nella chiusura.
+
+**§3.5 — l'orizzonte in CSS che si inclina.** È la proposta migliore che ho
+ricevuto: dice il prodotto con un gesto invece che con una parola, sta nel
+percorso critico, e cancella il «sta caricando». La prendo. Una sola riserva da
+verificare, non da discutere: `prefers-reduced-motion` — in questo sito il
+movimento si RIDUCE, non si spegne, quindi va progettata anche la versione
+ferma che comunque promette qualcosa.
+
+---
 
 ### Giro del 28 agosto, 07:00 (`nautica_2026-08-28_0700_97b3204.md`)
 
