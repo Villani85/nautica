@@ -257,7 +257,14 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const uniAcqua = {
     colore: { value: new Vector3(...ACQUA_COLORE) },
     sigma: { value: ACQUA_SIGMA },
-    attiva: { value: 1 }
+    attiva: { value: 1 },
+    /**
+     * La quota della camera, che serve allo shader per sapere quanta parte
+     * della linea di vista sta in ARIA. Si aggiorna a ogni fotogramma: in
+     * uscita dal salone scende da dentro la tuga fino al pelo, ed e' proprio
+     * quel tratto in cui la vecchia formula assorbiva l'84,6% di troppo.
+     */
+    quotaCamera: { value: 0 }
   }
   const immergi = (radice) => {
     const visti = new Set()
@@ -815,6 +822,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       camera.position.y,
       MathUtils.lerp(tugaZ, miraZ, uscita))
 
+    /**
+     * Quanta della linea di vista sta in aria. La camera non e' figlia di
+     * niente, quindi la sua posizione e' gia' in coordinate di mondo e non
+     * serve `getWorldPosition` -- che a ogni fotogramma allocherebbe.
+     */
+    uniAcqua.quotaCamera.value = camera.position.y
+
     if (salone) {
       // la crescita del piano del mare dipende dalla distanza VERA della
       // camera, che si conosce solo qui: chiamarla piu' su costava un
@@ -885,6 +899,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     const raggio = new Raycaster()
     window.__nautica = {
       scena, camera, render, nave,
+      // le uniformi dell'acqua: senza, la prova del rosso sulla nebbia non si
+      // puo' fare, e uno shader che non si puo' spegnere non e' verificato
+      uniAcqua,
       // Lo STATO, non solo la geometria. Senza, davanti a un meccanismo fermo
       // si finisce a indovinare perche': ridotto? stabilizzatore spento? mare
       // zero? Sono tre cause diverse e si distinguono solo leggendole.

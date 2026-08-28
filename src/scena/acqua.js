@@ -480,23 +480,79 @@ const INNESTO_SCINTILLE = /* glsl */`
  * il motivo per cui in una foto subacquea la prua a due metri si legge e la
  * poppa a venti e' gia' quasi solo acqua.
  *
- * Qui la si applica alla GEOMETRIA sommersa invece che con un velo davanti, e
- * il sito ha un regalo che rende il conto esatto: **la camera sta a quota
- * zero**. E' l'invariante da cui discende tutto, e significa che il cammino
- * dentro l'acqua di un frammento sommerso E' la sua distanza dalla camera --
- * non serve intersecare niente.
+ * Qui la si applica alla GEOMETRIA sommersa invece che con un velo davanti.
  *
- * Tre uniformi, nessuna texture, nessun passaggio in piu'.
+ * ─── IL CAMMINO NELL'ACQUA NON E' LA DISTANZA DALLA CAMERA
+ *
+ * Qui c'era scritto che coincidono, «perche' la camera sta a quota zero». La
+ * premessa e' vera solo per una parte del racconto: in uscita dal salone la
+ * camera scende **da dentro la tuga** fino al pelo, e in quel tratto una parte
+ * del segmento sta in ARIA, dove non si assorbe niente.
+ *
+ * Quanto contava, misurato con `strumenti/misura-acqua.mjs` sui vertici veri
+ * dello scafo: **all'apertura si attraversavano 9,3 m d'acqua dove ce ne sono
+ * 1,4 -- l'84,6% di troppo**, e proprio nel primo fotogramma che si vede. Dalla
+ * seconda battuta in poi la camera e' davvero sul pelo e l'errore e' zero:
+ * ecco perche' guardando il sito da fermo non si notava.
+ *
+ * La correzione e' geometria esatta, non un'approssimazione migliore. Per un
+ * frammento a quota h < 0 e una camera a quota c >= 0 il segmento taglia il
+ * pelo a t = c/(c-h), quindi la parte bagnata vale
+ *
+ *     d * |h| / (c + |h|)
+ *
+ * che a c = 0 da' esattamente d, cioe' quello che il sito calcolava prima. La
+ * vecchia formula era il caso particolare, e adesso e' contenuta nel generale.
+ *
+ * ─── E SIGMA ERA IN UNITA' DI SCENA MENTRE IL COMMENTO DICEVA METRI
+ *
+ * Secondo difetto, stesso blocco, ed e' quello che il sito rimprovera agli
+ * altri: `sigma` moltiplicava `length(vViewPosition)`, che e' in unita' di
+ * scena, mentre il commento prometteva metri. Una unita' vale 2,5 m -- lo
+ * dicono gia' `impianto.js`, `sovrastruttura.js` e `vetro.js` -- quindi 0,085
+ * non spegneva a 11,8 m ma a **29,4**, due volte e mezzo piu' in la'. Su uno
+ * scafo che pesca 2,35 m questo vuol dire quasi nessun degradare: sotto la
+ * linea si vedeva acqua piatta invece di uno scafo che si spegne.
+ *
+ * Adesso il numero e' in metri e la conversione e' scritta una volta sola.
+ *
+ * Quattro uniformi, nessuna texture, nessun passaggio in piu'.
  */
 const NEBBIA_GLSL = `
 uniform vec3  acquaColore;
 uniform float acquaSigma;
 uniform float acquaAttiva;
+uniform float acquaQuotaCamera;
 varying float vQuotaMondo;
 `
 
-/** Quanto assorbe: a 1/sigma metri resta 1/e della luce. */
-export const ACQUA_SIGMA = 0.085
+/** Metri per unita' di scena. Stesso numero di `impianto.js` e `vetro.js`. */
+export const METRI_PER_UNITA = 2.5
+
+/**
+ * QUANTO ASSORBE, e da dove viene il numero.
+ *
+ * Non e' scelto a occhio: si ricava da una grandezza che si misura davvero in
+ * mare, la **profondita' del disco di Secchi**, con la relazione classica
+ *
+ *     z_Secchi ~ 8,7 / (c + Kd)
+ *
+ * dove `c` e' il coefficiente di attenuazione del fascio -- quello che conta
+ * per il contrasto di un oggetto guardato lungo una linea di vista, che e'
+ * esattamente cio' che fa questo shader -- e `Kd` quello diffuso.
+ *
+ * Acqua mediterranea limpida d'estate: Secchi ~30 m, Kd ~0,06 /m. Quindi
+ *
+ *     c = 8,7 / 30 - 0,06 = 0,23 al metro     ->  1/e a 4,3 m
+ *
+ * Il valore precedente, riportato in metri, era 0,034 /m: acqua sette volte
+ * piu' limpida di qualunque mare in cui si naviga.
+ */
+export const ACQUA_SECCHI_M = 30
+export const ACQUA_KD = 0.06
+export const ACQUA_SIGMA_PER_METRO = 8.7 / ACQUA_SECCHI_M - ACQUA_KD
+/** Lo stesso numero nelle unita' in cui lo shader misura le distanze. */
+export const ACQUA_SIGMA = ACQUA_SIGMA_PER_METRO * METRI_PER_UNITA
 export const ACQUA_COLORE = [0.031, 0.145, 0.157]
 
 /**
@@ -520,6 +576,7 @@ export function nebbiaAcqua (m, uni) {
     s.uniforms.acquaColore = uni.colore
     s.uniforms.acquaSigma = uni.sigma
     s.uniforms.acquaAttiva = uni.attiva
+    s.uniforms.acquaQuotaCamera = uni.quotaCamera
     s.vertexShader = s.vertexShader
       .replace('#include <common>', `#include <common>
 varying float vQuotaMondo;`)
@@ -529,12 +586,15 @@ varying float vQuotaMondo;`)
       .replace('#include <common>', '#include <common>' + NEBBIA_GLSL)
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
 {
-  // sotto la linea, e solo sotto: il cammino nell'acqua e' la distanza dalla
-  // camera, perche' la camera sta a quota zero
+  // sotto la linea, e solo sotto
   float sotto = smoothstep( 0.02, -0.08, vQuotaMondo ) * acquaAttiva;
   if ( sotto > 0.0 ) {
-    float d = length( vViewPosition );
-    float resta = exp( -acquaSigma * d );
+    // solo il tratto BAGNATO del segmento: con la camera in aria una parte
+    // sta sopra il pelo e li' non si assorbe. A camera sul pelo vale d.
+    float h = max( -vQuotaMondo, 0.0 );
+    float c = max( acquaQuotaCamera, 0.0 );
+    float bagnato = length( vViewPosition ) * h / max( c + h, 1e-4 );
+    float resta = exp( -acquaSigma * bagnato );
     gl_FragColor.rgb = mix( acquaColore, gl_FragColor.rgb, mix( 1.0, resta, sotto ) );
   }
 }`)
