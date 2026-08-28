@@ -626,10 +626,80 @@ if CUOCI_AO:
         raise SystemExit('AO cotta ma non collegata a nessun materiale: '
                          'il GLB uscirebbe senza occlusione e senza UV.')
 
+# ═══════════════════════════════════════════════════════════════════════════
+# LA NORMALE COTTA, e perche' la sovrastruttura la aspettava da un pezzo
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Il GLB spedito aveva UV e occlusione su 5 materiali su 5 e NESSUNA normale --
+# verificato leggendo il file, non dedotto. E si vede: la sovrastruttura e' la
+# massa bianca piu' grande dell'inquadratura e legge come carta, perche' e'
+# omogenea a ogni scala. Uno spigolo vero e' un raccordo di pochi millimetri
+# che raccoglie una riga di luce, ed e' quella riga a dire che l'oggetto e'
+# stato fatto e non disegnato.
+#
+# La mappa arriva da `cuoci-sovrastruttura.py` (che costruisce l'alta smussata)
+# piu' `cottura.py` (il forno). Qui si attacca e basta.
+#
+# Si spedisce a 512 come la normale del meccanismo: li' e' stato misurato che
+# il recupero della resa e' lo STESSO a 2048, 1024 e 512 -- dentro il rumore del
+# render -- mentre i byte no, perche' una texture webp non si comprime piu' con
+# brotli e passa intera sul filo.
+MAPPE_S = os.environ.get('MAPPE_SOVRA')
+if MAPPE_S:
+    png_n = os.path.join(MAPPE_S, 'sovra_bassa-normale.png')
+    if not os.path.isfile(png_n):
+        raise SystemExit('MAPPE_SOVRA punta a %s ma non c e sovra_bassa-normale.png' % MAPPE_S)
+    img_n = bpy.data.images.load(png_n, check_existing=True)
+    img_n.colorspace_settings.name = 'Non-Color'
+    img_n.scale(512, 512)
+    quanti = 0
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        nt = m.node_tree
+        bsdf = next((x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED'), None)
+        if bsdf is None:
+            continue
+        tn = nt.nodes.new('ShaderNodeTexImage')
+        tn.image = img_n
+        tn.location = (-700, -200)
+        nm = nt.nodes.new('ShaderNodeNormalMap')
+        nm.location = (-420, -200)
+        nt.links.new(tn.outputs['Color'], nm.inputs['Color'])
+        nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        quanti += 1
+    print('NORMALE collegata a %d materiali' % quanti)
+    if not quanti:
+        raise SystemExit('normale cotta ma collegata a ZERO materiali: il GLB '
+                         'uscirebbe identico a prima e nessuno se ne accorgerebbe.')
+
+    # ─── SI TRIANGOLA, O LE TANGENTI NON NASCONO ──────────────────────────
+    #
+    # `export_tangents=True` da solo non basta: l'esportatore le calcola con
+    # `calc_tangents()`, che FALLISCE sulle facce con piu' di quattro lati e
+    # allora salta la tangente per quella mesh, in silenzio. Sull'impianto
+    # costo' 25 primitive su 26 senza tangenti e 25 avvisi del validatore
+    # Khronos. Triangolare qui non cambia la geometria spedita -- glTF e'
+    # triangoli e l'esportatore triangolerebbe comunque -- cambia solo che le
+    # tangenti si possono calcolare. E servono davvero: la normale e' cotta in
+    # spazio MikkTSpace, e chi disegna deve usare lo stesso spazio o la mappa
+    # racconta un rilievo diverso da quello cotto.
+    ngon = 0
+    for o in [x for x in bpy.data.objects if x.type == 'MESH']:
+        ngon += sum(1 for f in o.data.polygons if len(f.vertices) > 4)
+        bpy.ops.object.select_all(action='DESELECT')
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        t = o.modifiers.new(name='triangola', type='TRIANGULATE')
+        t.keep_custom_normals = True
+        bpy.ops.object.modifier_apply(modifier=t.name)
+    print('TRIANGOLATO  %d facce con piu di quattro lati sarebbero bastate a togliere le tangenti' % ngon)
+
 bpy.ops.object.select_all(action='SELECT')
 percorso = os.path.join(FUORI, 'sovrastruttura.glb')
 bpy.ops.export_scene.gltf(filepath=percorso, export_format='GLB',
                           use_selection=True, export_apply=True,
                           export_yup=True, export_extras=True,
+                          export_tangents=bool(MAPPE_S),
                           export_image_format='WEBP', export_image_quality=82)
 print('GLB %.0f KB' % (os.path.getsize(percorso) / 1024))
