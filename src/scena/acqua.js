@@ -1,5 +1,5 @@
 import {
-  Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial, BackSide,
+  Mesh, PlaneGeometry, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial, BackSide, Vector2,
   DoubleSide, Group, Color, Vector3, Vector4, Matrix4, Box3
 } from 'three'
 
@@ -112,6 +112,7 @@ uniform vec3  uNaveCol;
 uniform float uNaveForza;
 uniform float uNaveVel;
 uniform float uNaveOmbra;
+uniform vec2  uNaveOmbraRampa;
 uniform float uSpaccato;
 /* I VARCHI: dove il pelo si apre. Ognuno e' centro (xyz) e raggio (w) in
    coordinate del mondo. Sono i meccanismi, non la nave: aprire su tutta la
@@ -459,7 +460,7 @@ const INNESTO_SCINTILLE = /* glsl */`
    */
   if (uNaveForza > 0.0 && uNaveOmbra > 0.0) {
     vec3 op = (uNaveInv * vec4(vMondo, 1.0)).xyz / uNaveSemi;
-    float occ = smoothstep(1.9, 0.75, length(op.xz)) * uNaveOmbra;
+    float occ = smoothstep(uNaveOmbraRampa.x, uNaveOmbraRampa.y, length(op.xz)) * uNaveOmbra;
     acqCielo *= (1.0 - occ);
     diffuseColor.rgb *= (1.0 - occ * 0.55);
   }
@@ -799,6 +800,25 @@ export function costruisciAcqua (opzioni = {}) {
      * verso giusto.
      */
     uNaveOmbra: { value: 0.85 },
+    /**
+     * LA FORMA DELL'IMPRONTA, e qui una revisione esterna ha trovato il
+     * difetto vero: non l'intensita' ma la PORTATA.
+     *
+     * La rampa finiva a 1,9 semiassi dall'asse della nave. L'acqua che a
+     * schermo si legge "sotto la carena" -- il primo piano fra la camera e la
+     * linea d'acqua -- in quel sistema sta a **2,17**, cioe' gia' oltre il
+     * bordo, dove l'occlusione e' zero. Misurato da loro: occlusione media
+     * 0,082 su un massimo di 0,85, e solo il 28% della fascia sopra 0,05.
+     * L'ombra c'era e cadeva accanto al posto giusto.
+     *
+     * Il numero nuovo non e' un gusto ed e' l'unico che sapevo derivare:
+     * l'ombra di uno scafo si estende all'incirca quanto lo scafo e' ALTO.
+     * L'altezza d'aria dichiarata e' 10,96 m, cioe' 4,4 unita' di scena, e su
+     * un semiasse trasversale di 1,41 fanno 3,1 semiassi -- piu' il raggio
+     * stesso, 3,5 sta li'. A 6 la fascia diventa una macchia che invade il
+     * mare aperto, misurato: il mare lontano scende da 91 a 85.
+     */
+    uNaveOmbraRampa: { value: new Vector2(3.5, 0.9) },
     uSpaccato: { value: 0 },
     uVarchi: { value: [new Vector4(), new Vector4()] },
     uQuantiVarchi: { value: 0 }
