@@ -97,11 +97,18 @@ export function lavorazione (m, { scala = 9, forza = 0.10, direzione = 15,
   m.onBeforeCompile = function (s, r) {
     if (prima) prima.call(this, s, r)
     s.vertexShader = s.vertexShader
-      .replace('#include <common>', ['#include <common>', 'varying vec3 vPezzo;'].join('\n'))
+      .replace('#include <common>', s.vertexShader.includes('varying vec3 vPezzo;')
+        ? '#include <common>'
+        : `#include <common>
+varying vec3 vPezzo;`)
       .replace('#include <begin_vertex>', ['#include <begin_vertex>', '  vPezzo = transformed;'].join('\n'))
 
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', ['#include <common>', 'varying vec3 vPezzo;', DISTURBO].join('\n'))
+      .replace('#include <common>', s.fragmentShader.includes('varying vec3 vPezzo;')
+        ? '#include <common>'
+        : `#include <common>
+varying vec3 vPezzo;
+` + DISTURBO)
       /**
        * Dopo `roughnessmap_fragment`, perché è li' che la variabile nasce:
        * scriverla prima dà «undeclared identifier», ed è dove si era fermato
