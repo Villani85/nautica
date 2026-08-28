@@ -103,7 +103,7 @@ def geometria():
     """Stessa presa di `uv-impianto.py`: si esegue il sorgente FINO al taglio.
     Se la riga di taglio sparisse, ci si ferma invece di srotolare a caso."""
     sorgente_f = os.path.join(QUI, 'glb-impianto.py')
-    TAGLIO = "print('COTTURA occlusione ambientale...')"
+    TAGLIO = "print('--- TAGLIO: da qui in giu e solo esportazione, cuoci-impianto.py si ferma qui ---')"
     src = open(sorgente_f, encoding='utf-8').read()
     if TAGLIO not in src:
         raise SystemExit(
@@ -514,31 +514,29 @@ def prepara():
         dice('SENZA SMUSSO (alta == bassa, non c\'e\' niente da cuocere): %s'
              % ', '.join(senza_smusso))
 
-    # ─── §3 · le UV, sulla BASSA, con la ricetta di uv-impianto.py ────────
-    for o in pezzi:
-        bpy.ops.object.select_all(action='DESELECT')
-        o.select_set(True)
-        bpy.context.view_layer.objects.active = o
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0,
-                                 area_weight=0.0, correct_aspect=True,
-                                 scale_to_bounds=False)
-        bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in pezzi:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = pezzi[0]
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.select_all(action='SELECT')
-    bpy.ops.uv.average_islands_scale()
-    margine = MARGINE_PX / ATLANTE
-    bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION', margin=margine,
-                            shape_method=FORMA, scale=True, merge_overlap=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
-    dice('SROTOLAMENTO sulla BASSA + pack unico (forma %s, margine %.1f px su %d)'
-         % (FORMA, MARGINE_PX, ATLANTE))
+    # ─── §3 · le UV NON si rifanno qui: si VERIFICANO ────────────────────
+    #
+    # Questo blocco srotolava e impacchettava, con la stessa ricetta che
+    # `glb-impianto.py` ha adesso. Due ricette identiche in due file sono una
+    # sola finche' qualcuno non tocca una delle due, e allora la cottura viene
+    # fatta su un atlante e il GLB ne porta un altro -- un difetto che non da'
+    # nessun errore: le mappe si applicano, sono nitide, e stanno nel posto
+    # sbagliato.
+    #
+    # Adesso lo srotolamento sta UNA volta sola, in `glb-impianto.py`, prima
+    # della riga di taglio che `geometria()` usa. Quindi arriva fin qui da
+    # solo, e qui si controlla soltanto che ci sia davvero.
+    senza_uv = [o.name for o in pezzi if not o.data.uv_layers]
+    if senza_uv:
+        raise SystemExit(
+            'ERRORE: %d pezzi arrivano senza UV: %s. '
+            'Le UV le fa glb-impianto.py PRIMA della riga di taglio. Se quel '
+            'blocco fosse stato tolto o spostato dopo il taglio, va rimesso '
+            'li: rifarle qui creerebbe un secondo atlante, e la cottura '
+            'finirebbe su UV diverse da quelle che il GLB spedisce.'
+            % (len(senza_uv), ', '.join(senza_uv[:5])))
+    dice('SROTOLAMENTO ereditato da glb-impianto.py su %d pezzi (verificato, non rifatto)'
+         % len(pezzi))
 
     # ─── §4 · le misure per pezzo ─────────────────────────────────────────
     dice('')

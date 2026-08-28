@@ -359,6 +359,22 @@ def rimetti(salvato):
 def cuoci(tipo, alta, bassa, est, raggio, margine, campioni, cage=None):
     scena = bpy.context.scene
     scena.cycles.samples = campioni
+    # ─── IL CAMPIONAMENTO ADATTIVO RENDE `--campioni` UNA DECORAZIONE
+    #
+    # Cycles lo tiene acceso di serie: raggiunta la soglia di rumore si ferma,
+    # e il numero di campioni chiesto non conta piu'. Misurato cuocendo
+    # l'occlusione a 64 e poi a 512 campioni: **media 213,2 e deviazione 83,33
+    # identiche**, e la stessa fascia granulosa sul fianco della pinna.
+    #
+    # Due valori molto diversi che danno lo stesso risultato non dicono che il
+    # parametro non serva -- dicono che non arriva. E' la seconda volta in
+    # questa cottura: era gia' successo col raggio, dove pero' il difetto stava
+    # altrove davvero.
+    scena.cycles.use_adaptive_sampling = False
+    # Il denoise SOLO sull'occlusione. Su una normale sarebbe un danno: il
+    # denoise inventa continuita' dove la mappa deve avere spigoli, ed e' la
+    # ragione per cui questo file lo teneva spento per tutti.
+    scena.cycles.use_denoising = (tipo == 'AO')
     b = scena.render.bake
     b.use_selected_to_active = True
     b.margin_type = 'ADJACENT_FACES'

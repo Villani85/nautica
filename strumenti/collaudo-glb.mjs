@@ -415,38 +415,73 @@ if (E_IMPIANTO) {
 }
 
 /**
- * --- L OCCLUSIONE COTTA C E ANCORA?
+ * --- L OCCLUSIONE C E ANCORA, E ADESSO HA UN INDIRIZZO
  *
- * Segnalato da una revisione: il canale `COLOR_0` porta l occlusione ambientale
- * cotta in Blender, ma nessun cancello lo proteggeva. Basterebbe una
- * ricompressione senza il flag giusto per perderlo, e tutto resterebbe verde --
- * e' gia' successo con i nomi dei nodi, cancellati in silenzio da gltfpack.
+ * Segnalato da una revisione: nessun cancello proteggeva l occlusione cotta.
+ * Basterebbe una ricompressione senza il flag giusto per perderla, e tutto
+ * resterebbe verde -- e' gia' successo con i nomi dei nodi, cancellati in
+ * silenzio da gltfpack.
  *
- * Qui si conta, e basta. Gli accessori compressi con meshopt NON portano
- * `min`/`max`, quindi da questo file non si puo dire se i colori variano: un
- * canale tutto bianco passerebbe questo controllo.
+ * QUI SI CONTROLLAVA `COLOR_0`, e non ha piu' senso: l occlusione non viaggia
+ * piu' nei colori dei vertici. Il modello adesso spedisce la BASSA con una
+ * normale e una occlusione in texture -- 12.448 triangoli invece di 43.152, e
+ * gli smussi nella mappa. `COLOR_0` e' caduto con tutto il resto: era peso su
+ * 39.261 vertici che serviva solo a portare quell AO.
  *
- * Quel pezzo lo fa `collaudo-cinematica.mjs`, dove three.js li ha gia
- * decodificati per disegnarli, e dove si guarda anche se i materiali li
- * consumano. Scriverlo qui e non farlo sarebbe la cosa peggiore: e' la stessa
- * regola con cui questo file dichiara di NON controllare il verso delle
- * normali invece di far finta.
+ * Il controllo diventa piu' forte, non piu' debole, perche' la strada in
+ * texture ha piu' anelli che si possono rompere in silenzio:
+ *
+ *   - i materiali devono dichiarare `occlusionTexture` e `normalTexture`;
+ *   - le primitive devono portare `TEXCOORD_0`, o la mappa non ha dove
+ *     appoggiarsi. **gltfpack cancella le UV se nessun materiale usa una
+ *     texture**, senza dirlo: e' esattamente il difetto che ha tenuto ferma
+ *     questa strada per giorni;
+ *   - e `TANGENT`, perche' la normale e' cotta in spazio MikkTSpace. Senza,
+ *     il validatore Khronos alza MESH_PRIMITIVE_GENERATED_TANGENT_SPACE e
+ *     chi disegna se le inventa: misurato, uscivano su 1 primitiva su 26,
+ *     perche' `calc_tangents()` fallisce sulle facce con piu' di quattro lati
+ *     e questa geometria aveva 281 n-gon.
+ *
+ * Se il canale VARI, o se sia tutto bianco, da questo file non si vede: gli
+ * accessori compressi con meshopt non portano `min`/`max`, e l immagine e'
+ * un blob. Quel pezzo lo fa `collaudo-cinematica.mjs`, dove three.js l ha gia
+ * decodificata per disegnarla. Dichiararlo qui e non farlo sarebbe la cosa
+ * peggiore: e' la stessa regola con cui questo file dichiara di NON
+ * controllare il verso delle normali invece di far finta.
  */
 if (E_IMPIANTO) {
-  let prim = 0
-  let conColore = 0
+  let prim = 0, conUV = 0, conTangenti = 0
   for (const m of g.meshes ?? []) {
     for (const p of m.primitives) {
       prim++
-      if (p.attributes.COLOR_0 !== undefined) conColore++
+      if (p.attributes.TEXCOORD_0 !== undefined) conUV++
+      if (p.attributes.TANGENT !== undefined) conTangenti++
     }
   }
-  note.push(`OCCLUSIONE ${conColore} primitive su ${prim} portano COLOR_0 ` +
-            '(la VARIAZIONE la controlla collaudo-cinematica)')
-  if (conColore === 0) {
-    guasti.push('nessuna primitiva porta COLOR_0: l occlusione cotta nei vertici e sparita ' +
-                'dal modello. Il builder la cuoce e la esporta con export_vertex_color=ACTIVE; ' +
-                'se il modello e stato ricompresso, il flag e andato perso')
+  const mat = g.materials ?? []
+  const conAO = mat.filter((m) => m.occlusionTexture).length
+  const conNormale = mat.filter((m) => m.normalTexture).length
+  note.push(`OCCLUSIONE ${conAO}/${mat.length} materiali con occlusionTexture, ` +
+            `${conNormale} con normalTexture (la VARIAZIONE la controlla collaudo-cinematica)`)
+  note.push(`UV        ${conUV}/${prim} primitive con TEXCOORD_0, ${conTangenti} con TANGENT`)
+  if (conAO === 0) {
+    guasti.push('nessun materiale dichiara occlusionTexture: l occlusione e sparita dal ' +
+                'modello. La aggancia glb-impianto.py col gruppo di nodi "glTF Material ' +
+                'Output", ingresso "Occlusion"; se quel gruppo cambia nome, sparisce zitta')
+  }
+  if (conNormale === 0) {
+    guasti.push('nessun materiale dichiara normalTexture: senza, la BASSA e una bassa e ' +
+                'basta, cioe si spedisce meno geometria E meno resa')
+  }
+  if (conUV < prim) {
+    guasti.push(`${prim - conUV} primitive su ${prim} senza TEXCOORD_0: le mappe non hanno ` +
+                'dove appoggiarsi. gltfpack cancella le UV quando nessun materiale usa una ' +
+                'texture, e non lo dice')
+  }
+  if (conTangenti < prim) {
+    guasti.push(`${prim - conTangenti} primitive su ${prim} senza TANGENT: la normale e ` +
+                'cotta in MikkTSpace e chi disegna se le inventerebbe. Di solito e un n-gon: ' +
+                'calc_tangents() fallisce e l esportatore salta la mesh in silenzio')
   }
 }
 

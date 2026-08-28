@@ -227,7 +227,13 @@
     <p>Nine sections along the length, interpolated. The hull, the deck and the
     section cap are curves described in code. The mechanism and the two upper
     decks are modelled in Blender by the scripts in this repository and shipped
-    as glTF — 436 KB, meshopt-compressed. Still no third-party model, and
+    as glTF — 558 KB, meshopt-compressed. That figure went up from 436, and
+    the trade is worth naming: the mechanism used to ship its chamfers as
+    geometry, 43,152 triangles of them. It now ships 12,448 and carries the
+    chamfers in a baked normal map instead. Measured at the distance the camera
+    actually reaches, the map recovers 61.7% of what the coarse mesh loses, and
+    what it cannot fake — the silhouette — costs 632 pixels, 1.41% of
+    the mechanism. Still no third-party model, and
     still nothing downloaded that we did not author; but they are files now,
     not curves, and the page said <em>zero bytes</em> for one night longer than
     it was true. And the section cap at any station is <em>the same
@@ -283,13 +289,13 @@
         era giusto, l'aggettivo no.
       -->
       <div><dt>3D engine, loaded on approach (gzip)</dt><dd>191,7 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>436 KB</dd></div>
+      <div><dt>3D models downloaded</dt><dd>558 KB</dd></div>
       <!--
         E il totale, che e' la riga che un giurato verifica in dieci secondi.
         Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
         cose diverse e la differenza e' 134 volte.
       -->
-      <div><dt>Total before the first rendered frame</dt><dd>2,05 MB</dd></div>
+      <div><dt>Total before the first rendered frame</dt><dd>2,17 MB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>

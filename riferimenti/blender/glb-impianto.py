@@ -568,6 +568,74 @@ print('PINNA area       %.3f m2 (bersaglio %.2f), corda radice %.3f m'
       % (AREA_DISEGNATA, AREA_PINNA, CORDA_UNITA * CORDA))
 
 # ═══════════════════════════════════════════════════════════════════════════
+# LE UV, QUI E UNA VOLTA SOLA — E PRIMA CHE GLI SMUSSI SIANO APPLICATI
+#
+# Stanno qui, e non in `cuoci-impianto.py` che le faceva, per una ragione di
+# cucitura fra i due file: `cuoci-impianto.py` esegue QUESTO sorgente fino alla
+# riga «COTTURA occlusione ambientale...» e prende i pezzi con i modificatori
+# BEVEL ancora attaccati, poi ne ricava l'alta applicandoli e la bassa
+# togliendoli. Srotolando prima di quel taglio, **tutti e due i lati ereditano
+# lo stesso atlante per costruzione** invece di doverlo rifare uguale -- che e'
+# la specie di duplicazione che questo progetto vieta.
+#
+# ─── E VA FATTO PRIMA CHE IL BEVEL SIA APPLICATO, non dopo
+#
+# Sembra il contrario di quel che serve: la mappa dovra' pur stare sulla mesh
+# che viaggia. Ma la mesh che viaggia E' questa -- il BEVEL e' ancora un
+# modificatore, quindi i dati di mesh sono gia' la BASSA. E quando piu' avanti
+# `cuoci-impianto.py` applica il modificatore per costruire l'alta, Blender
+# INTERPOLA le UV nella geometria nuova: l'alta esce srotolata coerente con la
+# bassa, che e' esattamente cio' che una cottura alta->bassa richiede.
+#
+# Srotolare DOPO l'applicazione sarebbe l'errore gia' pagato una volta in
+# `uv-impianto.py`: un atlante fatto sull'alta non e' trasferibile alla bassa,
+# perche' gli smussi ci hanno messo in mezzo facce che sulla bassa non esistono.
+#
+# I numeri sono quelli misurati nel passo 1 di docs/15 e non si scelgono qui:
+# 66 gradi di angolo, `area_weight=0`, pareggio delle isole PRIMA
+# dell'impacchettamento (senza, il rapporto di densita' e' 14,28 perche' il
+# packer normalizza per OGGETTO e non per area), margine in FRAZIONE.
+ATLANTE_UV = 2048
+MARGINE_UV_PX = 8.0        # il minimo che soddisfa i due vincoli veri: un
+                           # blocco di compressione e' 4x4, e a mip 512
+                           # restano 2 px, cioe' il raggio del bilineare
+FORMA_UV = 'CONVEX'        # CONCAVE da piu' densita' e fa TOCCARE le isole:
+                           # bleed misurato 0 px, e Blender non avvisa
+
+_pezzi_uv = sorted([o for o in bpy.data.objects if o.type == 'MESH'],
+                   key=lambda o: o.name)
+if not _pezzi_uv:
+    raise SystemExit('ERRORE UV: nessuna mesh da srotolare.')
+for _o in _pezzi_uv:
+    bpy.ops.object.select_all(action='DESELECT')
+    _o.select_set(True)
+    bpy.context.view_layer.objects.active = _o
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0,
+                             area_weight=0.0, correct_aspect=True,
+                             scale_to_bounds=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+bpy.ops.object.select_all(action='DESELECT')
+for _o in _pezzi_uv:
+    _o.select_set(True)
+bpy.context.view_layer.objects.active = _pezzi_uv[0]
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.select_all(action='SELECT')
+bpy.ops.uv.select_all(action='SELECT')
+bpy.ops.uv.average_islands_scale()
+bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION',
+                        margin=MARGINE_UV_PX / ATLANTE_UV,
+                        shape_method=FORMA_UV, scale=True, merge_overlap=False)
+bpy.ops.object.mode_set(mode='OBJECT')
+_senza = [o.name for o in _pezzi_uv if not o.data.uv_layers]
+if _senza:
+    raise SystemExit('ERRORE UV: %d pezzi senza UV dopo lo srotolamento: %s'
+                     % (len(_senza), ', '.join(_senza[:5])))
+print('UV  srotolati e impacchettati %d pezzi (atlante %d, margine %.1f px, forma %s)'
+      % (len(_pezzi_uv), ATLANTE_UV, MARGINE_UV_PX, FORMA_UV))
+
+# ═══════════════════════════════════════════════════════════════════════════
 # L'OCCLUSIONE AMBIENTALE, COTTA NEI COLORI DEI VERTICI
 #
 # `docs/14 §7` chiede «normal/AO cotte per i dettagli minuti» e il §10 mette la
@@ -594,90 +662,170 @@ print('PINNA area       %.3f m2 (bersaglio %.2f), corda radice %.3f m'
 # loro vertici nascono al momento del disegno, e cuocendo prima si otterrebbe
 # un'occlusione su 3.528 facce invece che su 44.000 — cioe' niente sugli
 # spigoli, che sono l'unico posto in cui l'AO conta.
-print('COTTURA occlusione ambientale...')
+# ═══════════════════════════════════════════════════════════════════════════
+print('--- TAGLIO: da qui in giu e solo esportazione, cuoci-impianto.py si ferma qui ---')
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# `cuoci-impianto.py` esegue questo sorgente FINO alla riga qui sopra, e prende
+# i pezzi con i modificatori BEVEL ancora attaccati: da li' ricava l'alta
+# applicandoli e la bassa togliendoli. Il marcatore prima era
+# `print('COTTURA occlusione ambientale...')`, cioe' l'inizio di un passo che
+# non esiste piu' — un segnalibro che nominava un'altra cosa. Adesso dice cosa
+# fa: se lo si sposta o lo si toglie, l'altro file si ferma con un errore.
+#
+# ─── QUELLO CHE VIAGGIA E' LA BASSA, E GLI SMUSSI STANNO NELLA MAPPA
+#
+# Qui prima si APPLICAVANO i modificatori e si cuoceva l'occlusione nei colori
+# dei vertici. Era dichiarato come passo intermedio, con le parole «quando
+# arriveranno le UV, l'AO cotto in texture sostituira' questo»: le UV sono
+# arrivate — le fa questo stesso file, prima del taglio — e questo e' il
+# sostituto.
+#
+# I numeri che hanno deciso il cambio, misurati:
+#
+#   IMPIANTO_ALTA   43.168 triangoli  ->  gltfpack 213,1 KB
+#   IMPIANTO_BASSA  12.448 triangoli  ->  gltfpack  61,2 KB    rapporto 3,48
+#
+# e la normale recupera il 61,7% dello scarto di resa fra le due, misurato
+# rendendole a 2,6 unita', la distanza vera della camera del sito. Quello che
+# una normale NON puo' fingere e' la silhouette: costa 632 pixel, l'1,41% del
+# meccanismo e lo 0,117% del quadro, perche' uno smusso da 3 mm a 6,5 m sta
+# sotto il pixel tranne che di taglio.
+#
+# In piu' cade COLOR_0 su 39.261 vertici, che serviva solo a portare quell'AO.
+
 for o in list(bpy.data.objects):
     if o.type != 'MESH':
         continue
-    bpy.context.view_layer.objects.active = o
     for m in list(o.modifiers):
-        try:
-            bpy.ops.object.modifier_apply(modifier=m.name)
-        except RuntimeError:
-            o.modifiers.remove(m)
-    if 'ao' not in o.data.color_attributes:
-        o.data.color_attributes.new(name='ao', type='BYTE_COLOR', domain='CORNER')
-    # LA COTTURA SCRIVE SULL'ATTRIBUTO ATTIVO, non su quello che si e' appena
-    # creato. Senza queste due righe il forno gira, non da' errore, e il file
-    # esce con i colori tutti a 255 — cioe' nessuna occlusione. Misurato:
-    # min 255, max 255, media 255 su 4.992 vertici.
-    i = o.data.color_attributes.find('ao')
-    o.data.color_attributes.active_color_index = i
-    o.data.color_attributes.render_color_index = i
+        o.modifiers.remove(m)
+facce = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
+print('BASSA  %d facce (modificatori TOLTI, non applicati)' % facce)
 
-sc.render.engine = 'CYCLES'
-sc.cycles.samples = 48
-sc.cycles.use_denoising = False
-sc.render.bake.target = 'VERTEX_COLORS'
-sc.render.bake.use_selected_to_active = False
-sc.render.bake.use_clear = True
-# La scena nasce VUOTA — `read_factory_settings(use_empty=True)` — e quindi
-# senza mondo. L'occlusione ambientale ha bisogno di qualcosa da cui essere
-# occlusa: senza mondo, `light_settings` non esiste nemmeno.
-if sc.world is None:
-    sc.world = bpy.data.worlds.new('cottura')
-# ─── LA DISTANZA E' UN CONTATTO, NON UN'OMBRA
+# ─── SI TRIANGOLA, O LE TANGENTI NON NASCONO ──────────────────────────────
 #
-# A 0,45 m il risultato era una banda scura larga che attraversava le
-# superfici: con quel raggio i pezzi si oscurano a VICENDA, e su facce grandi
-# con pochi vertici l'occlusione viene interpolata su triangoli da dieci
-# centimetri — cioe' una sfumatura, non un contatto. A schermo sembrava una
-# macchia di sporco, non un'ombra.
+# `export_tangents=True` da solo non basta: l'esportatore le calcola con
+# `mesh.calc_tangents()`, che **fallisce sulle facce con piu' di quattro lati**
+# e allora salta la tangente per quella mesh, in silenzio. Questa geometria e'
+# fatta di cilindri e coni, cioe' e' piena di tappi a n-gon: misurato, le
+# tangenti uscivano su **1 primitiva su 26**, e il validatore Khronos alzava 25
+# avvisi MESH_PRIMITIVE_GENERATED_TANGENT_SPACE.
 #
-# Sei centimetri e' la scala giusta per questo assieme: la testa di un bullone,
-# la gola fra una nervatura e il carter, il bordo di un foro. Oltre, l'ombra la
-# fa la luce della scena, che c'e' gia' e la fa meglio.
-sc.world.light_settings.distance = 0.06
-
-bpy.ops.object.select_all(action='DESELECT')
-mesh = [o for o in bpy.data.objects if o.type == 'MESH']
-for o in mesh:
-    o.select_set(True)
-bpy.context.view_layer.objects.active = mesh[0]
-bpy.ops.object.bake(type='AO')
-# ─── E SI SMORZA, PERCHE' L'AO NON E' UN'OMBRA VERA
-#
-# L'occlusione ambientale e' un'approssimazione: moltiplicarla a piena forza
-# annerisce cavita' che nella scena sono illuminate da qualcosa. Mezzo passo —
-# al piu' il 45% di scurimento — lascia leggere il contatto senza dipingere
-# sporco. Si fa qui e non nel sito perche' e' una proprieta' del modello: chi
-# lo apre altrove deve vedere la stessa cosa.
-FORZA = 0.45
-for o in mesh:
-    col = o.data.color_attributes.get('ao')
-    if not col:
+# Triangolare qui non cambia la geometria spedita -- glTF e' triangoli e
+# l'esportatore triangolerebbe comunque -- cambia solo che le tangenti si
+# possono calcolare. E servono davvero: la normale e' cotta in spazio
+# MikkTSpace, e chi disegna deve usare lo stesso spazio o la mappa racconta un
+# rilievo leggermente diverso da quello cotto.
+ngon = 0
+for o in list(bpy.data.objects):
+    if o.type != 'MESH':
         continue
-    for d in col.data:
-        c = d.color
-        for i in range(3):
-            c[i] = 1.0 - (1.0 - c[i]) * FORZA
-        d.color = c
-print('COTTURA fatta su %d pezzi, forza %.2f, raggio %.2f m'
-      % (len(mesh), FORZA, sc.world.light_settings.distance))
+    ngon += sum(1 for p in o.data.polygons if len(p.vertices) > 4)
+    bpy.ops.object.select_all(action='DESELECT')
+    o.select_set(True)
+    bpy.context.view_layer.objects.active = o
+    t = o.modifiers.new('tri', 'TRIANGULATE')
+    t.quad_method = 'SHORTEST_DIAGONAL'
+    t.keep_custom_normals = True
+    bpy.ops.object.modifier_apply(modifier=t.name)
+tri = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
+print('TRIANGOLI  %d facce -> %d triangoli (%d erano n-gon)' % (facce, tri, ngon))
+
+
+# ─── LE DUE MAPPE ─────────────────────────────────────────────────────────
+#
+# Si agganciano ai materiali perche' l'esportatore le porti dentro il GLB. E
+# non e' solo comodita': gltfpack CANCELLA LE UV se nessun materiale usa una
+# texture, senza dirlo. Il file usciva con POSITION e NORMAL soltanto, e la
+# mappa non aveva dove appoggiarsi — verificato leggendo gli accessori del GLB
+# spedito. La cura non e' un flag: e' che le texture servano davvero.
+#
+# L'occlusione NON passa da un ingresso del Principled: in glTF `occlusion` non
+# e' una proprieta' del BSDF. L'esportatore la cerca in un gruppo di nodi
+# chiamato esattamente «glTF Material Output», ingresso «Occlusion».
+QUI_M = os.path.dirname(os.path.abspath(__file__))
+MAPPE = os.environ.get('MAPPE') or os.path.join(QUI_M, 'uscite', 'cottura-nuova')
+PNG_NORMALE = os.path.join(MAPPE, 'impianto_bassa-normale.png')
+# L'occlusione ha un file SUO, a 512 e a un canale, e non si prende dall'ORM.
+# Due ragioni misurate. Primo: dei tre canali dell'ORM solo R porta
+# informazione nuova -- G rugosita' ha 9 picchi che coprono il 98,1% dei texel
+# e B metallicita' ne ha 2 che ne coprono il 99,0%, cioe' sono costanti per
+# materiale e stanno gia' in materiali.js. Secondo: l'occlusione e' a bassa
+# frequenza, quindi 512 bastano dove una normale pretende 2048.
+# Agganciando l'ORM intero il GLB usciva 766 KB; con questo, 321.
+PNG_AO = os.path.join(MAPPE, 'impianto_bassa-ao.png')
+
+
+def gruppo_gltf():
+    """Il gruppo che l'esportatore glTF cerca PER NOME. Se il nome cambia,
+    l'occlusione sparisce dal file senza un avviso."""
+    g = bpy.data.node_groups.get('glTF Material Output')
+    if g is None:
+        g = bpy.data.node_groups.new('glTF Material Output', 'ShaderNodeTree')
+        g.interface.new_socket('Occlusion', in_out='INPUT',
+                               socket_type='NodeSocketFloat')
+        g.nodes.new('NodeGroupInput')
+    return g
+
+
+con_mappe = os.path.isfile(PNG_NORMALE) and os.path.isfile(PNG_AO)
+if not con_mappe:
+    print('MAPPE  assenti in %s: si esporta senza.' % MAPPE)
+    print('       Il primo giro DEVE essere cosi: la cottura ha bisogno di')
+    print('       queste UV per esistere. Cuoci, poi riesegui questo file.')
+else:
+    img_n = bpy.data.images.load(PNG_NORMALE, check_existing=True)
+    img_n.colorspace_settings.name = 'Non-Color'
+    img_o = bpy.data.images.load(PNG_AO, check_existing=True)
+    img_o.colorspace_settings.name = 'Non-Color'
+    g = gruppo_gltf()
+    quanti = 0
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        nt = m.node_tree
+        bsdf = next((x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED'), None)
+        if bsdf is None:
+            continue
+        tn = nt.nodes.new('ShaderNodeTexImage')
+        tn.image = img_n
+        tn.location = (-700, -200)
+        nm = nt.nodes.new('ShaderNodeNormalMap')
+        nm.location = (-420, -200)
+        nt.links.new(tn.outputs['Color'], nm.inputs['Color'])
+        nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+
+        to = nt.nodes.new('ShaderNodeTexImage')
+        to.image = img_o
+        to.location = (-700, -500)
+        gr = nt.nodes.new('ShaderNodeGroup')
+        gr.node_tree = g
+        gr.location = (-420, -500)
+        # glTF legge il canale R della occlusionTexture: l'immagine e' gia'
+        # a un canale, quindi il collegamento e' diretto.
+        nt.links.new(to.outputs['Color'], gr.inputs['Occlusion'])
+        quanti += 1
+    print('MAPPE  normale + occlusione agganciate a %d materiali' % quanti)
 
 bpy.ops.object.select_all(action='SELECT')
 percorso = os.path.join(FUORI, 'impianto.glb')
 bpy.ops.export_scene.gltf(filepath=percorso, export_format='GLB',
                           use_selection=True,
-                          # gia' applicati prima della cottura: riapplicarli
-                          # qui butterebbe via i colori appena cotti
                           export_apply=False,
-                          # 'ACTIVE', non 'MATERIAL': con MATERIAL
-                          # l'esportatore scrive i colori SOLO se un nodo del
-                          # materiale li usa, e i nostri materiali sono
-                          # Principled puliti. Cuoceva, esportava, e avvisava
-                          # in una riga fra centinaia: «The active Vertex Color
-                          # will not be exported». Il file usciva con COLOR_0 a
-                          # 255 ovunque e sembrava che il forno non funzionasse.
-                          export_vertex_color='ACTIVE',
+                          # niente piu' colori per vertice: l'occlusione che
+                          # portavano adesso sta nella mappa, e COLOR_0 su
+                          # 39.261 vertici era peso puro
+                          export_vertex_color='NONE',
+                          export_texcoords=True,
+                          # LE TANGENTI SI ESPORTANO, non si lasciano generare.
+                          # Senza, il validatore Khronos alza 26 avvisi
+                          # MESH_PRIMITIVE_GENERATED_TANGENT_SPACE: la normale
+                          # e' cotta da Blender in spazio MikkTSpace, e chi
+                          # disegna deve usare LO STESSO spazio o la mappa
+                          # racconta un rilievo leggermente diverso da quello
+                          # cotto. Il costo e' misurato accanto a questa riga.
+                          export_tangents=True,
+                          export_image_format='WEBP',
+                          export_image_quality=90,
                           export_yup=True, export_extras=True)
 print('GLB %.0f KB' % (os.path.getsize(percorso) / 1024))
