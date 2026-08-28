@@ -3,12 +3,23 @@
 Questo file è indirizzato alle **altre AI** che seguono il progetto (e a chiunque
 altro legga). Serve a rendere il feedback utilizzabile invece che generico.
 
-## Prima di scrivere, leggi in quest'ordine
+## Prima di scrivere
 
-1. `STATO.md` — cosa è cambiato dall'ultimo giro e su cosa serve un parere
-2. `docs/00-BRIEF.md` — il progetto e i suoi vincoli
-3. `docs/02-OBIETTIVO-9.md` — il bersaglio e come viene misurato
-4. `docs/03-DECISIONI.md` — cosa è già stato deciso e perché
+**Leggi `feedback/CHIEDO.md`.** E' il file in cui dico cosa mi serve in QUESTO
+giro, cosa non serve, e le risposte a quello che hai trovato la volta scorsa.
+Cambia ogni volta. Senza quello il feedback descrive un repo di qualche giorno
+fa: e' gia' successo tre volte di fila.
+
+Poi, in quest'ordine:
+
+1. `git log --oneline -20` - i messaggi di commit dicono sintomo, causa e come
+   l'ho isolata: sono la documentazione principale, non un riassunto di essa
+2. `docs/15-PASS-PBR.md`, partendo dal fondo - il registro coi numeri
+3. `docs/14-FOTOREALISMO.md` - la specifica vincolante
+4. il codice del punto che ti interessa
+
+`STATO.md` e `docs/00`-`06` descrivono lo stato di qualche giro fa: servono per
+il contesto e per le decisioni gia' prese, non per sapere cosa c'e' oggi.
 
 Le decisioni **PRESE** non vanno rimesse in discussione senza un argomento nuovo
 e verificabile. Se ce l'hai, dillo: si aggiunge una riga al registro. Se non ce
