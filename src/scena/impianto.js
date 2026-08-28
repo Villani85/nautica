@@ -206,7 +206,7 @@ const stretta = (x, a, b) => x < a ? a : x > b ? b : x
  * Qui dentro non c'e' three, non c'e' il GLB e non c'e' un nodo: c'e' solo la
  * legge che porta uno scorrimento a una posizione fra 0 e 1. E' una funzione
  * pura di (stato, scorrimento, dt), quindi si puo' MISURARE in Node senza
- * aprire un browser, senza caricare 223 KB di modello e senza una scheda
+ * aprire un browser, senza caricare 161 KB di modello e senza una scheda
  * grafica che disegni in software raccontando numeri che non sono quelli del
  * sito. Il provino importa questa, non una copia: due copie della stessa legge
  * sono due leggi che un giorno divergono.
@@ -320,7 +320,8 @@ export function creaImpianto (base, ambiente = null, opzioni = {}) {
 
   const caricato = new Promise((risolvi, rifiuta) => {
     /**
-     * MESHOPT — il modello viaggia compresso: 1686 KB diventano 223.
+     * MESHOPT — il modello viaggia compresso: 921 KB diventano 247, e 161
+     * una volta che il server applica brotli.
      * Il decodificatore e' un modulo ES da 28 KB che entra nel pacchetto, non un
      * file da servire a parte: e' la ragione per cui ha battuto Draco, che
      * comprimeva quasi uguale ma chiedeva 251 KB di wasm serviti a mano.

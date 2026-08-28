@@ -227,13 +227,16 @@
     <p>Nine sections along the length, interpolated. The hull, the deck and the
     section cap are curves described in code. The mechanism and the two upper
     decks are modelled in Blender by the scripts in this repository and shipped
-    as glTF — 558 KB, meshopt-compressed. That figure went up from 436, and
-    the trade is worth naming: the mechanism used to ship its chamfers as
-    geometry, 43,152 triangles of them. It now ships 12,448 and carries the
-    chamfers in a baked normal map instead. Measured at the distance the camera
-    actually reaches, the map recovers 61.7% of what the coarse mesh loses, and
-    what it cannot fake — the silhouette — costs 632 pixels, 1.41% of
-    the mechanism. Still no third-party model, and
+    as glTF — 374 KB, meshopt-compressed. That figure moved twice, and the second
+    move was a correction. The mechanism used to ship its chamfers as geometry,
+    43,152 triangles of them; it now ships 12,448 and carries them in a baked
+    normal map. Measured at the distance the camera actually reaches, the map
+    recovers 62% of what the coarse mesh loses, and what it cannot fake — the
+    silhouette — costs 632 pixels, 1.41% of the mechanism. The first version of
+    that trade shipped the map at 2048 and read as a saving, which it was in raw
+    bytes and was not on the wire: meshopt geometry compresses a further 2.4×,
+    a WebP texture not at all, so the model went from 130 KB to 343 over the
+    connection. The map at 512 recovers the same 62% for 161 KB. Still no third-party model, and
     still nothing downloaded that we did not author; but they are files now,
     not curves, and the page said <em>zero bytes</em> for one night longer than
     it was true. And the section cap at any station is <em>the same
@@ -271,7 +274,7 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,0 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,3 KB</dd></div>
       <div><dt>— of which JavaScript</dt><dd>3,2 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
       <!--
@@ -289,13 +292,13 @@
         era giusto, l'aggettivo no.
       -->
       <div><dt>3D engine, loaded on approach (gzip)</dt><dd>191,7 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>558 KB</dd></div>
+      <div><dt>3D models downloaded</dt><dd>374 KB</dd></div>
       <!--
         E il totale, che e' la riga che un giurato verifica in dieci secondi.
         Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
         cose diverse e la differenza e' 134 volte.
       -->
-      <div><dt>Total before the first rendered frame</dt><dd>2,17 MB</dd></div>
+      <div><dt>Total before the first rendered frame</dt><dd>1,99 MB</dd></div>
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>

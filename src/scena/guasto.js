@@ -89,11 +89,19 @@ const TARGA = '[guasto]'
 /**
  * Quanto si aspetta prima di dire che si sta aspettando.
  *
- * `impianto.glb` pesa 223 KB compresso con meshopt. Su una rete lenta vera —
- * 400 kbit/s effettivi, il famigerato «3G lento» degli strumenti — sono circa
- * 4,5 s di solo trasferimento. Sei secondi e' poco piu': abbastanza da non
- * accendersi su una connessione mediocre che sta comunque per farcela,
- * abbastanza poco da non lasciare fissare un carter vuoto in silenzio.
+ * `impianto.glb` pesa 161 KB sul filo (brotli; 247 grezzi, meshopt). Su una
+ * rete lenta vera — 400 kbit/s effettivi, il famigerato «3G lento» degli
+ * strumenti — sono 3,2 s di solo trasferimento. Sei secondi e' quasi il doppio:
+ * abbastanza da non accendersi su una connessione mediocre che sta comunque per
+ * farcela, abbastanza poco da non lasciare fissare un carter vuoto in silenzio.
+ *
+ * QUESTO NUMERO E' UN VINCOLO, NON UNA NOTA. Il commento diceva 223 KB, ed e'
+ * rimasto indietro quando il modello e' passato alla bassa con la normale
+ * cotta: per qualche ora il file ne pesava 343 sul filo, cioe' 6,9 s, e questa
+ * spia si sarebbe accesa esattamente sulla connessione per cui e' scritta per
+ * NON accendersi. Segnalato da una revisione esterna, verificato, e curato
+ * spedendo la normale a 512 invece che a 2048. Se il modello ricresce, o
+ * risale questa soglia o si rimpicciolisce la mappa.
  *
  * NON e' una soglia di prestazione e non va usata come tale: non misura la
  * macchina, misura la pazienza di chi guarda.

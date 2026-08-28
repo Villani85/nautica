@@ -30,7 +30,11 @@
 # l'immagine con un errore che non ferma l'esportazione.
 set -e
 B="${BLENDER:-/c/Program Files/Blender Foundation/Blender 5.2/blender.exe}"
-R="$(cd "$(dirname "$0")/.." && pwd)"
+# Percorso in forma WINDOWS. Blender riceve `-P` come argomento, e con la
+# forma MSYS (/c/Users/...) lo legge come RELATIVO: cercava
+# "...nautica/c/Users/.../cuoci-impianto.py" e si fermava. `pwd -W` da la
+# forma che Blender capisce.
+R="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || pwd)"
 U="$R/riferimenti/blender/uscite"
 C="$U/cottura-nuova"
 mkdir -p "$C"
@@ -46,13 +50,26 @@ MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cottura.py" -- \
   --max-macchie 0.6 --distanza-ao 0.06 \
   | grep -E "cotta dentro|informazione|macchie \(|ORM |ACCETTATA|RIFIUTATA"
 
-echo "── 3/5  occlusione: solo il canale R, a 512, in RGB"
-ffmpeg -y -v error -i "$C/impianto_bassa-orm.png" \
-  -vf "extractplanes=r,scale=512:512,format=rgb24" -pix_fmt rgb24 \
-  "$C/impianto_bassa-ao.png"
+echo "── 3/5  le mappe che SPEDIAMO: 512, non 2048"
+#
+# Si cuoce a 2048 -- dove i cancelli di `cottura.py` sono tarati e verdi -- e si
+# spedisce a 512. Non e' un compromesso, e' una misura: il recupero della
+# normale, cioe' quanto della resa dell'alta riporta indietro, e' lo STESSO alle
+# tre risoluzioni.
+#
+#     normale 2048   61,7% di recupero   modello 343,4 KB brotli
+#     normale 1024   63,6%                        210,0
+#     normale  512   62,5%                        160,7
+#
+# Le differenze sono dentro il rumore del render; i byte no. E sul filo contano
+# davvero: la geometria meshopt si comprime ancora 2,4 volte con brotli, una
+# texture webp per niente -- quindi una mappa grande e' peso che passa intero.
+mkdir -p "$C/spedito"
+ffmpeg -y -v error -i "$C/impianto_bassa-orm.png" -vf "extractplanes=r,scale=512:512,format=rgb24" -pix_fmt rgb24 "$C/spedito/impianto_bassa-ao.png"
+ffmpeg -y -v error -i "$C/impianto_bassa-normale.png" -vf "scale=512:512" "$C/spedito/impianto_bassa-normale.png"
 
 echo "── 4/5  GLB con UV, tangenti e le due mappe"
-MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/glb-impianto.py" -- "$U" \
+MAPPE="$C/spedito" MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/glb-impianto.py" -- "$U" \
   | grep -E "^UV |^BASSA |^TRIANGOLI |^MAPPE |^GLB "
 
 echo "── 5/5  meshopt, con la guardia sul contratto"
