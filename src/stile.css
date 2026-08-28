@@ -148,8 +148,9 @@ body::before{
 
    Nessuna immagine: quattro gradienti radiali molto larghi e molto tenui,
    nella FAMIGLIA della carta -- nessuna tinta nuova, come vuole la regola
-   dell'ambiente. La scala e' in `vmax`, quindi le bande restano grandi quanto
-   la finestra invece di rimpicciolirsi sul telefono.
+   dell'ambiente. La scala e' in `vw` per la larghezza e `vh` per l'altezza:
+   una frazione del fotogramma in ciascun asse, cosi' «un terzo di finestra»
+   resta vero anche su uno schermo stretto (vedi sotto: in `vmax` non lo era).
 
    ─── LA GIUNZIONE NON SI TOCCA
 
@@ -160,10 +161,10 @@ body::before{
 body::after{
   content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(120vmax 34vmax at 76% 6%,  rgba(255,253,247,.85), rgba(255,252,244,0) 62%),
-    radial-gradient(90vmax 22vmax at 18% 20%,  rgba(206,200,187,.55), rgba(214,208,196,0) 66%),
-    radial-gradient(150vmax 18vmax at 55% 34%, rgba(216,210,197,.58), rgba(224,219,207,0) 70%),
-    radial-gradient(70vmax 14vmax at 88% 30%,  rgba(198,192,180,.42), rgba(206,200,188,0) 68%),
+    radial-gradient(120vw 54vh at 76% 6%,  rgba(255,253,247,.85), rgba(255,252,244,0) 62%),
+    radial-gradient(90vw 35vh at 18% 20%,  rgba(206,200,187,.55), rgba(214,208,196,0) 66%),
+    radial-gradient(150vw 29vh at 55% 34%, rgba(216,210,197,.58), rgba(224,219,207,0) 70%),
+    radial-gradient(70vw 22vh at 88% 30%,  rgba(198,192,180,.42), rgba(206,200,188,0) 68%),
     /* ─── LE BANDE, perche' una rampa non e' un cielo
 
        I quattro gradienti qui sopra sono da 120-150vmax: su uno schermo da
@@ -179,17 +180,61 @@ body::after{
        repo ha gia' fatto piu' volte: un numero giusto che risponde a un'altra
        domanda.
 
-       Queste sono a MEDIA frequenza -- 26-44vmax, un terzo di finestra:
-       abbastanza strette da essere forme, abbastanza larghe da non leggersi
-       come un motivo. E sfalsate in orizzontale, cosi' il cielo smette di
-       essere uguale da sinistra a destra a quota fissa.
+       Queste sono a MEDIA frequenza -- 26-44% della larghezza, un terzo di
+       finestra: abbastanza strette da essere forme, abbastanza larghe da non
+       leggersi come un motivo. E sfalsate in orizzontale, cosi' il cielo
+       smette di essere uguale da sinistra a destra a quota fissa.
 
-       Il metro giusto e' l'R2 della retta sulla colonna, non lo scarto tipo. */
-    radial-gradient(38vmax 5vmax at 30% 13%, rgba(255,252,245,.50), rgba(255,252,245,0) 72%),
-    radial-gradient(30vmax 4vmax at 62% 9%,  rgba(196,190,178,.40), rgba(196,190,178,0) 74%),
-    radial-gradient(44vmax 6vmax at 84% 19%, rgba(255,251,243,.44), rgba(255,251,243,0) 70%),
-    radial-gradient(26vmax 3vmax at 46% 24%, rgba(190,185,173,.34), rgba(190,185,173,0) 76%),
-    radial-gradient(34vmax 4vmax at 12% 30%, rgba(255,250,241,.34), rgba(255,250,241,0) 72%);
+       ─── I RAGGI SONO IN vw E vh, E PRIMA ERANO IN vmax
+
+       «Un terzo di finestra» era vero su desktop e falso sul telefono, e la
+       ragione e' che `vmax` in verticale (portrait) E' l'altezza: su 390x844
+       una banda da 26-44vmax e' larga 219-371 px, cioe' il **56-95% della
+       larghezza**. Sul telefono le bande tornavano rampe a tutta larghezza --
+       esattamente il modo di fallire che erano state aggiunte per togliere.
+
+       Il commento vecchio diceva che vmax serviva «perche' le bande restino
+       grandi quanto la finestra invece di rimpicciolirsi sul telefono»: e'
+       proprio quello il difetto. Grande quanto la finestra, su uno schermo
+       stretto, vuol dire a tutta larghezza.
+
+       Un raggio orizzontale in `vw` e uno verticale in `vh` dicono la cosa che
+       si intendeva: una frazione del fotogramma in ciascun asse, uguale su
+       ogni schermo. Su 1440x900 non cambia un pixel -- li' vmax E' vw, e i
+       raggi verticali sono stati moltiplicati per 1,6, che e' esattamente
+       14,4/9,0. Cambia solo dove era sbagliato.
+
+       Il metro giusto e' lo scarto orizzontale A QUOTA FISSA, e misurato
+       ANCHE nella striscia dietro la nave: `strumenti/collaudo-cielo.mjs`. Non
+       l'R2 della colonna, che e' ancora uniformita' verticale e risponde a
+       un'altra domanda. */
+    radial-gradient(38vw 8vh   at 30% 13%, rgba(255,252,245,.50), rgba(255,252,245,0) 72%),
+    radial-gradient(30vw 6.4vh at 62% 9%,  rgba(196,190,178,.40), rgba(196,190,178,0) 74%),
+    radial-gradient(44vw 9.6vh at 84% 19%, rgba(255,251,243,.44), rgba(255,251,243,0) 70%),
+    radial-gradient(26vw 4.8vh at 46% 24%, rgba(190,185,173,.34), rgba(190,185,173,0) 76%),
+    radial-gradient(34vw 6.4vh at 12% 30%, rgba(255,250,241,.34), rgba(255,250,241,0) 72%),
+    /* ─── LE DUE CHE STANNO DIETRO LA NAVE
+       Sopra ce ne sono cinque e nessuna dipinge sotto il 36%: la piu' bassa e'
+       centrata al 30% con raggio verticale 6,4vh, quindi si spegne a 36,4%.
+       La striscia 0,36-0,44 -- quella che incornicia lo scafo -- restava la
+       campitura di prima, e una revisione esterna l'ha misurato nel modo
+       giusto: accendendo e spegnendo le bande, lo scarto orizzontale li'
+       cambiava di ESATTAMENTE 0,00, su desktop e su telefono.
+
+       Queste tre ci stanno dentro, e sono piu' STRETTE delle cinque di sopra
+       (18-26vw contro 26-44vw). Non e' un vezzo: lo scarto orizzontale a quota
+       fissa misura quanto la riga cambia da sinistra a destra, e una campitura
+       larga quanto mezzo fotogramma cambia poco anche quando e' intensa. Due
+       tentativi misurati: a 30-40vw con alfa 0,30-0,42 la striscia saliva da
+       1,1 a 2,2 -- meglio e ancora piatto. Strette e piu' contrastate arriva
+       dove serve, e restano tre forme invece di una campitura. La maschera e' opaca fino al 44% e sfuma a
+       zero al 48%: la piu' bassa e' centrata al 41% con 4vh, arriva al 45% e
+       muore dentro la sfumatura. La cucitura al 50% non la tocca nessuna delle
+       due, e il cancello dell'orizzonte lo verifica. */
+    radial-gradient(26vw 5vh   at 68% 36%, rgba(255,252,245,.55), rgba(255,252,245,0) 74%),
+    radial-gradient(22vw 4vh   at 24% 39%, rgba(192,186,174,.42), rgba(192,186,174,0) 76%),
+    radial-gradient(18vw 3.5vh at 46% 42%, rgba(255,251,243,.40), rgba(255,251,243,0) 78%),
+    radial-gradient(20vw 3vh   at 82% 42%, rgba(192,186,174,.34), rgba(192,186,174,0) 78%);
   -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 44%,transparent 48%);
           mask-image:linear-gradient(to bottom,#000 0%,#000 44%,transparent 48%);
 }
