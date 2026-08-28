@@ -311,6 +311,32 @@ roughnessFactor = mix(roughnessFactor, 0.045, vetroFin);
           * sin(b.z * 0.9 + b.x * 0.3);
   // solo dove NON c'e' vetro: una finestra non ha buccia d'arancia
   roughnessFactor = clamp(roughnessFactor + o * 0.042 * (1.0 - vetroFin), 0.02, 1.0);
+
+  /* ─── L'ONDULAZIONE LARGA: PROVATA, MISURATA, TOLTA
+     Il divario col render Cycles, misurato sui soli pixel sopra l'acqua con la
+     maschera esatta del soggetto, non e' l'alta frequenza:
+
+                      media    scarto a sfocatura 2 / 8 / 24
+       Cycles         156,3       38,1 / 34,7 / 28,4
+       sito           155,7       38,2 / 25,3 / 19,0
+
+     Esposizione identica, alta frequenza identica -- la buccia d'arancia qui
+     sopra fa il suo lavoro. A scala MEDIA e GRANDE il sito e' un terzo piu'
+     piatto, e l'ipotesi era che mancasse un'ondulazione lenta della vernice.
+
+     Provata, con l'ampiezza esposta come uniforme per poterla confrontare a
+     fotogramma fermo. Non funziona: fra ampiezza 0 e 0,045 cambiano **32 pixel
+     su 620.000, per un massimo di 4 livelli** -- e questo con la camera
+     appoggiata alla murata, dove dovrebbe vedersi di piu'.
+
+     La ragione vale piu' del tentativo: **una variazione di rugosita' si vede
+     solo se c'e' qualcosa di STRUTTURATO da riflettere.** L'ambiente del sito
+     e' una sfumatura liscia -- carta sopra, acqua sotto -- quindi riflettere
+     un po' piu' o un po' meno sfocato da' lo stesso pixel. Nel render la
+     differenza a scala media viene dalla luce RIMBALZATA fra le superfici, che
+     il tempo reale non ha, e non da una rugosita' disuniforme.
+
+     Non spedisco codice che non fa niente. */
 }`)
 }
 /** Cambiando lo shader a mano, three va avvisato di ricompilare. */

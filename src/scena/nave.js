@@ -124,11 +124,34 @@ export function costruisciNave (base = import.meta.env.BASE_URL) {
   ao.colorSpace = NoColorSpace   // e' una quantita', non un colore
   ao.flipY = true                // Blender e three concordano: v=0 sta in basso
 
-  const matScafo = materiali.scafo.clone()
-  matScafo.name = materiali.scafo.name
+  /**
+   * --- CLONARE PERDE LA PATCH DELLO SHADER, E NON LO DICE NESSUNO
+   *
+   * `Material.clone()` fa `new this.constructor().copy(this)`, e `copy()` NON
+   * copia `onBeforeCompile`: e' una proprieta' assegnata dopo la costruzione,
+   * non un campo del materiale. Il clone esce con la funzione VUOTA
+   * predefinita di three.
+   *
+   * Conseguenza, e l'ho spedita per mezza giornata senza accorgermene: lo
+   * scafo aveva perso **la buccia d'arancia, la fascia al galleggiamento e le
+   * finestre di murata** -- cioe' tutto cio' che `materiali.js` gli aggiunge
+   * per non farlo sembrare plastica. Il difetto non da' errore e non si vede
+   * da lontano: si vede in un numero, ed e' saltato fuori misurando perche'
+   * un'uniforme nuova non arrivava mai allo shader.
+   *
+   * `customProgramCacheKey` va copiata insieme, o due materiali con patch
+   * diverse condividono lo stesso programma compilato.
+   */
+  const clonaConPatch = (m) => {
+    const c = m.clone()
+    c.name = m.name
+    c.onBeforeCompile = m.onBeforeCompile
+    c.customProgramCacheKey = m.customProgramCacheKey
+    return c
+  }
+  const matScafo = clonaConPatch(materiali.scafo)
   matScafo.aoMap = ao
-  const matPonte = materiali.coperta.clone()
-  matPonte.name = materiali.coperta.name
+  const matPonte = clonaConPatch(materiali.coperta)
   matPonte.aoMap = ao
 
   const geoScafo = costruisciGuscio(72)
