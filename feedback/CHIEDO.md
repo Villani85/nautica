@@ -8,7 +8,11 @@ Progetto: <https://github.com/Villani85/nautica> — sito pubblicato su
 <https://villani85.github.io/nautica/>
 
 Aggiornato: **28 agosto 2026, ore 10.** Da quando hai clonato potrei aver spinto
-altro: `git log --oneline -25` e' sempre la fonte, non questo elenco.
+altro: `git log --oneline -25` resta la fonte, non questo elenco.
+
+> **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
+> punto per punto sta in fondo, al §5. Da allora ho corretto **tre** mie
+> affermazioni sbagliate: leggi la tabella qui sotto, non i commit vecchi.
 
 ---
 
@@ -87,14 +91,22 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | Affermazione | Dove verificarla |
 |---|---|
 | Le due camere, sito e Blender, coincidono a **0,05 px** | `strumenti/confronto-cotto.mjs`; `CAMERA_VERTICI` in `riferimenti/blender/cuoci.py` |
+| Allineando anche cielo, curva tonale **e luci**, la sovrastruttura combacia col path tracer **entro dieci livelli** | `SENZA_LUCI=1` + `LUCE=0`, poi `strumenti/varianti.mjs` |
+| Lo scafo invece e' **1,29×** piu' chiaro (Cycles 39,0, sito 50,4, sulle sole facce anteriori) | idem — ed e' la domanda §3.4.3 |
 | La normale cotta recupera il **61,7%** dello scarto fra bassa e alta | `cuoci-impianto.py -- confronto` |
 | La silhouette persa passando alla bassa vale **632 px, l'1,41%** del meccanismo | `riferimenti/blender/uscite/confronto/` |
-| Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, registrato in `docs/15` |
-| Con camera, ambiente e curva tonale allineati, il residuo fra sito e Blender è **14,2 livelli** sulla sovrastruttura | ultimo giro del confronto, `docs/15` |
-| Il corredo PBR costa **+122 KB** ma fa risparmiare 220 KB di geometria | `git show` del commit «Il meccanismo viaggia come bassa» |
-| Allineando anche cielo e curva tonale, sopra la linea d'acqua l'esposizione fra sito e Blender coincide a **+0,8 livelli** | `node strumenti/esporta-ambiente.mjs`, poi `AMBIENTE_SITO=1 SOGGETTO=nave` in `cuoci.py`, poi `confronto-cotto.mjs` |
-| Con luci, cielo, camera e curva allineati, la sovrastruttura combacia entro 10 livelli e lo scafo e' **1,29x** piu' chiaro | `strumenti/varianti.mjs` |
+| Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, in `docs/15` |
+| Il corredo PBR costa **+122 KB** ma ne fa risparmiare 220 di geometria | `git show 3ab67d4` |
 | L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
+
+**Bersagli gia' caduti — non riattaccarli, li ho smontati io dopo averli
+scritti.** Li elenco perche' la forma dell'errore e' piu' utile del numero:
+«la pinna satura al 94%» (era un transitorio dentro una prova, l'hai trovato
+tu); «lo scafo e' 2,5× e la causa e' il `DoubleSide`» (la maschera del
+materiale comprendeva le facce POSTERIORI, dove Cycles non disegna niente:
+il numero vero e' 1,29× e il `side` non c'entra); «`FrontSide` apre 9.786
+pixel di buco» (sono **zero** — contavo come vuoto ogni pixel scuro, e il
+vuoto si riconosce dall'**alfa**).
 
 ### 3.2 · Il giudizio che io non posso dare
 
@@ -165,6 +177,28 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
    SENZA_LUCI=1 SENZA_MARE=1 FUORI=<cartella> ETICHETTA=x      node strumenti/confronto-cotto.mjs
    node strumenti/varianti.mjs
    ```
+
+### 3.5 · Due seguiti al tuo giro delle 07:00
+
+**Il vetro (tua Voce 3) — non l'ho ancora provata, attaccala tu se vuoi.**
+Hai proposto: raddoppiare l'intensita' d'ambiente sul vetro, poi separatamente
+schiarire `coloreLeggero` da `0x061412`. E' la prova giusta e non l'ho fatta.
+Una correzione al tuo testo: `envMapIntensity` non sta in `ambiente.js`, sta
+sul materiale in `src/scena/vetro.js` (`creaVetroLeggero`). Se la fai tu, il
+numero che mi serve e': **di quanti livelli cambia la banda delle finestre**
+nei due casi, misurata sulla maschera del materiale `sovra_vetro` e non su un
+riquadro scelto a occhio (`strumenti/proprietari.mjs` la trova da solo).
+
+**L'apertura (il tuo giudizio visivo) — e' la cosa piu' utile che ho ricevuto.**
+«Su mobile la meta' superiore e' crema vuota, sembra che stia caricando» e «il
+contratto con l'utente non e' stabilito prima di chiedere lo scroll»: le
+prendo per buone e non le rimetto in discussione. La domanda che mi serve
+adesso e' piu' stretta:
+
+**Cosa metteresti nei primi 3 secondi, su telefono, che prometta la barca senza
+mostrarla?** Il vincolo e' che il 3D arriva in differita apposta -- il percorso
+critico e' 17 KB e non lo rompo -- quindi la promessa deve essere fatta di
+testo, CSS o al massimo un'immagine minuscola. Non «aggiungi un video».
 
 ---
 
