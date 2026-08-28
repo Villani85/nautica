@@ -30,9 +30,9 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const [file, quale, qualita] = process.argv.slice(2)
+const [file, quale, qualita, sfoca] = process.argv.slice(2)
 if (!file || !quale || !qualita) {
-  console.error('uso: alleggerisci-mappe.mjs <file.glb> <occlusione|normale> <qualita>')
+  console.error('uso: alleggerisci-mappe.mjs <file.glb> <occlusione|normale> <qualita> [sfocatura]')
   process.exit(2)
 }
 
@@ -79,7 +79,44 @@ const est = img.mimeType === 'image/webp' ? 'webp' : 'png'
 const tIn = join(tmpdir(), `mappa-in.${est}`)
 const tOut = join(tmpdir(), 'mappa-out.webp')
 writeFileSync(tIn, prima)
-execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', tIn, '-c:v', 'libwebp',
+/**
+ * ─── E SI PUO' SFOCARE, perche' un'occlusione non ha alta frequenza
+ *
+ * La cottura dell'occlusione lascia rumore per pixel. Su una mappa a bassa
+ * frequenza quel rumore non e' informazione: e' il residuo del campionamento.
+ * Da lontano non si vede; da vicino diventa GRANA -- misurato sul fotogramma
+ * in cui il sito consegna il 3D, la pinna sembrava carta vetrata.
+ *
+ * Ho creduto per un giro che fosse la compressione, perche' avevo ricodificato
+ * questa mappa a qualita' 60 validandola sull'errore MEDIO (2,12 su 255) senza
+ * guardare il massimo (43) ne' l'immagine da vicino. Rimessa a qualita' piena,
+ * la grana e' rimasta identica: non era il webp, era la cottura. Il modo in cui
+ * l'ho isolata: sostituire il contenuto della mappa con bianco pieno a runtime
+ * -- la grana sparisce -- lasciando lo shader identico, cosi' la prova non
+ * dipende da quale programma viene compilato.
+ */
+/**
+ * ─── E SI DILATA, che e' la cura vera
+ *
+ * La grana non veniva dal webp ne' dal rumore della cottura: la mappa,
+ * guardata, e' PULITA -- isole nette su fondo nero. Viene dal GUTTER. Fra
+ * un'isola e l'altra c'e' nero, cioe' occlusione piena, e ai bordi il
+ * filtraggio della texture mescola isola e fondo. Su una superficie grande e
+ * vicina quel miscuglio diventa sale e pepe.
+ *
+ * La cura standard di ogni cottura e' dilatare le isole nel fondo: si prende il
+ * massimo di un intorno, cosi' il chiaro invade il nero e il bordo non ha piu'
+ * niente di scuro con cui mescolarsi. Poi una sfocatura leggera, perche'
+ * l'occlusione e' a bassa frequenza e non perde niente.
+ *
+ * Le ombre di contatto vere si erodono di qualche texel -- e' il prezzo, ed e'
+ * molto meno di una superficie che sembra carta vetrata nel fotogramma in cui
+ * il sito consegna il 3D.
+ */
+const filtri = sfoca
+  ? ['-vf', `dilation,dilation,dilation,gblur=sigma=${Number(sfoca).toFixed(2)}`]
+  : []
+execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', tIn, ...filtri, '-c:v', 'libwebp',
   '-quality', String(qualita), '-compression_level', '6', tOut])
 const dopo = readFileSync(tOut)
 unlinkSync(tIn); unlinkSync(tOut)
