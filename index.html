@@ -265,7 +265,7 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>16,7 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,0 KB</dd></div>
       <div><dt>— of which JavaScript</dt><dd>3,2 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
       <!--
@@ -293,9 +293,20 @@
       <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
-      <div><dt>Largest Contentful Paint, real 4G</dt><dd>—</dd></div>
+      <div><dt>Largest Contentful Paint, lab Slow 4G with CPU ×4</dt><dd>2,9 s</dd></div>
+      <div><dt>— of which the network alone costs</dt><dd>0,76 s</dd></div>
       <div><dt>Frames per second, mid-range Android</dt><dd>—</dd></div>
     </dl>
+
+    <p>The paint figure is a <b>lab</b> measurement, not a field one, and the
+    recipe is part of the number: 1.6 Mbit/s down, 750 kbit/s up, 150 ms
+    round trip, CPU slowed four times — the profile Lighthouse calls mobile, so
+    the figure is comparable with the ones published elsewhere. Measured on the
+    live site with <code>strumenti/misura-lcp.mjs</code>, median of five loads.
+    The split is the interesting part: throttling the network alone gives
+    <b>0.76 s</b>, the CPU alone <b>0.80 s</b>, and together <b>2.9 s</b>. The
+    two do not add — a slow processor cannot work the bytes while they arrive.
+    The site is light; the cost is compute.</p>
 
     <p>The 3D engine weighs <b data-peso="3D engine, loaded on approach (gzip)">191,7 KB</b>
     compressed and is not on the critical path:
