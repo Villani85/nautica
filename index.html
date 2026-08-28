@@ -227,7 +227,7 @@
     <p>Nine sections along the length, interpolated. The hull, the deck and the
     section cap are curves described in code. The mechanism and the two upper
     decks are modelled in Blender by the scripts in this repository and shipped
-    as glTF — 374 KB, meshopt-compressed. That figure moved twice, and the second
+    as glTF — <b data-peso="3D models downloaded">352,9 KB</b>, meshopt-compressed. That figure moved twice, and the second
     move was a correction. The mechanism used to ship its chamfers as geometry,
     43,152 triangles of them; it now ships 12,448 and carries them in a baked
     normal map. Measured at the distance the camera actually reaches, the map
@@ -248,10 +248,17 @@
     <p>Two simulations run in parallel, identical except that one has no fin
     authority. The number on screen is <em>one minus the ratio of the two RMS
     roll amplitudes</em>, taken at steady state and averaged over five
-    independent draws of the sea. It changes with the sea and with the speed,
-    because in reality it does: fins produce lift only when the ship is making
-    way, so at anchor the reduction is zero, and in heavy weather the fins stall
-    and their effectiveness collapses.</p>
+    independent draws of the sea. It changes with the speed, because fins produce
+    lift only when the ship is making way &mdash; at anchor the reduction is
+    zero. With the sea it is stranger, and worth saying because the eye would not
+    guess it: at service speed the five sea states give the <em>same</em> 91%, to
+    within two hundredths of a point. That is not the model failing to notice the
+    weather. It is what a linear system does &mdash; the fin angle is
+    proportional to roll rate, so doubling the sea doubles both the roll and the
+    correction, and the ratio holds. The sea starts to matter only when the fin
+    runs out of travel: below about eleven knots the stall bites, and at four
+    knots the same ship drops from 44% in a slight sea to 3% in a heavy one.
+    Drag the speed, not the sea, to see the number move.</p>
     <p>And the figure belongs to that forcing, not to the ship alone. Replacing
     the three harmonics with a spectrum of the same energy but a different
     shape moves it a long way: a single wave train exactly on the roll period
@@ -281,7 +288,7 @@
     dash until they are.</p>
 
     <dl class="numeri">
-      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,5 KB</dd></div>
+      <div><dt>Critical path to first text, fonts excluded (gzip)</dt><dd>17,8 KB</dd></div>
       <div><dt>— of which JavaScript</dt><dd>3,2 KB</dd></div>
       <div><dt>Fonts, self-hosted and subset</dt><dd>39,7 KB</dd></div>
       <!--
@@ -299,14 +306,14 @@
         era giusto, l'aggettivo no.
       -->
       <div><dt>3D engine, loaded on approach (gzip)</dt><dd>192,4 KB</dd></div>
-      <div><dt>3D models downloaded</dt><dd>374 KB</dd></div>
+      <div><dt>3D models downloaded</dt><dd>352,9 KB</dd></div>
       <!--
         E il totale, che e' la riga che un giurato verifica in dieci secondi.
         Fino al PRIMO FOTOGRAMMA disegnato, non fino al primo testo: sono due
         cose diverse e la differenza e' 134 volte.
       -->
-      <div><dt>Total before the first rendered frame</dt><dd>1,99 MB</dd></div>
-      <div><dt>— of which the mechanism</dt><dd>310 KB</dd></div>
+      <div><dt>Total before the first rendered frame</dt><dd>1,97 MB</dd></div>
+      <div><dt>— of which the mechanism</dt><dd>225,9 KB</dd></div>
       <div><dt>CDN dependencies</dt><dd>none</dd></div>
       <div><dt>Cap-to-surface deviation</dt><dd>7.2 × 10⁻⁸</dd></div>
       <div><dt>Largest Contentful Paint, lab Slow 4G with CPU ×4</dt><dd>2,9 s</dd></div>

@@ -39,18 +39,18 @@ U="$R/riferimenti/blender/uscite"
 C="$U/cottura-nuova"
 mkdir -p "$C"
 
-echo "── 1/5  geometria + atlante + alta/bassa"
+echo "── 1/6  geometria + atlante + alta/bassa"
 MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cuoci-impianto.py" -- prepara \
   | grep -E "^UV |SROTOLAMENTO|TOTALE |UNITI"
 
-echo "── 2/5  cottura normale + ORM a 2048"
+echo "── 2/6  cottura normale + ORM a 2048"
 MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cottura.py" -- \
   "$U/impianto-cottura.blend" IMPIANTO_ALTA IMPIANTO_BASSA "$C" 2048 \
   --estrusione 0.0005 --raggio 0.006 --campioni 256 \
   --max-macchie 0.6 --distanza-ao 0.06 \
   | grep -E "cotta dentro|informazione|macchie \(|ORM |ACCETTATA|RIFIUTATA"
 
-echo "── 3/5  le mappe che SPEDIAMO: 512, non 2048"
+echo "── 3/6  le mappe che SPEDIAMO: 512, non 2048"
 #
 # Si cuoce a 2048 -- dove i cancelli di `cottura.py` sono tarati e verdi -- e si
 # spedisce a 512. Non e' un compromesso, e' una misura: il recupero della
@@ -68,11 +68,27 @@ mkdir -p "$C/spedito"
 ffmpeg -y -v error -i "$C/impianto_bassa-orm.png" -vf "extractplanes=r,scale=512:512,format=rgb24" -pix_fmt rgb24 "$C/spedito/impianto_bassa-ao.png"
 ffmpeg -y -v error -i "$C/impianto_bassa-normale.png" -vf "scale=512:512" "$C/spedito/impianto_bassa-normale.png"
 
-echo "── 4/5  GLB con UV, tangenti e le due mappe"
+echo "── 4/6  GLB con UV, tangenti e le due mappe"
 MAPPE="$C/spedito" MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/glb-impianto.py" -- "$U" \
   | grep -E "^UV |^BASSA |^TRIANGOLI |^MAPPE |^GLB "
 
-echo "── 5/5  meshopt, con la guardia sul contratto"
+echo "── 5/6  l'occlusione a qualita ridotta -- e PRIMA di meshopt"
+#
+# L'esportatore di Blender ha UNA qualita' per tutte le immagini, e le due mappe
+# non tollerano la stessa perdita: la normale codifica una direzione (un errore
+# diventa un rilievo che non c'e'), l'occlusione e' un termine moltiplicativo
+# d'ombra a bassa frequenza. Segnalato da fuori, coi numeri: l'AO pesava 51,7 KB
+# contro i 33,3 della normale, il blocco piu' grosso del file.
+#
+# Il passo sta QUI e non dopo, ed e' una trappola che ho pagato: su un glTF gia'
+# passato da meshopt i dati veri di una vista non stanno all'offset della vista
+# ma dentro `EXT_meshopt_compression`, quindi riscrivendo il blob si ricopia
+# altro e il file esce PIU' GRANDE. Misurato: dopo meshopt 160,7 -> 191,1 KB di
+# brotli (con l'AO comunque scesa: un guadagno vero dentro una perdita piu'
+# grossa). Prima di meshopt, 160,7 -> 139,4.
+node "$R/strumenti/alleggerisci-mappe.mjs" "$U/impianto.glb" occlusione 60
+
+echo "── 6/6  meshopt, con la guardia sul contratto"
 node "$R/strumenti/comprimi-modello.mjs" "$U/impianto.glb" "$R/public/modelli/impianto.glb"
 
 echo

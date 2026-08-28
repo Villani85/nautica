@@ -47,8 +47,29 @@ export function creaLetture (el) {
      * scritta a mano che diceva sempre 89. Ora arriva da `S.riduzione`: il
      * rapporto fra le RMS a regime di due simulazioni parallele — una con le
      * pinne e una senza — mediate su piu' realizzazioni del mare. Il numero se
-     * lo guadagna, e cambia con il mare e con la velocita' perche' nella
-     * realta' cambia.
+     * lo guadagna.
+     *
+     * --- E QUI C'ERA UNA PROMESSA CHE AL PUNTO DI LAVORO NON E' MANTENUTA
+     *
+     * Diceva: «cambia con il mare e con la velocita' perche' nella realta'
+     * cambia». Con la velocita' si', col mare NO -- non all'andatura da cui il
+     * sito si apre. Misurato sulla tabella spedita, scarto fra mare 1 e mare 5:
+     *
+     *      4 nodi   40,6 punti   [43,8  10,9  5,8  4,1  3,2]
+     *      8 nodi   63,3         [80,4  80,5  72,9 25,2 17,2]
+     *     12 nodi    0,02        [90,8  90,8  90,8 90,8 90,8]   <- il default
+     *     20 nodi    0,01        [96,6  96,6  96,6 96,6 96,6]
+     *
+     * Non e' un difetto del modello: e' cio' che fa un sistema LINEARE. Sotto
+     * lo stallo `portanza(a) = a`, l'angolo di pinna e' proporzionale alla
+     * velocita' di rollio, quindi raddoppiando il mare raddoppiano sia il
+     * rollio sia la correzione e il rapporto resta. Il mare torna a contare
+     * solo quando la pinna finisce la corsa, cioe' sotto gli ~11 nodi.
+     *
+     * Trovato da una revisione esterna, che ha notato la cosa giusta: lo
+     * stallo era stato introdotto APPOSTA per rompere quei cinque numeri
+     * uguali, e non arriva dove il sito si apre. Curato dicendolo in pagina,
+     * non cambiando il modello -- il modello ha ragione.
      *
      * (Questo commento diceva "il rapporto fra i picchi". Era vero per una
      * settimana e poi non piu': il picco su finestra finita non converge.)

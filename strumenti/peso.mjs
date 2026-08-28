@@ -85,9 +85,13 @@ try {
 } catch { /* nessuna cartella */ }
 /** I modelli, stessa ragione. */
 let byteModelli = 0
+let byteImpianto = 0
 try {
   for (const f of readdirSync('public/modelli')) {
-    if (f.endsWith('.glb')) byteModelli += statSync('public/modelli/' + f).size
+    if (!f.endsWith('.glb')) continue
+    const n = statSync('public/modelli/' + f).size
+    byteModelli += n
+    if (f === 'impianto.glb') byteImpianto = n
   }
 } catch { /* nessuna cartella */ }
 const eCritico = (v) => /index\.html$/.test(v.p) || /\/index-[^/]*\.(js|css)$/.test(v.p) || /\.woff2$/.test(v.p)
@@ -158,6 +162,20 @@ const ATTESI = [
    * "before the first rendered frame" e non "measured in Chrome".
    */
   ['Saloon footage, two clips', byteFilmati],
+  /**
+   * --- DUE RIGHE CHE STAVANO FUORI DAL CANCELLO
+   *
+   * «3D models downloaded» e «of which the mechanism» erano pubblicate ma non
+   * controllate, e la seconda era invecchiata in silenzio: diceva 310 KB, che
+   * e' il meccanismo di PRIMA dello scambio fra smussi geometrici e mappa
+   * normale -- un modello che il sito non spedisce piu' da parecchi commit.
+   * Nessuno se n'e' accorto perche' l'unico a controllare era questo file, e
+   * qui non c'erano. Una cifra pubblicata che nessun cancello legge non e'
+   * "misurata": e' dichiarata, cioe' esattamente cio' che il sito rimprovera
+   * agli altri.
+   */
+  ['3D models downloaded', byteModelli],
+  ['— of which the mechanism', byteImpianto],
   ['Total before the first rendered frame',
     somma(critico, 'gz') + somma(jsDopo, 'gz') + byteModelli + byteFilmati]
 ]
