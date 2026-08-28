@@ -109,6 +109,7 @@ uniform vec3  uColMare;
 uniform mat4  uNaveInv;
 uniform vec3  uNaveSemi;
 uniform vec3  uNaveCol;
+uniform vec3  uNaveSopra;
 uniform float uNaveForza;
 uniform float uNaveVel;
 uniform float uNaveOmbra;
@@ -489,7 +490,36 @@ const INNESTO_SCINTILLE = /* glsl */`
            dell'ellissoide, piu' e' sicuro che stia guardando lo scafo. Senza
            sfumatura la sagoma disegna la propria silhouette invece della nave. */
         float dentro = clamp(sq / (2.0 * sqrt(a)) * 1.6, 0.0, 1.0);
-        acqCielo = mix(acqCielo, uNaveCol, dentro * uNaveForza);
+
+        /**
+         * ─── UNA MURATA BIANCA SI SPECCHIA CHIARA
+         *
+         * Qui il riflesso era un colore solo, uNaveCol = 0x2a3338, luminanza
+         * 51: una sagoma grigio scura. Una revisione esterna l'ha usato per
+         * smentire una mia frase -- avevo scritto che il chiarore sotto la
+         * carena veniva dal «riflesso di una murata bianca», e non era vero
+         * perche' quel riflesso SCURISCE -- ed e' corretto. Ma la conseguenza
+         * vera e' un'altra: **una murata bianca dovrebbe specchiarsi chiara, e
+         * qui non lo faceva.** In una fotografia sotto uno yacht bianco c'e'
+         * una macchia chiara verticale, non un'ombra.
+         *
+         * Il colore giusto dipende da COSA incontra il raggio, e l'ellissoide
+         * non ha materiali. Ma ha una quota, e quella basta per la sola
+         * distinzione che conta: sopra la linea d'acqua la nave e' murata e
+         * sovrastruttura, cioe' vernice chiara; sotto e' opera viva scura.
+         *
+         * Si prende la quota del punto colpito nel sistema della nave --
+         * o + t*d e' gia' normalizzato sui semiassi, quindi la sua y va da
+         * -1 a +1 -- e si passa da un colore all'altro attorno allo zero.
+         *
+         * E' un'approssimazione dichiarata: non sa dove finisce la murata e
+         * comincia la tuga, e di un ponte in teak non sa niente. Ma distingue
+         * le due meta' che l'occhio distingue da trenta metri, ed e' l'unica
+         * cosa che a quella distanza si legge davvero.
+         */
+        float quota = (o + d * t).y;
+        vec3 colNave = mix(uNaveCol, uNaveSopra, smoothstep(-0.10, 0.22, quota));
+        acqCielo = mix(acqCielo, colNave, dentro * uNaveForza);
       }
     }
   }
@@ -786,6 +816,11 @@ export function costruisciAcqua (opzioni = {}) {
     uNaveInv: { value: new Matrix4() },
     uNaveSemi: { value: new Vector3(1, 1, 1) },
     uNaveCol: { value: new Color(0x2a3338) },
+    /* la parte FUORI dall'acqua: murata e sovrastruttura, cioe' vernice chiara.
+       Non e' bianco puro -- un riflesso e' sempre piu' scuro dell'originale,
+       perche' la superficie ne restituisce solo una parte e il resto lo
+       trasmette. */
+    uNaveSopra: { value: new Color(0xb9bfbe) },
     uNaveForza: { value: 0 },
     uNaveVel: { value: 0 },
     /**
