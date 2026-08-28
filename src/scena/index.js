@@ -702,8 +702,20 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * Si dichiara invece di nasconderlo: fuori dal taglio l'acqua e' un mezzo
      * fisico e assorbe come in mare; dentro il taglio e' una notazione, e il
      * sito sta mostrando un pezzo, non una fotografia subacquea.
+     *
+     * E DENTRO IL TAGLIO L'ACQUA SPARISCE DEL TUTTO, non quasi.
+     *
+     * Prima lasciavo un 12% di assorbimento e un 12% di velo, per non buttare
+     * via l'ambientazione. Misurato all'A/B sulla battuta del meccanismo,
+     * spegnendo un pezzo alla volta: togliendo il PELO quella zona guadagna
+     * **34,8 livelli**, contro 6,2 della luce di fondale e 1,4 del velo. Non
+     * era un velo di troppo: era la superficie dell'acqua davanti al pezzo.
+     *
+     * Quindi a taglio aperto non resta niente fra chi guarda e il meccanismo.
+     * Il sito in quel momento non sta mostrando il mare: sta mostrando un
+     * pezzo, e il mare e' gia' stato raccontato due battute prima.
      */
-    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - 0.88 * spaccato)
+    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - spaccato)
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)

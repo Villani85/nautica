@@ -235,7 +235,10 @@ const INNESTO_CAMPO = /* glsl */`
         acqApri = max(acqApri, clamp(vicino * 1.3, 0.0, 1.0));
       }
     }
-    diffuseColor.a *= mix(1.0, 0.15, acqApri * uSpaccato);
+    /* A TAGLIO APERTO IL VARCO E' UN BUCO, non una finestra appannata.
+       Restava il 15% di superficie davanti al pezzo, ed e' proprio quella a
+       spegnerlo: misurata a 34,8 livelli su una media di 107,9. */
+    diffuseColor.a *= mix(1.0, 0.0, acqApri * uSpaccato);
   }
 
   vec2  acqP   = vMondo.xz;
@@ -770,7 +773,10 @@ const FONDA = 0.72      // a nave intera: il sotto e' un altro mondo
    materiali — che ora hanno un ambiente vero da riflettere — non arrivavano.
    Misurato guardando il provino a 2,3 unita': il motore leggeva come una
    sagoma, non come un pezzo. */
-const CHIARA = 0.12     // dentro il taglio: l'acqua e' una quota
+/* dentro il taglio l'acqua sparisce: il sito sta mostrando un pezzo, e fra chi
+   guarda e il pezzo non deve restare niente. Era 0,12, cioe' quasi niente ma
+   non niente, e quel quasi si vedeva. */
+const CHIARA = 0.0      // dentro il taglio: l'acqua non c'e'
 
   /**
    * ─── LA SCATOLA E' IL FONDO, NON UN VELO DAVANTI
