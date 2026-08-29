@@ -83,6 +83,23 @@ argv = sys.argv[sys.argv.index('--') + 1:]
 FUORI = argv[0]
 QUALE = argv[1] if len(argv) > 1 else 'entrambe'
 
+# ─── I TRE MODI, E PERCHE' NON SONO DUE ──────────────────────────────────
+#
+#   alta     smussi APPLICATI, nessuna texture. E' cio' che si spediva prima
+#            della cottura, e resta il ripiego: se le mappe non ci sono, il
+#            modello esce comunque intero invece di uscire senza smussi
+#   bassa    smussi TOLTI, normale e ORM agganciate. E' cio' che si spedisce
+#   cottura  costruisce ALTA e BASSA nella stessa scena e si ferma prima di
+#            esportare: e' quello che `cuoci-macchine.py` mette nel .blend
+#
+# Il modo NON si sceglie: si DEDUCE dalla presenza delle mappe, tranne quando
+# `MODO` lo forza. Un flag che si puo' dimenticare avrebbe prodotto, prima o
+# poi, un GLB senza smussi E senza mappe — cioe il peggio dei due, senza un
+# errore che lo dica.
+MODO = os.environ.get('MODO', '').strip().lower()
+MAPPE = os.environ.get('MAPPE', '').strip()
+TANGENTI = os.environ.get('TANGENTI', '1') != '0'
+
 # ═════════════════════════════════════════════════════════════════════════
 #  LE QUOTE, IN METRI, E DA DOVE VENGONO
 # ═════════════════════════════════════════════════════════════════════════
@@ -147,52 +164,211 @@ bpy.context.scene.unit_settings.system = 'METRIC'
 #
 # La rugosita' viene da `LEGGIMI.md`: acciaio 0,20, bronzo 0,30. Sopra quei
 # valori il pezzo legge come sabbiato; sotto, come cromo da concessionario.
-def mat(nome, colore, metallo, rugosita):
+# ═════════════════════════════════════════════════════════════════════════
+#  LA VARIAZIONE DI RUGOSITA' — L'INDIZIO NUMERO UNO DEL SINTETICO
+# ═════════════════════════════════════════════════════════════════════════
+#
+# `LEGGIMI.md` di questa cartella ha gia' pagato la lezione, ed e' la scoperta
+# che vale piu' della ricetta: **un rumore ISOTROPO su un metallo si legge
+# sempre come sporco. Lo stesso rumore, con la stessa intensita', stirato nel
+# verso della lavorazione, si legge come superficie lavorata a macchina.**
+# Non e' questione di QUANTO: e' questione di CHE FORMA.
+#
+# Le tre lavorazioni di queste macchine hanno tre versi diversi, e li hanno
+# perche' i pezzi sono fatti in tre modi:
+#
+#   albero, boccole, perni   TORNITI attorno al proprio asse -> le tracce
+#                            corrono LUNGO l'asse
+#   astuccio in bronzo       lavorato al tornio, stesso verso
+#   carter, basamento        VERNICE su un getto: colata, non tornita, quindi
+#                            NON ha un verso. Rumore isotropo, ed e' scritto
+#                            in LEGGIMI: «la vernice vuole il rumore isotropo,
+#                            al contrario del metallo»
+#
+# ─── I NUMERI NON SONO QUELLI DI LEGGIMI, E VA DETTO PERCHE'
+#
+# LEGGIMI prescrive rumore a scala 900 stirato x60. Quei numeri valgono per un
+# PROVINO RESO DA VICINO, dove la superficie e' descritta dallo shader a
+# risoluzione infinita. Qui la variazione deve passare per un ATLANTE COTTO a
+# 2048 e spedito a 512, e li' la risoluzione non e' infinita: e' misurata.
+#
+# La densita' dell'atlante di queste macchine e' stampata da
+# `cuoci-macchine.py prepara` in px/cm. Un dettaglio ha bisogno di almeno
+# 4-5 texel per sopravvivere al ricampionamento a 512; sotto, non diventa piu'
+# fine, diventa RUMORE — e un rumore ad alta frequenza su un metallo e'
+# esattamente il difetto che LEGGIMI chiama «corroso».
+#
+# Quindi la scala si DERIVA dalla densita' misurata invece di copiarla:
+# `SCALA_RUMORE` e' in periodi al metro, e `STIRO` dice quante volte il
+# periodo e' piu' lungo nel verso della lavorazione. Copiare 900 qui avrebbe
+# prodotto una mappa piena di sale e pepe con la coscienza a posto.
+# ─── I VALORI, E IL CONTO CHE LI HA SCELTI ───────────────────────────────
+#
+# MISURATO da `cuoci-macchine.py prepara` sulla propulsione: l'atlante copre
+# 41,55 m2 di superficie e le isole occupano il 39,3% del quadrato. A 512 px —
+# la risoluzione SPEDITA — sono 0,50 texel/cm, cioe' **un texel ogni 2,01 cm**.
+#
+# Da li' discendono tutti e tre i numeri, nessuno scelto a occhio:
+#
+#   SCALA_RUMORE 6   periodo 16,7 cm = 8,3 texel. Il primo tentativo a 14 dava
+#                    7,1 cm = 3,6 texel: sotto la soglia dei 4, cioe' una
+#                    variazione che il ricampionamento a 512 non rimpicciolisce
+#                    ma trasforma in sale e pepe — e un rumore ad alta
+#                    frequenza su un metallo e' il difetto che LEGGIMI chiama
+#                    «corroso». Il valore 900 di LEGGIMI vale per un provino
+#                    reso da vicino, dove non c'e' nessun atlante di mezzo
+#   DETTAGLIO 1      le ottave di un Noise stanno a 1/2, 1/4, 1/8 del periodo
+#                    base. Con dettaglio 4 la piu' fine sarebbe 1,0 cm, cioe'
+#                    MEZZO texel: rumore puro. Con 1 la piu' fine e' 8,3 cm =
+#                    4,2 texel, ancora sopra soglia. Il dettaglio qui non si
+#                    sceglie per gusto: lo taglia l'atlante
+#   STIRO 60         il periodo nel verso della lavorazione dev'essere MOLTO
+#                    piu' lungo del pezzo piu' lungo, non paragonabile.
+#
+#                    SINTOMO col valore precedente (18): sull'astuccio in
+#                    bronzo la variazione non leggeva come tornitura, leggeva
+#                    come una MACCHIA — un'estremita' piu' scura dell'altra,
+#                    cioe' esattamente il difetto che LEGGIMI chiama «corroso»
+#                    e che tutto questo giro esiste per evitare.
+#                    CAUSA: 16,7 x 18 = 3,0 m di periodo assiale. Su un
+#                    astuccio da 1,35 m ci sta MENO DI META' oscillazione:
+#                    quello che si vede non e' una serie di righe, e' mezzo
+#                    periodo, cioe' un gradiente da un capo all'altro. Una
+#                    riga si legge come lavorazione solo se ce ne sono tante.
+#                    COME L'HO ISOLATA: guardando il provino da vicino
+#                    accanto a quello vecchio e contando le bande. Sulla
+#                    circonferenza (0,94 m) se ne contano cinque o sei, ed e'
+#                    giusto; lungo l'asse se ne conta MEZZA.
+#
+#                    A 60 il periodo assiale e' 10,0 m, cioe' piu' del doppio
+#                    del pezzo tornito piu' lungo (l'albero, 4,45 m): lungo
+#                    l'asse la rugosita' e' praticamente costante e tutta la
+#                    variazione resta CIRCONFERENZIALE — che disegnata su un
+#                    cilindro fa righe parallele all'asse. E' tornitura.
+#                    Costa zero in texel: lo stiramento agisce solo nel verso
+#                    dove il periodo cresce, e un periodo piu' lungo e' sempre
+#                    piu' facile da campionare, mai piu' difficile.
+SCALA_RUMORE = 6.0     # periodi al metro nel verso STRETTO
+STIRO = 60.0           # quante volte piu' lungo nel verso della lavorazione
+DETTAGLIO = 1.0        # ottave in piu'. Oltre, si scende sotto il texel
+# LEGGIMI dice 0,04 per un pezzo tornito, ed e' giusto LI': quel provino aveva
+# anche l'ANISOTROPIA a 0,70, che «da sola fa meta' del lavoro». glTF non porta
+# l'anisotropia e il sito non la legge, quindi qui la variazione deve reggere
+# da sola il carico che li' era diviso in due. 0,065, non 0,04.
+ESCURSIONE_METALLO = 0.065
+ESCURSIONE_VERNICE = 0.090   # una verniciatura a spruzzo varia di piu'
+
+_ASSE_STIRO = {'x': (1.0 / STIRO, 1.0, 1.0),
+               'y': (1.0, 1.0 / STIRO, 1.0),
+               'z': (1.0, 1.0, 1.0 / STIRO),
+               'iso': (1.0, 1.0, 1.0)}
+
+
+def _rugosita_variabile(nt, bsdf, base, escursione, verso):
+    """Attacca al Principled una rugosita' che varia, nel verso giusto.
+
+    ─── PERCHE' COORDINATE OGGETTO E NON GENERATE
+
+    `Generated` normalizza sull'ingombro dell'oggetto, cioe' scala i tre assi
+    di fattori DIVERSI. Su un albero lungo 4,45 m e largo 0,18 quel rapporto e'
+    25 a 1: la stiratura che si chiede al Mapping verrebbe moltiplicata per
+    l'ingombro e il verso della lavorazione non sarebbe piu' quello chiesto —
+    senza nessun errore, solo un metallo che sembra rigato per traverso.
+    `Object` e' metrico e non normalizza, quindi «7 cm» resta 7 cm.
+    """
+    co = nt.nodes.new('ShaderNodeTexCoord');  co.location = (-1100, -300)
+    mp = nt.nodes.new('ShaderNodeMapping');   mp.location = (-900, -300)
+    ru = nt.nodes.new('ShaderNodeTexNoise');  ru.location = (-700, -300)
+    mr = nt.nodes.new('ShaderNodeMapRange');  mr.location = (-460, -300)
+    mp.inputs['Scale'].default_value = _ASSE_STIRO[verso]
+    ru.inputs['Scale'].default_value = SCALA_RUMORE
+    ru.inputs['Detail'].default_value = DETTAGLIO
+    ru.inputs['Roughness'].default_value = 0.5
+    mr.inputs['From Min'].default_value = 0.30
+    mr.inputs['From Max'].default_value = 0.70
+    mr.inputs['To Min'].default_value = max(0.02, base - escursione / 2)
+    mr.inputs['To Max'].default_value = min(0.98, base + escursione / 2)
+    mr.clamp = True
+    nt.links.new(co.outputs['Object'], mp.inputs['Vector'])
+    nt.links.new(mp.outputs['Vector'], ru.inputs['Vector'])
+    nt.links.new(ru.outputs['Fac'], mr.inputs['Value'])
+    nt.links.new(mr.outputs['Result'], bsdf.inputs['Roughness'])
+
+
+def mat(nome, colore, metallo, rugosita, verso=None, escursione=None):
+    """§7 · i materiali di una sala macchine mantenuta, non di un'officina.
+    Il bronzo non e' un codice universale per «acqua marina» e non si mette se
+    la funzione del pezzo non lo giustifica.
+
+    `verso` e' la direzione della lavorazione: 'x' / 'y' / 'z' per un pezzo
+    tornito o rettificato, 'iso' per una superficie colata o verniciata, None
+    per lasciare la rugosita' costante (gomma, cavi: non sono lavorati).
+    """
     m = bpy.data.materials.new(nome)
     m.use_nodes = True
-    b = m.node_tree.nodes['Principled BSDF']
+    nt = m.node_tree
+    b = nt.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = (*colore, 1)
     b.inputs['Metallic'].default_value = metallo
     b.inputs['Roughness'].default_value = rugosita
+    if verso:
+        if escursione is None:
+            escursione = ESCURSIONE_METALLO if metallo > 0.5 else ESCURSIONE_VERNICE
+        _rugosita_variabile(nt, b, rugosita, escursione, verso)
     return m
 
 
 MAT = {}
 
 
-def materiali():
-    """Si rifanno a ogni macchina perche' la scena si azzera fra le due."""
+def materiali(tornio='y'):
+    """Si rifanno a ogni macchina perche' la scena si azzera fra le due.
+
+    `tornio` e' l'asse attorno a cui girano i pezzi torniti di QUESTA macchina:
+    'y' per la linea d'assi (albero, astuccio, boccole), 'z' per il giroscopio
+    (il volano gira attorno alla verticale). Il verso delle tracce e' quello,
+    e sbagliarlo si vede: un albero rigato per traverso sembra corroso.
+
+    ─── UN COMPROMESSO, DETTO INVECE CHE NASCOSTO
+
+    Il verso e' per MATERIALE, non per pezzo. Nel giroscopio i perni del
+    cardano sono torniti attorno a X mentre il volano lo e' attorno a Z, e
+    condividono `inox`: i perni prendono il verso del volano. Sono cilindri da
+    62 mm di raggio che nell'atlante occupano pochi texel per lato, cioe' meno
+    di un periodo del rumore: la direzione li' non e' leggibile in nessun caso.
+    Spaccare il materiale in due per quei due pezzi avrebbe aggiunto una
+    primitiva a testa nel GLB per una differenza che nessuno puo' vedere.
+    """
     MAT.clear()
     MAT.update({
-        # vernice industriale marina: colata, quindi senza verso di lavorazione
-        'vernice_motore': mat('vernice_motore', (0.055, 0.075, 0.092), 0.0, 0.40),
-        'vernice_riduttore': mat('vernice_riduttore', (0.048, 0.058, 0.062), 0.0, 0.44),
-        'vernice_base': mat('vernice_base', (0.072, 0.078, 0.080), 0.0, 0.50),
-        'vernice_gyro': mat('vernice_gyro', (0.780, 0.782, 0.775), 0.0, 0.46),
-        # acciai: tornito, quindi rugosita' bassa. La variazione direzionale che
-        # li farebbe leggere come LAVORATI vuole una texture, e qui non c'e':
-        # e' il debito dichiarato in testa al file.
-        'acciaio': mat('acciaio', (0.540, 0.560, 0.580), 1.0, 0.24),
-        'albero': mat('albero', (0.600, 0.612, 0.620), 1.0, 0.20),
-        'inox': mat('inox', (0.620, 0.628, 0.635), 1.0, 0.22),
-        'ghisa': mat('ghisa', (0.300, 0.302, 0.305), 1.0, 0.52),
+        # vernice industriale marina: COLATA, quindi senza verso di lavorazione
+        'vernice_motore': mat('vernice_motore', (0.055, 0.075, 0.092), 0.0, 0.40, 'iso'),
+        'vernice_riduttore': mat('vernice_riduttore', (0.048, 0.058, 0.062), 0.0, 0.44, 'iso'),
+        'vernice_base': mat('vernice_base', (0.072, 0.078, 0.080), 0.0, 0.50, 'iso'),
+        'vernice_gyro': mat('vernice_gyro', (0.780, 0.782, 0.775), 0.0, 0.46, 'iso'),
+        # acciai TORNITI: la variazione corre lungo l'asse del pezzo
+        'acciaio': mat('acciaio', (0.540, 0.560, 0.580), 1.0, 0.24, tornio),
+        'albero': mat('albero', (0.600, 0.612, 0.620), 1.0, 0.20, tornio),
+        'inox': mat('inox', (0.620, 0.628, 0.635), 1.0, 0.22, tornio),
+        # ghisa grezza: superficie di getto, nessun verso
+        'ghisa': mat('ghisa', (0.300, 0.302, 0.305), 1.0, 0.52, 'iso', 0.070),
         # bronzo al nichel-alluminio: e' il materiale delle eliche, e si mette
         # perche' la funzione lo giustifica, non come codice per «acqua marina»
-        'bronzo': mat('bronzo', (0.560, 0.400, 0.240), 1.0, 0.32),
-        'ottone': mat('ottone', (0.620, 0.480, 0.230), 1.0, 0.28),
-        # zinco sacrificale: opaco, e un tecnico lo cerca
-        'zinco': mat('zinco', (0.500, 0.505, 0.500), 1.0, 0.62),
+        'bronzo': mat('bronzo', (0.560, 0.400, 0.240), 1.0, 0.32, tornio),
+        'ottone': mat('ottone', (0.620, 0.480, 0.230), 1.0, 0.28, tornio),
+        # zinco sacrificale: fuso in conchiglia, opaco, e un tecnico lo cerca
+        'zinco': mat('zinco', (0.500, 0.505, 0.500), 1.0, 0.62, 'iso', 0.080),
+        # gomma e cavi non sono LAVORATI: niente verso, niente variazione. Un
+        # cavo con le righe del tornio e' il genere di dettaglio che tradisce
+        # che la variazione e' stata messa dappertutto senza guardare.
         'gomma': mat('gomma', (0.022, 0.022, 0.024), 0.0, 0.86),
         'cavo': mat('cavo', (0.420, 0.200, 0.045), 0.0, 0.68),
         'tubo': mat('tubo', (0.140, 0.150, 0.160), 0.0, 0.58),
-        'targhetta': mat('targhetta', (0.700, 0.705, 0.710), 1.0, 0.30),
-        'carena': mat('carena', (0.820, 0.810, 0.780), 0.0, 0.62),
+        'targhetta': mat('targhetta', (0.700, 0.705, 0.710), 1.0, 0.30, tornio),
+        'carena': mat('carena', (0.820, 0.810, 0.780), 0.0, 0.62, 'iso'),
     })
 
 
-# ═════════════════════════════════════════════════════════════════════════
-#  AIUTI GEOMETRICI
-# ═════════════════════════════════════════════════════════════════════════
 pezzi_di = {}
 
 
@@ -368,12 +544,31 @@ def targhetta(nodo, dim, pos, materiale='targhetta'):
 # ═════════════════════════════════════════════════════════════════════════
 #  MONTAGGIO, ESPORTAZIONE, E LE GUARDIE
 # ═════════════════════════════════════════════════════════════════════════
+def mappe_di(nome_file):
+    """I due PNG da agganciare, se la cottura li ha gia' prodotti."""
+    if not MAPPE:
+        return None
+    base = os.path.splitext(nome_file)[0]
+    n = os.path.join(MAPPE, '%s_bassa-normale.png' % base)
+    o = os.path.join(MAPPE, '%s_bassa-orm.png' % base)
+    return (n, o) if os.path.isfile(n) and os.path.isfile(o) else None
+
+
 def monta(radice_nome, nodi, gerarchia, origini, extras, nome_file):
-    """Costruisce la gerarchia, applica gli smussi, triangola, esporta.
+    """Costruisce la gerarchia, tratta gli smussi secondo il modo, esporta.
 
     Le guardie sono le stesse di `glb-impianto.py` e stanno qui per la stessa
     ragione: il guasto che coprono non fa rumore.
     """
+    coppia = mappe_di(nome_file)
+    modo = MODO or ('bassa' if coppia else 'alta')
+    if modo == 'bassa' and not coppia:
+        raise SystemExit(
+            'ERRORE: MODO=bassa ma le mappe non ci sono in %r. Uscirebbe un '
+            'modello SENZA smussi e SENZA normale, cioe il peggio dei due: '
+            'meno resa della alta e nessun guadagno. Cuoci prima.' % MAPPE)
+    print('MODO %s  (mappe: %s)' % (modo, 'si' if coppia else 'no'))
+
     bpy.ops.object.empty_add(location=(0, 0, 0))
     radice = bpy.context.object
     radice.name = radice_nome
@@ -400,41 +595,64 @@ def monta(radice_nome, nodi, gerarchia, origini, extras, nome_file):
     # Qui si stampa, PRIMA di fondere, ogni pezzo la cui quota maggiore supera
     # mezzo metro. Su macchine di questa taglia sono pochi e si conoscono a
     # memoria: uno che non ci si aspetta salta all'occhio e ha gia' un nome.
-    print('PEZZI GROSSI (quota maggiore oltre 0,50 m)')
-    for nodo in sorted(pezzi_di):
-        for o in pezzi_di[nodo]:
-            if o.type != 'MESH':
-                continue
-            b = [o.matrix_world @ Vector(v) for v in o.bound_box]
-            mn = [min(q[i] for q in b) for i in range(3)]
-            mx = [max(q[i] for q in b) for i in range(3)]
-            d = [mx[i] - mn[i] for i in range(3)]
-            if max(d) > 0.50:
-                print('  %-16s %-22s %5.2f x %5.2f x %5.2f   y da %6.2f a %6.2f  [%s]'
-                      % (nodo, o.name, d[0], d[1], d[2], mn[1], mx[1],
-                         o.data.materials[0].name if o.data.materials else '-'))
+    if os.environ.get('SPIA_PEZZI'):
+        print('PEZZI GROSSI (quota maggiore oltre 0,50 m)')
+        for nodo in sorted(pezzi_di):
+            for o in pezzi_di[nodo]:
+                if o.type != 'MESH':
+                    continue
+                b = [o.matrix_world @ Vector(v) for v in o.bound_box]
+                mn = [min(q[i] for q in b) for i in range(3)]
+                mx = [max(q[i] for q in b) for i in range(3)]
+                d = [mx[i] - mn[i] for i in range(3)]
+                if max(d) > 0.50:
+                    print('  %-16s %-22s %5.2f x %5.2f x %5.2f   y da %6.2f a %6.2f  [%s]'
+                          % (nodo, o.name, d[0], d[1], d[2], mn[1], mx[1],
+                             o.data.materials[0].name if o.data.materials else '-'))
 
-    # --- GLI SMUSSI SI APPLICANO PRIMA DEL `join`, E NON E' UN DETTAGLIO ---
+    # ═════════════════════════════════════════════════════════════════════
+    #  GLI SMUSSI: APPLICATI, TOLTI, O TUTTI E DUE
+    # ═════════════════════════════════════════════════════════════════════
     #
-    # SINTOMO che si otterrebbe saltando questo passo: il modello esce con gli
-    # spigoli vivi, cioe' senza la cosa per cui gli smussi erano stati messi,
-    # e nessuno se ne accorge finche' non lo si guarda in luce dura.
+    # ─── PERCHE' IL DOPPIONE SI FA QUI E NON DOPO IL `join`
+    #
+    # SINTOMO che avrebbe prodotto farlo dopo: la ALTA esce con UNO smusso
+    # solo per nodo — quello del primo pezzo — applicato a tutto il resto, e i
+    # nodi il cui primo pezzo non aveva smusso escono senza.
     # CAUSA: `bpy.ops.object.join()` tiene i modificatori del solo oggetto
-    # ATTIVO e butta quelli di tutti gli altri, in silenzio. Con `export_apply
-    # =False` a valle, quei bevel non tornano piu'.
-    # COME L'HO ISOLATA: leggendo `glb-impianto.py`, che i modificatori non li
-    # applica affatto — li RIMUOVE (`modifiers.remove`) — perche' li' gli
-    # smussi vivono nella normale cotta. Qui non c'e' cottura: la stessa riga
-    # produrrebbe l'effetto opposto.
+    # ATTIVO e butta quelli di tutti gli altri, in silenzio.
+    # COME LA CONOSCO: sta scritta nel censimento di `cuoci-impianto.py`, che
+    # la stampa pezzo per pezzo proprio perche' li' il doppione si fa DOPO.
+    # Qui si fa prima, quindi la ALTA ha davvero tutti gli smussi di tutti i
+    # pezzi — ed e' il motivo per cui il rapporto alta/bassa di queste
+    # macchine e' piu' alto di quello dell'impianto.
+    alte = []
     for lista in pezzi_di.values():
         for o in lista:
             if o.type != 'MESH':
                 continue
-            bpy.ops.object.select_all(action='DESELECT')
-            o.select_set(True)
-            bpy.context.view_layer.objects.active = o
-            for m in list(o.modifiers):
-                bpy.ops.object.modifier_apply(modifier=m.name)
+            if modo == 'cottura':
+                a = o.copy()
+                a.data = o.data.copy()
+                a.name = o.name + '_ALTA'
+                bpy.context.collection.objects.link(a)
+                alte.append(a)
+                bpy.ops.object.select_all(action='DESELECT')
+                a.select_set(True)
+                bpy.context.view_layer.objects.active = a
+                for m in list(a.modifiers):
+                    bpy.ops.object.modifier_apply(modifier=m.name)
+            if modo in ('cottura', 'bassa'):
+                # la BASSA e' «la stessa senza smussi»: si TOLGONO, non si
+                # applicano. Gli smussi vivranno nella normale cotta.
+                for m in list(o.modifiers):
+                    o.modifiers.remove(m)
+            else:
+                bpy.ops.object.select_all(action='DESELECT')
+                o.select_set(True)
+                bpy.context.view_layer.objects.active = o
+                for m in list(o.modifiers):
+                    bpy.ops.object.modifier_apply(modifier=m.name)
 
     # --- `convert` GUARDA LA SELEZIONE, NON L'OGGETTO ATTIVO ---
     #
@@ -483,7 +701,70 @@ def monta(radice_nome, nodi, gerarchia, origini, extras, nome_file):
         unito.parent = vuoti[nodo]
         unito.matrix_parent_inverse = vuoti[nodo].matrix_world.inverted()
 
-    fuori = [o.name for o in bpy.data.objects if o.parent is None and o is not radice]
+    # ═════════════════════════════════════════════════════════════════════
+    #  L'ATLANTE UV — SI FA QUI, IN UN POSTO SOLO
+    # ═════════════════════════════════════════════════════════════════════
+    #
+    # Lo srotolamento sta nel COSTRUTTORE e non nel cuocitore, ed e' la regola
+    # che `cuoci-impianto.py` ha scritto dopo averla pagata: due ricette di
+    # srotolamento in due file sono una sola finche' qualcuno non tocca una
+    # delle due, e allora la cottura viene fatta su un atlante e il GLB ne
+    # porta un altro. Le mappe si applicano, sono nitide, e stanno nel posto
+    # sbagliato — nessun errore da nessuna parte.
+    #
+    # Percio' l'atlante nasce qui, sulle stesse mesh che verranno esportate, e
+    # `cuoci-macchine.py` lo EREDITA arrivando fin qui: non lo rifa'.
+    #
+    # ─── I NUMERI, E DA DOVE VENGONO
+    #
+    #   66 gradi     limite d'angolo di smart_project: sotto, gli spigoli dei
+    #                cilindri diventano cuciture e le isole si moltiplicano
+    #   area_weight 0 + average_islands_scale
+    #                senza, il packer normalizza per OGGETTO invece che per
+    #                area, e un bullone prende la stessa densita' del motore
+    #   8 px su 2048 il minimo che soddisfa i due vincoli veri: un blocco di
+    #                compressione e' 4x4, e a mip 512 restano 2 px, cioe' il
+    #                raggio del bilineare
+    #   AABB         `rifai-impianto.sh` lo dice esplicito: col predefinito
+    #                CONVEX l'atlante dell'impianto e' ROSSO, bleed misurato
+    #                6 px su 8 chiesti. Non si abbassa la richiesta, si cambia
+    #                forma. Qui si parte da li' invece di ripagare la lezione
+    ATLANTE_UV = 2048
+    MARGINE_UV_PX = 8.0
+    FORMA_UV = 'AABB'
+    da_srotolare = sorted([bpy.data.objects[n + '_MESH'] for n in nodi
+                           if (n + '_MESH') in bpy.data.objects], key=lambda o: o.name)
+    for _o in da_srotolare:
+        bpy.ops.object.select_all(action='DESELECT')
+        _o.select_set(True)
+        bpy.context.view_layer.objects.active = _o
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0,
+                                 area_weight=0.0, correct_aspect=True,
+                                 scale_to_bounds=False)
+        bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    for _o in da_srotolare:
+        _o.select_set(True)
+    bpy.context.view_layer.objects.active = da_srotolare[0]
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.select_all(action='SELECT')
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION',
+                            margin=MARGINE_UV_PX / ATLANTE_UV,
+                            shape_method=FORMA_UV, scale=True, merge_overlap=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    _senza = [o.name for o in da_srotolare if not o.data.uv_layers]
+    if _senza:
+        raise SystemExit('ERRORE UV: %d mesh senza UV dopo lo srotolamento: %s'
+                         % (len(_senza), ', '.join(_senza)))
+    print('UV   %d mesh srotolate e impacchettate (atlante %d, margine %.0f px, forma %s)'
+          % (len(da_srotolare), ATLANTE_UV, MARGINE_UV_PX, FORMA_UV))
+
+    fuori = [o.name for o in bpy.data.objects
+             if o.parent is None and o is not radice and not o.name.endswith('_ALTA')]
     if fuori:
         raise SystemExit(
             'ERRORE: %d oggetti sono rimasti fuori dalla gerarchia di %s: %s.\n'
@@ -524,28 +805,171 @@ def monta(radice_nome, nodi, gerarchia, origini, extras, nome_file):
         if m:
             print('           %-18s %6d' % (nodo, len(m.data.polygons)))
 
+    # ═════════════════════════════════════════════════════════════════════
+    #  MODO COTTURA: si fermano qui, ALTA e BASSA nella stessa scena
+    # ═════════════════════════════════════════════════════════════════════
+    if modo == 'cottura':
+        bpy.ops.object.select_all(action='DESELECT')
+        for a in alte:
+            a.select_set(True)
+        bpy.context.view_layer.objects.active = alte[0]
+        if len(alte) > 1:
+            bpy.ops.object.join()
+        alta = bpy.context.object
+        alta.name = radice_nome + '_ALTA'
+
+        # La BASSA per la cottura e' una COPIA delle mesh che si spediranno,
+        # unite in un oggetto solo. Copia e non le originali: `cottura.py`
+        # vuole un oggetto unico, ma la gerarchia per nodo deve restare in
+        # piedi — e' il contratto che il sito interroga per nome.
+        copie = []
+        for o in da_srotolare:
+            c = o.copy()
+            c.data = o.data.copy()
+            c.name = o.name + '_B'
+            c.parent = None
+            c.matrix_world = o.matrix_world.copy()
+            bpy.context.collection.objects.link(c)
+            copie.append(c)
+        bpy.ops.object.select_all(action='DESELECT')
+        for c in copie:
+            c.select_set(True)
+        bpy.context.view_layer.objects.active = copie[0]
+        if len(copie) > 1:
+            bpy.ops.object.join()
+        bassa = bpy.context.object
+        bassa.name = radice_nome + '_BASSA'
+
+        # ─── LE MESH PER NODO ESCONO DAL RENDER, E QUI STA IL GUASTO ─────
+        #
+        # SINTOMO: la prima cottura dava un'occlusione quasi nera — media 84,5
+        # e mediana 8 contro 194 e 255 di quella che l'impianto spedisce — e
+        # non rispondeva alla distanza di ricerca: da 3 a 25 cm la media
+        # passava solo da 70 a 56. Guardando l'atlante, le isole grandi erano
+        # BINARIE: o tutte bianche o tutte nere.
+        # CAUSA: in questa scena la stessa geometria c'e' TRE volte — le mesh
+        # per nodo (che reggono la gerarchia), la BASSA (che ne e' la copia
+        # unita) e la ALTA. `cottura.py` toglie ai raggi la sola BASSA — «la
+        # bassa non deve farsi ombra da sola» — perche' nel caso dell'impianto
+        # i doppioni sono due, non tre. Qui restava un guscio COINCIDENTE con
+        # ogni superficie: il raggio dell'occlusione partiva e colpiva subito
+        # il gemello a distanza zero. Occlusione piena, ovunque, a qualunque
+        # distanza.
+        # COME L'HO ISOLATA: da `prop_scafo`. E' una lastra piatta in aria
+        # libera, e risultava nera al 51,4%. Una lastra piatta non puo' essere
+        # sepolta per meta': se il numero e' impossibile, non e' la geometria
+        # a essere sbagliata, e' la misura — o la scena in cui si misura.
+        #
+        # Non si cancellano, perche' la misura per nodo di `cuoci-macchine.py`
+        # le interroga: si tolgono dal RENDER, che e' l'unica cosa che le
+        # riguardava.
+        for o in da_srotolare:
+            o.hide_render = True
+        print('COTTURA  %d mesh per nodo tolte dal render (restavano gusci '
+              'coincidenti)' % len(da_srotolare))
+        fa, fb = len(alta.data.polygons), len(bassa.data.polygons)
+        print('COTTURA  %s %d facce   %s %d facce   rapporto %.2f'
+              % (alta.name, fa, bassa.name, fb, fa / max(fb, 1)))
+        if not bassa.data.uv_layers:
+            raise SystemExit('ERRORE: la BASSA e arrivata senza UV.')
+        return
+
+    # ═════════════════════════════════════════════════════════════════════
+    #  LE DUE MAPPE, QUANDO CI SONO
+    # ═════════════════════════════════════════════════════════════════════
+    if coppia:
+        png_n, png_o = coppia
+        img_n = bpy.data.images.load(png_n, check_existing=True)
+        img_n.colorspace_settings.name = 'Non-Color'
+        img_o = bpy.data.images.load(png_o, check_existing=True)
+        img_o.colorspace_settings.name = 'Non-Color'
+
+        # L'OCCLUSIONE NON PASSA DA UN INGRESSO DEL PRINCIPLED: in glTF
+        # `occlusion` non e' una proprieta' del BSDF. L'esportatore la cerca
+        # in un gruppo di nodi chiamato ESATTAMENTE «glTF Material Output»,
+        # ingresso «Occlusion». Se quel nome cambia, sparisce zitta.
+        g = bpy.data.node_groups.get('glTF Material Output')
+        if g is None:
+            g = bpy.data.node_groups.new('glTF Material Output', 'ShaderNodeTree')
+            g.interface.new_socket('Occlusion', in_out='INPUT',
+                                   socket_type='NodeSocketFloat')
+            g.nodes.new('NodeGroupInput')
+
+        quanti = 0
+        for m in bpy.data.materials:
+            if not m.use_nodes:
+                continue
+            nt = m.node_tree
+            bsdf = next((x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf is None:
+                continue
+            tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = img_n
+            tn.location = (-760, -60)
+            nm = nt.nodes.new('ShaderNodeNormalMap'); nm.location = (-470, -60)
+            nt.links.new(tn.outputs['Color'], nm.inputs['Color'])
+            nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+
+            # ─── L'ORM SI SPEDISCE, AL CONTRARIO DELL'IMPIANTO ───────────
+            #
+            # `glb-impianto.py` scarta l'ORM e manda la sola occlusione, e ha
+            # ragione LI': aveva misurato che dei tre canali solo R portava
+            # informazione nuova, perche' G (rugosita') aveva 9 picchi che
+            # coprivano il 98,1% dei texel — cioe' era costante per materiale.
+            #
+            # Qui G non e' piu' costante: e' il lavoro di questo giro. Quindi
+            # il canale porta informazione e va spedito, e conviene farlo
+            # nella stessa immagine dell'occlusione: glTF permette a
+            # `occlusionTexture` e `metallicRoughnessTexture` di puntare alla
+            # STESSA texture (R occlusione, G rugosita', B metallicita'), ed
+            # e' una immagine invece di due.
+            to = nt.nodes.new('ShaderNodeTexImage'); to.image = img_o
+            to.location = (-760, -420)
+            sp = nt.nodes.new('ShaderNodeSeparateColor'); sp.location = (-470, -420)
+            nt.links.new(to.outputs['Color'], sp.inputs['Color'])
+            nt.links.new(sp.outputs['Green'], bsdf.inputs['Roughness'])
+            nt.links.new(sp.outputs['Blue'], bsdf.inputs['Metallic'])
+            gr = nt.nodes.new('ShaderNodeGroup'); gr.node_tree = g
+            gr.location = (-470, -640)
+            nt.links.new(to.outputs['Color'], gr.inputs['Occlusion'])
+            quanti += 1
+        print('MAPPE  normale + ORM agganciate a %d materiali' % quanti)
+
     bpy.ops.object.select_all(action='SELECT')
     percorso = os.path.join(FUORI, nome_file)
-    # Niente texture, quindi niente UV e niente tangenti: sarebbero attributi
-    # per vertice senza nulla a cui appoggiarsi, cioe' peso puro. `gltfpack`
-    # cancellerebbe comunque le UV, visto che nessun materiale usa una texture
-    # — meglio non generarle che vederle sparire senza un avviso.
     bpy.ops.export_scene.gltf(filepath=percorso, export_format='GLB',
                               use_selection=True,
                               export_apply=False,
                               export_vertex_color='NONE',
-                              export_texcoords=False,
-                              export_tangents=False,
+                              # UV e TANGENTI si esportano SOLO se c'e' una
+                              # texture a cui appoggiarle. Senza, sarebbero
+                              # attributi per vertice che non descrivono
+                              # niente — e `gltfpack` cancellerebbe comunque
+                              # le UV quando nessun materiale usa una texture,
+                              # senza dirlo.
+                              export_texcoords=bool(coppia),
+                              # LE TANGENTI SI ESPORTANO, non si lasciano
+                              # generare: la normale e' cotta in spazio
+                              # MikkTSpace e chi disegna deve usare LO STESSO
+                              # spazio, o la mappa racconta un rilievo
+                              # leggermente diverso da quello cotto.
+                              # Le tangenti si possono spegnere, e la
+                              # decisione e' MISURATA in fondo a questo file
+                              # (cerca TANGENTI): su un tetto di peso duro,
+                              # un attributo per vertice va pesato come tutto
+                              # il resto invece di darlo per acquisito.
+                              export_tangents=bool(coppia) and TANGENTI,
                               export_normals=True,
+                              export_image_format='WEBP',
+                              export_image_quality=88,
                               export_yup=True, export_extras=True)
     print('GLB  %-16s %7.1f KB' % (nome_file, os.path.getsize(percorso) / 1024))
 
 
-def azzera():
+def azzera(tornio='y'):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.unit_settings.system = 'METRIC'
     pezzi_di.clear()
-    materiali()
+    materiali(tornio)
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -873,7 +1297,8 @@ def costruisci_elica():
 #  MACCHINA 2 — IL GIROSCOPIO
 # ═════════════════════════════════════════════════════════════════════════
 def costruisci_giroscopio():
-    azzera()
+    # il volano gira attorno alla VERTICALE: e' quello l'asse del tornio
+    azzera('z')
 
     # ─── gyro_rotore ── RUOTA attorno alla verticale (Z Blender = Y glTF) ──
     #

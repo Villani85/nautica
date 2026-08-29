@@ -897,6 +897,83 @@ for (const M of MACCHINE) {
     }
   }
 
+  // ═══ LE MAPPE COTTE, E IL FATTO CHE POSSONO SPARIRE IN SILENZIO ═════
+  //
+  // Da questo giro le due macchine spediscono la BASSA — geometria senza
+  // smussi — piu' una normale che li rimette e una ORM che porta occlusione,
+  // rugosita' e metallicita'. E' un baratto: MISURATO, la normale restituisce
+  // il 61,8% dello scarto fra bassa nuda e alta sulla propulsione e il 50,7%
+  // sul giroscopio (`confronto-macchine.py`).
+  //
+  // Il baratto ha un lato pericoloso: se le mappe spariscono, il modello NON
+  // da' errore. Si apre, si vede, pesa meno — ed e' peggio di prima, perche'
+  // adesso gli smussi non ci sono nemmeno nella geometria. Sarebbe il difetto
+  // perfetto: silenzioso, e mascherato da miglioramento sul peso.
+  //
+  // I modi in cui possono sparire sono noti e tutti muti:
+  //   · `gltfpack` cancella le UV se nessun materiale usa una texture, e non
+  //     lo dice. Senza UV la mappa non ha dove appoggiarsi
+  //   · l'occlusione non passa da un ingresso del Principled: l'esportatore la
+  //     cerca in un gruppo chiamato esattamente «glTF Material Output». Se quel
+  //     nome cambia, l'occlusione esce dal file senza un avviso
+  //   · le TANGENTI: la normale e' cotta in MikkTSpace, e senza tangenti chi
+  //     disegna se le inventa. Costano 14,3 KB brotli sulla propulsione — sono
+  //     state tenute apposta, quindi qui si controlla che ci siano ancora
+  {
+    let prim = 0, conUV = 0, conTan = 0
+    for (const me of j.meshes ?? []) {
+      for (const p of me.primitives) {
+        prim++
+        if (p.attributes.TEXCOORD_0 !== undefined) conUV++
+        if (p.attributes.TANGENT !== undefined) conTan++
+      }
+    }
+    const mat = j.materials ?? []
+    const conAO = mat.filter(x => x.occlusionTexture).length
+    const conNor = mat.filter(x => x.normalTexture).length
+    const conMR = mat.filter(x => x.pbrMetallicRoughness?.metallicRoughnessTexture).length
+    // l'ORM e' UNA immagine usata da due campi: si verifica che sia davvero
+    // cosi', perche' due immagini separate sarebbero peso doppio per lo
+    // stesso contenuto — ed e' un errore che il file non segnala
+    const stessa = mat.filter(x => x.occlusionTexture && x.pbrMetallicRoughness?.metallicRoughnessTexture &&
+      x.occlusionTexture.index === x.pbrMetallicRoughness.metallicRoughnessTexture.index).length
+    let byteImm = 0
+    for (const im of j.images ?? []) byteImm += j.bufferViews[im.bufferView]?.byteLength ?? 0
+    note.push(`          mappe: ${conNor}/${mat.length} materiali con normalTexture, ` +
+              `${conAO} con occlusionTexture, ${conMR} con metallicRoughnessTexture ` +
+              `(${stessa} condividono la stessa ORM); ${(j.images ?? []).length} immagini, ` +
+              `${(byteImm / 1024).toFixed(1)} KB`)
+    note.push(`          ${conUV}/${prim} primitive con TEXCOORD_0, ${conTan} con TANGENT`)
+    if (conNor === 0) {
+      guasti.push(`${eti}: nessun materiale dichiara normalTexture. Da quando si spedisce ` +
+                  'la BASSA, senza quella mappa gli smussi non esistono da nessuna parte: ' +
+                  'ne nella geometria ne nella texture. Il file resta valido e piu ' +
+                  'leggero, cioe il guasto si traveste da miglioramento.')
+    }
+    if (conAO === 0) {
+      guasti.push(`${eti}: nessun materiale dichiara occlusionTexture. L'aggancia ` +
+                  'glb-macchine.py col gruppo di nodi «glTF Material Output», ingresso ' +
+                  '«Occlusion»: se quel gruppo cambia nome, l occlusione sparisce zitta.')
+    }
+    if (conMR === 0) {
+      guasti.push(`${eti}: nessun materiale dichiara metallicRoughnessTexture. E' il canale ` +
+                  'G di quella texture a portare la VARIAZIONE di rugosita, che e la ' +
+                  'ragione per cui questa cottura esiste: senza, si torna al metallo ' +
+                  'uniforme che legge di plastica.')
+    }
+    if (conUV < prim) {
+      guasti.push(`${eti}: ${prim - conUV} primitive su ${prim} senza TEXCOORD_0: le mappe ` +
+                  'non hanno dove appoggiarsi. gltfpack cancella le UV quando nessun ' +
+                  'materiale usa una texture, e non lo dice.')
+    }
+    if (conTan < prim) {
+      guasti.push(`${eti}: ${prim - conTan} primitive su ${prim} senza TANGENT. La normale ` +
+                  'e cotta in MikkTSpace e chi disegna se le inventerebbe. Costano ' +
+                  '14,3 KB brotli e sono state tenute con quel numero davanti: se si ' +
+                  'decide di toglierle, si toglie anche questo cancello e si scrive perche.')
+    }
+  }
+
   // ─── IL DIAMETRO DICHIARATO DEVE DESCRIVERE IL PEZZO DISEGNATO ────────
   //
   // Stessa regola di `finAreaM2` sull'impianto, dove un numero dichiarato
@@ -943,6 +1020,225 @@ if (brMacchine) {
                 `brotli contro un tetto di ${(TETTO_MACCHINE_BR / 1024).toFixed(0)}.`)
   }
 }
+
+/**
+ * ═══ GLI INTERNI DELL'ATTO DUE ════════════════════════════════════════
+ *
+ * `docs/13-ATTO-DUE.md` §3 chiede uno spazio a due assi -- quattro stazioni per
+ * tre quote -- e §6 che sia costruito nello STESSO riferimento metrico dello
+ * scafo. `interni.glb` e' quello spazio: pagliolati, paratie, ossatura, scale e
+ * corredo, generati per ciclo da `riferimenti/blender/glb-interni.py` sulla
+ * forma vera delle ordinate.
+ *
+ * ─── IL CONTROLLO PER CUI QUESTO BLOCCO ESISTE DAVVERO: SOLO BABORDO
+ *
+ * `src/scena/index.js` taglia con `Plane(1,0,0)` e tiene `x < 0`: la meta' di
+ * dritta non si vede MAI. Quindi il modello ne costruisce una sola.
+ *
+ * E' esattamente il genere di cosa che nessuno vedrebbe rompersi. Chi domani
+ * rigenerasse gli interni su tutte e due le meta' otterrebbe un file GRANDE IL
+ * DOPPIO e uno schermo IDENTICO -- il renderer butta via la meta' in piu' senza
+ * dire niente. Non c'e' nessun provino che possa accorgersene: se ne accorge
+ * solo un numero, e il numero e' l'ingombro in X.
+ *
+ * ─── E LA LUNGHEZZA, CHE PRENDE L'ERRORE DI SCALA
+ *
+ * Stessa specie di forbice delle macchine e per lo stesso motivo: un fattore 10
+ * su un GLB si apre, si vede, e sembra giusto finche' non gli si mette accanto
+ * qualcos'altro. Qui pero' si puo' essere molto piu' stretti, perche' questi
+ * interni non sono un pezzo DENTRO la nave: sono la nave. Il loro ingombro
+ * longitudinale deve essere la lunghezza fuori tutto letta da `ordinate.js`,
+ * non una frazione plausibile.
+ *
+ * ─── COSA QUESTO BLOCCO NON CONTROLLA, E VA DETTO
+ *
+ * Non guarda se dentro si LEGGE qualcosa. Quello lo dice solo un render dalla
+ * posa della sezione verticale (`riferimenti/blender/render-interni.py`), e
+ * nessun numero di questo file lo sostituisce. Un verde qui significa che il
+ * modello e' fatto come dichiara, non che serva a qualcosa.
+ */
+const INTERNI = 'public/modelli/interni.glb'
+const NODI_INTERNI = [
+  'int_pagliolato_allestimento', 'int_pagliolato_macchine', 'int_pagliolato_sentina',
+  'int_paratia_prua_avanti', 'int_paratia_avanti_centro', 'int_paratia_centro_poppa',
+  'int_ordinate', 'int_correnti', 'int_scale',
+  'int_passerelle_cavi', 'int_tubazioni', 'int_plafoniere', 'int_supporti'
+]
+/**
+ * Lo smusso e' 8 mm e mezzo spessore di paratia altri 12: un vertice sul filo
+ * della mezzeria puo' finire a venti millimetri dall'altra parte senza che
+ * nessuno abbia costruito niente a dritta. La tolleranza e' quella quantita',
+ * dichiarata -- non un margine generoso. Il builder stampa lo scarto vero, e
+ * oggi misura 8,0 mm.
+ */
+const TOLL_MEZZERIA = 0.030           // m
+const TOLL_LOA = 0.02                 // 2% della lunghezza fuori tutto
+const CAVA_INTERNI = [3.0, 7.0]       // m: l'altezza della cava di un quaranta metri
+/**
+ * IL TETTO IN BROTLI E' UNA DECISIONE, e va detta come tale.
+ *
+ * Gli interni arrivano DOPO come le macchine -- non stanno nel percorso critico
+ * della prima schermata -- ma non possono costare piu' delle due macchine messe
+ * insieme, che hanno un tetto di 250 KB. 160 e' la misura di oggi piu' il
+ * margine per il corredo che ancora manca. Se si sfonda si dice col numero,
+ * non si alza il tetto di nascosto.
+ */
+const TETTO_INTERNI_BR = 160 * 1024
+
+;(function collaudaInterni () {
+  let b
+  try { b = readFileSync(INTERNI) } catch { guasti.push(`manca ${INTERNI}`); return }
+  const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'))
+  const L = lettore(j)
+  const eti = INTERNI.split('/').pop()
+  const kb = Math.round(b.length / 1024)
+  const br = brotliCompressSync(b, { params: { [ZLIB.BROTLI_PARAM_QUALITY]: 11 } }).length
+  note.push(`INTERNI   ${eti}  ${kb} KB grezzo, ${(br / 1024).toFixed(1)} KB brotli ` +
+            `(tetto ${(TETTO_INTERNI_BR / 1024).toFixed(0)})`)
+  if (kb > TETTO_KB) {
+    guasti.push(`${eti}: ${kb} KB sfondano l'obiettivo provvisorio di ${TETTO_KB} KB (§9)`)
+  }
+  if (br > TETTO_INTERNI_BR) {
+    guasti.push(`${eti}: ${(br / 1024).toFixed(1)} KB brotli contro un tetto di ` +
+                `${(TETTO_INTERNI_BR / 1024).toFixed(0)}. Il tetto e' una decisione: se va ` +
+                'alzato, va alzato scrivendo perche in strumenti/collaudo-glb.mjs.')
+  }
+
+  const radici = (j.scenes?.[j.scene ?? 0]?.nodes ?? []).map(i => j.nodes[i]?.name ?? '(senza nome)')
+  if (radici.length !== 1 || radici[0] !== 'INTERNI') {
+    guasti.push(`${eti}: la scena ha in cima ${radici.join(', ')} invece del solo INTERNI`)
+  }
+
+  const persi = NODI_INTERNI.filter(n => !L.perNome.has(n))
+  if (persi.length) {
+    guasti.push(`${eti}: mancano i nodi ${persi.join(', ')} — sono il contratto che il sito ` +
+                'interroga per nome, e gltfpack li cancella tutti se si scorda -kn')
+    return
+  }
+  const vuoti = NODI_INTERNI.filter(n => !L.ingombro(L.perNome.get(n)))
+  if (vuoti.length) {
+    guasti.push(`${eti}: nodi senza geometria sotto: ${vuoti.join(', ')} — il nome e' ` +
+                'sopravvissuto alla compressione, il pezzo no')
+  }
+
+  const ex = j.nodes?.find(n => n.extras)?.extras ?? null
+  if (!ex) { guasti.push(`${eti}: nessun extras`); return }
+  if (ex.authoringUnit !== 'meter') {
+    guasti.push(`${eti}: authoringUnit e' "${ex.authoringUnit}", non "meter": la ` +
+                'conversione 0,4 del sito diventa falsa')
+  }
+  // ─── LO STESSO RIFERIMENTO METRICO DELL'IMPIANTO, LETTO DAI DUE FILE ───
+  if (METRO_IMPIANTO !== null && ex.sceneMetersPerUnit !== METRO_IMPIANTO) {
+    guasti.push(`${eti}: sceneMetersPerUnit e' ${ex.sceneMetersPerUnit} mentre ` +
+                `impianto.glb dichiara ${METRO_IMPIANTO}. Due modelli nella stessa scena ` +
+                'con due metri diversi non danno nessun errore: danno un interno grande il ' +
+                'doppio dentro uno scafo giusto.')
+  }
+  if (ex.builtSide !== 'port') {
+    guasti.push(`${eti}: builtSide e' "${ex.builtSide}", non "port"`)
+  }
+
+  const tutto = L.ingombro(L.perNome.get('INTERNI'))
+  if (!tutto) { guasti.push(`${eti}: INTERNI non ha geometria sotto`); return }
+  const d = [0, 1, 2].map(i => tutto.mx[i] - tutto.mn[i])
+  const loa = loaMetri(ex.sceneMetersPerUnit)
+  note.push(`          ingombro ${d.map(v => v.toFixed(2)).join(' x ')} m; X da ` +
+            `${tutto.mn[0].toFixed(3)} a ${tutto.mx[0].toFixed(3)}`)
+
+  // ─── SOLO BABORDO ───────────────────────────────────────────────────────
+  //
+  // In glTF con Y in alto X e' l'asse del baglio, e babordo e' il NEGATIVO:
+  // l'esportatore tiene gx = bx, e in Blender +X e' dritta. Un ingombro che
+  // sconfina a X positiva vuol dire geometria costruita dalla parte che il
+  // piano di sezione butta via.
+  if (tutto.mx[0] > TOLL_MEZZERIA) {
+    guasti.push(`${eti}: c'e' geometria a DRITTA fino a x = ${tutto.mx[0].toFixed(3)} m, ` +
+                `oltre i ${(TOLL_MEZZERIA * 1000).toFixed(0)} mm di smusso ammessi. Il piano ` +
+                'Plane(1,0,0) la toglie dallo schermo ma non dal file: e\' peso spedito ' +
+                'che nessuno puo\' vedere, e nessun provino se ne accorgerebbe.')
+  }
+
+  // ─── LA LUNGHEZZA E' LA NAVE, NON UNA FRAZIONE DI NAVE ──────────────────
+  if (loa) {
+    const sc = (d[2] - loa) / loa
+    note.push(`          lunghezza ${d[2].toFixed(2)} m contro i ${loa.toFixed(2)} m di scafo ` +
+              `letti da ordinate.js (${sc >= 0 ? '+' : ''}${(sc * 100).toFixed(1)}%)`)
+    if (Math.abs(sc) > TOLL_LOA) {
+      guasti.push(`${eti}: si estende per ${d[2].toFixed(2)} m mentre lo scafo ne misura ` +
+                  `${loa.toFixed(2)}: ${(sc * 100).toFixed(1)}%, oltre il ${TOLL_LOA * 100}%. ` +
+                  'Questi interni SONO la nave: o la scala e\' sbagliata, o mezzo scafo e\' ' +
+                  'rimasto vuoto.')
+    }
+  } else {
+    note.push('          LOA non ricavabile da src/scafo/ordinate.js: lunghezza non verificata')
+  }
+  if (d[1] < CAVA_INTERNI[0] || d[1] > CAVA_INTERNI[1]) {
+    guasti.push(`${eti}: alto ${d[1].toFixed(2)} m, fuori dalla forbice ` +
+                `${CAVA_INTERNI.join('-')} m della cava interna di un quaranta metri`)
+  }
+
+  // ─── I PONTI DICHIARATI DESCRIVONO I PONTI DISEGNATI ────────────────────
+  //
+  // `deckYScene` e' cio' che il sito leggerebbe per sapere a che quota mettere
+  // la camera, ed e' in UNITA' DI SCENA dentro un file in metri: e' scritto nel
+  // nome apposta. Un numero dichiarato che non descrive la forma disegnata e' il
+  // difetto gia' pagato su `finAreaM2` dell'impianto, dove il numero valeva tre
+  // volte la cosa che descriveva.
+  const ponti = String(ex.deckYScene ?? '').split(',').map(Number).filter(n => !Number.isNaN(n))
+  const idPonti = String(ex.deckIds ?? '').split(',').filter(Boolean)
+  if (!ponti.length || ponti.length !== idPonti.length) {
+    guasti.push(`${eti}: deckYScene ha ${ponti.length} valori e deckIds ${idPonti.length} nomi`)
+  } else {
+    const mtr = ponti.map(v => v * ex.sceneMetersPerUnit)
+    note.push('          ponti ' + idPonti.map((n, i) =>
+      `${n} ${ponti[i].toFixed(3)} u (${mtr[i].toFixed(2)} m)`).join(', '))
+    for (let i = 1; i < mtr.length; i++) {
+      if (mtr[i] >= mtr[i - 1]) {
+        guasti.push(`${eti}: i ponti dichiarati non scendono: ${idPonti[i - 1]} a ` +
+                    `${mtr[i - 1].toFixed(2)} m e ${idPonti[i]} a ${mtr[i].toFixed(2)}. La ` +
+                    'griglia dell\'atto due li elenca dall\'alto in basso.')
+      }
+    }
+    for (let i = 0; i < mtr.length; i++) {
+      if (mtr[i] < tutto.mn[1] - 0.05 || mtr[i] > tutto.mx[1] + 0.05) {
+        guasti.push(`${eti}: il ponte ${idPonti[i]} e' dichiarato a ${mtr[i].toFixed(2)} m ` +
+                    `mentre il modello sta fra ${tutto.mn[1].toFixed(2)} e ` +
+                    `${tutto.mx[1].toFixed(2)} m. Il numero dichiarato non sta dentro la cosa ` +
+                    'che descrive: e\' il modo in cui una quota si moltiplica per 2,5 due ' +
+                    'volte senza dare errore.')
+      }
+    }
+  }
+
+  // ─── E QUALI PONTI SONO PIANI, PERCHE' UNO NON LO E' ────────────────────
+  //
+  // Il pagliolato di sentina segue la chiglia: il suo `deckYScene` e' il valore
+  // a z = 0, non una costante. `deckFlat` lo dichiara, e senza quella riga il
+  // numero sembrerebbe una quota valida per tutta la nave — che e' il modo in
+  // cui, fra sei mesi, una camera finisce sotto il pavimento a poppa senza che
+  // niente dia errore.
+  const piani = String(ex.deckFlat ?? '').split(',').filter(Boolean)
+  if (piani.length !== idPonti.length) {
+    guasti.push(`${eti}: deckFlat ha ${piani.length} valori e deckIds ${idPonti.length} nomi: ` +
+                'chi legge deckYScene non saprebbe quale di quei numeri e\' una costante.')
+  } else {
+    const seguono = idPonti.filter((_, i) => piani[i] !== '1')
+    note.push('          ponti piani ' + idPonti.filter((_, i) => piani[i] === '1').join(', ') +
+              (seguono.length ? `; seguono la chiglia: ${seguono.join(', ')} ` +
+                                '(il loro deckYScene vale a z = 0)' : ''))
+  }
+
+  // ─── OGNI PARATIA DICHIARATA HA UN NODO, E VICEVERSA ────────────────────
+  const zParatie = String(ex.bulkheadZScene ?? '').split(',').map(Number).filter(n => !Number.isNaN(n))
+  const nodiParatie = [...L.perNome.keys()].filter(n => /^int_paratia_/.test(n))
+  if (zParatie.length !== nodiParatie.length) {
+    guasti.push(`${eti}: dichiara ${zParatie.length} paratie in bulkheadZScene ma ne porta ` +
+                `${nodiParatie.length} come nodi. Chi cambia le stazioni cambia tutte e due ` +
+                'le cose, e questo e\' cio\' che se ne accorge.')
+  }
+  note.push(`          ${nodiParatie.length} paratie a z ${zParatie.join(', ')} in unita' di ` +
+            `scena; celle ricche: ${ex.richCells}`)
+})()
 
 // ─── esito ────────────────────────────────────────────────────────────────
 console.log(FILE)
