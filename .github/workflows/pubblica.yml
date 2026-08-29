@@ -106,7 +106,6 @@ jobs:
       - { name: 'Cancello · validatore glTF', run: node strumenti/collaudo-gltf.mjs }
       - name: 'Cancello · continuita della scena'
         run: node strumenti/collaudo-continuita.mjs
-
         env: { CHROMIUM: '1' }
       # ─── LA CINEMATICA E' LOCALE, e la ragione l'ho LETTA nel log
       #
@@ -132,7 +131,6 @@ jobs:
       # Rientra il giorno in cui o il runner ha una GPU, o il meccanismo si puo'
       # far avanzare a passo dichiarato invece che a fotogrammi -- che e' la
       # cura vera, e non la faccio stanotte alla settima corsa.
-        env: { CHROMIUM: '1' }
 
       # La manopola deve comandare il meccanismo DENTRO il primo piano. Il
       # difetto che questo cancello ha trovato non rompeva niente: era una
