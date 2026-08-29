@@ -1,6 +1,6 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  Clock, MathUtils, SRGBColorSpace, ACESFilmicToneMapping, Plane, Vector3,
+  Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
@@ -193,13 +193,60 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * E il salone, nella stessa pagina, usa ACES da sempre: erano due mondi
    * diversi a due schermate di distanza.
    *
+   * ─── E POI ACES SE N'E' ANDATO, PERCHE' HA UN TETTO
+   *
+   * Il difetto che restava: `RRTAndODTFit` non arriva a 1,0, si ferma a **242**
+   * livelli. Non brucia — l'8,28% di prima e' sparito davvero — ma la
+   * sovrastruttura, che e' la massa piu' grande dell'inquadratura ed e'
+   * verniciata di bianco, ci vive addosso. Misurato da
+   * `strumenti/curva-tonale.mjs` sul fotogramma della battuta 0,30, con la
+   * maschera presa dai mesh `sovra_*` (54 mila pixel):
+   *
+   *     curva        mediana   media    max   pixel >=235
+   *     ACES @1,0      226,0   185,1    242      1,5%
+   *     AgX  @1,0      201,3   168,9    229      0,0%
+   *     AgX  @0,8      193,3   160,9    229      0,0%
+   *     AgX  @0,7      188,0   155,9    229      0,0%
+   *     AgX  @0,5      174,0   142,9    229      0,0%
+   *
+   * A 226 di mediana contro un tetto di 242 restano SEDICI livelli di corsa:
+   * li' la curva non ha piu' pendenza, due radianze diverse escono allo stesso
+   * valore e la forma della sovrastruttura si perde. E' il modo in cui un
+   * render legge come plastica, ed e' il difetto numero uno del committente.
+   * Con AgX ne restano quaranta, e il gradiente torna.
+   *
+   * ─── E L'ESPOSIZIONE E' 0,7 PER UNA RAGIONE MISURATA, non per gusto
+   *
+   * Sotto AgX ogni esposizione fra 1,0 e 0,5 toglie il difetto (nessun pixel
+   * al tetto). A decidere e' stato il SECONDO vincolo: l'acqua disegnata deve
+   * restare dov'era, o il foglio di stile va riscritto in mezza pagina. Colore
+   * dell'acqua disegnata a x 900-1200, righe 500-560, scarto da ACES @1,0:
+   *
+   *     AgX @1,0   +15,9  +10,8  +11,3
+   *     AgX @0,8   +10,1   +4,3   +4,8
+   *     AgX @0,7    +6,7   +0,5   +1,0   <- il minimo dell'intero sondaggio
+   *     AgX @0,6    +3,1   -3,8   -3,2
+   *     AgX @0,5    -0,8   -8,7   -8,1
+   *
+   * A 0,7 il verde e il blu del mare tornano dov'erano a meno di un livello:
+   * si muove solo il rosso, di 6,7. Quindi il foglio di stile insegue con una
+   * riga sola — `--acqua-viva` — invece che con tutta la tavolozza.
+   *
+   * E c'e' un ancoraggio esterno: `cuoci.py` rende in AgX a -1EV, cioe'
+   * esposizione 0,5, ed e' il riferimento path-traced contro cui si misura il
+   * fotorealismo. Da oggi la pagina e il banco condividono la CURVA e
+   * differiscono di un terzo di stop, invece di essere due trasferimenti
+   * diversi. Prima `confronto-cotto.mjs` forzava AgX@0,5 su un sito che
+   * spediva ACES@1,0: ogni referto di somiglianza parlava di un'immagine che
+   * nessuno vedeva.
+   *
    * La giunzione resta a zero perche' i colori della carta sono stati
    * RICALCOLATI su questa curva e verificati: vedi --acqua in stile.css.
    * Inseguire il render col foglio di stile e' la strada giusta, perche' il
    * render obbedisce alla fisica e il foglio di stile obbedisce a me.
    */
-  render.toneMapping = ACESFilmicToneMapping
-  render.toneMappingExposure = 1.0
+  render.toneMapping = AgXToneMapping
+  render.toneMappingExposure = 0.7
   contenitore.appendChild(render.domElement)
 
   /**

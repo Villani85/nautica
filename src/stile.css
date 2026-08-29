@@ -33,8 +33,44 @@
   --inchiostro-tenue:#5F6367;   /* 4,82:1 su --aria. Il #6A6E72 del prototipo
                                    dava 4,09:1 e non passava WCAG AA. */
   /* sotto il taglio — acqua profonda */
+  /* ─── I DUE COLORI DELL'ACQUA INSEGUONO IL RENDER, e la misura dice
+     QUALE dei due deve muoversi.
+
+     `index.js` e' passato da ACES@1,0 ad AgX@0,7 (li' c'e' il perche'). La
+     tela allora dipinge un mare diverso, e questi due valori — che sono la
+     dichiarazione CSS dello stesso mare — vanno riderivati. Misurato con
+     `strumenti/curva-tonale.mjs`, battuta 0,30, colonne di mare aperto
+     x 900-1200 (verificate da `collaudo-orizzonte.mjs`):
+
+       regione                     ACES @1,0        AgX @0,7        scarto
+       acqua disegnata 500-560   23,6 62,5 62,9  30,3 63,0 63,9  +6,7 +0,5 +1,0
+       acqua profonda  840-896   34,1 58,7 58,8  32,7 54,8 55,3  -1,4 -3,9 -3,5
+
+     LA PARTE ALTA SI MUOVE, LA PARTE PROFONDA NO. In alto il rosso sale di
+     6,7 livelli; in basso non cambia niente che si possa vedere (3,9 livelli
+     su un fondo scuro, sotto il velo a .62, quando il tremolio del gradiente
+     ne fa gia' 1,5 da solo). Quindi si tocca `--acqua-viva` e si lascia stare
+     `--acqua` — e lasciarla e' il risultato della misura, non una svista.
+
+     DA 6,7 A #173539. La fascia di fondo CSS fra la linea e l'acqua disegnata
+     (righe 452-497) non e' `--acqua-viva` pura: sopra ci passano il gradiente
+     dello spacco, il velo di `.palco .scena::after` e il bagliore di
+     `.linea::after`. Modellati i tre strati e verificato il modello contro
+     otto righe misurate (scarto sulla media di banda: 0,01 / 0,39 / 0,31
+     livelli), il peso di `--acqua-viva` in quella fascia e' **0,8598**.
+     Quindi 15 + 6,7/0,8598 = 22,8 -> 23, e le stesse briciole su verde e blu.
+
+     ─── E LA GIUNZIONE NON STA DOVE CREDEVO, che e' la scoperta vera
+     Il profilo riga per riga dice che la tela comincia a dipingere a **y=498**
+     su un viewport alto 900, cioe' QUARANTOTTO PIXEL sotto la mezzeria: fra
+     la linea e l'orizzonte 3D c'e' una fascia di fondo CSS puro, dove il tone
+     mapping non puo' cambiare un pixel (misurato: scarto 0,00 fra tutte le
+     curve provate). E la tela non entra di colpo, sfuma su una decina di
+     righe. La cucitura CSS-tela quindi non e' un bordo, e' una dissolvenza —
+     il che spiega perche' il sito reggeva pur avendo, gia' sotto ACES, sette
+     livelli di scarto sul rosso proprio li'. */
   --acqua:#071A1D;
-  --acqua-viva:#0F3438;
+  --acqua-viva:#173539;
 
   /* LO SPACCO: meta' aria e meta' acqua, con lo stacco secco al 50%. E' l'unica
      idea meccanica del sito, e da qui in poi vive in una riga sola — cosi' il
@@ -48,7 +84,24 @@
   --spacco:linear-gradient(to bottom,
     var(--aria) 0%,var(--aria) var(--pelo),
     var(--acqua-viva) var(--pelo),var(--acqua) 100%);
-  --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua */
+  --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua — RICALCOLATO (WCAG 2.1,
+                                   luminanza relativa) dopo il passaggio ad
+                                   AgX, e NON e' cambiato: `--acqua` non si e'
+                                   mossa, quindi il numero dichiarato regge
+                                   identico. Restava da verificare l'altro
+                                   fondo, perche' `[data-lato="misto"]` passa
+                                   `--acqua-tenue` anche sopra `--acqua-viva`,
+                                   che invece si e' mossa: li' fa **4,79:1**,
+                                   dove prima ne faceva 4,90. Sopra il minimo
+                                   AA di 4,5 ma sotto 6, e ci stava gia' prima:
+                                   e' un debito che il cambio di curva ha
+                                   spostato di un decimo, non uno che ha
+                                   creato. Non l'ho schiarito perche' portarlo
+                                   a 6 su `--acqua-viva` vorrebbe dire
+                                   ritoccare il colore del testo di tutto il
+                                   lato acqua, che e' una decisione di
+                                   tavolozza e non una conseguenza del tone
+                                   mapping. */
   /* l'unico accento saturo, e sta sotto la linea */
   --recupero:#4FE0C4;
   --carico:#F5E3B8;
