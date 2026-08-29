@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **29 agosto 2026, 09:21.** Da quando hai clonato potrei aver spinto
+Aggiornato: **29 agosto 2026, 11:24.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -25,6 +25,13 @@ altro: `git log --oneline -25` resta la fonte, non questo elenco.
 > esito, pur avendone raccolte le voci nel codice. Adesso ce l'hanno, in
 > [`revisore-drive-arretrati-2026-08-29.md`](revisore-drive-arretrati-2026-08-29.md):
 > quindici voci confermate e **tre ancora aperte**, elencate in testa al §5.
+>
+> **E il giro delle 10:24 ha corretto la mia QUARTA e la mia QUINTA
+> affermazione**, tutte e due dentro la tabella dei bersagli del §3.1: il
+> «93,6% dell'atlante» (è 66,2%) e il «+122 KB / −220 di geometria», che il mio
+> stesso `e2ae489` aveva già ritrattato e la tabella non aveva seguito per tre
+> revisioni. **Se attacchi un numero, guarda prima se un mio commit l'ha già
+> ucciso**: è successo due volte in un giro solo.
 
 ---
 
@@ -133,7 +140,7 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | La normale cotta recupera il **61,7%** dello scarto fra bassa e alta | `cuoci-impianto.py -- confronto` |
 | La silhouette persa passando alla bassa vale **632 px, l'1,41%** del meccanismo | `riferimenti/blender/uscite/confronto/` |
 | Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, in `docs/15` |
-| Il corredo PBR costa **+122 KB** ma ne fa risparmiare 220 di geometria | `git show 3ab67d4` |
+| Il corredo PBR spedito pesa **43,5 KB** sul meccanismo (normale 33,3 + occlusione 10,3), e il netto contro l'alta e' **+30,8 KB** | `git show -s e2ae489`; i byte delle immagini nel GLB — vedi §5, giro 10:24 |
 | L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
 
 **Bersagli gia' caduti — non riattaccarli, li ho smontati io dopo averli
@@ -143,7 +150,14 @@ tu); «lo scafo e' 2,5× e la causa e' il `DoubleSide`» (la maschera del
 materiale comprendeva le facce POSTERIORI, dove Cycles non disegna niente:
 il numero vero e' 1,29× e il `side` non c'entra); «`FrontSide` apre 9.786
 pixel di buco» (sono **zero** — contavo come vuoto ogni pixel scuro, e il
-vuoto si riconosce dall'**alfa**).
+vuoto si riconosce dall'**alfa**); «il corredo PBR costa +122 KB ma ne fa
+risparmiare 220 di geometria» (il +122 era l'uscita **grezza** di gltfpack,
+non il byte che parte: `e2ae489` l'ha ritrattato mesi di commit fa e la
+tabella qui sopra non l'aveva seguito per tre revisioni — **trovato dal giro
+delle 10:24**, ed era igiene mia); «l'isola della pinna cade nella meta'
+destra fittissima dell'atlante» (le UV di `carena` finiscono a `u = 0,7031`,
+cioe' **esattamente x = 360 su 512**: nella banda destra non ha un solo texel
+— stesso giro).
 
 ### 3.2 · Il giudizio che io non posso dare
 
@@ -274,6 +288,78 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 29 agosto, 10:24 (`nautica_2026-08-29_1024_8911bb8.md`)
+
+**Il primo giro che attacca l'atlante PBR, e arriva a qualcosa di vero su tutte
+e tre le voci. Esito per esteso in
+[`revisore-drive-2026-08-29-1024.md`](revisore-drive-2026-08-29-1024.md).**
+
+Verificato sui suoi stessi byte: `git diff --quiet 20fa37f HEAD --
+public/modelli/impianto.glb` torna 0, quindi il mio branch `atto-due-locale`
+non ha toccato il meccanismo e le misure sotto non sono una ricostruzione.
+
+**VOCE 1 — «la pinna NON cade nella meta' fitta dell'atlante». CONFERMATA, e
+piu' forte di come la scrive.** `carena` occupa 77.050 texel (29,4%) e nella
+banda `x>360` ne ha **zero esatti su 20.125 etichettati**. La ragione
+strutturale, che il suo script non stampa: le UV di `carena` dopo la
+`KHR_texture_transform` stanno in `u[0,0041–0,7031]`, e `0,7031 x 512 = 360,0`.
+Nessuno dei 96 vertici esce da `[0,1]` — quindi non e' un artefatto di ritaglio,
+che era l'unico modo in cui quel conto poteva mentire. **Il giro che `0017f12`
+stava per farmi spendere — colorare l'isola e guardare — non va speso.**
+
+E **cade il mio 93,6%**: il bbox del footprint misura **66,2%**. Quarta mia
+affermazione corretta, in tabella al §3.1 fra i bersagli caduti.
+
+**VOCE 2 — «632 normali puntano dentro la superficie, 197 sulla pinna».
+PREMESSA CONFERMATA, LOCALIZZAZIONE NON RIPRODOTTA.** I 632 texel `z<0`
+(0,241%) e gli 85 di speckle croma esistono davvero nella normale webp
+spedita, e il suo rilievo **metodologico** e' corretto senza bisogno di misure:
+togliere tutta la `normalMap` non separa il rilievo cotto dai texel corrotti,
+quindi la mia esclusione era un test troppo grosso. Ma i 197 «proprio sulla
+pinna» vengono da una **maschera ribaltata verticalmente** (il suo painter
+scrive `label[(N-1-y)*N+x]` e poi maschera con quella un'immagine che ha la
+riga 0 in alto). Con la maschera allineata:
+
+    nel gutter, mai campionati   436   (69,0%)
+    dentro le isole              196   (31,0%)   acciaio 116 · tenuta 80 · carena 0
+
+**Zero su `carena`.** Verso stabilito per misura, non per spec: texel identici
+al vicino sinistro nella normale, dentro 71,7% / fuori 17,8% con la maschera
+allineata, contro 50,9% / 43,8% con la sua — una separa quattro volte, l'altra
+non separa. Lo stesso ribaltamento tocca le statistiche AO della VOCE 1, ma **li'
+rafforza la sua tesi**: gli scuri isolati sotto la pinna non sono 27 (0,035%) ma
+**zero**, e la grana fine e' **0,79% contro 5,91% globale** invece di 7,93%.
+L'occlusione sotto la pinna e' sette volte e mezza piu' liscia della media.
+
+Quindi **la leva che propone — normale in BC5/lossless — non e' una cura per la
+pinna.** Se valga la pena spenderla per i 196 texel di `acciaio` e `tenuta` e'
+una decisione di costo: **numero sul tavolo, 196 su 262.144, lo 0,075%.**
+
+**VOCE 3 — «§3.1 tiene in vita +122 KB / −220». CONFERMATA, ed e' colpa mia.**
+Il corredo spedito e' **43,5 KB** (normale 33,3 + occlusione 10,3) su
+`impianto.glb` e 17,6 su `sovrastruttura.glb`; `e2ae489` aveva gia' ritrattato
+il −220 alla lettera e fissato il netto a **+30,8 KB**. La tabella non l'ha
+seguito per tre revisioni, cioe' teneva un bersaglio morto nel punto esatto in
+cui un giro nuovo va a scegliere. **Riga corretta** al §3.1: e' `feedback/`,
+la sistemo invece di lasciarla sul tavolo.
+
+**Cosa NON ho verificato:** niente di visivo e niente da browser — tutto il suo
+capitolo «Giudizio visivo» resta non riprodotto, ne' a favore ne' contro; niente
+Blender, quindi la prova di causalita' della VOCE 2 non e' stata fatta; non ho
+controllato che i 196 texel di `acciaio`/`tenuta` si vedano a schermo; non ho
+isolato la lama dentro `carena` (48 triangoli su due nodi); non ho ricostruito
+da dove venisse il 93,6%; e non ho rieseguito i 180 s della simulazione per
+`DRAW`/`RECOVERY` su questo branch. **La causa della grana resta ignota:** questo
+giro ha tolto due piste e non ne ha messa nessuna.
+
+**Le voci di messa in scena restano al committente, per intero:** il fondo scala
+`0/100` di `DRAW` e `RECOVERY` (righe confermate a `index.html:111-112` e
+`116-117`), il cielo piatto, l'accavallamento dei tre testi, la meta' crema su
+telefono, le tre proposte per i primi 3 secondi (§3.5) e il gradiente a due-tre
+fermi (§3.4.1). Non le istruisco io.
+
+---
 
 ### I NOVE giri che questo §5 non aveva mai risposto — saldati il 29 agosto, 09:21
 
