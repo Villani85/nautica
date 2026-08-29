@@ -127,6 +127,7 @@
     <!-- La velocita' non e' piu' un comando. Si toglie propulsione e si
          guarda l'abbrivio calare: la lettura `v-velocita`, la scia e le pinne
          ricevono lo stesso stato. -->
+    <div class="comandi__fila">
     <button type="button" id="propulsione" class="interruttore interruttore--propulsione"
             aria-describedby="v-velocita">
       <span class="spia" aria-hidden="true"></span>
@@ -147,6 +148,7 @@
       <span class="spia" aria-hidden="true"></span>
       <span>Gyro</span>
     </button>
+    </div>
   </div>
 
   <!-- L'invito a scendere: compare dopo tre secondi e sparisce al primo gesto.
@@ -261,6 +263,19 @@
     <h2 id="tit-contatto" class="via">Contact</h2>
     <p class="indirizzo">
       <a href="https://github.com/Villani85/nautica">The repository, commit history included</a>
+    </p>
+    <!-- IL COLOPHON DICHIARA LA PIPELINE, e non e' un obbligo: Awwwards non lo
+         impone e non vieta gli strumenti generativi. E' l'unico modo di togliere
+         in anticipo il sospetto di attribuzione falsa, e il sospetto costa piu'
+         della dichiarazione. Vedi D64.
+
+         La riga si aggiorna quando la pipeline cambia: dichiarare uno strumento
+         che non si e' usato e' lo stesso difetto al contrario. -->
+    <p class="colophon">
+      Art direction, interaction, simulation, Blender refinement and WebGL
+      development in-house. Selected video material generated with AI and
+      composited as a texture into the real-time scene — the sea, the roll, the
+      mechanism and the navigation stay under the site's control.
     </p>
   </div>
 </section>

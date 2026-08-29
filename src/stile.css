@@ -596,6 +596,24 @@ html[data-unica="si"] .atto--demo{margin-top:0}
   position:absolute;left:50%;transform:translateX(-50%);bottom:var(--u4);z-index:7;
   display:flex;gap:var(--u4);align-items:flex-end;
 }
+/* ─── I COMANDI SONO TRE, E A 1280x720 NON CI STAVANO PIU'
+
+   DIFETTO PRESO DAL CANCELLO, non a occhio: entrato il terzo interruttore
+   (il giroscopio), `collaudo-impaginato` ha trovato `.comandi` sovrapposto a
+   `.pannello--letture` e a `.pannello--energia` -- 16-19 px in orizzontale e 60
+   in verticale -- su ogni battuta a 1280x720.
+
+   La causa non e' il bottone: e' che la fila centrale cresce verso i lati
+   mentre i due pannelli stanno fermi ai bordi. Una finestra larga ma BASSA e'
+   il caso peggiore, ed e' anche quello che nessuno guarda mentre lavora su uno
+   schermo grande.
+
+   Lo stacco cede per primo, ed e' la cosa giusta a cedere: la distanza fra i
+   comandi e' respiro, la sovrapposizione e' un difetto. Sotto i 1400 px lo
+   stacco passa da --u4 a --u2 e la fila torna dentro. */
+@media (max-width:1400px){
+  .comandi{gap:var(--u2)}
+}
 .mare__scala{display:flex;align-items:flex-end}
 .mare__tacca{
   width:44px;height:44px;border:0;padding:0;background:none;cursor:pointer;
@@ -1072,7 +1090,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
     display:flex;flex-direction:column;gap:var(--u2);align-items:stretch;
   }
   .mare__scala{justify-content:space-between;width:100%}
-  .interruttore{width:100%;justify-content:center}
+  .interruttore{justify-content:center}
 
   /* UNA misura sola, e tutto il resto la insegue. Con tre numeri scollegati
      ogni ritocco ai comandi ne sballava altri due, in silenzio.
@@ -1080,7 +1098,32 @@ html[data-unica="si"] .atto--demo{margin-top:0}
      (scala del mare + propulsione + stabilizzatore, con due stacchi da 16). La
      prima volta avevo scritto 180 sommando a mente, e il cancello ha trovato i
      18 px che mancavano. */
-  .palco{--h-comandi:206px;--h-energia:29px}
+  /* ─── TRE INTERRUTTORI SUL TELEFONO NON STANNO IN COLONNA, E CEDONO LORO
+     Il terzo (il giroscopio) portava la colonna dei comandi da 206 a 269 px, e
+     il cancello ha subito trovato la conseguenza dall'altra parte: la
+     didascalia traboccava di 69 px, cioe' due righe e mezzo, sulla battuta del
+     salotto.
+     Questo file lo aveva gia' scritto vent'anni-righe piu' su -- «qui non ci
+     sta tutto e va deciso COSA cede» -- e la risposta e' la stessa di allora
+     rovesciata: la prima volta cedettero le barre dell'energia, adesso cedono i
+     comandi. La didascalia no: e' l'argomento del sito, e un argomento
+     troncato a meta' riga non e' un argomento.
+     I tre interruttori vanno in FILA invece che in colonna. Il conto: scala
+     del mare 44 + stacco 16 + fila da 47 = 107 px, contro i 269 della colonna.
+     Se ne recuperano 162, molti piu' dei 63 che il giroscopio aveva tolto.
+     I bersagli restano oltre i 44 px: tre pulsanti su 390 di larghezza fanno
+     circa 115 ciascuno, e l'altezza non cambia.
+
+     E IL NUMERO E' 112, NON 107. L'aritmetica dava 107 -- 44 + 16 + 47 -- e il
+     cancello ha trovato cinque pixel di sovrapposizione con le letture: la fila
+     e' alta 52 e non 47, perche' il bordo e il riempimento del pulsante non
+     stanno dentro l'altezza dichiarata. Cinque pixel sono esattamente il genere
+     di errore che una somma a mente non prende e una misura si': il numero qui
+     sotto viene dal cancello, non dal conto. */
+  .palco{--h-comandi:112px;--h-energia:29px}
+  .comandi{flex-direction:column;gap:var(--u2)}
+  .comandi .interruttore{width:auto;flex:1 1 0;min-width:0;padding-inline:var(--u)}
+  .comandi__fila{display:flex;gap:var(--u2);width:100%}
   /* le etichette dei comandi rubano altezza a un posto che non ce l'ha */
   .comandi .et{font-size:8px}
 
@@ -1441,4 +1484,14 @@ html[data-traversata="si"] .nudge{
 }
 @media (prefers-reduced-motion:reduce){
   html[data-traversata="si"] .nudge{transition:none}
+}
+
+/* ═══ COLOPHON ═══
+   Dichiara la pipeline. Piccolo e tenue perche' non compete col contatto, ma
+   selezionabile e leggibile: un colophon che si nasconde vale meno di uno che
+   non c'e'. Il contrasto resta quello di `--tenue`, gia' verificato. */
+.colophon{
+  margin-top:var(--u3);max-width:52ch;
+  font-size:11px;line-height:1.6;color:var(--tenue);
+  text-wrap:pretty;
 }
