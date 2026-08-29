@@ -334,6 +334,25 @@ const GALLEGGIAMENTO = { alto: 0.058, spessore: 0.052 }
  * l'unica cosa che cambia e' il colore di partenza. Un materiale scritto da
  * zero avrebbe voluto rifare tutto il resto per riguadagnare le stesse cose.
  */
+/**
+ * ─── E SI PUO' SPEGNERE, per poterlo MISURARE
+ *
+ *     ?murata=0
+ *
+ * Il confronto con la cottura Cycles dice che la fascia bassa della nave -- la
+ * murata -- e' 21 livelli piu' scura nel sito, a parita' di luce. Quella e'
+ * anche esattamente la fascia dove questo blocco dipinge le finestre e la
+ * fascia al galleggiamento, che nella cottura NON esistono perche' li' non c'e'
+ * nessuno shader che le disegni.
+ *
+ * Quindi lo scarto puo' essere due cose opposte: contenuto in piu' da una parte
+ * (e allora e' un merito, non un difetto), oppure resa che perde. Sono
+ * indistinguibili finche' questo disegno non si puo' togliere.
+ *
+ * Vale come le altre leve, solo con `ispeziona` in mente: in pagina il disegno
+ * c'e' sempre.
+ */
+if (!(typeof location !== 'undefined' && location.search.includes('murata=0'))) {
 materiali.scafo.onBeforeCompile = (s) => {
   s.vertexShader = s.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vLocale;')
@@ -436,3 +455,4 @@ roughnessFactor = mix(roughnessFactor, 0.045, vetroFin);
 }
 /** Cambiando lo shader a mano, three va avvisato di ricompilare. */
 materiali.scafo.customProgramCacheKey = () => 'scafo-finestre-3'
+}
