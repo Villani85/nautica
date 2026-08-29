@@ -1410,6 +1410,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     const raggio = new Raycaster()
     window.__nautica = {
       scena, camera, render, nave,
+      /**
+       * LA TRAVERSATA, e perche' e' qui.
+       *
+       * `coperturaTraversata` esisteva -- con tanto di commento che diceva
+       * «perche' quel cancello possa VERIFICARE la copertura invece di
+       * fidarsi» -- ma stava SOLO sull'oggetto che il modulo restituisce alla
+       * regia, non su `__nautica`, che e' l'unica cosa che uno strumento
+       * esterno vede. Quindi `collaudo-continuita` e `dove-salta` leggevano
+       * `undefined`, e da li' 0.
+       *
+       * Un giro di revisione ne aveva concluso che «il cancello e' piu' lento
+       * del fenomeno». Non lo era: **leggeva una proprieta' che non c'era**.
+       * Un accessore assente non da' errore, da' `undefined` -- e `?? 0` lo
+       * trasforma in un numero che sembra una misura.
+       */
+      coperturaTraversata: () => traversata.copertura,
+      traversataFinita: () => traversata.finita,
       // le uniformi dell'acqua: senza, la prova del rosso sulla nebbia non si
       // puo' fare, e uno shader che non si puo' spegnere non e' verificato
       uniAcqua,

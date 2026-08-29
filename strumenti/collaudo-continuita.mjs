@@ -272,6 +272,10 @@ for (let i = 0; i <= PASSI; i++) {
       tele: document.querySelectorAll('#dimostrazione canvas').length,
       teleTotali: document.querySelectorAll('canvas').length,
       videoVisibili,
+      /* quanto una VideoTexture a schermo intero copre il fotogramma. Non e'
+         un <video> del DOM e il conteggio sopra non la vede: e' l'unico modo
+         di sapere se il cancello sta giudicando la scena o una lastra. */
+      copertura: n.coperturaTraversata ? n.coperturaTraversata() : null,
       stessaTela: n.render.domElement === r.tela,
       stessaScena: n.scena === r.scena,
       stessaCamera: c === r.camera,
@@ -357,7 +361,33 @@ if (cambiati.length) {
 }
 
 const videoMax = Math.max(...buoni.map(c => c.videoVisibili))
-note.push(`VIDEO       ${videoMax} visibili a schermo (le texture non contano: stanno fuori dal flusso)`)
+note.push(`VIDEO       ${videoMax} elementi <video> visibili a schermo`)
+/**
+ * ─── LA LASTRA, che il conteggio sopra NON puo' vedere
+ *
+ * Una revisione esterna ha centrato il punto: questo cancello contava i
+ * `<video>` del DOM e poteva risultare verde mentre a schermo c'era una
+ * `VideoTexture` a copertura totale. La nota che stampava -- «le texture non
+ * contano: stanno fuori dal flusso» -- era stata scritta per il salone, dove
+ * la texture E' dentro la scena, e da quando esiste la traversata descriveva
+ * il buco invece che il criterio.
+ *
+ * Adesso la copertura si LEGGE. Non era mai stata leggibile: `__nautica` non
+ * esponeva `coperturaTraversata`, quindi chi la chiedeva riceveva `undefined`
+ * e lo leggeva come zero. Un accessore assente non da' errore.
+ *
+ * Non e' un guasto e non fa fallire niente: una lastra dichiarata e voluta e'
+ * una scelta di regia. E' un'informazione, perche' chi legge questo esito sappia
+ * su quanti campioni il giudizio riguardava la scena e su quanti una texture.
+ */
+const cop = buoni.map(c => c.copertura).filter(x => typeof x === 'number')
+if (!cop.length) {
+  note.push('LASTRA      NON MISURATA: la scena non espone coperturaTraversata')
+} else {
+  const coperti = cop.filter(x => x > 0.5).length
+  note.push(`LASTRA      copertura massima ${Math.max(...cop).toFixed(2)} — ` +
+            `${coperti} campioni su ${cop.length} giudicano una texture, non la scena`)
+}
 if (videoMax > 0) {
   guasti.push(`ci sono ${videoMax} elementi <video> visibili a schermo. ` +
               'Un secondo mondo non richiede un secondo canvas: puo essere fatto ' +

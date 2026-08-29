@@ -319,8 +319,30 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
      * cui la tesi si puo' RIFARE dall'interno -- si spegne lo stabilizzatore e
      * il salone si inclina, con la stessa corsa che ha inclinato lo scafo.
      */
-    const finito = scena.traversataFinita?.() === true
-    const inTraversata = !finito && fra(p, S.traversata[0], S.traversata[1]) > 0.02 ? 'si' : 'no'
+    /**
+     * ─── SI LEGGE LA COPERTURA, NON LA FINE. Difetto preso da una revisione.
+     *
+     * Prima questa riga diceva `!finito && ...`: il cruscotto tornava quando il
+     * filmato aveva FINITO. Ma il filmato **non si dissolve** -- e' una scelta
+     * dichiarata in `traversata.js`, resta sulle persone -- quindi «finito»
+     * non vuol dire «si vede di nuovo la nave». Il risultato, misurato su un
+     * provino: a circa 78 s i comandi ricomparivano sopra l'ultimo fotogramma,
+     * e la fisica continuava dietro una lastra opaca. Si azionavano sistemi di
+     * cui non si poteva vedere la conseguenza -- che e' l'esatto contrario
+     * della ragione per cui quei comandi esistono.
+     *
+     * La correzione decisiva e' la SPARIZIONE di `!finito`: la fine del filmato
+     * non e' piu' un motivo per riaccendere i comandi. La copertura entra come
+     * secondo motivo per tenerli spenti, ed e' auto-correttiva -- tornando
+     * indietro con lo scorrimento cala e il cruscotto rientra da solo.
+     *
+     * Misurato dopo il cambio, su otto punti della corsa: la copertura passa da
+     * 0 a 1,00 a scorrimento 0,88, e da li' alla fine letture, cruscotto e
+     * nudge restano a opacita' 0. Prima tornavano accesi sopra l'ultimo
+     * fotogramma.
+     */
+    const copre = (scena.coperturaTraversata?.() ?? 0) > 0.5
+    const inTraversata = copre || fra(p, S.traversata[0], S.traversata[1]) > 0.02 ? 'si' : 'no'
     palco.dataset.traversata = inTraversata
     /**
      * Il nudge NON e' figlio del palco -- e' appeso al corpo del documento,

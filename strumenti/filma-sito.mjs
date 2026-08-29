@@ -24,7 +24,7 @@
  * non c'e'.
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, renameSync, readdirSync } from 'node:fs'
+import { mkdirSync, renameSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 
@@ -95,7 +95,17 @@ await contesto.close()
 await browser.close()
 preview?.kill()
 
-const nato = readdirSync(FUORI).filter(f => f.endsWith('.webm')).sort().pop()
+/**
+ * IL PIU' RECENTE, non l'ultimo in ordine alfabetico.
+ *
+ * Con `.sort().pop()` bastava che in cartella ci fosse un provino vecchio gia'
+ * rinominato (`sito-...webm`, che sta dopo `page@...` in alfabeto) perche' lo
+ * strumento rinominasse QUELLO su se stesso e consegnasse la registrazione
+ * della corsa precedente. Non da' errore: da' un filmato, dell'altro giorno.
+ */
+const nato = readdirSync(FUORI).filter(f => f.endsWith('.webm'))
+  .map(f => ({ f, t: statSync(join(FUORI, f)).mtimeMs }))
+  .sort((a, b) => b.t - a.t)[0]?.f
 if (nato) {
   const finale = join(FUORI, `sito-${L}x${A}.webm`)
   renameSync(join(FUORI, nato), finale)
