@@ -614,6 +614,16 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 @media (max-width:1400px){
   .comandi{gap:var(--u2)}
 }
+
+/* ─── LA FILA DEI TRE INTERRUTTORI ESISTE A OGNI LARGHEZZA
+   DIFETTO PRESO DA UN PROVINO. `.comandi__fila` era dichiarata SOLO dentro la
+   media query del telefono: su desktop restava un blocco, e i tre pulsanti si
+   impilavano sfalsati uno sull'altro -- si leggeva come un menu rotto.
+   Il contenitore e' nel DOM a ogni larghezza, quindi la sua regola di layout
+   deve esserci a ogni larghezza. Una media query cambia i VALORI, non decide
+   se un elemento ha un layout. */
+.comandi__fila{display:flex;gap:var(--u4);align-items:flex-end}
+@media (max-width:1400px){ .comandi__fila{gap:var(--u2)} }
 .mare__scala{display:flex;align-items:flex-end}
 .mare__tacca{
   width:44px;height:44px;border:0;padding:0;background:none;cursor:pointer;

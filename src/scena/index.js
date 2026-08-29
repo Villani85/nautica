@@ -662,6 +662,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   const macchine = creaMacchine(base)
   nave.add(macchine.gruppo)
+  /* gli interni obbediscono agli stessi due tagli del guscio: senza, si
+     vedrebbero attraverso lo scafo intatto. Le macchine no -- sono il soggetto */
+  macchine.caricate.then(() => macchine.taglia([pianoSezione, pianoVerticale]))
+    .catch(e => console.error('[macchine]', e.message))
   sovra.caricato
     // il valore si RESTITUISCE: il passo dopo lo destruttura, e con un
     // `then` che torna undefined la sovrastruttura moriva su

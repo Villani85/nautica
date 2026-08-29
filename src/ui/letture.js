@@ -17,8 +17,32 @@ export function creaLetture (el) {
 
     el.rollio.textContent = grad(Math.abs(S.rollio))
     el.picco.textContent = grad(S.picco)
-    el.carico.textContent = Math.round(S.carico)
-    el.recupero.textContent = Math.round(S.recupero)
+    /**
+     * ─── UNO STRUMENTO CHE SEGNA ZERO SEMBRA ROTTO, non «poco»
+     *
+     * Due revisioni indipendenti l'hanno segnalato come la cosa piu' azionabile
+     * del sito: «DRAW 0/100 e RECOVERY 0/100 si leggono come strumenti rotti o
+     * non ancora avviati». Un fondo scala 100 con l'ago a zero dice guasto.
+     *
+     * MA LA LORO DIAGNOSI ERA SBAGLIATA, e l'ho misurato prima di correggere.
+     * Proponevano di abbassare il fondo scala perche' «il campo vive fra 0 e 6».
+     * Vero a 12 nodi -- DRAW arriva a 5,5 -- e FALSO appena si spegne la
+     * propulsione: li' arriva a 54,0 su una corsa misurata, perche' a bassa
+     * andatura la pinna deve chiedere molta piu' incidenza per la stessa
+     * correzione. Il fondo scala serve alla scoperta, ed e' giusto.
+     *
+     * Il difetto e' un altro: `Math.round` di 0,3 e' ZERO. La lettura non
+     * mostrava «poco», mostrava «niente», e per giunta restava ferma mentre il
+     * valore si muoveva. E' la stessa ragione per cui la velocita' ha preso il
+     * decimo quando e' diventata dinamica: un intero nasconde proprio la
+     * grandezza che si vuole far vedere.
+     *
+     * Sotto 10 si stampa il decimo, sopra l'intero: a 54 il decimo sarebbe
+     * telemetria e occuperebbe spazio senza dire niente in piu'.
+     */
+    const cifra = (v) => (v < 10 ? grad(v) : String(Math.round(v)))
+    el.carico.textContent = cifra(S.carico)
+    el.recupero.textContent = cifra(S.recupero)
     el.fCarico.style.right = `${100 - S.carico}%`
     el.fRecupero.style.right = `${100 - S.recupero}%`
     /* L'andatura ora decade fisicamente: con un intero resterebbe immobile per

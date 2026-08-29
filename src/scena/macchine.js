@@ -44,6 +44,13 @@ const A_UNITA = 1 / M_PER_UNITA
 /** I nomi sono il contratto, e non si rinominano senza rifare il cancello. */
 const RICHIESTI_PROP = ['prop_albero', 'prop_elica']
 const RICHIESTI_GYRO = ['gyro_rotore']
+/**
+ * Gli interni non hanno niente che gira, ma stanno qui lo stesso: si caricano
+ * dallo stesso posto, si convalidano allo stesso modo e vivono nello stesso
+ * riferimento. Tenerli in un file a parte avrebbe voluto dire due caricatori
+ * identici al 90%, e in questo repo due cose identiche al 90% divergono.
+ */
+const RICHIESTI_INT = ['int_pagliolato_macchine', 'int_ordinate']
 
 /**
  * Quanti giri al secondo fa l'albero a propulsione piena.
@@ -92,15 +99,25 @@ export function creaMacchine (base, { applicaMateria } = {}) {
   const gruppo = new Group()
   let prop = null
   let gyro = null
+  let interni = null
   let fase = 0
   let faseGyro = 0
 
   const caricate = Promise.all([
     carica(base, 'propulsione.glb', RICHIESTI_PROP),
-    carica(base, 'giroscopio.glb', RICHIESTI_GYRO)
-  ]).then(([p, g]) => {
+    carica(base, 'giroscopio.glb', RICHIESTI_GYRO),
+    carica(base, 'interni.glb', RICHIESTI_INT)
+  ]).then(([p, g, i]) => {
     prop = p
     gyro = g
+    interni = i
+    /**
+     * GLI INTERNI STANNO GIA' AL LORO POSTO e non si spostano: sono stati
+     * costruiti sulle ordinate dello scafo, nello stesso riferimento, quindi
+     * l'origine e' gia' quella giusta. Spostarli qui vorrebbe dire spostarli
+     * DUE volte -- una nel builder e una nel sito -- e le due divergerebbero.
+     */
+    gruppo.add(i.radice)
     /* la linea d'assi: mezzeria, a poppavia, sotto il galleggiamento */
     p.radice.position.set(0, -0.62, 2.6)
     /* il giroscopio: basso e verso il centro, dove una massa rotante lavora */
@@ -137,5 +154,28 @@ export function creaMacchine (base, { applicaMateria } = {}) {
     }
   }
 
-  return { gruppo, gira, caricate, get pronto () { return !!prop } }
+  /**
+   * ─── I PIANI DI SEZIONE VANNO DATI ANCHE A QUESTA ROBA, uno per uno
+   *
+   * `index.js` li applica ai materiali del `guscio`, che sono i suoi. Questi
+   * arrivano dai GLB e non sono in quella lista: senza, gli interni si
+   * vedrebbero ATTRAVERSO lo scafo intatto -- un pagliolato che galleggia
+   * accanto alla nave invece che dentro. E' lo stesso errore che
+   * `impianto.js` aveva gia' pagato con la lastra del fasciame.
+   *
+   * Le macchine NON si tagliano: sono il soggetto, e una pinna dimezzata dal
+   * piano non dimostra niente. Gli interni si', perche' sono l'involucro.
+   */
+  function taglia (piani) {
+    if (!interni) return
+    interni.radice.traverse(o => {
+      if (o.material) {
+        for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+          m.clippingPlanes = piani
+        }
+      }
+    })
+  }
+
+  return { gruppo, gira, taglia, caricate, get pronto () { return !!prop } }
 }
