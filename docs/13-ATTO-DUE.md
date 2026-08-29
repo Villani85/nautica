@@ -201,6 +201,46 @@ devono coincidere entro 0,05° su 200 fotogrammi. Se divergono, il finale è un
 effetto e va rimosso: sarebbe la bugia peggiore del sito, proprio nel punto in
 cui rivendica di non mentire.
 
+### DUE DECISIONI SI CONTRADDICONO, e non la chiudo io — 29 agosto
+
+Il cancello qui sopra e' stato scritto per un finale **in 3D**: il salone
+sopra, lo scafo sotto, lo stesso integratore che li inclina tutti e due. Con
+quel finale il cancello e' esatto e necessario.
+
+Ma il finale deciso il 29 agosto **e' un filmato** -- la traversata dal
+meccanismo alle persone, girata, fotorealistica, montata come tessitura nella
+scena. **Un filmato non risponde al rollio.** Quindi, per come stanno le cose
+adesso:
+
+- l'inclinazione del salone nel finale **non** viene dalla corsa viva: viene
+  dalla camera di chi ha girato la clip;
+- il cancello del §5 non puo' passare, e non perche' ci sia un difetto: perche'
+  misura una cosa che il finale nuovo non fa piu';
+- e la frase «le due persone viste tranquille nella prima schermata adesso non
+  lo sono, **e la causa e' chi guarda**» -- che e' l'argomento piu' forte di
+  tutto il documento -- con un filmato **non e' piu' vera**.
+
+Le tre strade, e la scelta e' del committente:
+
+1. **il finale resta un filmato**, e il cancello del §5 si cancella insieme alla
+   frase che proteggeva. Si guadagna il fotorealismo, si perde la causalita'
+   proprio nel punto in cui il sito la rivendica di piu';
+2. **il finale torna in 3D**, e allora serve il guscio del salone con parallasse
+   e occlusioni vere (§10) -- che e' la condizione perche' non sia una
+   fotografia in un riquadro, ed e' settimane;
+3. **i due si dividono il lavoro**: il filmato fa la TRAVERSATA (corridoi,
+   scale, spazi tecnici: li' non c'e' niente da inclinare), e l'ultimo tratto --
+   il salone con le persone -- torna in 3D, dove il rollio e' vero. La cucitura
+   si sposta dall'inizio del filmato alla sua fine, ed e' misurabile con lo
+   stesso strumento (`consegna.mjs`, che ora sa confrontare tutti e due i
+   versi).
+
+**La terza e' l'unica che tiene insieme fotorealismo e causalita'**, ed e' anche
+la piu' cara. Non la prendo da solo: e' messa in scena, e la messa in scena la
+decide il committente. Scritta qui come numero sul tavolo, non come proposta
+approvata.
+
+
 ### La domanda che questo paragrafo lascia aperta
 
 **Come si vede il salone mentre si è sotto la linea?**
