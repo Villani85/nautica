@@ -108,8 +108,30 @@ jobs:
         run: node strumenti/collaudo-continuita.mjs
 
         env: { CHROMIUM: '1' }
-      - name: 'Cancello · cinematica del meccanismo'
-        run: node strumenti/collaudo-cinematica.mjs
+      # ─── LA CINEMATICA E' LOCALE, e la ragione l'ho LETTA nel log
+      #
+      # Bocciava la pubblicazione con «in nessun punto l'ingresso compie un
+      # giro intero». Il log dice che tutti e tre i punti hanno esaurito il
+      # tetto di 45 s con 35-38 campioni, e il cancello stesso li dichiara
+      # «macchina lenta, non difetto» -- poi pero' boccia perche' NESSUNO ha
+      # chiuso il giro. In locale almeno uno lo chiude, con 77 campioni.
+      #
+      # La causa non e' il numero di campioni: e' che `index.js` blocca il passo
+      # a `Math.min(getDelta(), 0.05)`, cosa giusta per la stabilita'. Su un
+      # rasterizzatore software a circa un fotogramma al secondo, il tempo
+      # SIMULATO avanza venti volte piu' lento di quello reale: in 45 secondi di
+      # orologio il meccanismo ne vive due, e un giro d'albero non ci sta.
+      # Alzare il tetto vorrebbe dire portarlo a un quarto d'ora per punto.
+      #
+      # E' di nuovo «un cancello che misura la velocita' della macchina» -- la
+      # regola che questo repo si e' dato dopo undici commit di CI rossa a fine
+      # agosto. Vale ancora, e vale anche adesso: quel cancello resta in
+      # `npm run collaudo`, dove la macchina e' abbastanza veloce perche' la
+      # misura significhi qualcosa.
+      #
+      # Rientra il giorno in cui o il runner ha una GPU, o il meccanismo si puo'
+      # far avanzare a passo dichiarato invece che a fotogrammi -- che e' la
+      # cura vera, e non la faccio stanotte alla settima corsa.
         env: { CHROMIUM: '1' }
 
       # La manopola deve comandare il meccanismo DENTRO il primo piano. Il

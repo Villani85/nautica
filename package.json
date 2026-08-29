@@ -21,7 +21,7 @@
     "numeri": "vite build && node strumenti/peso.mjs --scrivi && vite build",
     "collaudo:varco": "node strumenti/collaudo-varco.mjs",
     "collaudo:scia": "node strumenti/collaudo-scia.mjs",
-    "collaudo:resa": "node strumenti/collaudo-orizzonte.mjs && node strumenti/collaudo-cielo.mjs"
+    "collaudo:resa": "node strumenti/collaudo-orizzonte.mjs && node strumenti/collaudo-cielo.mjs && node strumenti/collaudo-cinematica.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"
