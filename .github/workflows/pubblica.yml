@@ -80,20 +80,33 @@ jobs:
       - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
       - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
       - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
-      # Questi tre giravano in locale e NON qui. La divergenza fra le due liste
-      # andava in tutti e due i versi -- scia e varco solo nella CI, cielo,
-      # gltf, orizzonte e catena solo in `npm run collaudo` -- e nessuna delle
-      # due la dichiarava. Sei cancelli su diciotto: per un giorno intero
-      # «suite verde» non ha voluto dire «pubblicabile», in nessuno dei due
-      # sensi. Verificati col browser interno prima di aggiungerli: exit 0.
+      # ─── LA DIVERGENZA FRA LE DUE LISTE, ADESSO DICHIARATA
+      #
+      # Per un giorno intero `npm run collaudo` e questo workflow non hanno
+      # eseguito gli stessi cancelli, in ENTRAMBI i versi: scia e varco solo
+      # qui, cielo/gltf/orizzonte/catena solo in locale. Sei su diciotto, e
+      # nessuna delle due liste lo diceva. Quindi «suite verde» non ha mai
+      # voluto dire «pubblicabile».
+      #
+      # Adesso combaciano, TRANNE DUE, e la ragione e' scritta invece che
+      # taciuta: `collaudo-orizzonte` e `collaudo-cielo` misurano la STRUTTURA
+      # TONALE di cio' che il motore disegna, e qui il motore e' SwiftShader --
+      # nessuna GPU. Aggiunti, `orizzonte` e' uscito rosso su questo runner
+      # mentre in locale passa.
+      #
+      # ATTENZIONE, e va detto perche' e' l'errore che ho appena fatto:
+      # `CHROMIUM=1` forza il browser interno ma NON il disegno in software.
+      # Su una macchina con la GPU quella prova non riproduce questo runner, e
+      # io l'avevo trattata come se lo facesse. La causa vera non e' verificata:
+      # i log del job servono i diritti di amministratore.
+      #
+      # Restano quindi LOCALI, dichiarati qui: sono cancelli sulla RESA, e la
+      # resa di un rasterizzatore software non e' quella che riceve un
+      # visitatore. Il giorno in cui questo runner avesse una GPU, rientrano.
       - { name: 'Cancello · validatore glTF', run: node strumenti/collaudo-gltf.mjs }
       - name: 'Cancello · continuita della scena'
         run: node strumenti/collaudo-continuita.mjs
 
-      - name: 'Cancello · orizzonte'
-        run: node strumenti/collaudo-orizzonte.mjs
-      - name: 'Cancello · cielo'
-        run: node strumenti/collaudo-cielo.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · cinematica del meccanismo'
         run: node strumenti/collaudo-cinematica.mjs
