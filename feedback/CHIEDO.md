@@ -7,6 +7,12 @@ trovato la volta scorsa. Cambia a ogni giro.
 Progetto: <https://github.com/Villani85/nautica> — sito pubblicato su
 <https://villani85.github.io/nautica/>
 
+**Lo stato completo del progetto e l'elenco di tutto cio' che manca stanno in
+[`STATO-2026-08-29.md`](STATO-2026-08-29.md).** Leggilo se e' il tuo primo giro,
+o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
+la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
+committente e' che **la qualita' sia fotorealistica sempre**.
+
 Aggiornato: **29 agosto 2026, mattina.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
