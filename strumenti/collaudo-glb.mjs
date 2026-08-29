@@ -44,6 +44,9 @@
  * Non misura millisecondi. Misura il file.
  */
 import { readFileSync, statSync, readdirSync } from 'node:fs'
+// Il tetto delle due macchine e' in BROTLI: e' il peso che passa sul filo,
+// e il grezzo del disco non lo prevede.
+import { brotliCompressSync, constants as ZLIB } from 'node:zlib'
 
 const FILE = process.argv[2] ?? 'public/modelli/impianto.glb'
 
@@ -71,8 +74,6 @@ if (buf.readUInt32LE(0) !== 0x46546c67) {
   process.exit(1)
 }
 const g = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString('utf8'))
-const nodi = g.nodes ?? []
-const perNome = new Map(nodi.map((n, i) => [n.name, i]).filter(([n]) => n))
 
 // ─── matrici, perche' l'ingombro si misura nello spazio giusto ────────────
 // La quantizzazione mette la dequantizzazione in una scala e una traslazione
@@ -124,39 +125,92 @@ const punto = (m, p) => [0, 1, 2].map(i =>
  * materiale e non per nome del nodo perche' il cavo E' dentro STATIC_MOTOR:
  * e' li' che deve stare, ed e' li' che non deve contare.
  */
-function ingombro (indice, m0 = I4, senzaMateriali = null) {
-  const mn = [Infinity, Infinity, Infinity]
-  const mx = [-Infinity, -Infinity, -Infinity]
-  let trovato = false
+/**
+ * ─── LA MISURA E' UNA FABBRICA, DA QUANDO I MODELLI SONO QUATTRO
+ *
+ * `ingombro` chiudeva sopra le due costanti `g` e `nodi` del file in collaudo,
+ * quindi sapeva misurare UN documento solo. Finche' il controllo profondo era
+ * riservato all'impianto andava bene: la sovrastruttura passava da un lettore
+ * ridotto, in fondo al file, che le trasformazioni non le guardava affatto.
+ *
+ * Con `propulsione.glb` e `giroscopio.glb` quel lettore ridotto non basta piu':
+ * la cosa che va misurata su di loro — se l'origine di un nodo rotante sta sul
+ * suo asse — richiede la matrice di MONDO, cioe' esattamente cio' che il
+ * lettore ridotto non calcolava. Duplicare la camminata sarebbe stato il modo
+ * sicuro di farla divergere: in questo repo e' gia' successo con
+ * `glb-grezzo.py`. Quindi la si apre a qualunque documento e basta.
+ *
+ * `mondo(indice)` e' nuovo e serve solo a quel controllo: dice DOVE finisce
+ * l'origine di un nodo dopo tutta la catena dei padri. Senza, si potrebbe
+ * confrontare l'ingombro con la traslazione LOCALE del nodo, che su un figlio
+ * — il rotore del giroscopio sta sotto la culla cardanica — e' un altro punto.
+ */
+function lettore (doc) {
+  const nodi = doc.nodes ?? []
+  const perNome = new Map(nodi.map((n, i) => [n.name, i]).filter(([n]) => n))
 
-  ;(function scendi (i, m) {
-    const n = nodi[i]
-    if (!n) return
-    const w = mul(m, locale(n))
-    if (n.mesh !== undefined) {
-      for (const p of g.meshes[n.mesh].primitives) {
-        if (senzaMateriali?.has(g.materials?.[p.material]?.name)) continue
-        const a = g.accessors[p.attributes.POSITION]
-        if (!a?.min) continue
-        trovato = true
-        for (let k = 0; k < 8; k++) {
-          const q = punto(w, [
-            k & 1 ? a.max[0] : a.min[0],
-            k & 2 ? a.max[1] : a.min[1],
-            k & 4 ? a.max[2] : a.min[2]
-          ])
-          for (let d = 0; d < 3; d++) {
-            if (q[d] < mn[d]) mn[d] = q[d]
-            if (q[d] > mx[d]) mx[d] = q[d]
+  function ingombro (indice, m0 = I4, senzaMateriali = null) {
+    const mn = [Infinity, Infinity, Infinity]
+    const mx = [-Infinity, -Infinity, -Infinity]
+    let trovato = false
+
+    ;(function scendi (i, m) {
+      const n = nodi[i]
+      if (!n) return
+      const w = mul(m, locale(n))
+      if (n.mesh !== undefined) {
+        for (const p of doc.meshes[n.mesh].primitives) {
+          if (senzaMateriali?.has(doc.materials?.[p.material]?.name)) continue
+          const a = doc.accessors[p.attributes.POSITION]
+          if (!a?.min) continue
+          trovato = true
+          for (let k = 0; k < 8; k++) {
+            const q = punto(w, [
+              k & 1 ? a.max[0] : a.min[0],
+              k & 2 ? a.max[1] : a.min[1],
+              k & 4 ? a.max[2] : a.min[2]
+            ])
+            for (let d = 0; d < 3; d++) {
+              if (q[d] < mn[d]) mn[d] = q[d]
+              if (q[d] > mx[d]) mx[d] = q[d]
+            }
           }
         }
       }
-    }
-    for (const c of n.children ?? []) scendi(c, w)
-  })(indice, m0)
+      for (const c of n.children ?? []) scendi(c, w)
+    })(indice, m0)
 
-  return trovato ? { mn, mx } : null
+    return trovato ? { mn, mx } : null
+  }
+
+  /**
+   * La matrice di mondo del nodo, e QUELLA DEL SUO PADRE.
+   *
+   * Il padre serve davvero: `ingombro` parte dall'identita', quindi su un nodo
+   * annidato — `gyro_rotore` sta sotto `gyro_cardano` — misurerebbe la
+   * geometria nel sistema del padre e la confronterebbe con un'origine di
+   * mondo. Due riferimenti diversi, nessun errore, e uno scarto inventato pari
+   * alla traslazione che si e' persa.
+   */
+  function mondo (indice) {
+    let risultato = null
+    for (const r of doc.scenes?.[doc.scene ?? 0]?.nodes ?? []) {
+      ;(function scendi (i, m) {
+        if (risultato) return
+        const n = nodi[i]
+        if (!n) return
+        const w = mul(m, locale(n))
+        if (i === indice) { risultato = { w, padre: m }; return }
+        for (const c of n.children ?? []) scendi(c, w)
+      })(r, I4)
+    }
+    return risultato
+  }
+
+  return { doc, nodi, perNome, ingombro, mondo }
 }
+
+const { nodi, perNome, ingombro } = lettore(g)
 
 // ─── i controlli ──────────────────────────────────────────────────────────
 const guasti = []
@@ -603,6 +657,292 @@ const modelli = readdirSync('public/modelli').filter(f => f.endsWith('.glb'))
 const totaleKB = Math.round(
   modelli.reduce((s, f) => s + statSync(`public/modelli/${f}`).size, 0) / 1024)
 note.push(`MODELLI   ${totaleKB} KB in ${modelli.length} file sul disco`)
+
+/**
+ * ═══ LE MACCHINE DELL'ATTO DUE ════════════════════════════════════════
+ *
+ * `docs/13-ATTO-DUE.md` §7 punto 4 chiede albero, riduttore ed elica collegati
+ * a `giriPropulsione`, e il punto 5 il giroscopio. Sono due GLB nuovi, e senza
+ * questo blocco entrerebbero nel sito come c'e' gia' entrata la sovrastruttura:
+ * senza che nessun cancello chiedesse loro niente.
+ *
+ * ─── IL CONTROLLO CHE ESISTE SOLO PER QUESTI DUE MODELLI
+ *
+ * Un nodo che gira attorno a un'origine fuori asse **non gira: descrive un
+ * cono.** E' il difetto piu' facile da fare e uno dei piu' difficili da
+ * attribuire, perche' non produce nessun errore: il GLB e' valido,
+ * l'animazione parte, il pezzo si muove. A schermo si vede un'elica che
+ * sbanda, e la prima ipotesi di chiunque e' che il modello sia storto.
+ *
+ * Si misura cosi': si prende l'ingombro del nodo in coordinate di MONDO, si
+ * guarda il piano perpendicolare all'asse di rotazione dichiarato, e si
+ * verifica che il centro di quell'ingombro coincida con l'origine del nodo.
+ * Se l'origine e' fuori asse di d, il centro dell'ingombro e' fuori di d: e'
+ * la stessa quantita', vista da un punto in cui si puo' misurare.
+ *
+ * La tolleranza puo' essere STRETTA — il 2% dell'estensione — perche' i pezzi
+ * che fanno un giro intero qui sono tutti simmetrici attorno al proprio asse:
+ * l'albero e il rotore sono solidi di rivoluzione, e l'elica ha un numero PARI
+ * di pale, quindi il suo ingombro e' invariante per un quarto di giro. La
+ * scelta delle quattro pale e' motivata in `glb-macchine.py` proprio qui: con
+ * cinque pale lo scarto geometrico sarebbe del 5,3% e la tolleranza andrebbe
+ * allargata fino a non vedere piu' un difetto vero.
+ *
+ * ─── COSA QUESTO CANCELLO NON CONTROLLA, E VA DETTO
+ *
+ * **Il nodo di precessione del giroscopio non passa da questa prova.**
+ * `gyro_cardano` porta i due cilindri del freno di precessione, che stanno da
+ * una parte sola: il suo ingombro NON e' simmetrico attorno ai perni, e non
+ * deve esserlo — una culla cardanica vera e' fatta cosi'. Applicargli la prova
+ * di simmetria darebbe un rosso su una geometria corretta, cioe' un cancello
+ * che insegna a ignorarlo. La sua origine si stampa e basta: chi la cambia la
+ * vede cambiare, ma qui non c'e' nessuna misura che la giudichi. E' la stessa
+ * regola con cui questo file dichiara di non controllare il verso delle
+ * normali invece di far finta.
+ */
+const ASSE = { x: 0, y: 1, z: 2 }
+const NOME_ASSE = ['X', 'Y', 'Z']
+const TOLL_CENTRO = 0.02        // 2% dell'estensione nel piano perpendicolare
+const TOLL_DIAMETRO = 0.03      // 3% fra diametro dichiarato e disegnato
+const TETTO_MACCHINE_BR = 250 * 1024   // il vincolo del brief, sui DUE insieme
+
+/**
+ * LA LUNGHEZZA DELLA NAVE SI LEGGE DALLE ORDINATE, NON SI SCRIVE QUI.
+ *
+ * Serve a dare un metro alla scala delle macchine, e se la si copiasse a mano
+ * diventerebbe falsa il giorno in cui lo scafo cambia — senza che niente lo
+ * dica. Si cerca per NOME, non per riga: `docs/13-ATTO-DUE.md` avverte che i
+ * numeri di riga di questo repo si spostano nel giro di ore, i nomi no.
+ */
+function loaMetri (metriPerUnita) {
+  let src
+  try { src = readFileSync('src/scafo/ordinate.js', 'utf8') } catch { return null }
+  const num = (nome) => {
+    const r = new RegExp('export const ' + nome + '\\s*=\\s*(-?[0-9.]+)').exec(src)
+    return r ? Number(r[1]) : null
+  }
+  const prua = num('PRUA_Z')
+  const poppa = num('POPPA_Z')
+  if (prua === null || poppa === null) return null
+  return (poppa - prua) * metriPerUnita
+}
+
+/**
+ * Il metro dell'impianto, LETTO dal file e non assunto: e' il riferimento
+ * contro cui le macchine nuove devono stare.
+ */
+const METRO_IMPIANTO = (() => {
+  try {
+    const b = readFileSync('public/modelli/impianto.glb')
+    const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'))
+    return (j.nodes ?? []).find(n => n.extras)?.extras?.sceneMetersPerUnit ?? null
+  } catch { return null }
+})()
+
+const MACCHINE = [
+  {
+    file: 'public/modelli/propulsione.glb',
+    radice: 'PROPULSIONE',
+    nodi: ['prop_motore', 'prop_riduttore', 'prop_albero', 'prop_astuccio',
+           'prop_supporti', 'prop_scafo', 'prop_elica'],
+    extrasAttesi: ['spinAxis', 'spinNodes', 'motorPowerKW', 'gearRatio',
+                   'shaftDiameterM', 'propDiameterM', 'propBlades'],
+    // Una linea d'assi completa sta fra un decimo e un terzo della nave: sotto
+    // e' un giocattolo, sopra non ci starebbe in sala macchine. E' la forbice
+    // che coglie l'errore di scala x10 — il piu' comune e il piu' invisibile
+    // in un GLB, perche' un modello dieci volte piu' grande si apre, si vede,
+    // e sembra giusto finche' non gli si mette accanto qualcos'altro.
+    frazioneLOA: [0.10, 0.33],
+    diametro: { nodo: 'prop_elica', extra: 'propDiameterM' }
+  },
+  {
+    file: 'public/modelli/giroscopio.glb',
+    radice: 'GIROSCOPIO',
+    nodi: ['gyro_rotore', 'gyro_sfera', 'gyro_calotta', 'gyro_cardano',
+           'gyro_basamento'],
+    extrasAttesi: ['spinAxis', 'spinNodes', 'precessAxis', 'precessNode',
+                   'rotorDiameterM', 'rotorRpm'],
+    frazioneLOA: [0.02, 0.08],
+    diametro: { nodo: 'gyro_rotore', extra: 'rotorDiameterM' }
+  }
+]
+
+let brMacchine = 0
+for (const M of MACCHINE) {
+  let b
+  try { b = readFileSync(M.file) } catch { guasti.push(`manca ${M.file}`); continue }
+  const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'))
+  const L = lettore(j)
+  const eti = M.file.split('/').pop()
+  const kbM = Math.round(b.length / 1024)
+  const brM = brotliCompressSync(b, { params: { [ZLIB.BROTLI_PARAM_QUALITY]: 11 } }).length
+  brMacchine += brM
+  note.push(`MACCHINA  ${eti}  ${kbM} KB grezzo, ${(brM / 1024).toFixed(1)} KB brotli`)
+  if (kbM > TETTO_KB) {
+    guasti.push(`${eti}: ${kbM} KB sfondano l'obiettivo provvisorio di ${TETTO_KB} KB (§9)`)
+  }
+
+  const persiM = M.nodi.filter(n => !L.perNome.has(n))
+  if (persiM.length) {
+    guasti.push(`${eti}: mancano i nodi ${persiM.join(', ')} — sono il contratto che il ` +
+                'sito interroga per nome, e gltfpack li cancella tutti se si scorda -kn')
+    continue
+  }
+  const vuotiM = M.nodi.filter(n => !L.ingombro(L.perNome.get(n)))
+  if (vuotiM.length) {
+    guasti.push(`${eti}: nodi senza geometria sotto: ${vuotiM.join(', ')} — il nome e' ` +
+                'sopravvissuto alla compressione, il pezzo no')
+  }
+
+  const radiciM = (j.scenes?.[j.scene ?? 0]?.nodes ?? [])
+    .map(i => j.nodes[i]?.name ?? '(senza nome)')
+  if (radiciM.length !== 1 || radiciM[0] !== M.radice) {
+    guasti.push(`${eti}: la scena ha in cima ${radiciM.join(', ')} invece del solo ` +
+                `${M.radice}. Un pezzo alla radice arriva nel sito lo stesso e non ` +
+                'risponde a nessun nome del contratto.')
+  }
+
+  const exM = j.nodes?.find(n => n.extras)?.extras ?? null
+  if (!exM) {
+    guasti.push(`${eti}: nessun extras — il sito non saprebbe ne' l'unita' ne' ` +
+                'attorno a quale asse far girare i pezzi')
+    continue
+  }
+  if (exM.authoringUnit !== 'meter') {
+    guasti.push(`${eti}: authoringUnit e' "${exM.authoringUnit}", non "meter": la ` +
+                'conversione 0,4 del sito diventa falsa')
+  }
+  // ─── LO STESSO RIFERIMENTO METRICO DELL'IMPIANTO, LETTO DAI DUE FILE ───
+  if (METRO_IMPIANTO !== null && exM.sceneMetersPerUnit !== METRO_IMPIANTO) {
+    guasti.push(`${eti}: sceneMetersPerUnit e' ${exM.sceneMetersPerUnit} mentre ` +
+                `impianto.glb dichiara ${METRO_IMPIANTO}. Due modelli nella stessa scena ` +
+                'con due metri diversi non danno nessun errore: danno una macchina ' +
+                'grande il doppio accanto a una giusta.')
+  }
+  for (const k of M.extrasAttesi) {
+    if (exM[k] === undefined) guasti.push(`${eti}: manca l'extra ${k}`)
+  }
+
+  // ─── l'ingombro, e la scala misurata contro la nave ───────────────────
+  const tuttoM = L.ingombro(L.perNome.get(M.radice))
+  if (tuttoM) {
+    const d = [0, 1, 2].map(i => tuttoM.mx[i] - tuttoM.mn[i])
+    const loa = loaMetri(exM.sceneMetersPerUnit)
+    const q = Math.max(...d)
+    const forbice = M.frazioneLOA.map(f => (f * 100).toFixed(0)).join('-')
+    if (loa) {
+      note.push(`          ingombro ${d.map(v => v.toFixed(2)).join(' x ')} m; quota maggiore ` +
+                `${q.toFixed(2)} m = ${(q / loa * 100).toFixed(1)}% dei ${loa.toFixed(0)} m ` +
+                `di scafo (forbice ${forbice}%)`)
+      const f = q / loa
+      if (f < M.frazioneLOA[0] || f > M.frazioneLOA[1]) {
+        guasti.push(`${eti}: la quota maggiore e' ${q.toFixed(2)} m, il ` +
+                    `${(f * 100).toFixed(1)}% dei ${loa.toFixed(0)} m di scafo, fuori dalla ` +
+                    `forbice ${forbice}%. Un fattore 10 sulla scala esce di qui e da ` +
+                    'nessun\'altra parte.')
+      }
+    } else {
+      note.push(`          ingombro ${d.map(v => v.toFixed(2)).join(' x ')} m ` +
+                '(LOA non ricavabile da src/scafo/ordinate.js: forbice non verificata)')
+    }
+  }
+
+  // ─── I NODI CHE FANNO UN GIRO INTERO: L'ORIGINE STA SULL'ASSE? ────────
+  const iAsse = ASSE[String(exM.spinAxis).toLowerCase()]
+  if (iAsse === undefined) {
+    guasti.push(`${eti}: spinAxis e' "${exM.spinAxis}", non x/y/z: il sito non saprebbe ` +
+                'attorno a cosa far girare i pezzi')
+  } else {
+    const perp = [0, 1, 2].filter(i => i !== iAsse)
+    for (const nome of String(exM.spinNodes).split(',').map(x => x.trim()).filter(Boolean)) {
+      const i = L.perNome.get(nome)
+      if (i === undefined) {
+        guasti.push(`${eti}: spinNodes nomina ${nome}, che nel file non c'e'`)
+        continue
+      }
+      const m = L.mondo(i)
+      if (!m) { guasti.push(`${eti}: ${nome} non e' raggiungibile dalla scena`); continue }
+      const bb = L.ingombro(i, m.padre)
+      if (!bb) { guasti.push(`${eti}: ${nome} non ha geometria da far girare`); continue }
+      const org = [m.w[12], m.w[13], m.w[14]]
+      const detto = []
+      for (const d of perp) {
+        const centro = (bb.mn[d] + bb.mx[d]) / 2
+        const est = bb.mx[d] - bb.mn[d]
+        const scarto = Math.abs(centro - org[d])
+        detto.push(`${NOME_ASSE[d]} ${(scarto * 1000).toFixed(1)} mm su ${(est * 1000).toFixed(0)}`)
+        if (est > 0 && scarto / est > TOLL_CENTRO) {
+          guasti.push(
+            `${eti}: l'origine di ${nome} e' fuori dal suo asse di rotazione. Sull'asse ` +
+            `${NOME_ASSE[d]} il centro della geometria sta a ${centro.toFixed(4)} m e ` +
+            `l'origine del nodo a ${org[d].toFixed(4)}: ${(scarto * 1000).toFixed(1)} mm, il ` +
+            `${(scarto / est * 100).toFixed(1)}% dell'estensione, oltre il ${TOLL_CENTRO * 100}%. ` +
+            'Ruotando, quel pezzo descrive un CONO invece di girare — e non da\' nessun errore.')
+        }
+      }
+      note.push(`          ${nome} gira attorno a ${NOME_ASSE[iAsse]}: ` +
+                `scarto dell'origine ${detto.join(', ')}`)
+    }
+  }
+  if (exM.precessNode) {
+    const i = L.perNome.get(exM.precessNode)
+    const m = i === undefined ? null : L.mondo(i)
+    if (!m) {
+      guasti.push(`${eti}: precessNode nomina ${exM.precessNode}, che nel file non c'e'`)
+    } else {
+      note.push(`          ${exM.precessNode} precede attorno a ` +
+                `${String(exM.precessAxis).toUpperCase()}, origine ` +
+                `(${[12, 13, 14].map(k => m.w[k].toFixed(3)).join(', ')}) — NON verificata ` +
+                'per simmetria, vedi la nota qui sopra')
+    }
+  }
+
+  // ─── IL DIAMETRO DICHIARATO DEVE DESCRIVERE IL PEZZO DISEGNATO ────────
+  //
+  // Stessa regola di `finAreaM2` sull'impianto, dove un numero dichiarato
+  // valeva tre volte la forma che descriveva. Qui si puo' fare meglio di un
+  // confronto per ordine di grandezza: i due pezzi in questione sono
+  // simmetrici attorno al proprio asse, quindi l'ingombro nel piano
+  // perpendicolare E' il diametro, e si confronta al 3%.
+  if (M.diametro && iAsse !== undefined) {
+    const i = L.perNome.get(M.diametro.nodo)
+    const m = i === undefined ? null : L.mondo(i)
+    const bb = m ? L.ingombro(i, m.padre) : null
+    const atteso = exM[M.diametro.extra]
+    if (bb && typeof atteso === 'number') {
+      const perp = [0, 1, 2].filter(k => k !== iAsse)
+      const misurato = Math.max(...perp.map(d => bb.mx[d] - bb.mn[d]))
+      const sc = (misurato - atteso) / atteso
+      note.push(`          ${M.diametro.extra} dichiarato ${atteso} m, misurato ` +
+                `${misurato.toFixed(3)} m su ${M.diametro.nodo} ` +
+                `(${sc >= 0 ? '+' : ''}${(sc * 100).toFixed(1)}%)`)
+      if (Math.abs(sc) > TOLL_DIAMETRO) {
+        guasti.push(`${eti}: ${M.diametro.extra} dichiara ${atteso} m ma ` +
+                    `${M.diametro.nodo} ne misura ${misurato.toFixed(3)}: ` +
+                    `${(sc * 100).toFixed(1)}%, oltre il ${TOLL_DIAMETRO * 100}%. Il numero ` +
+                    'dichiarato non descrive la forma disegnata.')
+      }
+    }
+  }
+}
+
+/**
+ * IL TETTO E' IN BROTLI, E SI MISURA QUI PERCHE' E' IL NUMERO CHE PASSA SUL FILO.
+ *
+ * Il grezzo del disco non lo prevede e non ci va nemmeno vicino: la geometria
+ * meshopt si comprime ancora ~2,4 volte, una texture webp per niente. Due
+ * modelli con lo stesso peso su disco possono costare molto diverso in rete a
+ * seconda di cosa c'e' dentro — e quello che conta e' la rete.
+ */
+if (brMacchine) {
+  const ok = brMacchine <= TETTO_MACCHINE_BR
+  note.push(`MACCHINE  ${(brMacchine / 1024).toFixed(1)} KB brotli in due, su un tetto di ` +
+            `${(TETTO_MACCHINE_BR / 1024).toFixed(0)} — ${ok ? 'dentro' : 'FUORI'}`)
+  if (!ok) {
+    guasti.push(`le due macchine dell'atto due pesano ${(brMacchine / 1024).toFixed(1)} KB ` +
+                `brotli contro un tetto di ${(TETTO_MACCHINE_BR / 1024).toFixed(0)}.`)
+  }
+}
 
 // ─── esito ────────────────────────────────────────────────────────────────
 console.log(FILE)

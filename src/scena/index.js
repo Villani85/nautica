@@ -10,6 +10,7 @@ import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
 import { creaTraversata } from './traversata.js'
+import { creaMacchine } from './macchine.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
@@ -614,6 +615,15 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
+
+  /**
+   * LE DUE MACCHINE DELL'ATTO DUE, figlie della NAVE e non della scena: devono
+   * rollare con lei. Una linea d'assi che resta ferma mentre lo scafo si
+   * inclina non e' un dettaglio da poco -- si vede subito, e si legge come
+   * l'errore che e'.
+   */
+  const macchine = creaMacchine(base)
+  nave.add(macchine.gruppo)
   sovra.caricato
     // il valore si RESTITUISCE: il passo dopo lo destruttura, e con un
     // `then` che torna undefined la sovrastruttura moriva su
@@ -851,6 +861,14 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * mano, che in questo sito e' la bugia peggiore possibile.
      */
     nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - 0.6 * spaccato)
+
+    /**
+     * L'ALBERO GIRA PERCHE' GIRA IL MOTORE, non perche' scorre il tempo.
+     * `S.giriPropulsione` e' l'uscita dell'inerzia della linea d'assi: quando
+     * si toglie propulsione, l'elica rallenta prima che la nave perda
+     * abbrivio, ed e' quell'ordine a rendere la catena leggibile.
+     */
+    macchine.gira(sim.S, dt)
 
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
