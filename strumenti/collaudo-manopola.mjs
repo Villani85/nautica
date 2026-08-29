@@ -470,7 +470,25 @@ const campiona = () => pagina.evaluate(([finestra, fondo]) => {
 const ASSESTAMENTO = 2200
 
 const misura = async (dove) => {
-  await new Promise(r => setTimeout(r, ASSESTAMENTO))
+  /**
+   * ─── ANCHE L'ASSESTAMENTO E' A PASSO DICHIARATO, e non e' pedanteria
+   *
+   * Portata la MISURA al passo dichiarato restava una dipendenza dalla
+   * macchina: l'attesa del transitorio era di orologio, quindi su un
+   * rasterizzatore lento la nave arrivava al campione in un'altra FASE.
+   * Misurato, stesso codice e stessi 480 passi: a mare 2 l'escursione usciva
+   * 3,8 rad con la GPU e 16,8 senza -- la nave stava ancora scendendo da mare
+   * 5 -- e il rapporto scendeva da 6,62 a 1,51 contro un minimo di 1,30.
+   * Passava, ma per un soffio e per caso: un runner ancora piu' lento lo
+   * avrebbe fatto cadere.
+   *
+   * Una condizione iniziale che dipende dalla macchina rende la misura
+   * irriproducibile anche quando la misura in se' non lo e' piu'.
+   */
+  await pagina.evaluate((ms) => {
+    const DT = 1 / 60
+    window.__nautica.passoDichiarato?.(DT, Math.round((ms / 1000) / DT))
+  }, ASSESTAMENTO)
   const c = await campiona()
   if (c.nonMisurabile) {
     guai.push(`campione "${dove}": ${c.nonMisurabile}`)

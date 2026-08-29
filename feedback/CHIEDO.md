@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **29 agosto 2026, 11:24.** Da quando hai clonato potrei aver spinto
+Aggiornato: **29 agosto 2026, 20:10.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -185,6 +185,27 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
 
 ### 3.4 · Quello su cui sono ancora fermo
 
+**IL PUNTO PIU' CARO, DAL GIRO DELLE 20:10, ED E' L'UNICO CHE CHIEDO DAVVERO.**
+Il salone e' una clip mascherata e non una stanza modellata: e' una scelta
+dichiarata in `salone3d.js`, e per quaranta secondi regge. Ma quando la camera
+del sito gira intorno a quel piano, **il piano si vede**: a scorrimento 0,235 la
+stanza e' un rettangolo con quattro bordi netti incastrato nello scafo
+(`feedback/prove/2026-08-29-salone-e-una-carta.png`, si rifa con
+`strumenti/dove-si-vede-la-carta.mjs`).
+
+**Nessun cancello poteva trovarlo, e la forma di questa cecita' e' istruttiva:**
+`collaudo-filmato` guarda DENTRO l'inquadratura -- che la camera della clip stia
+ferma, che la maschera non scivoli oltre il vano -- e passa, perche' e' tutto
+vero. Il difetto sta sul **bordo** dell'inquadratura, dove nessuna delle mie
+misure va a guardare.
+
+Quello che chiedo: **non un'altra soglia.** Se conosci un modo di far reggere una
+proiezione su un guscio essenziale -- imbotti del finestrone, pavimento,
+soffitto, pareti, montanti -- senza rimodellare il salone, dimmelo. E se hai
+visto altri punti della corsa in cui un piano mostra il proprio bordo, quelli
+valgono piu' di qualsiasi punteggio.
+
+
 *(Due delle tre domande che stavano qui sono chiuse dal giro delle 10:17 —
 il cielo e la cura del diffuso. Vedi §5.)*
 
@@ -306,6 +327,68 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 29 agosto, 20:10 — trova a occhio il difetto che nessun cancello vedeva
+
+**Esito per esteso in
+[`revisore-2026-08-29-2010.md`](revisore-2026-08-29-2010.md).**
+Corregge il proprio giudizio precedente — *«l'emozione e' migliorata piu' del
+fotorealismo»* — e trova guardando una cosa che nessun numero di questo repo
+sapeva vedere.
+
+**Prima di tutto: guarda un filmato di 67,9 s che non arriva al meccanismo.** Il
+provino di stasera dura 97,6 s e ci arriva. Due voci sui nudge descrivono quindi
+una regia gia' cambiata, e va detto o sembrano contraddire cio' che lui stesso
+elenca come chiuso.
+
+**VOCE 1 — CONFERMATA, ed e' LA priorita'.** A scorrimento **0,235** il salone e'
+un rettangolo con **quattro bordi netti** che galleggia contro lo scafo: il
+taglio verticale destro attraversa il salotto a meta'. Fotogramma in
+`feedback/prove/2026-08-29-salone-e-una-carta.png`. Che la stanza sia una clip mascherata e non una stanza
+modellata `salone3d.js` lo dichiara da sempre; la novita' e' che **il trucco si
+vede**. E nessun cancello poteva trovarlo: `collaudo-filmato` guarda DENTRO
+l'inquadratura — che la camera della clip stia ferma, che la maschera non
+scivoli — e passa, perche' e' vero. Il difetto sta sul **bordo**. Cura indicata
+da lui e non fatta: guscio 3D essenziale piu' proiezione dalla camera sorgente.
+Lasciato `strumenti/dove-si-vede-la-carta.mjs`, che non e' un cancello e lo
+dichiara.
+
+**VOCE 2 — NON RIPRODOTTA.** «Jump to any scene» non e' sulla hero: misurato,
+compare a q 0,292 nella battuta `emerge`, cioe' nella seconda scena. `scene: 2`
+funziona.
+
+**VOCE 3 — NON RIPRODOTTA.** Il nudge «Drag the speed» **non esiste**: i testi
+sono cinque, e i due del meccanismo dichiarano gia' `battute: ['taglio',
+'meccanismo']`.
+
+**VOCE 4 — CONFERMATA sul codice.** «Change the sea» ha `dopo: 'stab'`
+(`nudge.js:88`): aspetta il CLIC sullo stabilizzatore, cioe' l'inizio
+dell'esperimento e non la sua fine — il commento dice il contrario di cio' che la
+regola misura. Quando debba comparire e' messa in scena. **Numero sul tavolo**,
+con la condizione che servirebbe: dopo spento **e** riacceso, a stanza calma.
+
+**VOCE 5 — CONFERMATA, una riga.** `salone3d.js:76` `const TESA = null`: la clip
+del salone teso non viene caricata. L'inclinazione della stanza e' vera — la
+comanda lo stesso integratore — **la reazione delle persone no**. E' il difetto
+aperto piu' vicino alla rivendicazione «si tocca e la fisica risponde».
+
+**VOCE 6 — CONFERMATA: il sito e' muto.** Zero occorrenze di `new Audio`,
+`AudioContext`, `<audio`, `.mp3`, `.ogg`, `PositionalAudio` in `src/` e
+`index.html`. Quali suoni servano e' messa in scena. **Sul tavolo.**
+
+**VOCE 7 — il numero non l'ho trovato, il fatto si'.** «0,63/255» non esiste in
+questo repo; `docs/15:19` pero' dichiara `sovrastruttura.glb ... immagini: 0
+texture: 0`, quindi la mappa davvero non c'e' e la sua conclusione regge.
+Dichiarato invece che passato: **una misura citata e non ritrovata non e' una
+misura.**
+
+**VOCE 8 — il punto 9 della sua sequenza c'e' gia'.** Il ritorno alle stesse
+persone e' stato costruito stasera, con 0,7 livelli di scarto di calore contro i
+47,5 di prima. L'ordine delle battute e il colpo d'acqua sono messa in scena.
+
+**VOCE 9 — il cruscotto pieno nel salone.** Nei fotogrammi si contano due letture
+grandi, due righe di valori, la scala del mare e tre interruttori. Quali restino
+e' messa in scena. **Sul tavolo.**
 
 ### Giro del 29 agosto, 18:45 — il primo che guarda un FILMATO, e li' il sito perde
 

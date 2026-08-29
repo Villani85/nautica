@@ -211,6 +211,24 @@ export const IPOTESI_ROLLIO_AVVERTITO_RMS = 1.8
  * stanno cedendo. Per questo il nome porta `IPOTESI_` come gli altri, anche se
  * la traduzione in nodi e' aritmetica pura.
  *
+ * ─── E DIECI NODI NON E' UN NUMERO NUOVO, che e' la ragione per cui regge
+ *
+ * L'argomento arriva da un lavoro parallelo su `main`, ed e' piu' forte di
+ * quello aritmetico: **10,0 e' una RIGA della tabella di stallo misurata**,
+ * quella in cui la pinna e' gia' in stallo il 71% del tempo. Cioe' il punto in
+ * cui l'autorita' e' persa per tre quarti, che e' esattamente cio' che questa
+ * battuta deve nominare. I 7,0 di prima erano un valore scelto FRA due righe
+ * misurate; qui se ne usa una.
+ *
+ * Su `main` quel ragionamento era stato applicato al suggerimento del
+ * GIROSCOPIO, spostandone la soglia da 7 a 10 per farlo arrivare prima. La
+ * diagnosi era giusta -- il nudge arrivava a 29,5 s e nessuno era piu' li' --
+ * ma la cura curava il sintomo: un'andatura resta un SURROGATO del rollio, e
+ * misurandolo sbaglia in tutti e due i versi (a mare 3 nomina il giroscopio
+ * ventiquattro secondi prima che ci sia qualcosa da calmare). Il giroscopio
+ * guarda adesso `IPOTESI_ROLLIO_AVVERTITO_RMS`, cioe' la cosa stessa. Il
+ * numero di main resta, e sta qui: e' la soglia giusta per l'anello giusto.
+ *
  * Nota che NON e' una soglia di tempo, ed e' il punto: con `ACCEL_RIF` a 0,30
  * la nave ci arrivava in 9,3 s e adesso in 4,3, e questa riga non e' cambiata.
  * Una soglia scritta in fisica sopravvive a un cambio di orologio; una scritta
