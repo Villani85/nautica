@@ -18,6 +18,9 @@ import { costruisciFuoribordo } from './fuoribordo.js'
 import { avanza, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
+/** `?senzaFilmato=1`: vedi `impostaTraversata` in fondo al file. */
+const SENZA_FILMATO = new URLSearchParams(location.search).has('senzaFilmato')
+
 const RAGGIO_SEZIONE = 7.2
 /**
  * Dove sta il piano longitudinale quando NON taglia. 2,5 e' fuori dallo scafo:
@@ -1529,7 +1532,27 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * chiama nell'ultima battuta e nessun altro: non e' uno stato del mondo,
      * e' il passaggio di consegne finale.
      */
-    impostaTraversata: (q) => traversata.mostra(q),
+    /**
+     * `?senzaFilmato=1` tiene il piano della traversata spento.
+     *
+     * ─── PERCHE' ESISTE, e non e' una comodita' da collaudo
+     *
+     * `collaudo-varco` cerca il meccanismo in quadro scorrendo la corsa, e da
+     * quando la traversata prende il comando lo trova coperto: al 91% dello
+     * scorrimento davanti c'e' il filmato, non il pezzo. Il cancello usciva
+     * rosso dicendo «il meccanismo non e' in quadro», che e' vero e non e' il
+     * difetto che cerca.
+     *
+     * E' la stessa esigenza che `consegna.mjs` ha gia' risolto con
+     * `senzaFilmato()`: per misurare il 3D bisogna poter togliere cio' che gli
+     * sta davanti. Qui diventa un interruttore dichiarato invece di una
+     * funzione interna, perche' serve a piu' di un cancello.
+     *
+     * Non e' un ripiego: il filmato resta nel sito, e nessun cancello puo'
+     * accenderlo o spegnerlo per far tornare un numero. Puo' solo chiedere di
+     * misurare cio' che c'e' SOTTO, dichiarandolo nella URL.
+     */
+    impostaTraversata: (q) => traversata.mostra(SENZA_FILMATO ? 0 : q),
     /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
     traversataFinita: () => traversata.finita,
     /**

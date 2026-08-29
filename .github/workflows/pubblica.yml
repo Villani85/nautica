@@ -70,14 +70,30 @@ jobs:
       # `CHROMIUM=1` vale per tutti: in CI non c'e' nessun Chrome di sistema, e
       # dirlo e' meglio che lasciarlo scoprire per tentativi.
       - { name: 'Cancello · rollio',       run: node strumenti/collaudo-rollio.mjs }
+      # La catena causale dell'atto due: mancava qui mentre esisteva in
+      # `npm run collaudo`. Le due liste erano divergenti in ENTRAMBI i versi --
+      # scia e varco solo qui, catena solo li' -- e nessuna delle due lo diceva.
+      - { name: 'Cancello · catena causale', run: node strumenti/collaudo-catena.mjs }
       - { name: 'Cancello · scafo',        run: node strumenti/collaudo-scafo.mjs }
       - { name: 'Cancello · mare',         run: node strumenti/collaudo-mare.mjs }
       - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs }
       - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
       - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
       - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
+      # Questi tre giravano in locale e NON qui. La divergenza fra le due liste
+      # andava in tutti e due i versi -- scia e varco solo nella CI, cielo,
+      # gltf, orizzonte e catena solo in `npm run collaudo` -- e nessuna delle
+      # due la dichiarava. Sei cancelli su diciotto: per un giorno intero
+      # «suite verde» non ha voluto dire «pubblicabile», in nessuno dei due
+      # sensi. Verificati col browser interno prima di aggiungerli: exit 0.
+      - { name: 'Cancello · validatore glTF', run: node strumenti/collaudo-gltf.mjs }
       - name: 'Cancello · continuita della scena'
         run: node strumenti/collaudo-continuita.mjs
+
+      - name: 'Cancello · orizzonte'
+        run: node strumenti/collaudo-orizzonte.mjs
+      - name: 'Cancello · cielo'
+        run: node strumenti/collaudo-cielo.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · cinematica del meccanismo'
         run: node strumenti/collaudo-cinematica.mjs

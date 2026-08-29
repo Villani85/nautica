@@ -31,7 +31,18 @@ const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true
 await new Promise(r => setTimeout(r, 4000))
 const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
+/**
+ * `senzaFilmato=1`: questo cancello cerca il MECCANISMO in quadro, e da quando
+ * la traversata prende il comando lo trova coperto -- al 91% dello scorrimento
+ * davanti c'e' il filmato. Usciva rosso dicendo «il meccanismo non e' in
+ * quadro», che era vero e non era il difetto che cerca.
+ *
+ * L'interruttore toglie cio' che sta DAVANTI, non cambia cio' che si misura: e'
+ * la stessa cosa che `consegna.mjs` fa con `senzaFilmato()`. Un cancello non
+ * puo' accendere o spegnere il filmato per far tornare un numero; puo' chiedere
+ * di guardare sotto, dichiarandolo.
+ */
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 /**
  * ─── LA POSIZIONE SI RICAVA DALLA SEZIONE, non e' una frazione del documento
