@@ -45,7 +45,10 @@ import { fileURLToPath } from 'node:url'
  *       SCARTA_LA_NAVE=1 node strumenti/esporta-meccanismo.mjs meccanismo.json
  *
  *   la NAVE INTERA (per il ritratto in Cycles: la carena E' il soggetto):
- *       TETTO_TRI=999999 node strumenti/esporta-meccanismo.mjs nave-scena.json
+ *       TETTO_TRI=999999 BATTUTA=mare node strumenti/esporta-meccanismo.mjs nave-scena.json
+ *
+ *   `BATTUTA=mare` serve perche' senza si esporta la posa del meccanismo, dove
+ *   il piano di sezione e' aperto: il ritratto esce con la poppa tagliata.
  *
  * Senza nessuna delle due esce con errore e dice quale pezzo della nave il
  * tetto sta buttando via. Vedi il blocco sul TETTO piu' sotto per la ragione:
@@ -110,14 +113,45 @@ await pg.waitForTimeout(1500)
  * finestra. Li' la sezione riempie lo schermo -- quindi si disegna -- e il
  * taglio e' alla sua corsa piena, che e' la battuta del meccanismo.
  */
-const dove = await pg.evaluate(() => {
+/**
+ * ─── E PER IL RITRATTO DELLA NAVE LA POSA E' UN'ALTRA, col taglio CHIUSO
+ *
+ * Il fondo della dimostrazione e' la battuta del meccanismo, dove il piano di
+ * sezione e' alla corsa piena. Giusto per il meccanismo; sbagliato per il
+ * ritratto della nave, che esce **con la poppa tagliata via** -- misurato sul
+ * primo ritratto con la carena: `sezione: normale 0,0,-1 costante -0.650`, e
+ * meta' nave mancante nel render.
+ *
+ * `BATTUTA=mare` (o un altro nome) cerca quella battuta invece di andare al
+ * fondo. Si CERCA, non si indovina: le frazioni di pagina scritte a mano in
+ * questo repo si sono gia' rotte due volte quando la pagina ha cambiato
+ * altezza.
+ */
+const BATTUTA = process.env.BATTUTA || ''
+const dove = await pg.evaluate(async (voluta) => {
   const s = document.querySelector('#dimostrazione') || document.querySelector('.dimostrazione')
   if (!s) return null
+  if (voluta) {
+    const H = document.documentElement.scrollHeight - innerHeight
+    for (let f = 0; f <= 1; f += 0.005) {
+      const y = Math.round(H * f)
+      scrollTo(0, y)
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const pal = s.querySelector('.palco[data-battuta]')
+      if (pal && pal.dataset.battuta === voluta) {
+        const b = pal.getBoundingClientRect()
+        if (b.top > -1 && b.bottom > innerHeight - 1) return y
+      }
+    }
+    return null
+  }
   const r = s.getBoundingClientRect()
   return Math.round(r.top + scrollY + r.height - innerHeight)
-})
+}, BATTUTA)
 if (dove === null) {
-  console.error('  ROTTO  la sezione #dimostrazione non esiste piu: lo esportatore non sa dove fermarsi.')
+  console.error(BATTUTA
+    ? `  ROTTO  non trovo nessuna posizione con la battuta "${BATTUTA}" in quadro.`
+    : '  ROTTO  la sezione #dimostrazione non esiste piu: lo esportatore non sa dove fermarsi.')
   process.exit(1)
 }
 await pg.evaluate((y) => scrollTo(0, y), dove)
