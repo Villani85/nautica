@@ -54,10 +54,44 @@ MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/glb-interni.py" -- "$U" \
   | grep -E "^SPORGENZA|^ +su |^MEZZERIA|^FUORI|^NODI|^TRIANGOLI|^INGOMBRO|^POZZI|^SCALE|^ORDINATE|^CORREDO|^APERTURE|^GLB"
 
 echo
-echo "── 3/4  meshopt, con la guardia sul contratto"
+echo "── 3/5  l'occlusione: atlante, cottura, e la mappa dentro il GLB"
+#
+# ─── PERCHE' QUESTO PASSO E' NATO, e cosa non e'
+#
+# Una revisione esterna ha chiamato gli interni «una struttura, non un interno»,
+# e il numero che portava era `0 texture, 0 immagini`. Il buco pero' non era la
+# mancanza di texture in generale: guardando i provini, cio' che manca e'
+# **l'ombra di contatto**. Dove il pagliolato incontra l'ordinata, sotto i
+# piani, dietro le scalette non si scurisce niente, e un interno senza
+# occlusione legge come cartone ritagliato per quanto sia modellato bene.
+#
+# Non si cuoce una normale, e non e' pigrizia: qui non c'e' una ALTA da cui
+# trasferire dettaglio, la mesh spedita E' quella di dettaglio. `cottura.py`
+# boccerebbe da sola una normale piatta col cancello dell'informazione.
+#
+# ─── E COSTA, quindi si srotola solo dove rende
+#
+# Le cuciture spaccano i vertici, e su una geometria di scatole il fattore non
+# scende sotto 2,19 con nessuna proiezione. `cuoci-interni.py` misura per ogni
+# mesh la quota d'AREA contro la quota di CUCITURE e srotola solo sopra 0,5:
+# le ordinate costavano il 57,3% delle cuciture per il 9,5% dell'area e restano
+# piatte. Misurato: 308,3 KB brotli srotolando tutto a 1024, 189,6 cosi'.
+MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cuoci-interni.py" -- "$U" 512   | grep -E "^SCALA|^COTTURA|^RESA|^UV|^MATERIALI|^MAPPA|^OCCLUSIONE|^AGGANCIO|^GLB"
+
+echo
+echo "── 4/5  la mappa a qualita' ridotta, e PRIMA di meshopt"
+#
+# Il passo sta QUI e non dopo: su un glTF gia' passato da meshopt i dati veri di
+# una vista non stanno all'offset della vista ma dentro
+# `EXT_meshopt_compression`, quindi riscrivendo il blob si ricopia altro e il
+# file esce PIU' GRANDE. Trappola gia' pagata sull'impianto.
+node "$R/strumenti/alleggerisci-mappe.mjs" "$U/interni.glb" occlusione 70
+
+echo
+echo "── 5/5  meshopt, con la guardia sul contratto"
 node "$R/strumenti/comprimi-modello.mjs" "$U/interni.glb" "$R/public/modelli/interni.glb"
 
-# ─── 4/4  I PROVINI NON SI FANNO QUI
+# ─── I PROVINI NON SI FANNO QUI
 #
 # Ordine del committente, e c'e' un numero che lo sostiene: su Cycles la parte
 # di campionamento sulla T4 e' circa tredici volte piu' rapida della CPU di

@@ -340,14 +340,140 @@ valido (0 errori dal validatore glTF, sia sul disco sia decompresso),
 nello spazio della scena, e `riferimenti/blender/glb-interni.py` è la sorgente.
 Il pezzo che manca non è l'impalcatura: è la **materia**.
 
-## PUNTO 4 — La qualità visiva dello yacht: NON toccata
+## PUNTO 4 — Il texturing degli interni: l'occlusione c'è
 
-Stessa ragione, senza attenuanti: raccordi scafo/coperta, curvature dei
-finestrini, cornici con spessore, battagliola, scarichi, flange e bulloni nei
-primi piani, gelcoat con clearcoat, vetro con volume, teak con fughe fisiche.
-È lavoro di modellazione e di materiali in Blender, e la direzione ha ragione
-anche sulla parte che non si vede: *nessun color grading finale può correggere
-due illuminazioni progettate diversamente*.
+**L'affermazione.** *«`interni.glb` ha 4 materiali, 14 primitive, 0 texture e 0
+immagini. È una struttura utile per la sezione, non ancora un interno
+fotorealistico.»*
+
+**Confermata, ma la diagnosi era incompleta**, e guardare i provini lo dice
+subito. Il modello è ben costruito — ordinate, pagliolati, paratie, scale,
+riduttore, serbatoio, il gruppo pinna. Quello che manca non è "una texture": è
+**l'ombra di contatto**. Dove il pagliolato incontra l'ordinata, sotto i piani,
+dietro le scalette, nell'angolo fra fasciame e paratia non si scurisce niente.
+Un interno senza occlusione legge come cartone ritagliato per quanto sia
+modellato bene, ed è il segno di CG più forte che quelle immagini portano.
+
+Quindi si cuoce l'occlusione, e **non** la coppia normale+ORM delle macchine:
+lì una ALTA con smussi trasferisce dettaglio su una BASSA semplificata, qui non
+c'è nessuna semplificazione — la mesh spedita *è* quella di dettaglio, 51.848
+triangoli. Una normale cotta da sé stessa uscirebbe piatta, e `cottura.py` la
+boccerebbe da sola col cancello dell'informazione.
+
+### La strada scartata, misurata prima di scartarla
+
+**Occlusione sui vertici** in `COLOR_0`: nessun atlante, nessuna texture,
+nessuna cucitura. 25.108 vertici × 4 byte = 98 KB grezzi. Allettante.
+
+Non funziona **su questa** geometria, e il perché è nei numeri:
+
+| distanza | p10 | mediana | p90 |
+|---|---|---|---|
+| 0,10 m | 0,016 | 0,445 | 0,991 |
+| 0,20 m | 0,000 | 0,402 | 0,965 |
+| 0,35 m | 0,000 | 0,366 | 0,965 |
+| 0,60 m | 0,000 | 0,342 | 0,947 |
+
+Il decimo percentile è **zero a qualunque distanza**, e la distanza quasi non
+sposta la mediana. Non è taratura: il modello è fatto di scatole che si
+compenetrano — ordinate dentro il fasciame, supporti annegati nei pagliolati —
+e i vertici di quelle compenetrazioni stanno *dentro* il solido, dove
+l'occlusione vale zero. Su un atlante sono superficie nascosta; su un vertice il
+nero viene interpolato sul triangolo visibile e macchia.
+
+### Il costo vero non è la texture: sono le cuciture
+
+| | vertici | ×  |
+|---|---|---|
+| senza UV | 25.108 | — |
+| proiezione a cubo | 54.894 | 2,19 |
+| unwrap angle-based | 59.185 | 2,36 |
+| smart project 66° | 62.103 | 2,47 |
+
+Il fattore non scende sotto 2,19 con nessun metodo: srotolare spacca ogni
+vertice su un bordo d'isola, e su una geometria di scatole ogni spigolo lo è.
+Da qui la discesa, tutta misurata:
+
+| configurazione | brotli |
+|---|---|
+| senza occlusione | 136,3 KB |
+| atlante 1024, smart, webp q70 | 308,3 KB |
+| atlante 512, smart, webp q70 | 272,3 KB |
+| atlante 512, **srotolando solo dove rende** | **189,6 KB** |
+
+L'ultimo scalino viene da una regola misurata, non da una lista di nomi: si
+srotola una mesh solo se la sua quota d'**area** vale almeno metà della sua
+quota di **cuciture**. Il conto che la giustifica:
+
+```
+int_ordinate               21191 cuciture aggiunte    9,5% area   57,3% costo  → piatta
+int_supporti                2598                      0,6%         7,0%        → piatta
+int_pagliolato_allestimento  570                     31,3%         1,5%        → srotolata
+int_pagliolato_sentina       177                     13,2%         0,5%        → srotolata
+```
+
+Le ordinate da sole costavano il **57,3% di tutte le cuciture per il 9,5% della
+superficie**. Restano piatte, e ricevono una copia del materiale *senza* il nodo
+dell'occlusione — altrimenti una mesh senza UV campionerebbe tutta la
+superficie sul texel (0,0), cioè una tinta presa a caso.
+
+Risultato: 89% dell'area srotolata pagando il 25% delle cuciture. Occlusione
+misurata: mediana 0,953, media 0,825, il 25,9% dei texel sotto 0,75.
+
+### E il tetto è stato alzato dicendolo col numero
+
+`collaudo-glb` dichiarava 160 KB brotli, con la motivazione scritta: *«non
+possono costare più delle due macchine messe insieme, che hanno un tetto di 250
+KB; 160 è la misura di oggi più il margine per il corredo che ancora manca»*.
+Il corredo è arrivato ed è questo. Il tetto passa a **200** — venti KB di
+margine sul valore di oggi, come li aveva il precedente — e resta sotto i
+**223,3 KB** che le due macchine pesano davvero, quindi il principio scritto
+regge invariato.
+
+### Tre trappole pagate, scritte perché non si ripaghino
+
+1. **`bpy.ops.uv.pack_islands` in `blender -b` non fa niente e ritorna
+   riuscito.** L'impacchettamento vive nell'editor UV, e in background quello
+   non c'è. Le UV restano fuori dal quadrato unitario (misurato: `u 0,023..8,317`
+   senza sincronia, `0,006..5,312` con), ogni cottura scrive fuori
+   dall'immagine, e il PNG esce **nero**. Tre corse per accorgersene. Adesso
+   l'atlante se lo costruisce lo script — una cella per mesh, area
+   proporzionale alla superficie e proporzione uguale a quella dell'isola — ed
+   è deterministico. Con celle quadrate la copertura era 29,9%; con la
+   proporzione giusta, 52,9%.
+2. **`bpy.ops.wm.read_factory_settings()` disregistra l'addon BlenderMCP.**
+   Chiamato via MCP, uccide la connessione che lo ha invocato. Da lì in poi si
+   lavora in `blender -b`, che è comunque la strada del repo.
+3. **`alleggerisci-mappe.mjs` riscrive i byte in webp e lascia il `mimeType`.**
+   Il validatore Khronos ha bocciato `interni.glb` con `IMAGE_MIME_TYPE_INVALID`
+   e `IMAGE_NON_ENABLED_MIME_TYPE`: il file dichiarava `image/png` e conteneva
+   webp, e webp in glTF vuole `EXT_texture_webp`. Sulle macchine non si vede
+   perché `glb-macchine.py` esporta già in webp e lo strumento sostituisce webp
+   con webp. **Il difetto è nello strumento condiviso e resta lì**: l'ho aggirato
+   allineando l'esportazione degli interni (`export_image_format='WEBP'`)
+   invece di toccare una catena che oggi funziona, ma chiunque userà quello
+   strumento su un GLB con immagini PNG ripagherà lo stesso errore.
+4. **Cycles non mostra l'occlusione.** `occlusionTexture` è un concetto da
+   motore in tempo reale; Cycles calcola la GI vera e la ignora. I provini di
+   `render-interni.py` escono identici a prima: la verifica va fatta nel sito,
+   dove three.js la applica come `aoMap` sulla diffusa indiretta — e la scena ha
+   sia una `HemisphereLight` sia un `environment` su cui agire.
+
+### Quello che resta aperto
+
+L'occlusione è cotta, agganciata e spedita dentro il budget. **Non ho ancora
+una prova visiva a schermo che migliori le inquadrature del sito**: negli
+scorrimenti che ho catturato (0,80–0,86) gli interni sono piccoli e in ombra
+dietro lo scafo, e la differenza non si legge. È la prossima cosa da guardare,
+e va guardata dove gli interni riempiono il quadro — non dove li ho cercati io
+stanotte.
+
+Restano intatti gli altri capi del punto 4: raccordi scafo/coperta, curvature
+dei finestrini, cornici con spessore, battagliola, scarichi, flange e bulloni
+nei primi piani, gelcoat con clearcoat, vetro con volume, teak con fughe
+fisiche. È modellazione e materiali in Blender, e la direzione ha ragione anche
+sulla parte che non si vede: *nessun color grading finale può correggere due
+illuminazioni progettate diversamente*.
 
 ## PUNTO 6 — Le cinque persone: non le ho
 

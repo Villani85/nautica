@@ -1079,11 +1079,40 @@ const CAVA_INTERNI = [3.0, 7.0]       // m: l'altezza della cava di un quaranta 
  *
  * Gli interni arrivano DOPO come le macchine -- non stanno nel percorso critico
  * della prima schermata -- ma non possono costare piu' delle due macchine messe
- * insieme, che hanno un tetto di 250 KB. 160 e' la misura di oggi piu' il
- * margine per il corredo che ancora manca. Se si sfonda si dice col numero,
- * non si alza il tetto di nascosto.
+ * insieme, che hanno un tetto di 250 KB. Se si sfonda si dice col numero, non
+ * si alza il tetto di nascosto.
+ *
+ * ─── ED E' STATO ALZATO DA 160 A 200, col numero
+ *
+ * 160 era «la misura di oggi (136,3) piu' il margine per il corredo che ancora
+ * manca». Il corredo e' arrivato, ed e' l'OCCLUSIONE: `cuoci-interni.py` cuoce
+ * l'ambient occlusion su un atlante e la spedisce come `occlusionTexture`.
+ * Senza, l'interno non ha una sola ombra di contatto -- dove il pagliolato
+ * incontra l'ordinata, sotto i piani, dietro le scalette non si scurisce
+ * niente, e per quanto sia modellato bene legge come cartone ritagliato. E' il
+ * difetto che una revisione esterna ha chiamato «una struttura, non un
+ * interno».
+ *
+ * Quanto costa, misurato, e come si e' sceso:
+ *
+ *     senza occlusione                                    136,3 KB
+ *     atlante 1024, smart project, webp q70               308,3 KB
+ *     atlante  512, smart project, webp q70               272,3 KB
+ *     atlante  512, srotolando solo dove rende            189,6 KB   <- oggi
+ *
+ * Il prezzo NON e' la texture -- la webp pesa 16,6 KB -- sono le cuciture:
+ * srotolare spacca ogni vertice su un bordo d'isola, e su una geometria di
+ * scatole il fattore non scende sotto 2,19 con nessun metodo di proiezione.
+ * L'ultimo scalino viene da una regola misurata in `cuoci-interni.py`: si
+ * srotola una mesh solo se la sua quota d'AREA vale almeno meta' della sua
+ * quota di CUCITURE. Le ordinate da sole costavano il 57,3% delle cuciture per
+ * il 9,5% della superficie, e restano piatte.
+ *
+ * 200 e non 190: venti KB di margine sul valore di oggi, come li aveva il
+ * tetto precedente. E resta sotto i 223,3 KB che le due macchine pesano
+ * davvero, quindi il principio scritto qui sopra regge invariato.
  */
-const TETTO_INTERNI_BR = 160 * 1024
+const TETTO_INTERNI_BR = 200 * 1024
 
 ;(function collaudaInterni () {
   let b
@@ -1119,6 +1148,47 @@ const TETTO_INTERNI_BR = 160 * 1024
   if (vuoti.length) {
     guasti.push(`${eti}: nodi senza geometria sotto: ${vuoti.join(', ')} — il nome e' ` +
                 'sopravvissuto alla compressione, il pezzo no')
+  }
+
+  /**
+   * ─── L'OCCLUSIONE DEVE ESSERCI, e deve stare dove le UV la cercano
+   *
+   * Il difetto che questo pezzo prende non e' un errore di sintassi: e' una
+   * SPARIZIONE. `cuoci-interni.py` aggancia la mappa dentro un gruppo di nodi
+   * che l'esportatore glTF cerca per NOME esatto («glTF Material Output»); se
+   * quel nome cambia in una versione di Blender, l'occlusione se ne va zitta e
+   * il modello resta valido, piu' leggero e piatto. Nessun altro cancello se ne
+   * accorgerebbe -- il peso scenderebbe, che sembra un miglioramento.
+   *
+   * E il secondo caso, piu' insidioso del primo: un materiale con
+   * `occlusionTexture` usato da una mesh SENZA UV campiona tutta la superficie
+   * sul texel (0,0), cioe' una tinta piatta presa a caso. Succede appena
+   * qualcuno tocca la regola della resa in `cuoci-interni.py` senza rifare le
+   * copie «_piatto» dei materiali.
+   */
+  const conOcc = (j.materials ?? []).filter(m => m.occlusionTexture)
+  if (!conOcc.length) {
+    guasti.push(`${eti}: nessun materiale porta occlusionTexture. La cottura di ` +
+                'cuoci-interni.py non e arrivata nel file: o non e stata fatta, o ' +
+                'l esportatore non ha trovato il gruppo «glTF Material Output».')
+  } else {
+    note.push(`INTERNI   occlusione su ${conOcc.length} materiali su ${(j.materials ?? []).length}`)
+    const senzaUv = []
+    for (const me of (j.meshes ?? [])) {
+      for (const pr of (me.primitives ?? [])) {
+        const mat = (j.materials ?? [])[pr.material]
+        if (!mat || !mat.occlusionTexture) continue
+        const uv = `TEXCOORD_${mat.occlusionTexture.texCoord ?? 0}`
+        if (!(pr.attributes ?? {})[uv]) senzaUv.push(`${me.name ?? '?'}/${uv}`)
+      }
+    }
+    if (senzaUv.length) {
+      guasti.push(`${eti}: ${senzaUv.length} primitive hanno un materiale con occlusione ` +
+                  `ma non le UV che serve: ${senzaUv.slice(0, 4).join(', ')}. ` +
+                  'Campionerebbero tutta la superficie sul texel (0,0), cioe una tinta ' +
+                  'piatta presa a caso. Le mesh lasciate piatte devono avere la copia ' +
+                  '«_piatto» del materiale, senza occlusione.')
+    }
   }
 
   const ex = j.nodes?.find(n => n.extras)?.extras ?? null
