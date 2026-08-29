@@ -182,3 +182,18 @@ export function avanza (dt, marca) {
 const ascoltatori = new Set()
 export const alCambioDiStato = (f) => { ascoltatori.add(f); return () => ascoltatori.delete(f) }
 export const statoCambiato = () => { for (const f of ascoltatori) f() }
+
+/**
+ * ─── IL TEMPO SIMULATO SI PUO' LEGGERE, e serve a un cancello solo
+ *
+ * Chi vuole sapere se un gesto ha TELETRASPORTATO la nave deve poter dividere
+ * lo spostamento per il tempo che lo ha prodotto. Finche' il tempo restava
+ * chiuso qui dentro, l'unico denominatore disponibile era il FOTOGRAMMA --
+ * cioe' la velocita' della macchina, 16 ms qui e 830 sul runner. E' la stessa
+ * malattia che ha appena tenuto rossa la CI sul campionamento, sopravvissuta
+ * nella parte di `collaudo-manopola` che cerca i salti temporali.
+ *
+ * Non e' uno stato del mondo e nessuna parte del sito lo legge: e' il
+ * denominatore onesto di una misura.
+ */
+export const tempoSimulato = () => tempo
