@@ -2,6 +2,7 @@ import { creaScena } from './scena/index.js'
 import { sim, statoCambiato, FERMO_A } from './stato.js'
 import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
+import { segnalaStato } from './ui/nudge.js'
 import { creaRegia } from './regia.js'
 import { attritoDiApertura } from './ui/attrito.js'
 import { STAZIONI, QUOTE } from './ui/atto-due.js'
@@ -60,7 +61,10 @@ export function avviaDimostrazione () {
   })
 
   let inCorso = false
-  const passo = (marca) => { scena.disegna(sim, marca); aggiornaLetture(sim.S) }
+  /* la stessa mandata alimenta i nudge di STATO: il suggerimento del
+     giroscopio deve arrivare quando la catena causale lo merita, non dopo
+     cinque secondi in cui nessuno tocca niente */
+  const passo = (marca) => { scena.disegna(sim, marca); aggiornaLetture(sim.S); segnalaStato(sim.S) }
 
   function avviaCiclo () {
     // il ciclo parte SEMPRE: con movimento ridotto la scena e' piu' piccola,

@@ -124,6 +124,27 @@ export const IPOTESI_PASSO_CELLA_PX = 24
 export const IPOTESI_GESTO_VERO_PX = 8
 
 /**
+ * L'ANDATURA SOTTO LA QUALE LE PINNE NON BASTANO PIU'.
+ *
+ * Serve al nudge del giroscopio: la quinta battuta dell'atto due -- «Try the
+ * gyro» -- deve arrivare quando il rollio E' TORNATO, non dopo cinque secondi
+ * in cui nessuno tocca niente. E il rollio torna perche' la pinna ha perso
+ * acqua, cioe' a una certa andatura.
+ *
+ * Perche' e' un'IPOTESI e non una soglia. Il numero e' PLAUSIBILE e viene da
+ * una misura vera fatta oggi -- a 6,1 kn la pinna e' in stallo l'87,5% del
+ * tempo, contro lo 0,0% a 12,0 -- ma quella misura dice quando la pinna
+ * satura, NON quando una persona che guarda si accorge che la nave rolla di
+ * nuovo. Sono due cose diverse, e la seconda non l'ho misurata su nessuno.
+ * Sette nodi cade fra i 10,0 (stallo 71%) e i 6,1 (stallo 87,5%) della
+ * tabella; e' una scelta per poter costruire, non un risultato.
+ *
+ * Si chiude guardando delle persone: a che andatura dicono «sta ricominciando
+ * a rollare». Allora cambia nome.
+ */
+export const IPOTESI_ANDATURA_GYRO_KN = 7.0
+
+/**
  * L'elenco delle ipotesi vive, cosi' chi arriva le trova tutte in un posto
  * invece di scoprirle una alla volta. `strumenti/peso.mjs` non le tocca e
  * nessun cancello le legge: e' un promemoria per le persone, non un contratto
@@ -134,5 +155,6 @@ export const IPOTESI_APERTE = [
   { nome: 'IPOTESI_RAGGIO_SISTEMA', valore: IPOTESI_RAGGIO_SISTEMA, si_chiude_con: 'cinque persone, ?studio=1' },
   { nome: 'IPOTESI_BLOCCO_ASSE_PX', valore: IPOTESI_BLOCCO_ASSE_PX, si_chiude_con: 'cinque persone col dito, ?studio=1: tentativi a vuoto e asse bloccato sul lato sbagliato' },
   { nome: 'IPOTESI_PASSO_CELLA_PX', valore: IPOTESI_PASSO_CELLA_PX, si_chiude_con: 'cinque persone col dito, ?studio=1: scatti chiesti contro scatti ottenuti' },
-  { nome: 'IPOTESI_GESTO_VERO_PX', valore: IPOTESI_GESTO_VERO_PX, si_chiude_con: 'cinque persone col dito, ?studio=1: contatti che non producono niente' }
+  { nome: 'IPOTESI_GESTO_VERO_PX', valore: IPOTESI_GESTO_VERO_PX, si_chiude_con: 'cinque persone col dito, ?studio=1: contatti che non producono niente' },
+  { nome: 'IPOTESI_ANDATURA_GYRO_KN', valore: IPOTESI_ANDATURA_GYRO_KN, si_chiude_con: 'cinque persone: a che andatura dicono che la nave ricomincia a rollare' }
 ]

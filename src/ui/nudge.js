@@ -65,6 +65,8 @@ const DURATA = 7000
  * la nave reagire -- mentre la dipendenza dalla propulsione viene dopo, ed e'
  * anche il passaggio piu' controintuitivo.
  */
+import { IPOTESI_ANDATURA_GYRO_KN } from './soglie.js'
+
 const NUDGE = [
   {
     id: 'stab',
@@ -88,11 +90,39 @@ const NUDGE = [
   {
     id: 'propulsione',
     bersaglio: '#propulsione',
-    testo: 'See what happens without propulsion',
+    testo: 'Switch propulsion off',
     eventi: ['click'],
     /* al MECCANISMO: il gesto non anticipa la spiegazione sulla prima vista.
        Qui albero, velocita' e pinna possono diventare una sola conseguenza. */
     battute: ['taglio', 'meccanismo']
+  },
+  {
+    /**
+     * IL GIROSCOPIO — l'unico nudge che NON aspetta che ci si annoi.
+     *
+     * Una revisione esterna ha trovato il buco e l'ha detto meglio di come
+     * l'avevo pensato: in un sito guidato dallo scorrimento un suggerimento
+     * che dipende da 5,2 s di inattivita' e' strutturalmente troppo timido —
+     * ogni rotella azzera il timer, e l'atto due esisteva nel codice senza
+     * essere vissuto. E fra i cinque testi non ce n'era **nessuno** che
+     * nominasse il giroscopio, che e' la scoperta conclusiva.
+     *
+     * Questo arriva quando la CATENA CAUSALE lo merita: propulsione spenta,
+     * pinne ancora accese, e l'andatura scesa sotto l'ipotesi. Cioe' nel
+     * momento in cui la nave ha ricominciato a rollare **con gli
+     * stabilizzatori inseriti** — la contraddizione che il giroscopio esiste
+     * per sciogliere.
+     *
+     * `quando` lo esenta dalla pausa d'inattivita': non serve a chi si e'
+     * fermato, serve a chi ha appena provocato una conseguenza.
+     */
+    id: 'giroscopio',
+    bersaglio: '#giroscopio',
+    testo: 'Try the gyro',
+    eventi: ['click'],
+    battute: ['taglio', 'meccanismo'],
+    quando: (S) => !S.propulsione && S.stab && !S.giroscopio &&
+                   S.velocita < IPOTESI_ANDATURA_GYRO_KN
   },
   {
     id: 'menu',
@@ -130,6 +160,21 @@ const visibile = (el) => {
      bottoni invisibili */
   return Number(getComputedStyle(el).opacity) > 0.15
 }
+
+/**
+ * L'ULTIMO STATO DELLA SIMULAZIONE, spinto da chi ce l'ha.
+ *
+ * Sta a livello di modulo e non dentro `creaNudge` perche' chi lo scrive
+ * (`demo.js`, che carica il motore) e chi lo legge (il giro dei nudge, gia'
+ * partito con la pagina) non si conoscono e non devono conoscersi: `nudge.js`
+ * e' nel percorso critico e non puo' importare ne' three ne' la simulazione.
+ *
+ * Finche' nessuno lo spinge resta `null`, e un nudge che dipende da `quando`
+ * non compare. E' il comportamento giusto: senza scena non c'e' conseguenza
+ * causale da nominare.
+ */
+let ultimoStato = null
+export const segnalaStato = (S) => { ultimoStato = S }
 
 export function creaNudge () {
   const bolla = document.createElement('div')
@@ -196,7 +241,16 @@ export function creaNudge () {
     segnaScena()
   }
 
+  /**
+   * LO STATO CAUSALE, spinto dalla scena.
+   *
+   * `nudge.js` sta nel percorso critico e non deve importare ne' three ne' la
+   * simulazione: riceve l'ultimo stato da `demo.js`, dallo stesso punto in cui
+   * la HUD riceve il suo. Finche' nessuno lo spinge resta `null`, e i nudge
+   * che dipendono da `quando` semplicemente non compaiono.
+   */
   const suoTurno = (n) => {
+    if (n.quando && !(ultimoStato && n.quando(ultimoStato))) return false
     if (n.dopo && !fatti.has(n.dopo)) return false
     if (n.scene && sceneViste.size < n.scene) return false
     if (n.battute && !n.battute.includes(battutaOra())) return false
@@ -222,9 +276,14 @@ export function creaNudge () {
   }
 
   function giro () {
-    if (!acceso && performance.now() - ultimoGesto > PAUSA) {
+    if (!acceso) {
+      const fermo = performance.now() - ultimoGesto > PAUSA
       for (const n of NUDGE) {
         if (fatti.has(n.id) || giaMostrati.has(n.id)) continue
+        /* un nudge di STATO non aspetta la noia: la conseguenza e' appena
+           accaduta e il momento per nominarla e' adesso. Tutti gli altri
+           continuano a rispettare la pausa. */
+        if (!n.quando && !fermo) continue
         if (!suoTurno(n)) continue
         const el = primoVisibile(n.bersaglio)
         if (!el) continue
