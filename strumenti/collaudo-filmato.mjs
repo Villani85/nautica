@@ -199,7 +199,25 @@ if (!file) {
    * una clip di transizione l'unica cosa che deve stare ferma e' il punto in
    * cui consegna.
    */
-  const CAMERA_CHE_SI_MUOVE = ['discesa.mp4']
+  /**
+   * ─── E LA TRAVERSATA STA NELLA STESSA LISTA, per la stessa ragione
+   *
+   * Aggiunta dopo che questo cancello l'ha bocciata in CI: «i bordi si perdono
+   * in 117 fotogrammi su 240». Il referto e' CORRETTO e il verdetto no --
+   * `traversata.mp4` fa meccanismo, scafo, sala macchine, scala, corridoio,
+   * salone: cambia inquadratura undici volte perche' e' un viaggio.
+   *
+   * Chiederle di tenere i bordi fermi e' chiederle di non essere una
+   * traversata, ed e' lo stesso errore gia' fatto con la discesa. Il cancello
+   * che le tocca e' `strumenti/consegna.mjs`: per una clip di transizione
+   * l'unica cosa che deve stare ferma e' il punto in cui consegna, e quello e'
+   * misurato -- linea d'acqua a 10 px, pinna corta del 10%, toni entro 5,5
+   * livelli.
+   *
+   * La lista si allunga solo cosi': un filmato ci entra quando esiste un ALTRO
+   * cancello che lo misura. Senza, sarebbe un condono.
+   */
+  const CAMERA_CHE_SI_MUOVE = ['discesa.mp4', 'traversata.mp4']
   try {
     elenco = readdirSync(dir)
       .filter(f => f.endsWith('.mp4'))
