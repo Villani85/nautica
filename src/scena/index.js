@@ -42,19 +42,42 @@ const QUOTA_MECCANISMO = 0
  *     raggio 2,6  ->  93,8 px      raggio 1,7  ->  profilo rotto
  *     raggio 2,1  -> 144,5 px      raggio 1,4  ->  profilo rotto
  *
- * A 2,1 il profilo per colonne e' 152 153 141 132 contro 181 165 152 136 del
- * filmato: stessa forma, 9% piu' piccola. A 1,7 e 1,4 la media si avvicina
- * ancora ma il profilo si sfascia (239 82 77 77): le colonne pescano lo scafo
- * invece della pinna, e la media diventa un numero che risponde a un'altra
- * domanda. Il valore piu' vicino non e' quello giusto: quello giusto e'
- * l'ultimo in cui il metro misura ancora la pinna.
+ * A 1,7 e 1,4 la media si avvicina ancora ma il profilo si sfascia
+ * (239 82 77 77): le colonne pescano lo scafo invece della pinna, e la media
+ * diventa un numero che risponde a un'altra domanda. Il valore piu' vicino non
+ * e' quello giusto: quello giusto e' l'ultimo in cui il metro misura ancora la
+ * pinna.
+ *
+ * ─── POI L'HO RIFATTO FINE, perche' una revisione ha visto il buco
+ *
+ * Mi ero fermato a 2,1 con una griglia da quattro punti, e 2,1 resta **9%
+ * corto** (144,5 contro 158,5). Fra 2,1 e 1,7 non avevo misurato niente, e
+ * «2,1 e' l'ultimo onesto» era dedotto da una griglia grossa, non visto. La
+ * revisione l'ha detto, e aveva ragione. Rifatto a passo 0,1 su tre istanti:
+ *
+ *     raggio   9 s      18 s     24 s     profilo
+ *       2,1   146,5    125,0    134,0    pulito
+ *       2,0   156,5    136,8    146,8    pulito
+ *       1,9   169,8    150,0    159,8    pulito
+ *       1,8    70,3    162,0     93,5    ROTTO in 2 istanti su 3
+ *
+ * **2,0**: a 156,5 contro 158,5 lo scarto e' 1,3%, il profilo per colonne e'
+ * 164 165 152 145 contro 181 165 152 136 del filmato -- stessa forma -- e
+ * restano due passi interi di margine prima che il metro si rompa.
+ *
+ * 1,9 ha la media migliore sui tre istanti (+1,4 px contro -11,9), ma sta
+ * ATTACCATO al valore in cui il profilo si sfascia, e la posa alla consegna non
+ * si comanda: nel sito vivo il tempo scorre. Fra un ottimo con un passo di
+ * margine e un ottimo con zero, si prende il primo -- e la scelta definitiva
+ * si fa quando il filmato sara' montato in pagina, cioe' quando la consegna
+ * esistera' davvero e non solo in uno strumento.
  *
  * Avvicinarsi non tocca l'invariante: il beccheggio resta zero e la linea
  * d'acqua resta sulla mezzeria. E' l'unica leva di scala che non mente --
  * inclinare la pinna a mano sarebbe una posa che la fisica non produce, e
  * alzare la camera, provato e misurato, guarda un altro pezzo di nave.
  */
-const RAGGIO_MECCANISMO = 2.1
+const RAGGIO_MECCANISMO = 2.0
 // La decisione «una scena o due» sta in un posto solo, `regia.js`: due
 // definizioni della stessa condizione sono due condizioni che un giorno
 // divergono, e qui divergerebbero fra la corsa della camera e le battute.

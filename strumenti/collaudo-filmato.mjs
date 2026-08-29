@@ -103,13 +103,68 @@ import { join } from 'node:path'
  * quello che il sito pubblica davvero. Con un argomento collauda quel file, e
  * serve a provare una clip PRIMA di montarla.
  */
-import { readdirSync } from 'node:fs'
+import { readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const RADICE = fileURLToPath(new URL('..', import.meta.url))
+/**
+ * ─── PRIMA DI TUTTO: OGNI FILMATO NOMINATO NEL CODICE DEVE ESISTERE
+ *
+ * Segnalato da una revisione esterna, che ha guardato la RETE invece del
+ * codice. `composito.js` chiedeva `filmati/salone-teso.mp4` e `salone.js`
+ * chiedeva `filmati/mare-fuoribordo.mp4`: tolti dal repo mesi prima, con i
+ * riferimenti rimasti indietro.
+ *
+ * E il guasto era MUTO, che e' la ragione per cui questo controllo esiste.
+ * Sotto il base `/nautica/` un file mancante non da' 404: il server torna
+ * **200 con dentro `index.html`**. Il `<video>` riceve HTML, `loadeddata` non
+ * scatta mai, e lo strato resta vuoto senza che niente si lamenti. I due rami
+ * colpiti erano `?doppia=1` -- il paracadute da aprire se il salone 3D non
+ * reggesse su un telefono -- e `?sagoma=1`, la sorgente delle sagome. Un
+ * paracadute che non si apre e' peggio di nessun paracadute.
+ *
+ * Il controllo e' due righe di grep e sarebbe scattato il giorno stesso in cui
+ * il file e' stato cancellato.
+ *
+ * ─── E AL CONTRARIO: un filmato spedito che nessuno nomina
+ *
+ * Non e' un errore -- `discesa.mp4` sta nel repo apposta, in attesa del
+ * montaggio -- ma e' peso che viaggia. Si stampa col suo costo, cosi' non puo'
+ * restare li' dimenticato.
+ */
+function riferimentiIncrociati (dir) {
+  const nominati = new Set()
+  const cerca = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = d + '/' + e.name
+      if (e.isDirectory()) { cerca(p); continue }
+      if (!/\.(js|mjs|html|css)$/.test(e.name)) continue
+      for (const m of readFileSync(p, 'utf8').matchAll(/filmati\/([a-z0-9-]+\.mp4)/g)) nominati.add(m[1])
+    }
+  }
+  cerca(RADICE + 'src')
+  let presenti = []
+  try { presenti = readdirSync(dir).filter((f) => f.endsWith('.mp4')) } catch { /* assente */ }
+  const mancanti = [...nominati].filter((f) => !presenti.includes(f))
+  const orfani = presenti.filter((f) => !nominati.has(f))
+  for (const f of orfani) {
+    let kb = 0
+    try { kb = statSync(dir + '/' + f).size / 1024 } catch { /* sparito */ }
+    console.log(`  spedito ma non nominato da nessuna riga: ${f} (${kb.toFixed(0)} KB)`)
+  }
+  if (mancanti.length) {
+    console.error(`  ROTTO  il codice chiede ${mancanti.length} filmato/i che non esistono: ${mancanti.join(', ')}`)
+    console.error('         Non danno 404: sotto il base il server torna 200 con index.html,')
+    console.error('         il <video> riceve HTML e `loadeddata` non scatta mai. Lo strato')
+    console.error('         resta vuoto in silenzio.')
+    process.exit(1)
+  }
+}
+
 let file = process.argv[2]
 if (!file) {
   const dir = RADICE + 'public/filmati'
+  riferimentiIncrociati(dir)
   let elenco = []
   /**
    * --- UNA CLIP CHE NON HA NIENTE DI FERMO NON SI PUO' MISURARE QUI

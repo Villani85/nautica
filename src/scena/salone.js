@@ -305,7 +305,17 @@ export function creaSalone (contenitore) {
   scena.add(mare)
 
   const filmato = document.createElement('video')
-  filmato.src = import.meta.env.BASE_URL + 'filmati/mare-fuoribordo.mp4'
+  /**
+   * ERA `mare-fuoribordo.mp4`, che nel repo non c'e' piu'. Stesso guasto muto
+   * dell'altro riferimento morto: il file mancante torna 200 con `index.html`,
+   * il `<video>` riceve HTML e `loadeddata` non scatta -- il finestrino restava
+   * bianco senza dire perche'. Questo e' il ramo `?sagoma=1`, la sorgente delle
+   * sagome: se non carica, le sagome escono sbagliate e nessuno lo sa.
+   *
+   * `salone-mare.mp4` e' la ripresa nuova del mare, ritagliata dalla stessa
+   * scena e gia' spedita.
+   */
+  filmato.src = import.meta.env.BASE_URL + 'filmati/salone-mare.mp4'
   filmato.loop = true; filmato.muted = true; filmato.playsInline = true
   /* In modalita' maschera il filmato NON si applica: serve il bianco pieno.
      Senza questa riga il gestore `loadeddata` sovrascriveva il materiale bianco

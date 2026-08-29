@@ -133,7 +133,25 @@ export function creaComposito (contenitore, base) {
    * difetti impossibili invece che rari.
    */
   const CALMA = 'filmati/salone-largo.mp4'
-  const TESA = 'filmati/salone-teso.mp4'
+  /**
+   * ─── LA POSA PUNTELLATA E' SPENTA ANCHE QUI, e prima puntava nel vuoto
+   *
+   * `salone-teso.mp4` e' stato tolto dal repo in 23a15ee, con una ragione buona
+   * -- viene da un'altra generazione, e' una ripresa NOTTURNA col finestrone
+   * nero e un'inquadratura diversa, 72 livelli su 255 di differenza media dalla
+   * clip calma. `salone3d.js` l'ha spenta di conseguenza. **Questo file no**, e
+   * il riferimento e' rimasto a puntare un file che non c'e' piu'.
+   *
+   * E non dava errore, che e' il punto. Sotto il base `/nautica/` un file
+   * mancante torna **200 con dentro `index.html`**: il `<video>` riceve HTML,
+   * `loadeddata` non scatta mai, e lo strato resta vuoto in silenzio. Trovato
+   * da una revisione esterna che ha guardato la RETE invece del codice.
+   *
+   * Questo e' il ramo `?doppia=1`, cioe' il paracadute da aprire se il salone
+   * 3D non reggesse su un telefono vero. Un paracadute che non si apre e' peggio
+   * di nessun paracadute, perche' ci si conta sopra.
+   */
+  const TESA = null
 
   const filmato = (classe, sorgente) => {
     const v = nuovo(classe, 'video')
@@ -199,10 +217,12 @@ export function creaComposito (contenitore, base) {
    *      trasformava. La posa puntellata deve TENERE, non trasformarsi: la coda
    *      e' anche la parte giusta, non solo quella pulita.
    */
-  const tesa = filmato('composito__stanza composito__stanza--tesa', TESA)
-  tesa.style.webkitMaskImage = m
-  tesa.style.maskImage = m
-  tesa.style.opacity = '0'
+  const tesa = TESA ? filmato('composito__stanza composito__stanza--tesa', TESA) : null
+  if (tesa) {
+    tesa.style.webkitMaskImage = m
+    tesa.style.maskImage = m
+    tesa.style.opacity = '0'
+  }
 
   /**
    * I due elementi puntano allo STESSO file: il browser lo scarica una volta
@@ -294,7 +314,7 @@ export function creaComposito (contenitore, base) {
      */
     const r = `rotate(${(-gradi).toFixed(2)}deg)`
     mare.style.transform = `${TRASF_MARE} ${r}`
-    tesa.style.opacity = String(q)
+    if (tesa) tesa.style.opacity = String(q)
     contenitore.dataset.posa = q.toFixed(3)
   }
 
