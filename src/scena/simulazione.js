@@ -186,8 +186,17 @@ const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi 
  *
  *     picco della pinna a 12 nodi, misurato su 300 s
  *       mare 1    3,6 gradi     in stallo 0,00%     (soglia 20)
- *       mare 3   10,9 gradi     in stallo 0,00%
+ *       mare 3   10,9 gradi     in stallo 0,00%   (finestra 300 s)
  *       mare 5   17,7 gradi     in stallo 0,00%
+ *
+ * I gradi sono di QUELLA finestra, e non sono «il» picco: l'intestazione di
+ * questo file dichiara che il picco su finestra finita NON converge -- le tre
+ * armoniche hanno periodi incommensurabili e non tornano mai in fase -- quindi
+ * il massimo cresce con la durata. Altrove nel file si leggono 16,0 e su 300 s
+ * ne escono 18,1: non sono tre numeri in disaccordo, sono tre finestre. E' la
+ * ragione per cui la riduzione pubblicata usa la RMS e non il picco. Scritto
+ * qui perche' una revisione l'ha verificato prima di segnalarlo come difetto, e
+ * la prossima non debba rifarlo.
  *
  * Al mare piu' grosso che il sito mostra la pinna sta 2,3 gradi SOTTO la soglia:
  * la nonlinearita' e' tarata per stare appena fuori portata. Quindi la riduzione
@@ -199,8 +208,30 @@ const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi 
  *
  * Lo stallo lavora sotto i 10 nodi, e fino a ieri quel regime era irraggiungibile
  * perche' la velocita' era un cursore che nessuno abbassava. Adesso e' una
- * conseguenza: spegnendo la propulsione la nave scende a 2,19 kn in quaranta
- * secondi, e li' la pinna satura davvero.
+ * conseguenza: spegnendo la propulsione la nave scende a **6,10 kn in quaranta
+ * secondi**, e molto prima di arrivarci la pinna satura.
+ *
+ * IL NUMERO ERA SBAGLIATO, e l'ha trovato una revisione. Qui c'era «2,19 kn in
+ * quaranta secondi»: falso di un fattore cinque nel tempo. A 2,19 kn la nave ci
+ * arriva in **180,5 s**, e i 2,1 kn che avevo in mente sono il regime del
+ * CONTROESEMPIO del giroscopio, dove `collaudo-catena` lascia planare la nave
+ * per centonovanta secondi. Avevo incollato la velocita' di una scena sul
+ * titolo di un'altra.
+ *
+ * E lo dicevano gia' due file di questo stesso commit: `collaudo-catena` stampa
+ * «dopo 40 s ... (6.10 kn)» e `docs/12` scrive 6,10. Tre punti dello stesso
+ * albero, due d'accordo e uno no -- ed era il commento, cioe' l'unico che
+ * nessun cancello legge.
+ *
+ * LA FRASE QUALITATIVA REGGE, e va detto: la pinna satura davvero. Solo che
+ * satura MOLTO prima, e il numero giusto lo rende piu' forte, non piu' debole:
+ *
+ *     12,0 kn   picco 18,1 gradi   in stallo  0,0%
+ *     10,0 kn   picco 25,0 gradi   in stallo 71,0%     (dopo ~10 s di planata)
+ *      6,1 kn   picco 25,0 gradi   in stallo 87,5%     (il punto di 40 s)
+ *
+ * Al primo calo di velocita' la pinna e' gia' a fondo corsa i tre quarti del
+ * tempo. Non serve aspettare tre minuti: succede subito.
  *
  *     riduzione a mare 5, lungo la velocita'
  *       12 kn 90,8%   10 kn 38,9%   8 kn 17,2%   6 kn 8,2%   2 kn 0,7%

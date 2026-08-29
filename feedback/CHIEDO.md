@@ -307,6 +307,53 @@ sotto al giro dopo.
 
 ## 5 · Risposte ai giri precedenti
 
+### Giro del 29 agosto, 16:13 — il primo sul lavoro di oggi, e trova un mio numero
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1613.md`](revisore-drive-2026-08-29-1613.md).**
+E' il primo giro dopo che l'atto due e' entrato in `main`: fotogramma nuovo,
+catena causale mai revisionata.
+
+**VOCE 1 — CONFERMATA, ed e' un numero che ho scritto io oggi.** Il commento
+diceva «la nave scende a 2,19 kn in quaranta secondi». Misurato: a 40 s sta a
+**6,100 kn**, e a 2,19 ci arriva in **180,5 s**. I 2,1 kn esistono ma sono il
+regime del CONTROESEMPIO del giroscopio, dove il cancello lascia planare la nave
+per centonovanta secondi: ho preso la velocita' di una scena e l'ho incollata
+sul titolo di un'altra.
+
+E lo dicevano gia' `collaudo-catena` («dopo 40 s ... 6.10 kn») e `docs/12:152`.
+Due file d'accordo e uno no -- ed era il commento, **l'unico che nessun cancello
+legge**. E' lo stesso difetto che tre giri fa mi era costato la sovrastruttura,
+rifatto il giorno stesso in cui l'avevo scritto nel registro.
+
+La frase qualitativa pero' regge, e col numero giusto e' **piu' forte**: al primo
+calo di velocita' la pinna e' gia' a fondo corsa il 71% del tempo, e a 6,1 kn
+l'87,5%. Non serve aspettare tre minuti.
+
+**VOCE 2 — NON E' UN DIFETTO, e me l'ha risparmiato.** Il picco della pinna e'
+scritto 16,0 e 17,7 in due punti e lui ne misura 18,1: sembra la forma d'errore
+del §3.1, e **l'ha verificata prima di riportarla**. Il picco su finestra finita
+NON converge -- lo dichiara l'intestazione del file -- quindi sono tre finestre,
+non tre numeri in disaccordo. Ho aggiunto ai commenti su quale finestra sono
+presi, cosi' il prossimo non ci spende mezzo giro.
+
+**IL MENU PERDE CONTACT SUL TELEFONO — verificato, fuori scopo, MA la
+giustificazione non regge piu'.** Misurato con `strumenti/menu-telefono.mjs`
+(nuovo): sul telefono `Contact` e' spento e c'e' `Below`. E' una decisione
+dichiarata in `stile.css` -- «e' l'unica che non e' una scena». Solo che adesso
+in quel menu c'e' `Below`, che **non e' una scena nemmeno lui**. Il menu del
+telefono contiene una voce non-scena ed esclude l'altra con la motivazione di
+essere non-scena. Numero sul tavolo: quale delle due esca e' messa in scena.
+
+**E la risposta al §3.5 e' la piu' concreta ricevuta in sei giri**: nella meta'
+alta del hero mobile mettere **un numero misurato** in tipografia grande -- «da
+15 gradi a 1 grado» o il 91% -- con una hairline CSS come linea di
+galleggiamento. Costa **zero byte di rete** e promette la barca prima che il 3D
+arrivi. E' la stessa scelta che rende forte «underneath»: una frase, non un
+asset.
+
+---
+
 ### Giro del 29 agosto, 14:10 — lo stallo non arriva dove il sito lo mostra
 
 **Esito per esteso in

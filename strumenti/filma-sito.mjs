@@ -34,8 +34,21 @@ const A = Number(process.env.ALTEZZA || 900)
 const SECONDI = Number(process.env.SECONDI || 80)
 const FUORI = process.env.FUORI || 'uscite/filmato'
 
+/**
+ * `URL_SITO` filma un indirizzo gia' online invece della build locale.
+ *
+ * Serve per la ragione detta piu' volte oggi: un video della build locale
+ * mostra qualcosa che nessuno puo' aprire. Quando il sito e' pubblicato, il
+ * provino va girato SU QUELLO -- e' l'unica versione che un giurato vedrebbe.
+ *
+ *     URL_SITO=https://villani85.github.io/nautica/ node strumenti/filma-sito.mjs
+ */
+const URL_SITO = process.env.URL_SITO || null
+
 mkdirSync(FUORI, { recursive: true })
-const preview = spawn('npx', ['vite', 'preview', '--port', PORTA, '--strictPort'], { shell: true, stdio: 'ignore' })
+const preview = URL_SITO
+  ? null
+  : spawn('npx', ['vite', 'preview', '--port', PORTA, '--strictPort'], { shell: true, stdio: 'ignore' })
 
 /**
  * Il browser e' quello COMPLETO con la GPU, non `chrome-headless-shell`: quello
@@ -52,7 +65,7 @@ const contesto = await browser.newContext({
   recordVideo: { dir: FUORI, size: { width: L, height: A } }
 })
 const pg = await contesto.newPage()
-await pg.goto(`http://localhost:${PORTA}/nautica/`, { waitUntil: 'load' })
+await pg.goto(URL_SITO || `http://localhost:${PORTA}/nautica/`, { waitUntil: 'load' })
 
 /* si aspetta che la scena esista davvero prima di partire: filmare il
    caricamento vorrebbe dire consegnare un provino in cui il sito e' vuoto */
@@ -80,7 +93,7 @@ await pg.waitForTimeout(6000)
 
 await contesto.close()
 await browser.close()
-preview.kill()
+preview?.kill()
 
 const nato = readdirSync(FUORI).filter(f => f.endsWith('.webm')).sort().pop()
 if (nato) {
