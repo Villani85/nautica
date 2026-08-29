@@ -46,7 +46,7 @@
  */
 import { spawn } from 'node:child_process'
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apriBrowser } from './browser.mjs'
@@ -77,9 +77,27 @@ await pg.evaluate((q) => {
 }, BATTUTA)
 await pg.waitForTimeout(2500)
 
+/**
+ * ─── IL FILE TEMPORANEO HA UN NOME UNICO, e non e' pedanteria
+ *
+ * Era `orizzonte.png` / `cielo.png` fissi dentro la cartella temporanea di
+ * sistema. Basta che due corse si sovrappongano -- e stanotte ne giravano
+ * quattro, fra collaudi e misure -- perche' una scriva mentre l'altra legge:
+ * ffmpeg riceve mezzo PNG e muore con «Invalid PNG signature», il cancello
+ * esce 1, e sembra un difetto del sito.
+ *
+ * E' successo davvero: la suite e' uscita rossa su un file corrotto, non su
+ * una regressione, e rieseguita subito dopo era verde. Un cancello che fallisce
+ * per una ragione sua insegna a rieseguire finche' passa, che e' il modo piu'
+ * rapido di rendere inutile una suite.
+ *
+ * Nome col pid e col millisecondo -- e si cancella dopo. Il resto degli
+ * strumenti qui lo faceva gia': queste due erano rimaste indietro.
+ */
 const T = tmpdir()
+const UNICO = `orizzonte-${process.pid}-${Date.now()}.png`
 const grigio = (png, filtro) => {
-  const f = join(T, 'orizzonte.png')
+  const f = join(T, UNICO)
   writeFileSync(f, png)
   return execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', filtro,
     '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1e9 })
@@ -181,6 +199,7 @@ const tutta = statistica(0, 1400)
 
 await browser.close()
 preview.kill()
+try { unlinkSync(join(T, UNICO)) } catch { /* gia' sparito */ }
 
 console.log('\nIL MARE E LA GIUNZIONE\n')
 console.log(`  sopra la mezzeria  rgb ${sopra.join(',')}   (luce ${chiaroSopra.toFixed(0)})`)
