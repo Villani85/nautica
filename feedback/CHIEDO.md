@@ -307,6 +307,45 @@ sotto al giro dopo.
 
 ## 5 · Risposte ai giri precedenti
 
+### Giro del 29 agosto, 14:10 — lo stallo non arriva dove il sito lo mostra
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1410.md`](revisore-drive-2026-08-29-1410.md).**
+Quinto giro sullo stesso fotogramma, terzo di fila che si rifiuta di rifare il
+giudizio visivo perche' il pixel non e' cambiato. Cinque giri, cinque bersagli
+diversi, zero ripetizioni: il §2 e' entrato.
+
+**VOCE 1 — CONFERMATA, e riprodotta qui.** Ha attaccato non il valore della
+riduzione ma **cio' che lo produce**. Il commento su `portanza` dice che lo
+stallo «fa variare il risultato con le condizioni»; a 12 nodi lo stallo **non
+ingaggia mai** -- picco pinna 3,6 / 10,9 / 17,7 gradi contro una soglia di 20,
+in stallo lo 0,00% del tempo. La nonlinearita' e' tarata per stare appena fuori
+portata, e la riduzione mostrata e' quella di un modello lineare.
+
+E' la forma d'errore che il §3.1 chiede di cercare: **un parametro scritto che
+non arriva dove serve.** Commento corretto coi numeri.
+
+**VOCE 2 — CONFERMATA sulla tabella.** A 12 nodi la resa non dipende dal mare:
+spread **0,025 punti** fra mare 1 e mare 5 (0,006 a 20 nodi). Uno stabilizzatore
+reale invece degrada col mare, perche' la pinna satura. Il revisore dichiara da
+solo il limite della sua voce -- la direzione e' dominio consolidato, il
+**quanto** non l'ha misurato -- e per questo non ho toccato il modello.
+
+**E UNA COSA CHE SUL BRANCH NON E' PIU' VERA.** La 1(b) dice «il mare e' una
+leva che muove la scena ma non il dato», e che un numero fermo sotto un gesto
+legge come hardcoded. Su `main` e' esatto. Sul branch **la propulsione muove
+quel numero da 90,8% a sotto l'uno** in quaranta secondi, e a 6 nodi lo spread
+fra gli stati del mare torna a **59,96 punti**. Lo stallo non e' codice morto:
+e' codice che si accende dove l'atto due porta chi guarda.
+
+Il modello e' lineare nel punto di PARTENZA e nonlineare nel punto di ARRIVO.
+
+**Cosa resta come numero sul tavolo:** far degradare la resa con lo stato del
+mare, e mettere il rollio nudo accanto alla riduzione. Il primo e' realismo e
+nessuno ha la magnitudine; il secondo e' messa in scena.
+
+---
+
 ### Giri del 29 agosto, 10:24 e 12:14 — due giri che si coordinano da soli
 
 **Esito per esteso in

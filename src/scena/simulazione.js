@@ -175,6 +175,41 @@ const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi 
  * IDENTICA a ogni stato del mare — cinque numeri uguali, che a schermo leggono
  * come un dato inventato anche essendo veri. Lo stallo e' cio' che rompe la
  * linearita' e fa variare il risultato con le condizioni, come nella realta'.
+ *
+ * ─── E QUESTA GIUSTIFICAZIONE E' FALSA AL PUNTO DI LAVORO. Misurata.
+ *
+ * Trovata da una revisione esterna che ha preso alla lettera il segnale del §3.1
+ * -- «un parametro che e' scritto e non arriva dove serve» -- e ha azzerato lo
+ * stallo per vedere se la misura si muoveva. Non si muove: a 12 nodi, l'andatura
+ * di servizio che il sito MOSTRA, togliere del tutto lo stallo cambia la
+ * riduzione di 0,00000 su tutti e cinque gli stati del mare.
+ *
+ *     picco della pinna a 12 nodi, misurato su 300 s
+ *       mare 1    3,6 gradi     in stallo 0,00%     (soglia 20)
+ *       mare 3   10,9 gradi     in stallo 0,00%
+ *       mare 5   17,7 gradi     in stallo 0,00%
+ *
+ * Al mare piu' grosso che il sito mostra la pinna sta 2,3 gradi SOTTO la soglia:
+ * la nonlinearita' e' tarata per stare appena fuori portata. Quindi la riduzione
+ * che il visitatore legge e' il numero che darebbe un modello lineare, e i
+ * «cinque numeri uguali» che questo commento diceva di voler evitare sono
+ * esattamente cio' che il sito mostra -- spread 0,025 punti fra mare 1 e mare 5.
+ *
+ * ─── MA LO STALLO NON E' CODICE MORTO, ed e' l'atto due a cambiarlo
+ *
+ * Lo stallo lavora sotto i 10 nodi, e fino a ieri quel regime era irraggiungibile
+ * perche' la velocita' era un cursore che nessuno abbassava. Adesso e' una
+ * conseguenza: spegnendo la propulsione la nave scende a 2,19 kn in quaranta
+ * secondi, e li' la pinna satura davvero.
+ *
+ *     riduzione a mare 5, lungo la velocita'
+ *       12 kn 90,8%   10 kn 38,9%   8 kn 17,2%   6 kn 8,2%   2 kn 0,7%
+ *     spread fra gli stati del mare, a 6 nodi:  59,96 punti  (a 12: 0,025)
+ *
+ * Quindi il modello e' lineare nel punto di PARTENZA e nonlineare nel punto di
+ * ARRIVO della scoperta. Il commento sopra resta falso dove il sito si apre, ed
+ * e' per questo che sta qui invece di essere cancellato: dice cosa fa lo stallo,
+ * e queste righe dicono DOVE.
  */
 export function portanza (a) {
   const A = Math.abs(a)
