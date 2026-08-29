@@ -94,11 +94,27 @@ jobs:
       # nessuna GPU. Aggiunti, `orizzonte` e' uscito rosso su questo runner
       # mentre in locale passa.
       #
-      # ATTENZIONE, e va detto perche' e' l'errore che ho appena fatto:
-      # `CHROMIUM=1` forza il browser interno ma NON il disegno in software.
-      # Su una macchina con la GPU quella prova non riproduce questo runner, e
-      # io l'avevo trattata come se lo facesse. La causa vera non e' verificata:
-      # i log del job servono i diritti di amministratore.
+      # CORREZIONE, ed e' costata due pubblicazioni. Qui c'era scritto:
+      # «`CHROMIUM=1` forza il browser interno ma NON il disegno in software,
+      # quindi su una macchina con la GPU quella prova non riproduce questo
+      # runner». E' FALSO, e finche' e' rimasto scritto ha fatto credere non
+      # riproducibile un guasto riproducibilissimo -- si e' indovinato invece di
+      # misurare, che e' l'errore che questo repo si vieta.
+      #
+      # `browser.mjs` lo dice gia', due paragrafi sopra la riga che serve:
+      # `chromium.launch({ headless: true })` senza `channel` non lancia
+      # Chromium, lancia `chrome-headless-shell`, che lo stack GPU non ce l'ha
+      # proprio. `CHROMIUM=1` prende esattamente quel ramo.
+      #
+      # MISURATO su una macchina con la GPU, stesso collaudo, stesso commit,
+      # col testimone di vitalita' del cancello della manopola:
+      #     senza CHROMIUM   132 fotogrammi in 3 s
+      #     con CHROMIUM       4 fotogrammi in 3 s
+      # Trentatre volte. Non e' «quasi come il runner»: e' il runner.
+      #
+      # Resta vero che i log del job non si leggono senza diritti. Ma adesso
+      # servono molto meno: il guasto si rifa' in locale con una variabile
+      # d'ambiente, e infatti e' cosi' che sono stati presi gli ultimi due.
       #
       # Restano quindi LOCALI, dichiarati qui: sono cancelli sulla RESA, e la
       # resa di un rasterizzatore software non e' quella che riceve un
