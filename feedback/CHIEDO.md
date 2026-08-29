@@ -13,12 +13,18 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **29 agosto 2026, mattina.** Da quando hai clonato potrei aver spinto
+Aggiornato: **29 agosto 2026, 09:21.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
 > punto per punto sta in fondo, al §5. Da allora ho corretto **tre** mie
 > affermazioni sbagliate: leggi la tabella qui sotto, non i commit vecchi.
+>
+> **E il §5 aveva un buco di nove giri, saldato stamattina.** Fra il 10:17 del
+> 28 e il 06:22 del 29 sono arrivati nove giri a cui non avevo mai scritto un
+> esito, pur avendone raccolte le voci nel codice. Adesso ce l'hanno, in
+> [`revisore-drive-arretrati-2026-08-29.md`](revisore-drive-arretrati-2026-08-29.md):
+> quindici voci confermate e **tre ancora aperte**, elencate in testa al §5.
 
 ---
 
@@ -268,6 +274,69 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### I NOVE giri che questo §5 non aveva mai risposto — saldati il 29 agosto, 09:21
+
+**Ho confrontato la cartella Drive dei giri con questo §5 e ho trovato un buco
+che era mio.** Il §5 rispondeva a quattro giri (28/08 07:00 e 10:17, 29/08 06:22
+e 08:23); fra il 10:17 del 28 e il 06:22 del 29 ne sono arrivati **nove** senza
+esito scritto. Non erano stati ignorati — otto commit di quelle ventiquattro ore
+nascono da una loro voce, e tre commenti nel codice dicono «trovato da una
+revisione esterna» — ma `COME-DARE-FEEDBACK.md` promette che **l'esito viene
+scritto comunque**, e per nove giri non l'ho mantenuta.
+
+**Esito per esteso, voce per voce, in
+[`revisore-drive-arretrati-2026-08-29.md`](revisore-drive-arretrati-2026-08-29.md).**
+Verificato tutto su `cbd0778`, non sull'albero di lavoro (che oggi e' sporco per
+l'atto due): le misure sulla simulazione girano su
+`git show HEAD:src/scena/simulazione.js`, altrimenti avrei misurato la
+propulsione nuova invece del sito spedito.
+
+| Giro | Voci | Esito |
+|---|---|---|
+| 12:20 · `2b94ef7` | 2 | confermate, **gia' raccolte** (`letture.js:60-83`; AO da 51,7 a **10,3 KB**) |
+| 14:16 · `1c7d4c5` | 2 | premessa gia' ribaltata al giro 08:23 — numero sul tavolo |
+| 16:20 · `895c59d` | 3 | cancello orizzonte raccolto; **DRAW/RECOVERY e PEAK aperte** |
+| 18:48 · `8c6566d` | 3 | «murata bianca» confermata e raccolta; due non riprodotte |
+| 20:38 · `36191dd` | 2 | normale sovrastruttura raccolta; inversione non riprodotta |
+| 22:24 · `67683e3` | 2 | cielo confermato e raccolto; una fuori scopo |
+| 00:15 · `b20047e` | 2 | confermate, **gia' raccolte** (`stile.css:188-237`) |
+| 02:19 · `1dbc1c4` | 3 | `?doppia=1` raccolta; **`discesa.mp4` mezza aperta** |
+| 04:35 · `1c8a323` | 2 | `fondale` raccolta; emisferica: premessa confermata |
+
+**Le tre che restano aperte, riprodotte da me su questo HEAD:**
+
+1. **`DRAW` e `RECOVERY` sono tarate `/100` e al punto di lavoro vivono in 0-6.**
+   Misurato su 180 s dopo 60 s di regime: mare 4 / 12 nodi (il default) da'
+   `DRAW 0,0/0,9/4,3` e `RECOVERY 0,00/0,33/1,65`; il campo si usa davvero solo a
+   8 nodi (`DRAW` fino a 47,6). `simulazione.js:351-352`, `index.html:113,118`,
+   `letture.js:22-23`. **Il fondo scala reale al punto di lavoro e' ~6, non 100** —
+   ma ritararlo o dichiararlo accanto e' messa in scena, e non lo decido io.
+   *Vale piu' oggi che alle 16:20:* con la propulsione dell'atto due gli 8 nodi
+   smettono di essere un'andatura che il sito non mostra e diventano una cosa che
+   si attraversa ogni volta che si spegne il motore.
+2. **`PEAK, 10 s` balla del 44% fra un caricamento e l'altro.** Tre semi, mare 5 /
+   12 nodi: 1,24° · 0,78° · 1,38°, mentre la riduzione accanto e' **90,78% su
+   tutti e tre**. Il codice sa gia' che non converge (`simulazione.js:36-39`,
+   `letture.js:83`) ma la lettura resta stampata con una cifra decimale, dalla
+   stessa `grad()` del 91% (`letture.js:3,19`).
+3. **`discesa.mp4` pesa 953,4 KB nel tetto dei filmati e non lo carica nessuno.**
+   `grep -rn "filmati/" src/ index.html` trova solo `salone-largo` e
+   `salone-mare`; `peso.mjs:283-285` somma tutta la cartella, referenziata o no.
+   **Il 43% del budget filmati e' un file che nessuno scarica.** La meta' della
+   voce sul raggio invece e' caduta, ed e' merito suo: `RAGGIO_MECCANISMO` e'
+   `2.0` (`index.js:80`), il 1,9-2,0 che il revisore diceva non provato.
+   Resta non costruito il cancello che proponeva — «ogni `.mp4` referenziato
+   esiste» — e `discesa.mp4` e' lo stesso guasto girato al contrario.
+
+**Cosa NON ho verificato, e lo dico invece di farlo passare:** niente di visivo e
+niente da browser (nessuna schermata, nessun giudizio dei nove giri riletto);
+niente da Blender; l'inversione dell'acqua sotto la carena (+7,3 / +8) non
+riprodotta; e i due re-invii `_v3`/`_v5` del giro delle 07:00 non riletti voce
+per voce — se contengono materiale che l'originale non aveva, quel materiale e'
+ancora non verificato.
+
+---
 
 ### Giro del 29 agosto, 08:23 (`nautica_2026-08-29_0823_20fa37f.md`)
 
