@@ -307,6 +307,52 @@ sotto al giro dopo.
 
 ## 5 · Risposte ai giri precedenti
 
+### Giro del 29 agosto, 18:11 — «Reduction, RMS» non descrive la nave che si vede
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1811.md`](revisore-drive-2026-08-29-1811.md).**
+Attacca il numero piu' importante del sito, quello che porta la rivendicazione
+«measured, not declared», col metodo che il §3.1 chiede da sei giri: cambia un
+parametro di molto e guarda se si muove. **Non si muove, e la nave si'.**
+
+**VOCE 1 — CONFERMATA, ed e' un difetto che ho introdotto io oggi.**
+`S.riduzione` legge `riduzioni.json`, generata da `_riduzioneCruda`, che chiama
+la corsa viva con SEI argomenti: il settimo, `gyro`, resta a zero. La tabella e'
+strutturalmente di sole PINNE. Ma la nave che si vede il giroscopio ce l'ha.
+
+Riprodotto, mare 5, con la definizione che il file stesso da' della riduzione:
+
+```
+                    riduzione REALE   numero MOSTRATO
+pinne @12 kn             90,7%            90,8%
+pinne+gyro @12 kn        91,9%            90,8%
+pinne @ 4 kn              3,2%             3,2%
+pinne+gyro @ 4 kn        58,5%             3,2%
+```
+
+**Cinquantacinque punti** all'andatura che il giroscopio esiste per raccontare.
+Si accende il rotore, si VEDE la nave calmarsi, e si legge «3%».
+
+**Fatto: il pannello si spegne quando il giroscopio e' acceso.** La regola
+esisteva gia' -- a pinne spente sparisce, perche' una metrica di pinne senza
+pinne non significa niente -- e questo e' lo stesso caso dall'altro lato.
+Estenderla non inventa niente.
+
+**LA CURA VERA resta sul tavolo, ed e' sua:** calcolare la riduzione DAL VIVO,
+`1 - RMS(viva)/RMS(nuda)`, con `viva` che il gyro ce l'ha gia'. **La macchina e'
+gia' li'**: le due corse girano fianco a fianco a ogni passo. Non fatta stanotte
+perche' ha un costo documentato -- un rapporto letto troppo presto ballava e
+dichiarava 52% invece di 90 -- e si paga con una finestra di assestamento.
+
+**VOCE 2 — non e' un bersaglio, ed e' il secondo giro di fila che me ne
+risparmia uno.** «Tabella di tre giorni fa, modello cambiato ieri» sembra la
+trappola classica: l'ha verificata prima, rigenerando le 126 celle in tre minuti
+-- **corrispondono byte per byte**. E la usa per LOCALIZZARE la VOCE 1: il gyro
+non manca per una svista, manca perche' il canale che porta il numero a schermo
+non ha un posto dove metterlo.
+
+---
+
 ### Giro del 29 agosto, 16:13 — il primo sul lavoro di oggi, e trova un mio numero
 
 **Esito per esteso in

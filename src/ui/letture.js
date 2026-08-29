@@ -109,7 +109,52 @@ export function creaLetture (el) {
      * (Questo commento diceva "il rapporto fra i picchi". Era vero per una
      * settimana e poi non piu': il picco su finestra finita non converge.)
      */
-    const attiva = S.stab && AMPIEZZA_MARE[S.mare] > 0 && S.riduzione > 0.005
+    /**
+     * ─── E SI SPEGNE ANCHE COL GIROSCOPIO ACCESO, perche' quel numero non lo vede
+     *
+     * DIFETTO TROVATO DA UNA REVISIONE, misurato e confermato. `S.riduzione`
+     * legge `riduzioneVera`, cioe' la tabella `riduzioni.json`, che e' generata
+     * da `_riduzioneCruda` -- e quella chiama `viva.passo(...)` con SEI
+     * argomenti: il settimo, `gyro`, resta al suo default zero. La tabella e'
+     * strutturalmente di sole PINNE.
+     *
+     * Ma la nave che si vede il giroscopio ce l'ha (`simulazione.js`, la corsa
+     * viva riceve `S.autoritaGiroscopio`). Quindi il numero descrive una nave
+     * diversa da quella sullo schermo, e a bassa andatura la distanza e'
+     * enorme -- misurato, mare 5:
+     *
+     *     pinne @12 kn        riduzione vera 90,7%   il pannello diceva 90,8%
+     *     pinne+gyro @12 kn                  91,9%                       90,8%
+     *     pinne @ 4 kn                        3,2%                        3,2%
+     *     pinne+gyro @ 4 kn                  58,5%                        3,2%
+     *
+     * Cinquantacinque punti di scarto proprio all'andatura che il giroscopio
+     * esiste per raccontare. Un visitatore accende il rotore, VEDE la nave
+     * calmarsi, e legge «3%»: il numero e la scena si contraddicono nello
+     * stesso fotogramma.
+     *
+     * ─── PERCHE' SI SPEGNE INVECE DI CORREGGERSI
+     *
+     * La regola c'era gia' ed e' giusta: a pinne spente il pannello sparisce,
+     * perche' una metrica di pinne senza pinne non significa niente. Qui e' la
+     * stessa cosa vista dall'altro lato -- una metrica di SOLE pinne mentre un
+     * secondo stabilizzatore fa il grosso del lavoro. Estendere quella regola
+     * non inventa niente: applica una decisione gia' presa al caso che le
+     * mancava.
+     *
+     * LA CURA VERA E' UN'ALTRA, e sta sul tavolo: calcolare la riduzione DAL
+     * VIVO, `1 - RMS(viva)/RMS(nuda)`, con `viva` che il giroscopio ce l'ha
+     * gia'. Le due corse girano fianco a fianco a ogni passo: la macchina per
+     * farlo giusto e' li'. Non si fa stanotte perche' ha un costo noto e
+     * documentato -- un rapporto letto troppo presto ballava e dichiarava 52%
+     * invece di 90 -- e quel costo si paga con una finestra di assestamento,
+     * non con una riga.
+     *
+     * Fino ad allora: meglio nessun numero che un numero che contraddice la
+     * nave.
+     */
+    const soloPinne = !S.giroscopio && (S.giriGiroscopio || 0) < 0.02
+    const attiva = S.stab && soloPinne && AMPIEZZA_MARE[S.mare] > 0 && S.riduzione > 0.005
     el.riduzione.textContent = attiva ? String(Math.round(S.riduzione * 100)) : '0'
 
     const stato = `${attiva}`
