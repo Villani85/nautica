@@ -164,6 +164,9 @@ const LUCI = {
 export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   /** L'ultimo stato passato a `disegna`, per `?ispeziona=1`. */
   let ultimoStato = null
+  /* l'ultima simulazione passata a `disegna`: serve al passo dichiarato, che
+     deve poter rientrare in `disegna` senza che il chiamante gliela ripassi */
+  let ultimaSim = null
   const scena = new Scene()
 
   /**
@@ -923,9 +926,35 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     azimutTarget = MathUtils.clamp(azimutTarget + delta, -AZIMUT_MAX, AZIMUT_MAX)
   }
 
-  function disegna (sim, marca) {
+  /**
+   * ─── IL PASSO PUO' ESSERE DICHIARATO, e non e' una comodita' per i cancelli
+   *
+   * `opz.dt` sostituisce l'orologio; `opz.senzaDisegno` salta `render.render`.
+   * Insieme fanno una cosa sola: far avanzare il MECCANISMO a passo dichiarato
+   * invece che a fotogrammi.
+   *
+   * Serve perche' `dt` e' bloccato a `Math.min(getDelta(), 0.05)` -- giusto per
+   * la stabilita' dell'integratore, fatale per una misura. Su un rasterizzatore
+   * software a mezzo fotogramma al secondo il tempo SIMULATO avanza quaranta
+   * volte piu' lento di quello reale: in venti secondi di orologio il
+   * meccanismo ne vive mezzo, e un cancello che ne misura l'escursione legge
+   * aliasing. Misurato in CI: 12 fotogrammi in 20,5 s, e il verdetto usciva
+   * ROVESCIATO -- mare 5 dava meno escursione di mare 2, che e' fisicamente
+   * impossibile. Sulla macchina vera, 480 fotogrammi e 3,63 volte nel verso
+   * giusto.
+   *
+   * La regola di questo repo era «nessun cancello misura la velocita' della
+   * macchina», e finora si applicava togliendo i cancelli dalla CI. Questa e'
+   * l'altra strada, ed e' quella buona: togliere alla misura la dipendenza dal
+   * fotogramma. `stato.js` la rende possibile da sola -- `avanza(dt, marca)`
+   * con `marca` indefinita fa sempre un passo, senza la guardia del doppio
+   * conteggio che serve solo quando due capitoli disegnano insieme.
+   */
+  function disegna (sim, marca, opz) {
     ultimoStato = sim.S
-    const dt = Math.min(orologio.getDelta(), 0.05)
+    ultimaSim = sim
+    const dichiarato = opz && typeof opz.dt === 'number'
+    const dt = dichiarato ? opz.dt : Math.min(orologio.getDelta(), 0.05)
     frame++
     /**
      * L orologio della scena avanza SEMPRE, anche con movimento ridotto: da
@@ -941,7 +970,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // Il passo della simulazione non lo fa piu' questa scena: lo fa `stato.js`,
     // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo
     // fotogramma. Il `t` locale resta per le onde, che sono roba di scena.
-    avanza(dt, marca)
+    avanza(dt, dichiarato ? undefined : marca)
 
     /**
      * ─── IL ROLLIO NON SI SPEGNE PIU' DEL TUTTO NELLA SEZIONE
@@ -1387,7 +1416,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     contenitore.dataset.spaccato = spaccato.toFixed(3)
     contenitore.dataset.emersione = emersione.toFixed(3)
 
-    render.render(scena, camera)
+    if (!(opz && opz.senzaDisegno)) render.render(scena, camera)
   }
 
   /**
@@ -1427,6 +1456,22 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        */
       coperturaTraversata: () => traversata.copertura,
       traversataFinita: () => traversata.finita,
+      /**
+       * AVANZA IL MECCANISMO A PASSO DICHIARATO, senza disegnare.
+       *
+       * Un cancello che misura l'escursione dell'albero non ha bisogno dei
+       * pixel: ha bisogno che il tempo SIMULATO passi. Cosi' la misura vale
+       * uguale su questa macchina e su un runner senza GPU, ed e' la cura che
+       * la regola «nessun cancello misura la velocita' della macchina» chiedeva
+       * da undici commit di CI rossa.
+       *
+       * Torna quanti passi ha fatto, cosi' chi chiama non deve fidarsi.
+       */
+      passoDichiarato: (dt, n) => {
+        if (!ultimaSim) return 0
+        for (let i = 0; i < n; i++) disegna(ultimaSim, undefined, { dt, senzaDisegno: true })
+        return n
+      },
       // le uniformi dell'acqua: senza, la prova del rosso sulla nebbia non si
       // puo' fare, e uno shader che non si puo' spegnere non e' verificato
       uniAcqua,
