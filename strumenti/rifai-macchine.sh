@@ -11,6 +11,10 @@
 #
 # ─── I NUMERI, E DA DOVE VIENE OGNUNO
 #
+# (I parametri si passano in `cuoci-su-colab.sh`, che e' il posto da cui parte
+#  il comando. Restano documentati qui perche' qui c'e' il conto che li ha
+#  scelti, e un numero senza il suo conto e' una superstizione.)
+#
 #   --estrusione 0.0005   il cage. Lo smusso piu' largo dell'assieme e' 3,5 mm
 #   --raggio 0.005        MISURATO che qui non conta: spazzando da 0,007 a
 #                         0,002 le macchie non si muovono di un millesimo
@@ -60,18 +64,32 @@ for M in $MACCHINE; do
   C="$U/cottura-$M"
   mkdir -p "$C/spedito"
 
-  echo "── 1/5  $M · geometria, alta/bassa, atlante UV"
+  echo "── 1/6  $M · geometria, alta/bassa, atlante UV (LOCALE: e' geometria, non rendering)"
   MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cuoci-macchine.py" -- "$U" "$M" \
     | grep -E "^UV |^ATLANTE|texel/cm|^RUGOSITA|per periodo|^FACCE|^COTTURA|^BLEND"
 
-  echo "── 2/5  $M · cottura normale + ORM a 2048"
-  MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/cottura.py" -- \
-    "$U/$M-cottura.blend" "${RAD}_ALTA" "${RAD}_BASSA" "$C" 2048 \
-    --estrusione 0.0005 --raggio 0.005 --campioni 256 \
-    --max-macchie 0.95 --distanza-ao 0.06 \
-    | grep -E "cotta dentro|informazione|macchie \(|ORM |ACCETTATA|RIFIUTATA"
+  echo "── 2/6  $M · cottura normale + ORM a 2048, SU COLAB"
+  #
+  # ─── LA COTTURA NON SI FA PIU' QUI, E IL MOTIVO E' UN NUMERO
+  #
+  # Su questo PC Cycles non ha GPU. Stessa cottura, stessi parametri, stesso
+  # Blender 5.2.0, stesso .blend:
+  #
+  #     propulsione 2048 / 256 campioni    CPU locale 185 s    T4 43,5 s
+  #     giroscopio  2048 / 256 campioni                        T4 38,8 s
+  #
+  # 4,3 volte. E i cancelli danno numeri IDENTICI dalle due parti (macchie
+  # 0,7868% e 0,6204%): non e' una cottura diversa, e' la stessa piu' in fretta.
+  #
+  # Il come sta in `cuoci-su-colab.sh`, con le trappole gia' pagate. Qui si
+  # chiama e basta — e si chiama uno SCRIPT DEL REPO, non una sessione: una
+  # ricetta che vive solo dentro una VM remota, fra due settimane non la sa
+  # piu' nessuno, perche' la VM riparte vuota a ogni giro.
+  #
+  # I cancelli restano in LOCALE: su Colab ci va il calcolo, non il giudizio.
+  sh "$R/strumenti/cuoci-su-colab.sh" "$M"
 
-  echo "── 3/5  $M · le mappe che SPEDIAMO"
+  echo "── 3/6  $M · le mappe che SPEDIAMO"
   #
   # ─── LA RISOLUZIONE NON E' LA STESSA PER LE DUE MACCHINE, ED E' IL PUNTO
   #
@@ -109,7 +127,7 @@ for M in $MACCHINE; do
   ffmpeg -y -v error -i "$C/${M}_bassa-normale.png" -vf "scale=$LN:$LN" "$C/spedito/${M}_bassa-normale.png"
   ffmpeg -y -v error -i "$C/${M}_bassa-orm.png"     -vf "scale=$LO:$LO" "$C/spedito/${M}_bassa-orm.png"
 
-  echo "── 4/5  $M · GLB della BASSA con UV, tangenti e le due mappe"
+  echo "── 4/6  $M · GLB della BASSA con UV, tangenti e le due mappe"
   MODO=bassa MAPPE="$C/spedito" MSYS_NO_PATHCONV=1 "$B" -b -P "$R/riferimenti/blender/glb-macchine.py" -- "$U" "$M" \
     | grep -E "^MODO|^UV |^MAPPE|^TRIANGOLI|^GLB "
 
