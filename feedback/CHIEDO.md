@@ -190,7 +190,7 @@ Il salone e' una clip mascherata e non una stanza modellata: e' una scelta
 dichiarata in `salone3d.js`, e per quaranta secondi regge. Ma quando la camera
 del sito gira intorno a quel piano, **il piano si vede**: a scorrimento 0,235 la
 stanza e' un rettangolo con quattro bordi netti incastrato nello scafo
-(`uscite/bordo/carta.png`, si rifa con
+(`feedback/prove/2026-08-29-salone-e-una-carta.png`, si rifa con
 `strumenti/dove-si-vede-la-carta.mjs`).
 
 **Nessun cancello poteva trovarlo, e la forma di questa cecita' e' istruttiva:**
@@ -344,7 +344,7 @@ elenca come chiuso.
 **VOCE 1 — CONFERMATA, ed e' LA priorita'.** A scorrimento **0,235** il salone e'
 un rettangolo con **quattro bordi netti** che galleggia contro lo scafo: il
 taglio verticale destro attraversa il salotto a meta'. Fotogramma in
-`uscite/bordo/carta.png`. Che la stanza sia una clip mascherata e non una stanza
+`feedback/prove/2026-08-29-salone-e-una-carta.png`. Che la stanza sia una clip mascherata e non una stanza
 modellata `salone3d.js` lo dichiara da sempre; la novita' e' che **il trucco si
 vede**. E nessun cancello poteva trovarlo: `collaudo-filmato` guarda DENTRO
 l'inquadratura — che la camera della clip stia ferma, che la maschera non
