@@ -343,6 +343,28 @@ if (process.env.COTTA) {
    * e non parlava della nave: parlava del mare che era finito dentro il conto
    * da una parte sola. Due sagome scritte con due regole non si confrontano.
    */
+  /**
+   * ─── LE FASCE SI TAGLIANO SUL SOGGETTO, non sul fotogramma
+   *
+   * Prima erano cinque quinti dell'IMMAGINE. Su un fotogramma alto 620 con la
+   * nave fra 167 e 467, i quinti cadono a 124/248/372/496: la prima fascia e'
+   * quasi tutta cielo, e la fascia che chiamavo «coperta» conteneva mezza
+   * sovrastruttura. Le etichette con cui ho letto la tabella la prima volta
+   * erano quindi sbagliate, e con loro la lettura.
+   *
+   * Un taglio ancorato al fotogramma non ha senso appena il soggetto si sposta
+   * o cambia scala -- ed e' successo stanotte, quando il raggio della camera e'
+   * passato da 2,6 a 2,0. Adesso si misura dove sta la nave e si divide
+   * QUELLA in cinque.
+   */
+  let cima = H; let fondo = 0
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < L; x++) {
+      if (B[y * L + x] >= 12) { if (y < cima) cima = y; if (y > fondo) fondo = y; break }
+    }
+  }
+  const passoFascia = Math.max(1, (fondo - cima + 1) / 5)
+
   let soloA = 0; let soloB = 0
   let n = 0; let somma = 0; let sommaAss = 0
   /**
@@ -369,7 +391,7 @@ if (process.env.COTTA) {
       if (!inA || !inB) continue
       const d = b - a
       n++; somma += d; sommaAss += Math.abs(d); tutti.push(d)
-      const f = fasce[Math.min(4, Math.floor(y / (H / 5)))]
+      const f = fasce[Math.min(4, Math.max(0, Math.floor((y - cima) / passoFascia)))]
       f.n++; f.s += d; f.v.push(d)
     }
   }
@@ -431,11 +453,14 @@ if (process.env.COTTA) {
     console.log(`  scarto medio assoluto ${(sommaAss / n).toFixed(2)} livelli`)
     const mediana = (a) => { const c = a.slice().sort((p, q) => p - q); return c[Math.floor(c.length / 2)] }
     console.log(`  scarto MEDIANO        ${mediana(tutti).toFixed(2)} livelli`)
+    console.log(`  la nave sta fra le righe ${cima} e ${fondo}; le fasce sono quinti DI QUELLA`)
     console.log('  per fascia (dall alto in basso):')
     fasce.forEach((f, i) => {
       if (!f.n) { console.log(`    ${i + 1}  -`); return }
       const c = f.v.slice().sort((p, q) => p - q)
-      console.log(`    ${i + 1}  ${String(f.n).padStart(6)} px   media ${(f.s / f.n).toFixed(2).padStart(7)}   mediana ${String(c[Math.floor(c.length / 2)]).padStart(5)}`)
+      const y0 = Math.round(cima + i * passoFascia)
+      const y1 = Math.round(cima + (i + 1) * passoFascia)
+      console.log(`    ${i + 1}  righe ${String(y0).padStart(3)}-${String(y1).padStart(3)}  ${String(f.n).padStart(6)} px   media ${(f.s / f.n).toFixed(2).padStart(7)}   mediana ${String(c[Math.floor(c.length / 2)]).padStart(5)}`)
     })
   }
 }

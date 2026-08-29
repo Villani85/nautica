@@ -223,9 +223,37 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       Number(new URLSearchParams(location.search).get('sotto') ?? 0.55))
   }
 
-  scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, LUCI.emisfero))
-  const sole = new DirectionalLight(0xfff6e4, LUCI.sole)
-  sole.position.set(4.5, 7, 6); scena.add(sole)
+  /**
+   * ─── LE LUCI SI POSSONO PROVARE SENZA RICOMPILARE
+   *
+   *     ?luce=<emisfero>,<sole>,<quota del sole>
+   *
+   * Serve a tarare l'impianto contro il riferimento invece che a occhio.
+   * Misurato accendendo e spegnendo ciascun impianto dalla sua parte, quanto
+   * aggiunge la luce a ogni fascia della nave:
+   *
+   *       fascia            sito     Cycles
+   *       sovrastruttura    41,0      2,2
+   *       coperta           40,7     43,5
+   *       murata            26,1     44,0
+   *
+   * Sulla coperta i due fanno la stessa cosa; sulle altre due fanno il
+   * contrario. Una sovrastruttura illuminata da tutte le parti perde le facce,
+   * un fianco che riceve poca luce perde la forma: sono le due cose che fanno
+   * leggere una nave come un modellino.
+   *
+   * Vale solo con `ispeziona`, come le altre leve: in pagina restano i numeri
+   * di `LUCI`.
+   */
+  const _q = new URLSearchParams(location.search).get('luce')
+  const _l = _q ? _q.split(',').map(Number) : []
+  const EMISFERO = Number.isFinite(_l[0]) ? _l[0] : LUCI.emisfero
+  const SOLE = Number.isFinite(_l[1]) ? _l[1] : LUCI.sole
+  const SOLE_Y = Number.isFinite(_l[2]) ? _l[2] : 7
+
+  scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, EMISFERO))
+  const sole = new DirectionalLight(0xfff6e4, SOLE)
+  sole.position.set(4.5, SOLE_Y, 6); scena.add(sole)
 
   /**
    * ─── LE OMBRE, e perche' non c'erano
