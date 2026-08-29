@@ -139,7 +139,7 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | Lo scafo invece e' **1,29×** piu' chiaro (Cycles 39,0, sito 50,4, sulle sole facce anteriori) | idem — ed e' la domanda §3.4.3 |
 | La normale cotta recupera il **61,7%** dello scarto fra bassa e alta | `cuoci-impianto.py -- confronto` |
 | La silhouette persa passando alla bassa vale **632 px, l'1,41%** del meccanismo | `riferimenti/blender/uscite/confronto/` |
-| Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, in `docs/15` |
+| ~~Rugosità e metallicità costanti, non vanno spedite~~ | **decisione GIA' ESEGUITA, non un bersaglio.** Verificato sui quattro GLB spediti: `metallicRoughnessTexture` = **0** ovunque (impianto 0/9, sovrastruttura 0/5, propulsione 0/14, giroscopio 0/9). Escono come fattori scalari. L'istogramma sta su un ORM cotto che nel repo NON c'e' |
 | Il corredo PBR spedito pesa **43,5 KB** sul meccanismo (normale 33,3 + occlusione 10,3), e il netto contro l'alta e' **+30,8 KB** | `git show -s e2ae489`; i byte delle immagini nel GLB — vedi §5, giro 10:24 |
 | L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
 
@@ -193,25 +193,43 @@ una curva tonale che il sito non spedisce. **I rapporti qui sotto non cadono** �
 sono presi in lineare da tutte e due le parti, dove la curva è spenta. Cade la
 rassicurazione che ne avevo tratto guardando la colonna AgX. Vedi §5.)*
 
-**Perché lo scafo è più chiaro del 37% e la sovrastruttura più scura del 20%?**
-Con camera (0,05 px), cielo, curva tonale **e luci** allineati, e i rapporti
-presi **in lineare** a esposizione 0 da tutte e due le parti:
+**CORRETTO IL 29 AGOSTO, POMERIGGIO: il difetto e' UNO SOLO, ed e' lo scafo.**
+
+Questo paragrafo ha chiesto per giorni la spiegazione di «due errori di segno
+opposto». Il secondo segno non esiste, e a dirlo e' l'**ultima riga di
+`docs/15`** — cioe' la prima che si legge partendo dal fondo, come ordina il §1
+qui sopra:
+
+> `docs/15:842` — *«CORREZIONE: la sovrastruttura non e' scura del 20%,
+> combacia. Quel numero veniva dalla banda y 150-300, che comprende teak, vetro,
+> montanti, parapetti e sfondo. Sulla maschera ESATTA del materiale,
+> `sovra_guscio` da' **1,007x**. Il difetto e' uno solo: lo scafo.»*
+
+Il `0,797x` non era la sovrastruttura: era una banda di pixel contaminata. E il
+sospetto che restava -- «three non ha occlusione dell'ambiente» -- era stato
+introdotto per spiegare **proprio quel segno**, come questo paragrafo ammetteva
+da solo. Cade con lui.
+
+L'ha trovato il giro delle 12:14 leggendo `docs/15` fino in fondo, che nessuno
+aveva fatto. Io avevo propagato il quadro sbagliato anche in `STATO-2026-08-29`.
+
+**Quello che resta aperto, ed e' uno:**
 
 ```
-scafo           Cycles 0,0564   sito 0,0772   = 1,370x   (sito piu chiaro)
-sovrastruttura  Cycles 0,3267   sito 0,2605   = 0,797x   (sito piu SCURO)
+scafo   Cycles 0,0564   sito 0,0772   = 1,370x   (sito piu' chiaro del 37%)
 ```
 
-Due errori di **segno opposto**. Sette sospetti esclusi, ognuno con una misura:
-buccia d'arancia, guscio `interno`, parametri del materiale, `side`,
-risoluzione dell'ambiente, speculare a incidenza radente, e — dal giro
-scorso — **l'irradianza in armoniche sferiche**, che ho costruito e che non
-cambia niente (§5).
+Otto sospetti esclusi, ognuno con una misura: buccia d'arancia, guscio interno,
+parametri del materiale, `side`, risoluzione dell'ambiente, speculare a incidenza
+radente, irradianza in armoniche sferiche, e l'occlusione dello scafo -- che c'e'
+ed e' corretta (canale 0, UV presenti, AO 0,993 sulle murate: verificato due
+volte, una in modo indipendente dal giro delle 12:14).
 
-Sospetto rimasto, non provato: three **non ha occlusione dell'ambiente**.
-Cycles ombreggia il cielo con lo sbalzo della coperta e la curvatura dello
-scafo; three no. Spiegherebbe lo scafo più chiaro — ma **non** la sovrastruttura
-più scura, quindi le cause sono due e ne conosco zero.
+**E la domanda che merita davvero un giro adesso e' un'altra**, ed e' quella che
+`docs/15` lascia in sospeso in fondo: **la separazione fra i due materiali dentro
+ciascun motore vale 5,33x in Cycles e 3,95x nel sito**, con albedo puro 4,27. Il
+sito comprime, il path tracer allarga. Quella non passa dal fantasma dei due
+segni, e non l'ha ancora guardata nessuno.
 
 **Da riprodurre:**
 ```
@@ -288,6 +306,62 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giri del 29 agosto, 10:24 e 12:14 — due giri che si coordinano da soli
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1024-e-1214.md`](revisore-drive-2026-08-29-1024-e-1214.md).**
+Il 12:14 dichiara di non rifare il giudizio visivo perche' il pixel non e'
+cambiato, e sottoscrive quello del 10:24. E' la prima volta che due giri si
+coordinano invece di ripetersi: e' esattamente cio' che il §2 chiede.
+
+**12:14 VOCE 1 — CONFERMATA, ed e' un errore che avevo propagato io.** §3.4
+chiedeva due segni opposti; `docs/15:842` li aveva ritrattati il giorno prima --
+la sovrastruttura **combacia** (1,007x sulla maschera esatta), il `0,797x` veniva
+da una banda con dentro teak, vetro, montanti, parapetti e sfondo. §3.4 e'
+riscritto: **un difetto solo, lo scafo**. E il sospetto «three non ha occlusione
+dell'ambiente» cade col segno che doveva spiegare.
+
+Il revisore ha anche corroborato in modo indipendente che `aoMap` arriva ed e'
+corretta -- canale 0, UV presenti, AO 0,993 sulle murate -- **e lo scrive pur
+non essendo un difetto**, perche' e' una trappola three classica che il prossimo
+troverebbe e riporterebbe a torto. Un giro risparmiato a qualcun altro.
+
+**12:14 VOCE 2 — CONFERMATA sui quattro GLB.** Zero
+`metallicRoughnessTexture` ovunque, compresi i due modelli nuovi. La riga di
+§3.1 offriva come bersaglio una decisione gia' eseguita e un istogramma che nel
+repo non c'e'. Sostituita.
+
+**12:14 VOCE 3 — CONFERMATA, e vale ancora.** `discesa.mp4` non e' referenziato
+da nessuno: 0,98 MB su un tetto di 4,2 che nessun browser scarica. Il rilievo
+vero pero' e' sul CANCELLO, che sommava la cartella invece del codice: corretto,
+`peso.mjs` ora separa i filmati referenziati dagli orfani. Il file **non l'ho
+toccato**: montarlo o toglierlo e' messa in scena.
+
+**10:24 VOCE 1 — la mia pista sulla pinna era sbagliata.** `carena` non cade
+nella meta' fitta dell'atlante: ci sta a **0,0%**, misurato rasterizzando le UV
+vere. Cade con essa la prova che ci avevo appoggiato.
+
+**10:24 VOCE 2 — CONFERMATA, e riprodotta qui al texel. E' la piu' importante
+dei due giri.** La normale spedita ha **632 texel con z < 0** (0,241%) e **85
+speckle di croma** -- i suoi numeri, esatti. Un texel con z < 0 e' un microfacet
+rivolto all'indietro: sotto luce radente da' un lampo speculare, cioe' un
+puntino **chiaro**. Ed e' proprio quello che avevo descritto senza spiegarlo.
+
+La mia esclusione «tolta la normale, la grana resta» non scagionava niente:
+toglieva l'intera mappa, cioe' il rilievo buono E i texel corrotti insieme.
+**La causalita' pero' NON e' verificata**: che quei 632 texel producano la grana
+visibile resta un'ipotesi. La prova che manca -- spedire la normale in BC5 o
+webp lossless e riguardare il primo piano -- e' passata a chi sta rifacendo le
+mappe adesso.
+
+**Il giudizio visivo, e la voce piu' azionabile dei due giri:** `DRAW 0/100` e
+`RECOVERY 0/100` si leggono come strumenti **rotti**, non come «poco». Fondo
+scala 100 con l'ago a zero dice guasto, e il campo vive fra 0 e ~6 al punto di
+lavoro. Sta in due righe di markup. **Non corretto**: il fondo scala di una
+lettura e' una decisione su cosa il sito dichiara di misurare. Numero sul tavolo.
+
+---
 
 ### Giro del 29 agosto, 10:24 (`nautica_2026-08-29_1024_8911bb8.md`)
 
