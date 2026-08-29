@@ -385,8 +385,41 @@ if (!cop.length) {
   note.push('LASTRA      NON MISURATA: la scena non espone coperturaTraversata')
 } else {
   const coperti = cop.filter(x => x > 0.5).length
-  note.push(`LASTRA      copertura massima ${Math.max(...cop).toFixed(2)} — ` +
+  const massima = Math.max(...cop)
+  note.push(`LASTRA      copertura massima ${massima.toFixed(2)} — ` +
             `${coperti} campioni su ${cop.length} giudicano una texture, non la scena`)
+
+  /**
+   * ─── IL TETTO CHIESTO, SCRITTO ACCANTO ALLA MISURA
+   *
+   * La direzione per il Site of the Year lo mette fra i cancelli di uscita del
+   * punto 1: *«Nessun piano figlio della camera deve coprire piu' del 10% del
+   * fotogramma»*. Oggi la lastra della traversata ne copre il 100%.
+   *
+   * ─── E PERCHE' QUESTA RIGA NON BOCCIA
+   *
+   * Perche' un cancello che nasce rosso e viene tenuto disattivato non e' un
+   * cancello: e' un commento che costa una corsa di CI. La distanza fra 1,00 e
+   * 0,10 non si copre con una taratura -- si copre costruendo il guscio interno
+   * e una traiettoria di camera dentro `interni.glb`, che e' lavoro di asset e
+   * di regia.
+   *
+   * Quindi la misura si STAMPA col suo obiettivo, e il divario resta sotto gli
+   * occhi a ogni corsa invece di vivere in un documento. Il giorno in cui la
+   * shell esiste, questa riga diventa un `guasti.push` -- una parola sola -- e
+   * va acceso NELLO STESSO COMMIT che la rende vera, o si torna a un cancello
+   * che nessuno puo' soddisfare.
+   *
+   * Nel frattempo protegge comunque qualcosa, ed e' il verso che conta: se
+   * qualcuno alzasse la copertura DOVE OGGI E' BASSA -- appendendo un altro
+   * piano alla camera in una battuta che adesso e' pulita -- il numero dei
+   * campioni coperti cresce e si vede subito.
+   */
+  const TETTO_LASTRA = 0.10
+  note.push(`LASTRA      obiettivo della direzione: nessun piano figlio della camera ` +
+            `sopra il ${(100 * TETTO_LASTRA).toFixed(0)}% del fotogramma. ` +
+            `Oggi ${(100 * massima).toFixed(0)}%: il divario e' il punto 1, e si chiude ` +
+            'con il guscio degli interni, non con una taratura.')
 }
 if (videoMax > 0) {
   guasti.push(`ci sono ${videoMax} elementi <video> visibili a schermo. ` +
