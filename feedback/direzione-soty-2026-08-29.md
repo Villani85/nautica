@@ -504,7 +504,7 @@ regge invariato.
    dove three.js la applica come `aoMap` sulla diffusa indiretta — e la scena ha
    sia una `HemisphereLight` sia un `environment` su cui agire.
 
-### Quello che resta aperto
+### Quello che resta aperto sugli interni
 
 L'occlusione è cotta, agganciata, spedita dentro il budget e difesa da un
 cancello. **Ma non ho una prova visiva che migliori le inquadrature del sito**,
@@ -518,23 +518,52 @@ la struttura che li contiene è una macchia scura. A quella scala un termine di
 occlusione non si legge, e sarebbe disonesto sostenere il contrario.
 
 Quindi la domanda vera non è «l'occlusione è giusta» — lo è, misurata — ma
-**se questa sia la spesa giusta di 53 KB per il sito com'è oggi**. La risposta
-dipende da una cosa che non decido io: se la sezione longitudinale completa che
-la direzione chiede al punto 5 («persone sopra, propulsione a poppa,
-stabilizzatori sotto la linea, gyro al centro, tutto nello stesso quadro») verrà
-costruita, gli interni diventano il soggetto di un fotogramma eroico e
-l'occlusione è esattamente ciò che li fa leggere come volume. Se invece restano
-lo sfondo sommerso di adesso, quei 53 KB comprano poco.
+**se questa sia la spesa giusta di 53 KB per il sito com'è oggi**. Dipende dalla
+sezione longitudinale completa che la direzione chiede al punto 5: se arriva,
+gli interni diventano il soggetto di un fotogramma eroico e l'occlusione è
+esattamente ciò che li fa leggere come volume. Se restano lo sfondo sommerso di
+adesso, quei byte comprano poco. La pipeline si spegne togliendo un passo da
+`rifai-interni.sh`.
 
-La pipeline è pronta o in un caso o nell'altro, e si spegne togliendo un passo
-da `rifai-interni.sh`.
+### E lo yacht esterno: NON l'ho toccato, e la ragione è diversa dalle altre
 
-Restano intatti gli altri capi del punto 4: raccordi scafo/coperta, curvature
-dei finestrini, cornici con spessore, battagliola, scarichi, flange e bulloni
-nei primi piani, gelcoat con clearcoat, vetro con volume, teak con fughe
-fisiche. È modellazione e materiali in Blender, e la direzione ha ragione anche
-sulla parte che non si vede: *nessun color grading finale può correggere due
-illuminazioni progettate diversamente*.
+Non è «è lavoro di asset e non ho gli asset». È che **ho guardato il modello e
+la diagnosi corrente non regge**.
+
+Il render di riferimento (`riferimenti/blender/nave-cotta.png`) legge davvero
+come uno studio di masse. Ma leggendo `glb-sovrastruttura.py`, la geometria è
+più considerata di quanto quel fotogramma suggerisca:
+
+| voce del punto 4 | stato verificato nel sorgente |
+|---|---|
+| smussi su ogni spigolo | **ci sono**: `smussa()` con 0,012–0,030 unità, cioè 3–7,5 cm reali, `limit_method='ANGLE'` a 38° |
+| vetratura con cornice e spessore | **c'è**: il vetro è incassato di 0,055 unità = **13,75 cm** dal fianco |
+| montanti | **ci sono**, uno ogni tre stazioni, con la loro sezione |
+| hard-top su montanti, non una lastra | **c'è**, con i quattro tubi in inox |
+
+Quello che manca davvero, e che alla scala del sito si vedrebbe, è un'altra
+lista: **listello di scafo** (la riga orizzontale che dà a una barca la sua
+scala a qualunque distanza), **scarichi e prese d'aria**, **tientibene sulla
+sovrastruttura**, **portelli e passauomo sul fianco**, e le **fughe del teak**,
+che il sorgente dichiara come debito aperto in un commento.
+
+**Ma il salto più grande non è geometrico: è la LUCE.** In quel render la chiave
+è un grigio piatto senza direzione, e su superfici bianche una luce senza
+direzione non modella niente — qualunque dettaglio si aggiunga resta invisibile.
+È esattamente ciò che la direzione dice al punto 4 parlando di luce, e che dice
+meglio di me: *«nessun color grading finale può correggere due illuminazioni
+progettate diversamente»*.
+
+Non l'ho cambiata. Non perché non sappia farlo, ma perché **l'illuminazione di
+quello yacht è la tua direzione artistica**, non un difetto: hai iterato su
+quella resa per parecchi giri, e riscriverla alle 00:50 senza il tuo occhio
+sarebbe scommettere al posto tuo. Il resto di stanotte l'ho speso dove il
+giudizio era mio da dare — un difetto fotografato, una misura, un cancello — e
+non dove è tuo.
+
+Quando lo faremo, l'ordine giusto è quello della skill: **prima la luce** (una
+direzione, una temperatura, la stessa del filmato del salone), **poi** listello,
+scarichi e tientibene. Al contrario si aggiunge dettaglio che nessuno vede.
 
 ## PUNTO 6 — Le cinque persone: non le ho
 
