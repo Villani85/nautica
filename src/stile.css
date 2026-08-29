@@ -687,6 +687,29 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 .palco[data-battuta="meccanismo"] .richiamo{opacity:0;pointer-events:none}
 .palco[data-battuta="taglio"] .pannello--energia{opacity:0}
 
+/* ─── IL 91% ARRIVA QUANDO SEI TU A PRODURLO, non prima
+
+   Misurato scorrendo la pagina e leggendo l'opacita' calcolata a ogni tappa:
+   «Reduction, RMS 91%» era a schermo dal 16% della pagina fino in fondo, sempre
+   uguale, senza mai cambiare. Cioe' era li' gia' nel salone -- prima che
+   esistesse una nave, un mare o un interruttore.
+
+   Due revisioni indipendenti l'hanno segnalato con le stesse parole: un numero
+   senza un referente visibile. E c'e' un guaio peggiore del referente mancante:
+   un numero che non cambia mai per due terzi di pagina smette di essere una
+   misura e diventa un fregio. Quando finalmente arrivi al meccanismo -- dove la
+   pinna lavora e quel 91% e' finalmente la lettura di cio' che stai guardando --
+   l'occhio l'ha gia' smesso di vedere da un pezzo.
+
+   Quindi compare dall'INVITO in poi: dal momento in cui il sito ti mette in
+   mano l'interruttore. Prima non e' un dato, e' uno slogan.
+
+   E' la stessa cura gia' applicata a «Drag the speed», spostato sul meccanismo
+   per la stessa ragione. */
+.palco[data-battuta="salotto"] .dato--evidenza,
+.palco[data-battuta="emerge"] .dato--evidenza,
+.palco[data-battuta="mare"] .dato--evidenza{opacity:0}
+
 /* l'interruttore chiede attenzione solo quando e' il suo momento */
 .palco[data-battuta="invito"] .interruttore:not([aria-pressed="true"]){
   border-color:var(--recupero);color:var(--recupero);

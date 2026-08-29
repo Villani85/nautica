@@ -50,6 +50,22 @@ const forzato = location.search.includes('ridotto=1')
  * Il passo e' 1/120 e non il dt del disegno perche' il dt del disegno dipende
  * da quanto e' carica la macchina, ed e' proprio quello che rende la posa
  * irripetibile.
+ *
+ * ─── E COSA NON SI PUO' MISURARE COSI', che e' meta' del valore di questa nota
+ *
+ * L'integrazione avviene UNA VOLTA, al primo giro, con lo stato del mare di
+ * quel momento. Poi il tempo non avanza piu'. Quindi tutto cio' che DISCENDE
+ * dalla simulazione -- riduzione, picchi, carico, recupero -- resta congelato
+ * anche se lo scorrimento cambia lo stato del mare, che invece cambia davvero.
+ *
+ * Ci sono gia' cascato: misurando dove compare il numero della riduzione lungo
+ * la pagina, con ?fermo risultava che si spegneva a meta' visita. Rifatta senza,
+ * era acceso dappertutto -- il contrario. La prima lettura descriveva il mio
+ * strumento, non il sito.
+ *
+ * Regola: ?fermo serve a misurare un FOTOGRAMMA -- geometria, materiali,
+ * inquadratura, grana. Non serve a misurare come si comporta la pagina mentre
+ * si scorre. Per quello il tempo deve scorrere.
  */
 const FERMO = Number(new URLSearchParams(
   typeof location === 'undefined' ? '' : location.search).get('fermo'))
