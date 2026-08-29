@@ -80,9 +80,25 @@ if (trovata === null) {
   process.exit(2)
 }
 console.log(`  inquadratura trovata al ${(trovata * 100).toFixed(0)}% dello scorrimento`)
-await pg.waitForTimeout(3000)
 
-const r = await pg.evaluate(() => {
+/**
+ * ─── NON SI ASPETTANO TRE SECONDI, SI ASPETTA IL MECCANISMO
+ *
+ * Qui c'era `waitForTimeout(3000)`. Sulla macchina di chi scrive bastano, e la
+ * misura esce; sul runner della CI, senza GPU, tre secondi sono **due
+ * fotogrammi** del ciclo del sito, e la camera non ha ancora finito di
+ * arrivare. Risultato misurato nella corsa 250: «ROTTO il meccanismo non e in
+ * quadro a questa quota» su un sito che in locale passa con 57.562 pixel di
+ * soggetto in quadro. Un cancello rosso per la lentezza della macchina, che e'
+ * la cosa che questo repo si e' ripromesso di non fare piu'.
+ *
+ * Non si allunga l'attesa -- allungarla sposta il problema e basta. Si aspetta
+ * IL FATTO: si rimisura finche' il soggetto non compare, e si stampa quanti
+ * fotogrammi ha disegnato la scena mentre si aspettava. Cosi' se resta vuoto
+ * il verdetto porta con se' il perche': una scena ferma e una scena che non
+ * inquadra il meccanismo smettono di essere lo stesso rosso.
+ */
+const misuraVarco = () => pg.evaluate(() => {
   const n = window.__nautica
   if (!n.acqua || !n.acqua.uni.uSpaccato) return { rotto: 'le uniformi dell acqua non sono esposte' }
   const suoi = new Set(['acciaio', 'lucido', 'carter', 'motore', 'tenuta', 'gomma', 'cavo', 'bronzo', 'sezione'])
@@ -115,9 +131,36 @@ const r = await pg.evaluate(() => {
   sp.value = prima
   return { pixel: mask.length, quadro: c.width * c.height, aperto, chiuso, varchi: n.acqua.uni.uQuantiVarchi.value }
 })
+
+const disegnati = () => pg.evaluate(() => window.__nautica.fotogrammi ?? null)
+
+let r = null
+const f0 = await disegnati()
+let atteso = 0
+for (let i = 0; i < 24; i++) {
+  await pg.waitForTimeout(1000)
+  atteso += 1
+  r = await misuraVarco()
+  if (!r.rotto) break
+  /* solo il "non e in quadro" vale la pena riprovarlo: se i nomi dei materiali
+     sono cambiati o le uniformi non sono esposte, riprovare non cambia niente */
+  if (r.rotto !== 'il meccanismo non e in quadro a questa quota') break
+}
+const f1 = await disegnati()
+const passati = (f0 !== null && f1 !== null) ? f1 - f0 : null
+console.log(`  atteso ${atteso}s, la scena ha disegnato ${passati ?? '?'} fotogrammi`)
+
 await browser.close(); preview.kill()
 
-if (r.rotto) { console.error('  ROTTO  ' + r.rotto); process.exit(1) }
+if (r.rotto) {
+  console.error('  ROTTO  ' + r.rotto)
+  if (r.rotto === 'il meccanismo non e in quadro a questa quota' && passati !== null && passati < 12) {
+    console.error(`         ma la scena ha disegnato solo ${passati} fotogrammi in ${atteso}s: ` +
+                  'e una macchina troppo lenta perche questa misura significhi qualcosa, ' +
+                  'non una prova che il meccanismo non ci sia')
+  }
+  process.exit(1)
+}
 
 console.log('il varco nel pelo')
 console.log(`  soggetto  ${r.pixel} pixel su ${r.quadro} (${(100 * r.pixel / r.quadro).toFixed(2)}%) · ${r.varchi} varchi`)
