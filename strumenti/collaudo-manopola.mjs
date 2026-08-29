@@ -362,7 +362,7 @@ for (const [sel, nome] of [
   [MARE_ALTO, 'manopola del mare, stato 5'],
   [MARE_BASSO, 'manopola del mare, stato 2'],
   ['#stab', 'interruttore di stabilizzazione'],
-  ['#velocita', 'andatura']
+  ['#propulsione', 'comando della propulsione']
 ]) {
   const r = await bersaglio(sel, nome)
   mani[sel] = r

@@ -2,6 +2,17 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { apriBrowser } from './browser.mjs'
+/**
+ * ─── LA MAPPA ARRIVA DAL SORGENTE, NON DALLA PAGINA
+ *
+ * `src/ui/atto-due.js` non importa niente e non tocca il DOM, quindi node lo
+ * legge cosi' com'e'. E' deliberato che la DICHIARAZIONE arrivi da li' e la
+ * REALTA' dal documento vivo: se il cancello leggesse entrambe dalla pagina,
+ * verificherebbe che un modulo e' d'accordo con se' stesso -- il difetto che
+ * questo repo ha gia' pagato due volte.
+ */
+import { STAZIONI, QUOTE, SISTEMI, CELLE, COMANDI_NOTI } from '../src/ui/atto-due.js'
+import { IPOTESI_QUIETE_MS, IPOTESI_BLOCCO_ASSE_PX, IPOTESI_PASSO_CELLA_PX } from '../src/ui/soglie.js'
 
 /**
  * IL SITO SU UNO SCHERMO DA TELEFONO — misurato, non supposto.
@@ -105,6 +116,44 @@ import { apriBrowser } from './browser.mjs'
  *      la ragione per cui non se ne trae nessuna conclusione stanno accanto
  *      alla riga che lo stampa; qui basti che un numero che deriva non e' un
  *      numero rumoroso, e' un numero da cui non si deduce.
+ *
+ *   5. LA COPERTURA — cio' che si raggiunge da desktop si raggiunge col dito
+ *      E' il cancello del §8 di `docs/13`: «ogni cosa che si puo' scoprire da
+ *      desktop si deve poter scoprire da telefono. Non con lo stesso gesto --
+ *      con lo stesso esito.»
+ *
+ *      I due elenchi si costruiscono in due modi DIVERSI, ed e' l'unica cosa
+ *      che rende questa sezione un cancello invece di un rito:
+ *        - il desktop si ENUMERA dal documento vivo a 1280x800, cercando i
+ *          comandi dentro `.comandi`. Nessuna lista scritta a mano;
+ *        - il telefono si MISURA a 360x640, aprendo l'esplorazione col dito e
+ *          percorrendola;
+ *        - `src/ui/atto-due.js` fa da terzo: dichiara la mappa, e il cancello
+ *          pretende che il DOM la consegni.
+ *
+ *      Cosa fa uscire ROSSO, e sono tutti guasti veri e gia' visti altrove:
+ *        - un comando compare sul desktop e la mappa non lo conosce (e' il
+ *          caso «uno solo non lo e'» del §9);
+ *        - un comando noto non si raggiunge col dito;
+ *        - una delle dodici celle non si raggiunge coi pulsanti;
+ *        - il gesto non produce scatti, o le frecce della tastiera non fanno
+ *          niente. **Questo secondo caso e' successo davvero mentre scrivevo
+ *          il modulo** -- un `?.` che corto-circuitava e si portava via la
+ *          chiamata dentro l'argomento -- e il cancello lo avrebbe preso;
+ *        - un bersaglio dell'esplorazione sotto i 44x44, o coperto;
+ *        - l'annotazione non compare dopo la quiete dichiarata;
+ *        - il pulsante che inoltra dichiara uno stato diverso dal nodo
+ *          canonico.
+ *
+ *      **Cosa questa sezione NON verifica, e va detto forte:** che 400 ms di
+ *      quiete siano il numero giusto, o che 24 px per scatto lo siano. Sono
+ *      `IPOTESI_` di `src/ui/soglie.js`, e nessun cancello puo' verificarle:
+ *      qui i valori si LEGGONO e si aspetta il triplo, si trascina il doppio.
+ *      Se domani cambiano, questa sezione resta vera senza toccarla.
+ *
+ *      E non verifica che la scena si muova con la posizione, perche' **non si
+ *      muove**: la lama come strumento non esiste ancora (`docs/13` §7, punto
+ *      1). Il referto lo stampa invece di lasciarlo credere.
  *
  *   4. QUANTI BYTE SCARICA
  *      fino al PRIMO FOTOGRAMMA DISEGNATO, non fino a `load`: e' il momento in
@@ -314,6 +363,25 @@ const FOTOGRAMMI_MINIMI = 2
 const BERSAGLIO_MIN = 24
 
 /**
+ * ─── E QUARANTAQUATTRO PER CIO' CHE E' NATO PER IL DITO
+ *
+ * I 24 px qui sopra sono il minimo di legge e valgono per i comandi che
+ * esistevano prima. La superficie dell'atto due col dito -- l'esplorazione di
+ * `src/ui/tocco.js` -- e' nata per essere toccata e basta, e li' il numero e'
+ * **44**: e' quello che questo repo si e' gia' dato in `comandi.js` dopo il
+ * difetto del prototipo (un bersaglio di 20x7), ed e' il minimo delle linee
+ * guida Apple.
+ *
+ * Due numeri diversi in un file solo hanno bisogno di una ragione, e la
+ * ragione e' questa: **il primo e' un cancello ereditato, il secondo e' una
+ * promessa nuova.** Alzare anche il primo sarebbe corretto e non e' compito di
+ * questa sessione: toccherebbe una soglia su una superficie che sta
+ * riscrivendo qualcun altro, e un cancello che diventa rosso per il lavoro di
+ * un altro e' un cancello che verra' spento.
+ */
+const BERSAGLIO_44 = 44
+
+/**
  * Le posizioni di scorrimento in cui si guarda l'impaginato. Sono le stesse
  * che usa `collaudo-impaginato.mjs` — le battute stanno in `regia.js` — con
  * in piu' lo zero, cioe' la prima schermata, che e' l'unica che un visitatore
@@ -337,7 +405,7 @@ const COMANDI = [
   ['#mare .mare__tacca:nth-of-type(1)', 'stato del mare, tacca 0'],
   ['#mare .mare__tacca:nth-of-type(3)', 'stato del mare, tacca 2'],
   ['#mare .mare__tacca:nth-of-type(6)', 'stato del mare, tacca 5'],
-  ['#velocita', 'andatura'],
+  ['#propulsione', 'comando della propulsione'],
   ['#stab', 'interruttore di stabilizzazione']
 ]
 
@@ -985,6 +1053,442 @@ async function misuraViewport (browser, vp) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   5 · LA COPERTURA — due elenchi costruiti in due modi diversi
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Il viewport da cui si enumera cio' che il desktop OFFRE. Non e' uno dei tre
+ * del referto: e' il termine di paragone, e senza di lui la parita' non ha un
+ * primo membro.
+ */
+const DESKTOP = { nome: 'desktop', width: 1280, height: 800 }
+
+/**
+ * Dove i comandi sono vivi. Stessa ricerca della sezione 1c, e per la stessa
+ * ragione: `stile.css` li porta a `opacity:0` fuori dalle loro battute, quindi
+ * cercarli a uno scorrimento fisso vuol dire, a seconda della fortuna, un
+ * falso allarme o un cancello che non prova niente.
+ *
+ * ─── E SI PRENDE IL CENTRO DELLA FINESTRA, NON IL PRIMO PUNTO BUONO
+ *
+ * SINTOMO: la prima stesura di questa sezione dichiarava `#stab`
+ * IRRAGGIUNGIBILE a 360x640 -- «fuori dalla finestra, centro a 180,694» --
+ * mentre la sezione 1c, nella stessa corsa, lo trovava raggiungibile.
+ * CAUSA: prendevo il PRIMO scorrimento in cui i comandi risultano vivi. Li' il
+ * palco e' appena entrato e la fascia dei comandi cade ancora sotto il bordo;
+ * la sezione 1c prende invece il centro dell'intervallo.
+ * COME L'HO ISOLATA: dal referto stesso, che dava due verdetti opposti sullo
+ * stesso nodo nella stessa corsa. Un cancello che si contraddice ha un difetto
+ * nel metro, non nel soggetto.
+ *
+ * La regola che ne esce vale oltre questa funzione: **due criteri diversi per
+ * la stessa domanda, nello stesso file, prima o poi danno due risposte** -- e
+ * quella sbagliata sara' creduta perche' e' scritta accanto a una giusta.
+ */
+async function doveIComandiSonoVivi (pg) {
+  const vivi = []
+  for (let f = 0.15; f <= 0.80001; f += 0.01) {
+    const ok = await pg.evaluate(async (f) => {
+      const h = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.round(h * f))
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const palco = document.querySelector('#dimostrazione .palco[data-battuta]')
+      if (!palco) return false
+      const b = palco.getBoundingClientRect()
+      const c = document.querySelector('.comandi')
+      return !!c && +getComputedStyle(c).opacity > 0.9 && b.top > -1 && b.bottom > window.innerHeight - 1
+    }, f)
+    if (ok) vivi.push(f)
+  }
+  if (!vivi.length) return null
+  const scelto = vivi[Math.floor(vivi.length / 2)]
+  await pg.evaluate(async (f) => {
+    const h = document.documentElement.scrollHeight - window.innerHeight
+    window.scrollTo(0, Math.round(h * f))
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  }, scelto)
+  await pg.waitForFunction(() => +getComputedStyle(document.querySelector('.comandi')).opacity > 0.95,
+    null, { timeout: 5000 }).catch(() => {})
+  return scelto
+}
+
+/**
+ * COSA OFFRE IL DESKTOP. Si enumera il documento, non una lista scritta a
+ * mano: e' l'unico modo perche' il cancello si accorga di un comando NUOVO.
+ *
+ * Il setaccio dell'interattivita' serve a non contare `#et-mare`, che e' un
+ * `<p>` con un id ed e' l'etichetta della scala, non un comando. Un cancello
+ * che chiedesse al telefono di raggiungere un'etichetta manderebbe a
+ * correggere una cosa sana -- ed e' la trappola numero 5 di questo file,
+ * quella di `#stab-salone`, in un'altra veste.
+ */
+const ENUMERA = () => {
+  const dentro = document.querySelector('.comandi')
+  if (!dentro) return null
+  const interattivo = (e) => {
+    const t = e.tagName
+    const r = e.getAttribute('role')
+    return t === 'BUTTON' || t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'A' ||
+      r === 'group' || r === 'button' || r === 'slider' || r === 'radiogroup'
+  }
+  return [...dentro.querySelectorAll('[id]')].filter(interattivo).map(e => {
+    const b = e.getBoundingClientRect()
+    const sopra = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+    return {
+      id: e.id,
+      tag: e.tagName.toLowerCase(),
+      w: +b.width.toFixed(1), h: +b.height.toFixed(1),
+      colpito: !!sopra && (sopra === e || e.contains(sopra))
+    }
+  })
+}
+
+async function misuraCopertura (browser) {
+  const R = { guai: [], desktop: [], telefono: [], celle: null, gesto: null, tastiera: null, sistemi: [], note: [] }
+
+  /* --- il primo membro del confronto: il desktop ------------------------- */
+  const cD = await browser.newContext({ viewport: { width: DESKTOP.width, height: DESKTOP.height }, deviceScaleFactor: 1 })
+  const pD = await cD.newPage()
+  await pD.goto(BASE + '?ispeziona=1', { waitUntil: 'domcontentloaded' })
+  await pD.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 8000))]))
+  await pD.waitForFunction(() => window.__nautica && window.__nautica.scena, null, { timeout: 90000 }).catch(() => {})
+  const fD = await doveIComandiSonoVivi(pD)
+  if (fD === null) {
+    R.guai.push('copertura: a 1280x800 non c e una posizione in cui i comandi siano vivi, ' +
+                'quindi non ho un elenco di partenza e la parita non si puo misurare')
+    await cD.close()
+    return R
+  }
+  R.dove = `${(fD * 100).toFixed(0)}% di scorrimento`
+  R.desktop = await pD.evaluate(ENUMERA) || []
+  await cD.close()
+
+  if (!R.desktop.length) {
+    R.guai.push('copertura: a 1280x800 non ho trovato NESSUN comando dentro .comandi. ' +
+                'O il setaccio dell interattivita e sbagliato, o la barra dei comandi non c e piu: ' +
+                'in entrambi i casi il confronto sarebbe vuoto e verde, che e il modo peggiore di passare')
+    return R
+  }
+
+  /**
+   * --- IL SECONDO MEMBRO: IL TELEFONO PIU' PICCOLO
+   *
+   * 360x640 e non 390x844, e non e' pigrizia: se la parita' regge sul telefono
+   * piu' stretto e piu' basso regge sugli altri due, mentre il contrario non e'
+   * vero. E' anche l'unico dei tre in cui fra la dichiarazione e i comandi
+   * restano ottantatre pixel, cioe' quello su cui la modalita' e' stata
+   * disegnata.
+   */
+  const vp = VIEWPORT[0]
+  const cT = await browser.newContext({
+    viewport: { width: vp.width, height: vp.height },
+    deviceScaleFactor: vp.dpr, isMobile: true, hasTouch: true, reducedMotion: 'no-preference'
+  })
+  const pT = await cT.newPage()
+  const eccezioni = []
+  pT.on('pageerror', e => eccezioni.push(String(e).slice(0, 160)))
+  await pT.goto(BASE + '?ispeziona=1', { waitUntil: 'domcontentloaded' })
+  await pT.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 8000))]))
+  await pT.waitForFunction(() => window.__nautica && window.__nautica.scena, null, { timeout: 90000 }).catch(() => {})
+
+  /* --- 5a · i comandi del desktop, dove li trova un dito ----------------- */
+
+  const fT = await doveIComandiSonoVivi(pT)
+  for (const c of R.desktop) {
+    const noto = COMANDI_NOTI.find(x => x.sel === '#' + c.id)
+    const raggiunto = fT === null ? null : await pT.evaluate((id) => {
+      const e = document.getElementById(id)
+      if (!e) return { c: false, perche: 'non e nel documento' }
+      const st = getComputedStyle(e)
+      const b = e.getBoundingClientRect()
+      if (+st.opacity < 0.1) return { c: false, perche: `trasparente (opacity ${st.opacity})` }
+      if (st.display === 'none' || st.visibility === 'hidden') return { c: false, perche: 'nascosto dal foglio di stile' }
+      const x = b.left + b.width / 2
+      const y = b.top + b.height / 2
+      if (!(y > 0 && y < window.innerHeight && x > 0 && x < window.innerWidth)) {
+        return { c: false, perche: `fuori dalla finestra (centro a ${Math.round(x)},${Math.round(y)})` }
+      }
+      const sopra = document.elementFromPoint(x, y)
+      const colpito = !!sopra && (sopra === e || e.contains(sopra))
+      return { c: colpito, perche: colpito ? null : `coperto da <${sopra ? sopra.tagName.toLowerCase() : 'niente'}>`, w: +b.width.toFixed(1), h: +b.height.toFixed(1) }
+    }, c.id)
+
+    R.telefono.push({ id: c.id, noto: !!noto, raggiunto })
+
+    /**
+     * IL CASO CHE QUESTO CANCELLO ESISTE PER PRENDERE: un comando che compare
+     * sul desktop e di cui la mappa dell'atto due non sa niente. Non e' un
+     * difetto del telefono -- e' che nessuno gli ha detto che quella cosa
+     * esiste, ed e' esattamente il modo in cui la parita' si perde: non
+     * rompendola, dimenticandola.
+     */
+    if (!noto) {
+      R.guai.push(`copertura: "#${c.id}" e un comando del desktop che src/ui/atto-due.js NON conosce. ` +
+                  'Aggiungilo a COMANDI_NOTI dicendo dove lo ritrova il dito -- dentro una cella della ' +
+                  'griglia, oppure fuori come lo stato del mare -- oppure toglilo dal desktop')
+    }
+    if (raggiunto && raggiunto.c === false) {
+      R.guai.push(`copertura: "#${c.id}" si usa da desktop e su ${vp.width}x${vp.height} ${raggiunto.perche}`)
+    }
+  }
+  if (fT === null) {
+    R.guai.push(`copertura: su ${vp.width}x${vp.height} i comandi non sono mai vivi, quindi non ho ` +
+                'potuto verificare se il dito li raggiunge nello stato normale della pagina')
+  }
+
+  /* --- 5b · l'esplorazione col dito -------------------------------------- */
+
+  const offerta = await pT.evaluate(() => {
+    const b = document.querySelector('#entra-esplorazione')
+    if (!b) return { c: false, perche: 'il pulsante che apre non e nel documento' }
+    const st = getComputedStyle(b)
+    if (st.display === 'none') return { c: false, perche: 'il pulsante che apre e display:none' }
+    const r = b.getBoundingClientRect()
+    const sopra = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+    return {
+      c: !!sopra && (sopra === b || b.contains(sopra)),
+      w: +r.width.toFixed(1), h: +r.height.toFixed(1),
+      perche: null
+    }
+  })
+  R.entrata = offerta
+  if (!offerta.c) {
+    R.guai.push(`copertura: l esplorazione col dito non si apre -- ${offerta.perche || 'il pulsante e coperto'}. ` +
+                'Senza, le celle della griglia non sono raggiungibili da telefono in nessun modo')
+    await cT.close()
+    return R
+  }
+  if (offerta.w < BERSAGLIO_44 || offerta.h < BERSAGLIO_44) {
+    R.guai.push(`copertura: il pulsante che apre l esplorazione misura ${offerta.w}x${offerta.h}, ` +
+                `sotto i ${BERSAGLIO_44}x${BERSAGLIO_44} che questo repo si e dato per cio che si tocca`)
+  }
+
+  await pT.click('#entra-esplorazione')
+  await pT.waitForFunction(() => document.querySelector('#esplorazione')?.dataset.stato === 'aperta',
+    null, { timeout: 15000 }).catch(() => {
+    R.guai.push('copertura: premuto il pulsante, l esplorazione non si e aperta in 15 secondi')
+  })
+
+  /* i bersagli dentro il riquadro: misurati come tutti gli altri di questo file */
+  R.bersagli = await pT.evaluate((min) => {
+    const c = document.querySelector('#esplorazione')
+    if (!c) return []
+    return [...c.querySelectorAll('button')].filter(e => !e.hidden).map(e => {
+      const b = e.getBoundingClientRect()
+      const sopra = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+      return {
+        nome: e.getAttribute('aria-label') || e.textContent.trim() || '(senza nome)',
+        w: +b.width.toFixed(1), h: +b.height.toFixed(1),
+        colpito: !!sopra && (sopra === e || e.contains(sopra)),
+        piccolo: b.width < min - 0.5 || b.height < min - 0.5
+      }
+    })
+  }, BERSAGLIO_44)
+  for (const b of R.bersagli) {
+    if (!b.colpito) R.guai.push(`copertura: nell esplorazione "${b.nome}" e coperto e non si puo toccare`)
+    else if (b.piccolo) R.guai.push(`copertura: nell esplorazione "${b.nome}" misura ${b.w}x${b.h}, sotto i ${BERSAGLIO_44}x${BERSAGLIO_44}`)
+  }
+
+  /**
+   * --- LE DODICI CELLE, RAGGIUNTE COI PULSANTI
+   *
+   * Coi PULSANTI e non col dito, ed e' il punto: il vincolo dichiarato dice
+   * che nessuna azione puo' richiedere esclusivamente il trascinamento. Questa
+   * e' la prova che l'alternativa esiste e funziona per tutte e dodici, non
+   * per quella che capita.
+   */
+  R.celle = await pT.evaluate(async ([celle]) => {
+    const c = document.querySelector('#esplorazione')
+    const premi = (sel, n) => { const b = c.querySelector(sel); for (let i = 0; i < n; i++) b.click() }
+    const mancate = []
+    for (const cella of celle) {
+      /* si torna sempre all'angolo noto: cosi' ogni cella si raggiunge con una
+         sequenza sua, e un difetto su una non nasconde quello sulla successiva */
+      premi('.espl__passo[data-passo="stazione:-1"]', 8)
+      premi('.espl__passo[data-passo="quota:-1"]', 8)
+      premi('.espl__passo[data-passo="stazione:1"]', cella.is)
+      premi('.espl__passo[data-passo="quota:1"]', cella.iq)
+      const arrivata = c.dataset.cella
+      if (arrivata !== `${cella.is},${cella.iq}`) mancate.push(`${cella.id}: chiesta ${cella.is},${cella.iq}, arrivata ${arrivata}`)
+    }
+    return { chieste: celle.length, mancate }
+  }, [CELLE])
+  for (const m of R.celle.mancate) {
+    R.guai.push(`copertura: una cella non si raggiunge coi pulsanti -- ${m}. ` +
+                'Senza i pulsanti resterebbe solo il trascinamento, e il trascinamento da solo e vietato')
+  }
+
+  /**
+   * --- IL GESTO VERO, con un puntatore vero
+   *
+   * Le prove qui sopra chiamano `click()` sul nodo: verificano la logica, non
+   * il dito. Questa invece trascina davvero. Il viaggio e' il blocco d'asse
+   * PIU' due passi, letti dalle ipotesi: si pretende ALMENO uno scatto, non
+   * esattamente due -- pretendere il numero esatto vorrebbe dire sostenere che
+   * il passo dichiarato e' quello giusto, e nessun cancello puo' farlo.
+   */
+  await pT.evaluate(() => {
+    const c = document.querySelector('#esplorazione')
+    for (let i = 0; i < 8; i++) c.querySelector('.espl__passo[data-passo="stazione:-1"]').click()
+  })
+  const centro = await pT.evaluate(() => {
+    const r = document.querySelector('.espl__schema').getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, prima: document.querySelector('#esplorazione').dataset.cella }
+  })
+  const viaggio = IPOTESI_BLOCCO_ASSE_PX + IPOTESI_PASSO_CELLA_PX * 2
+  await pT.mouse.move(centro.x, centro.y)
+  await pT.mouse.down()
+  for (let i = 1; i <= 12; i++) await pT.mouse.move(centro.x - (viaggio * i) / 12, centro.y)
+  await pT.mouse.up()
+  const dopoGesto = await pT.evaluate(() => document.querySelector('#esplorazione').dataset.cella)
+  R.gesto = { prima: centro.prima, dopo: dopoGesto, viaggio }
+  if (dopoGesto === centro.prima) {
+    R.guai.push(`copertura: un trascinamento di ${viaggio} px sul campo non ha prodotto NESSUNO scatto ` +
+                `(cella ferma a ${centro.prima}). Il viaggio e il blocco d asse piu due passi, letti da ` +
+                'src/ui/soglie.js: se il gesto non risponde a questo, sul telefono non risponde')
+  }
+
+  /**
+   * --- LA TASTIERA, e il difetto che questa riga ha gia' preso
+   *
+   * Non e' una formalita' di accessibilita' spuntata per dovere: scrivendo
+   * `tocco.js` le frecce non facevano NIENTE, perche' la chiamata che muove
+   * stava dentro l'argomento di una chiamata opzionale (`window.__studio?.`)
+   * che senza `?studio=1` corto-circuita. Nessun errore, nessun sintomo, e il
+   * dito continuava a funzionare: solo una prova da tastiera lo vede.
+   */
+  const tast = await pT.evaluate(async () => {
+    const c = document.querySelector('#esplorazione')
+    const campo = c.querySelector('.espl__campo')
+    /**
+     * SI PARTE DALL'ANGOLO, e la prima stesura non lo faceva: la prova del
+     * dito qui sopra lascia la cella dove capita, e se capita in fondo alle
+     * quote la freccia in giu' NON DEVE muovere niente -- e' il limite della
+     * griglia, non un difetto. Il referto lo dichiarava come guasto: un
+     * cancello che non controlla le proprie condizioni iniziali misura
+     * l'ordine delle proprie prove.
+     */
+    const premi = (sel, n) => { const b = c.querySelector(sel); for (let i = 0; i < n; i++) b.click() }
+    premi('.espl__passo[data-passo="stazione:-1"]', 8)
+    premi('.espl__passo[data-passo="quota:-1"]', 8)
+    campo.focus()
+    const messoAFuoco = document.activeElement === campo
+    const prima = c.dataset.cella
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+    const dopoX = c.dataset.cella
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+    const dopoY = c.dataset.cella
+    return { messoAFuoco, prima, dopoX, dopoY }
+  })
+  R.tastiera = tast
+  if (!tast.messoAFuoco) R.guai.push('copertura: il campo dell esplorazione non prende il fuoco, quindi da tastiera non esiste')
+  if (tast.dopoX === tast.prima) R.guai.push(`copertura: la freccia destra non muove la stazione (cella ferma a ${tast.prima})`)
+  if (tast.dopoY === tast.dopoX) R.guai.push(`copertura: la freccia in giu non muove la quota (cella ferma a ${tast.dopoX})`)
+
+  /* --- 5c · i sistemi: si arriva, e si comandano ------------------------- */
+
+  for (const s of SISTEMI) {
+    const iS = STAZIONI.findIndex(x => x.id === s.stazione)
+    const iQ = QUOTE.findIndex(x => x.id === s.quota)
+    if (iS < 0 || iQ < 0) {
+      R.guai.push(`copertura: il sistema "${s.id}" e dichiarato nella cella ${s.stazione}/${s.quota}, che non esiste nella griglia`)
+      continue
+    }
+    await pT.evaluate(([iS, iQ]) => {
+      const c = document.querySelector('#esplorazione')
+      const premi = (sel, n) => { const b = c.querySelector(sel); for (let i = 0; i < n; i++) b.click() }
+      premi('.espl__passo[data-passo="stazione:-1"]', 8)
+      premi('.espl__passo[data-passo="quota:-1"]', 8)
+      premi('.espl__passo[data-passo="stazione:1"]', iS)
+      premi('.espl__passo[data-passo="quota:1"]', iQ)
+    }, [iS, iQ])
+
+    /**
+     * SI ASPETTA IL TRIPLO DELLA QUIETE DICHIARATA. Non e' una verifica del
+     * numero -- quello e' un'ipotesi -- e' un margine: se l'annotazione non
+     * c'e' dopo tre volte il tempo che il sito dichiara di aspettare, non e'
+     * lenta, non c'e'.
+     */
+    await new Promise(r => setTimeout(r, IPOTESI_QUIETE_MS * 3))
+    const v = await pT.evaluate(([sel]) => {
+      const c = document.querySelector('#esplorazione')
+      const cm = c.querySelector('.espl__comando')
+      const canonico = sel ? document.querySelector(sel) : null
+      const b = cm && !cm.hidden ? cm.getBoundingClientRect() : null
+      const sopra = b ? document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) : null
+      return {
+        cella: c.dataset.cella,
+        nota: c.querySelector('.espl__nota').textContent.trim(),
+        comandoPresente: !!cm && !cm.hidden,
+        w: b ? +b.width.toFixed(1) : null,
+        h: b ? +b.height.toFixed(1) : null,
+        colpito: b ? !!sopra && (sopra === cm || cm.contains(sopra)) : null,
+        statoProxy: cm ? cm.getAttribute('aria-pressed') : null,
+        statoCanonico: canonico ? canonico.getAttribute('aria-pressed') : null,
+        canonicoInPagina: !!canonico
+      }
+    }, [s.comando || null])
+
+    const esito = { id: s.id, cella: `${iS},${iQ}`, ...v }
+    R.sistemi.push(esito)
+
+    if (v.cella !== `${iS},${iQ}`) {
+      R.guai.push(`copertura: la cella del sistema "${s.id}" non si raggiunge (chiesta ${iS},${iQ}, arrivata ${v.cella})`)
+      continue
+    }
+    if (!v.nota.includes(s.nome)) {
+      R.guai.push(`copertura: fermi sulla cella di "${s.id}" per ${IPOTESI_QUIETE_MS * 3} ms, ` +
+                  `l annotazione non lo nomina (dice: "${v.nota.slice(0, 60)}"). ` +
+                  'Da desktop l annotazione compare per quiete: qui non compare, e la parita e rotta')
+    }
+    if (s.comando) {
+      if (!v.canonicoInPagina) {
+        R.guai.push(`copertura: "${s.id}" dichiara il comando ${s.comando}, che nel documento non c e`)
+      } else if (!v.comandoPresente) {
+        R.guai.push(`copertura: sulla cella di "${s.id}" il pulsante che inoltra a ${s.comando} non compare, ` +
+                    'quindi da telefono il sistema si trova ma non si tocca')
+      } else {
+        if (!v.colpito) R.guai.push(`copertura: il comando di "${s.id}" nell esplorazione e coperto`)
+        else if (v.w < BERSAGLIO_44 - 0.5 || v.h < BERSAGLIO_44 - 0.5) {
+          R.guai.push(`copertura: il comando di "${s.id}" misura ${v.w}x${v.h}, sotto i ${BERSAGLIO_44}x${BERSAGLIO_44}`)
+        }
+        if (v.statoProxy !== v.statoCanonico) {
+          R.guai.push(`copertura: il comando di "${s.id}" dichiara aria-pressed="${v.statoProxy}" mentre ` +
+                      `${s.comando} dice "${v.statoCanonico}". Sono due stati per una cosa sola, ed e il difetto ` +
+                      'che comandi.js ha gia pagato una volta')
+        }
+      }
+    }
+  }
+
+  /* si preme davvero, una volta: inoltrare non e' mostrare */
+  const ultimo = R.sistemi.find(x => x.comandoPresente)
+  if (ultimo) {
+    const prima = await pT.evaluate(() => document.querySelector('.espl__comando').getAttribute('aria-pressed'))
+    await pT.click('.espl__comando')
+    await new Promise(r => setTimeout(r, 250))
+    const dopo = await pT.evaluate(() => {
+      const cm = document.querySelector('.espl__comando')
+      const can = document.querySelector(cm.dataset.comanda)
+      return { proxy: cm.getAttribute('aria-pressed'), canonico: can?.getAttribute('aria-pressed') }
+    })
+    R.inoltro = { prima, ...dopo }
+    if (dopo.proxy === prima) {
+      R.guai.push('copertura: premuto il comando dentro l esplorazione, lo stato non e cambiato: ' +
+                  'il pulsante c e, il sistema non risponde')
+    }
+    if (dopo.proxy !== dopo.canonico) {
+      R.guai.push(`copertura: dopo la pressione il pulsante dice "${dopo.proxy}" e il nodo canonico "${dopo.canonico}"`)
+    }
+  }
+
+  for (const e of eccezioni.slice(0, 3)) R.guai.push(`copertura: eccezione in pagina — ${e}`)
+  R.eccezioni = eccezioni
+  await cT.close()
+  return R
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    ESECUZIONE
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -1047,6 +1551,32 @@ for (const vp of VIEWPORT) {
   guai.push(...R.guai)
   console.log(R.morto ? 'MORTO DUE VOLTE' : 'fatto')
 }
+
+/**
+ * LA COPERTURA SI MISURA DOPO, e su contesti suoi.
+ *
+ * Non dentro `misuraViewport`: quella funzione descrive il sito COM'E' quando
+ * lo si apre, e aprire l'esplorazione lo cambia -- spegne la pila e i comandi.
+ * Misurare le due cose nella stessa pagina vorrebbe dire che l'ordine dei
+ * controlli decide il risultato, che e' il modo piu' silenzioso di rendere un
+ * cancello inaffidabile.
+ */
+process.stdout.write('  misuro la copertura desktop -> dito ... ')
+let coperturaMorta = null
+let copertura = { guai: [], desktop: [], telefono: [], sistemi: [] }
+try {
+  copertura = await misuraCopertura(browser)
+} catch (e) {
+  const m = String(e).split('\n')[0]
+  if (/Execution context was destroyed|Target (page, context or browser has been )?closed|browser has been closed|crash/i.test(m)) {
+    coperturaMorta = m
+  } else {
+    await browser.close().catch(() => {})
+    throw e
+  }
+}
+console.log(coperturaMorta ? 'MISURA INTERROTTA' : 'fatto')
+guai.push(...copertura.guai)
 
 await browser.close()
 if (!TIENI_SERVER) server?.kill()
@@ -1231,6 +1761,74 @@ for (const R of referti) {
 }
 console.log('')
 
+console.log('5 · LA COPERTURA                        (questi controlli fanno FALLIRE)')
+console.log('    la regola: cio che si scopre da desktop si deve poter scoprire col dito.')
+console.log('    Non con lo stesso gesto — con lo stesso esito. (docs/13 §8)')
+console.log('')
+if (coperturaMorta) {
+  console.log('    MISURA INTERROTTA: ' + coperturaMorta)
+} else {
+  console.log(`    dichiarato in src/ui/atto-due.js: ${STAZIONI.length} stazioni x ${QUOTE.length} quote = ${CELLE.length} celle, ` +
+              `${SISTEMI.length} sistemi con una cella, ${COMANDI_NOTI.length} comandi noti`)
+  console.log(`    enumerato dal desktop a 1280x800${copertura.dove ? ', ' + copertura.dove : ''}: ` +
+              `${copertura.desktop.length} comandi dentro .comandi`)
+  console.log('')
+  console.log('    ' + col('comando del desktop', 22) + col('la mappa lo conosce', 22) + 'lo raggiunge il dito a 360x640')
+  for (const t of copertura.telefono) {
+    console.log('    ' + col('#' + t.id, 22) + col(t.noto ? 'si' : 'NO — vedi i guasti', 22) +
+      (t.raggiunto === null ? 'non misurato' : t.raggiunto.c ? `si (${t.raggiunto.w}x${t.raggiunto.h} px)` : 'NO — ' + t.raggiunto.perche))
+  }
+  console.log('')
+  if (copertura.celle) {
+    console.log(`    le ${copertura.celle.chieste} celle raggiunte coi PULSANTI (non col trascinamento): ` +
+      (copertura.celle.mancate.length ? copertura.celle.mancate.length + ' MANCATE' : 'tutte'))
+  }
+  if (copertura.gesto) {
+    console.log(`    il dito: trascinamento di ${copertura.gesto.viaggio} px (blocco d asse ${IPOTESI_BLOCCO_ASSE_PX} + ` +
+      `2 passi da ${IPOTESI_PASSO_CELLA_PX}), cella da ${copertura.gesto.prima} a ${copertura.gesto.dopo}`)
+  }
+  if (copertura.tastiera) {
+    console.log(`    la tastiera: fuoco ${copertura.tastiera.messoAFuoco ? 'preso' : 'NON PRESO'}, ` +
+      `cella ${copertura.tastiera.prima} -> ${copertura.tastiera.dopoX} (freccia destra) -> ${copertura.tastiera.dopoY} (freccia giu)`)
+  }
+  if (copertura.bersagli?.length) {
+    console.log('')
+    console.log(`    i bersagli dentro l esplorazione, contro ${BERSAGLIO_44}x${BERSAGLIO_44}:`)
+    for (const b of copertura.bersagli) {
+      console.log('       ' + col(b.nome.slice(0, 34), 36) + num(b.w, 6) + ' x ' + num(b.h, 5) + ' px   ' +
+        (!b.colpito ? 'COPERTO' : b.piccolo ? 'TROPPO PICCOLO' : 'ok'))
+    }
+  }
+  if (copertura.sistemi.length) {
+    console.log('')
+    console.log('    i sistemi, raggiunti e comandati:')
+    for (const s of copertura.sistemi) {
+      console.log(`       ${col(s.id, 18)} cella ${s.cella}   annotazione: ${s.nota ? '"' + s.nota.slice(0, 44) + '..."' : 'NESSUNA'}`)
+      console.log(`       ${col('', 18)} comando: ` + (s.comandoPresente
+        ? `${s.w}x${s.h} px, aria-pressed proxy "${s.statoProxy}" / canonico "${s.statoCanonico}"`
+        : s.canonicoInPagina ? 'NON COMPARE' : 'il nodo canonico non e in pagina'))
+    }
+  }
+  if (copertura.inoltro) {
+    console.log(`    premuto una volta: ${copertura.inoltro.prima} -> proxy ${copertura.inoltro.proxy}, canonico ${copertura.inoltro.canonico}`)
+  }
+  console.log('')
+  /**
+   * QUELLO CHE QUESTA SEZIONE NON PUO' DIRE, stampato accanto a quello che
+   * dice. Un referto che tacesse su questo lascerebbe credere che l'atto due
+   * col dito sia finito, e non lo e': e' finita l'INTERFACCIA.
+   */
+  console.log('    NON VERIFICATO, e non e verificabile finche non esiste: che la SCENA segua la')
+  console.log('    posizione. La lama come strumento e il punto 1 di docs/13 §7 e non c e ancora,')
+  console.log('    quindi muovendosi fra le celle cambia lo stato, l annuncio e lo schema — non')
+  console.log('    l inquadratura. L aggancio e l evento `nautica:cella` sul documento, e oggi non')
+  console.log('    lo ascolta nessuno.')
+  console.log(`    E delle dodici celle ne hanno qualcosa DUE: e quello che esiste (${SISTEMI.map(s => s.id).join(', ')}).`)
+  console.log('    docs/13 §3 ne prevede sette o otto, e il giroscopio del §4 non e costruito:')
+  console.log('    src/ui/atto-due.js dichiara cio che c e, non cio che ci sara.')
+}
+console.log('')
+
 /* --- L'ESITO ------------------------------------------------------------ */
 
 console.log(AVVISO)
@@ -1272,6 +1870,12 @@ console.log('  VERIFICATO su 360x640, 390x844 e 768x1024: niente scorrimento lat
 console.log(`  ${PUNTI.length} punti della visita, nessun riquadro sorvegliato fuori schermo, i comandi`)
 console.log(`  presenti in pagina raggiungibili con elementFromPoint e con bersagli sopra i`)
 console.log(`  ${BERSAGLIO_MIN}x${BERSAGLIO_MIN} px di WCAG 2.2, e la scena che disegna.`)
+console.log('')
+console.log(`  E VERIFICATO che i ${copertura.desktop.length} comandi enumerati dal desktop siano tutti noti alla mappa`)
+console.log(`  dell atto due e raggiungibili col dito; che le ${CELLE.length} celle si raggiungano coi PULSANTI`)
+console.log('  e non solo trascinando; che il trascinamento produca scatti e le frecce muovano;')
+console.log(`  che i ${SISTEMI.length} sistemi si annuncino per quiete e si comandino con bersagli sopra i`)
+console.log(`  ${BERSAGLIO_44}x${BERSAGLIO_44} px, con lo stesso aria-pressed del nodo che possiede lo stato.`)
 console.log('')
 console.log('  NON VERIFICATO, e non e verificabile qui: la fluidita su un telefono vero (non')
 console.log('  c e una GPU), il consumo di batteria, il comportamento su rete lenta, la resa')

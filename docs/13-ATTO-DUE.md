@@ -87,7 +87,23 @@ al visitatore che il mondo è finto e che le cose interessanti sono state
 marcate. Qui le cose **stanno lì**. Si trovano muovendo il taglio, e
 l'annotazione compare **perché ci si è fermati**, non perché si è cliccato.
 
-**Soglia:** l'annotazione appare dopo 400 ms di quiete della lama entro il
+**Soglia — ed e' un'IPOTESI, non un requisito.** Deciso il 29 agosto: i
+valori provvisori sono ammessi, spacciarli per dimostrati no. Le tre specie
+sono ora distinte e il nome le dichiara: `IPOTESI_*` in `src/ui/soglie.js` per
+i valori provvisori, `SOGLIA_*` per quelli validati su persone, e **un cancello
+automatico puo' nascere solo dalla seconda specie** -- un cancello costruito su
+un'ipotesi certificherebbe la mia congettura invece del sito. Nessun test deve
+sostenere che 400 ms siano corretti, e `?studio=1` (`src/ui/studio.js`) misura
+cio' che serve a sostituirli: tempo al primo gesto efficace, tentativi a vuoto,
+permanenza per macchina, annotazioni aperte e abbandonate subito, ritorno o
+mancato ritorno al salone. Si chiude dopo cinque persone che non conoscono il
+sito.
+
+**E nessun ritardo artificiale prima che la lama risponda: la lama risponde
+subito.** L'attrito del passaggio di consegne e' una cosa che si guarda addosso
+a qualcuno; la prontezza della mano si da' e basta.
+
+L'annotazione appare dopo 400 ms di quiete della lama entro il
 raggio del sistema, e scompare al primo movimento. Va tarata guardando.
 
 ### La camera si libera, e la regola lo prevedeva già
@@ -106,13 +122,14 @@ ragione completamente diversa. Sotto la linea questo pesa meno, ma non zero.
 
 ---
 
-## 4. I quattro sistemi, e perché quattro
+## 4. I tre sistemi, e perché non quattro
 
-Propulsione · stabilizzatori · giroscopio · timoneria.
+Propulsione · stabilizzatori · giroscopio.
 
-Non venti. Quattro, scelti perché **si tengono per mano**. Venti sistemi
-scollegati sono un catalogo; quattro concatenati sono un modello mentale che ci
-si porta a casa.
+Non venti. Tre, scelti perché **si tengono per mano**. Sistemi scollegati sono
+un catalogo; tre conseguenze concatenate sono un modello mentale che ci si
+porta a casa. La timoneria resta fuori dal primo atto due: non chiude questa
+catena e aggiungerla adesso significherebbe aggiungere un'altra demo.
 
 ### La catena causale
 
@@ -141,17 +158,16 @@ E il giroscopio chiude il ragionamento invece di aggiungere un pezzo: **è il
 motivo per cui esistono entrambi**, e nessun sito lo ha mai fatto capire
 facendolo provare.
 
-### La velocità: la stessa grandezza, due modi opposti di incontrarla
+### La velocità è diventata una conseguenza
 
-La velocità **è già esposta**: `index.html:89` ha un `<input type="range">` da 0
-a 20 nodi con etichetta *Speed*.
+Il cursore pubblico da 0 a 20 nodi è stato rimosso. Il comando ora è
+`#propulsione`; la velocità resta una lettura. `dinamicaPropulsione()` porta i
+giri verso il comando con inerzia e integra spinta e resistenza quadratiche.
+La scia riceve la stessa `S.velocita`, mentre `autorita()` continua a ricavare
+da quella grandezza — e soltanto da quella — l'autorità delle pinne.
 
-Il punto dell'atto due non è *esporla*. È che nell'atto uno la velocità è un
-**cursore in un pannello**, e nell'atto due diventa una **conseguenza**. Non la
-si trascina: la si causa spegnendo la propulsione, e il crollo delle pinne
-arriva da solo perché il quadrato lo produce.
-
-Il primo modo si legge. Il secondo si scopre.
+Il banco numerico può ancora costruire una simulazione a velocità imposta: è
+una modalità di misura, non una superficie data al visitatore.
 
 **Cancello, ed è il più importante del documento:** con la propulsione spenta,
 la velocità deve scendere secondo una decelerazione dichiarata, e la riduzione
@@ -185,6 +201,46 @@ devono coincidere entro 0,05° su 200 fotogrammi. Se divergono, il finale è un
 effetto e va rimosso: sarebbe la bugia peggiore del sito, proprio nel punto in
 cui rivendica di non mentire.
 
+### DUE DECISIONI SI CONTRADDICONO, e non la chiudo io — 29 agosto
+
+Il cancello qui sopra e' stato scritto per un finale **in 3D**: il salone
+sopra, lo scafo sotto, lo stesso integratore che li inclina tutti e due. Con
+quel finale il cancello e' esatto e necessario.
+
+Ma il finale deciso il 29 agosto **e' un filmato** -- la traversata dal
+meccanismo alle persone, girata, fotorealistica, montata come tessitura nella
+scena. **Un filmato non risponde al rollio.** Quindi, per come stanno le cose
+adesso:
+
+- l'inclinazione del salone nel finale **non** viene dalla corsa viva: viene
+  dalla camera di chi ha girato la clip;
+- il cancello del §5 non puo' passare, e non perche' ci sia un difetto: perche'
+  misura una cosa che il finale nuovo non fa piu';
+- e la frase «le due persone viste tranquille nella prima schermata adesso non
+  lo sono, **e la causa e' chi guarda**» -- che e' l'argomento piu' forte di
+  tutto il documento -- con un filmato **non e' piu' vera**.
+
+Le tre strade, e la scelta e' del committente:
+
+1. **il finale resta un filmato**, e il cancello del §5 si cancella insieme alla
+   frase che proteggeva. Si guadagna il fotorealismo, si perde la causalita'
+   proprio nel punto in cui il sito la rivendica di piu';
+2. **il finale torna in 3D**, e allora serve il guscio del salone con parallasse
+   e occlusioni vere (§10) -- che e' la condizione perche' non sia una
+   fotografia in un riquadro, ed e' settimane;
+3. **i due si dividono il lavoro**: il filmato fa la TRAVERSATA (corridoi,
+   scale, spazi tecnici: li' non c'e' niente da inclinare), e l'ultimo tratto --
+   il salone con le persone -- torna in 3D, dove il rollio e' vero. La cucitura
+   si sposta dall'inizio del filmato alla sua fine, ed e' misurabile con lo
+   stesso strumento (`consegna.mjs`, che ora sa confrontare tutti e due i
+   versi).
+
+**La terza e' l'unica che tiene insieme fotorealismo e causalita'**, ed e' anche
+la piu' cara. Non la prendo da solo: e' messa in scena, e la messa in scena la
+decide il committente. Scritta qui come numero sul tavolo, non come proposta
+approvata.
+
+
 ### La domanda che questo paragrafo lascia aperta
 
 **Come si vede il salone mentre si è sotto la linea?**
@@ -206,7 +262,40 @@ Tre strade, e va scelta **guardando**, non ragionando:
 3. **Il salone appare in un'apertura** nella parte alta dell'inquadratura, con
    la composizione del riferimento. Sicura, e la meno legata al gesto.
 
-Registrata come decisione aperta invece che scelta di nascosto.
+### CHIUSA — 29 agosto. La prima strada, ma non come fotogramma
+
+Il committente ha scelto, e ha corretto la domanda: **la sezione intera non e'
+l'ultima immagine, e' il climax razionale**. Il finale emotivo viene dopo, ed e'
+il ritorno alle persone.
+
+La sequenza, in sei passi:
+
+1. la camera **arretra fisicamente** dal meccanismo, dentro lo stesso scafo
+   aperto;
+2. compare la **sezione verticale completa**: il meccanismo sotto, il salone e
+   le persone sopra, un taglio solo;
+3. l'utente risolve il problema;
+4. rollio, pinne, mare e persone reagiscono **contemporaneamente**;
+5. la camera **risale attraverso lo stesso taglio** ed entra nel salone;
+6. il sito finisce sulle stesse persone della prima immagine, **ora rilassate**.
+
+**Le altre due strade sono scartate, con la ragione.** Guardare in alto dal
+meccanismo rende il salone troppo piccolo e prospetticamente difficile.
+Il salone dentro un'apertura e' un picture-in-picture mascherato: contraddice
+la scena continua, che e' la conquista piu' costosa di questo repo. E in nessuna
+delle due deve esserci un salto di camera o una fotografia che compare dentro un
+riquadro.
+
+**E il vecchio `finale.js` e' stato cancellato**, non collegato: implementava
+esattamente la soluzione respinta. Diciannove kilobyte non importati da nessuno,
+un'architettura vietata, e una trappola per chi fosse arrivato dopo. La storia
+resta in git; il perche' sta in `docs/20-FINALE.md`, che ora e' la lapide di
+quella strada e porta le tre misure geometriche che il finale nuovo deve
+battere.
+
+Se servira' un modulo separato potra' contenere **soltanto** la traiettoria
+continua della camera e la composizione finale. Mai un renderer, una scena o
+una lastra alternativi.
 
 ---
 
@@ -222,7 +311,8 @@ Più di quanto sembri. È il motivo per cui l'atto due è cablaggio.
 | `C(V) = C0·(V/V_rif)²` — `autorita()` | `simulazione.js` | fatto |
 | due corse parallele, viva e nuda | `simulazione.js`, `creaSimulazione` | fatto |
 | tabella riduzioni precalcolata | `src/scena/riduzioni.json` | fatto |
-| cursore velocità 0–20 nodi | `index.html`, `#velocita` | fatto |
+| comando propulsione e andatura dinamica | `#propulsione`, `dinamicaPropulsione()` | fatto, collaudato |
+| cancello della catena causale | `strumenti/collaudo-catena.mjs` | fatto |
 | meccanismo stabilizzatori | `nave.js` | fatto |
 | allestimento e fuoribordo | `costruisciAllestimento`, `costruisciFuoribordo` | scritti, invisibili |
 | contratto dei sistemi | `docs/08` §5 | specificato |
@@ -239,8 +329,11 @@ Più di quanto sembri. È il motivo per cui l'atto due è cablaggio.
 1. **La lama come strumento** — oggi è conseguenza dello scorrimento.
 2. **La navigazione a due assi** e il passaggio di consegne.
 3. **La camera libera sotto la linea**, entro il vincolo di beccheggio.
-4. **Tre sistemi nuovi**: propulsione, giroscopio, timoneria.
-5. **Il cablaggio delle conseguenze** — la catena del §4.
+4. **La macchina visibile della propulsione e il giroscopio.** Il comando e la
+   dinamica propulsiva esistono; albero, riduttore ed elica non hanno ancora
+   una rappresentazione Blender collegata a `giriPropulsione`.
+5. **Completare la catena del §4** — propulsione → velocità → pinne → rollio è
+   costruita e collaudata; manca il controesempio del giroscopio.
 6. **Le annotazioni** che compaiono per quiete, non per clic.
 7. **Il finale** — collegare l'inclinazione del salone alla corsa viva, e
    risolvere l'inquadratura lasciata aperta al §5.

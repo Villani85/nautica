@@ -1,14 +1,16 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  Clock, MathUtils, SRGBColorSpace, ACESFilmicToneMapping, Plane, Vector3,
+  Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
-import { POPPA_Z } from '../scafo/ordinate.js'
+import { POPPA_Z, PRUA_Z } from '../scafo/ordinate.js'
 import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
+import { creaTraversata } from './traversata.js'
+import { creaMacchine } from './macchine.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
@@ -17,6 +19,17 @@ import { avanza, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
+/**
+ * Dove sta il piano longitudinale quando NON taglia. 2,5 e' fuori dallo scafo:
+ * la semilarghezza massima e' 1,95, MISURATA sulla scena viva con
+ * `strumenti/dove-stanno.mjs` e non dedotta dalle ordinate, perche' fra le
+ * ordinate e la mesh in scena ci sono una scala e uno spessore di fasciame.
+ * Il margine e' mezza unita': abbastanza da non mordere il fasciame per un
+ * errore di arrotondamento, poco da non far perdere corsa all'animazione.
+ */
+const X_INTERO = 2.5
+/** A zero resta esattamente la meta' di babordo. */
+const X_MEZZO = 0.0
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
 /**
  * QUANTO SI ALZA LA CAMERA SUL PRIMO PIANO DEL MECCANISMO, in unita' di scena
@@ -193,13 +206,60 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * E il salone, nella stessa pagina, usa ACES da sempre: erano due mondi
    * diversi a due schermate di distanza.
    *
+   * ─── E POI ACES SE N'E' ANDATO, PERCHE' HA UN TETTO
+   *
+   * Il difetto che restava: `RRTAndODTFit` non arriva a 1,0, si ferma a **242**
+   * livelli. Non brucia — l'8,28% di prima e' sparito davvero — ma la
+   * sovrastruttura, che e' la massa piu' grande dell'inquadratura ed e'
+   * verniciata di bianco, ci vive addosso. Misurato da
+   * `strumenti/curva-tonale.mjs` sul fotogramma della battuta 0,30, con la
+   * maschera presa dai mesh `sovra_*` (54 mila pixel):
+   *
+   *     curva        mediana   media    max   pixel >=235
+   *     ACES @1,0      226,0   185,1    242      1,5%
+   *     AgX  @1,0      201,3   168,9    229      0,0%
+   *     AgX  @0,8      193,3   160,9    229      0,0%
+   *     AgX  @0,7      188,0   155,9    229      0,0%
+   *     AgX  @0,5      174,0   142,9    229      0,0%
+   *
+   * A 226 di mediana contro un tetto di 242 restano SEDICI livelli di corsa:
+   * li' la curva non ha piu' pendenza, due radianze diverse escono allo stesso
+   * valore e la forma della sovrastruttura si perde. E' il modo in cui un
+   * render legge come plastica, ed e' il difetto numero uno del committente.
+   * Con AgX ne restano quaranta, e il gradiente torna.
+   *
+   * ─── E L'ESPOSIZIONE E' 0,7 PER UNA RAGIONE MISURATA, non per gusto
+   *
+   * Sotto AgX ogni esposizione fra 1,0 e 0,5 toglie il difetto (nessun pixel
+   * al tetto). A decidere e' stato il SECONDO vincolo: l'acqua disegnata deve
+   * restare dov'era, o il foglio di stile va riscritto in mezza pagina. Colore
+   * dell'acqua disegnata a x 900-1200, righe 500-560, scarto da ACES @1,0:
+   *
+   *     AgX @1,0   +15,9  +10,8  +11,3
+   *     AgX @0,8   +10,1   +4,3   +4,8
+   *     AgX @0,7    +6,7   +0,5   +1,0   <- il minimo dell'intero sondaggio
+   *     AgX @0,6    +3,1   -3,8   -3,2
+   *     AgX @0,5    -0,8   -8,7   -8,1
+   *
+   * A 0,7 il verde e il blu del mare tornano dov'erano a meno di un livello:
+   * si muove solo il rosso, di 6,7. Quindi il foglio di stile insegue con una
+   * riga sola — `--acqua-viva` — invece che con tutta la tavolozza.
+   *
+   * E c'e' un ancoraggio esterno: `cuoci.py` rende in AgX a -1EV, cioe'
+   * esposizione 0,5, ed e' il riferimento path-traced contro cui si misura il
+   * fotorealismo. Da oggi la pagina e il banco condividono la CURVA e
+   * differiscono di un terzo di stop, invece di essere due trasferimenti
+   * diversi. Prima `confronto-cotto.mjs` forzava AgX@0,5 su un sito che
+   * spediva ACES@1,0: ogni referto di somiglianza parlava di un'immagine che
+   * nessuno vedeva.
+   *
    * La giunzione resta a zero perche' i colori della carta sono stati
    * RICALCOLATI su questa curva e verificati: vedi --acqua in stile.css.
    * Inseguire il render col foglio di stile e' la strada giusta, perche' il
    * render obbedisce alla fisica e il foglio di stile obbedisce a me.
    */
-  render.toneMapping = ACESFilmicToneMapping
-  render.toneMappingExposure = 1.0
+  render.toneMapping = AgXToneMapping
+  render.toneMappingExposure = 0.7
   contenitore.appendChild(render.domElement)
 
   /**
@@ -495,7 +555,34 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * vicina alla camera. Lo scafo va da z = -1,5 a z = +1,5.
    */
   const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
-  for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
+  /**
+   * ─── E IL SECONDO TAGLIO, QUELLO CHE GIRA LA LAMA DI NOVANTA GRADI
+   *
+   * `docs/13` §5 chiude il finale con una SEZIONE VERTICALE COMPLETA:
+   * meccanismo sotto, salone e persone sopra, un taglio solo. Il piano
+   * trasversale qui sopra non puo' farlo, ed e' misurato in `docs/20`: e'
+   * `Plane(0,0,-1)`, tiene `z < C`, e il meccanismo si legge solo da C = -0,65
+   * -- a quel punto il salone, che sta a z = +0,6, e' gia' dentro la fetta che
+   * e' stata tolta. Nessuna costante di quel piano contiene tutti e due.
+   *
+   * Quindi si gira la lama. Normale (1,0,0), tiene `x < C`: portando C da 2,5
+   * (fuori dallo scafo, che ha semilarghezza MISURATA 1,95) a 0,0 si toglie
+   * l'intera meta' di dritta e resta una sezione longitudinale sulla mezzeria.
+   *
+   * Dentro ci sono tutti e quattro i soggetti, e non per fortuna: l'impianto
+   * stabilizzatore e' DOPPIO -- `agganci` lo istanzia per lato, e quello di
+   * babordo resta dalla parte che non si toglie. Propulsione e giroscopio
+   * stanno sulla mezzeria. Il salone e' centrato e ne resta la meta'. E' la
+   * tesi del sito in un fotogramma: sopra la gente sta comoda, sotto le
+   * macchine lavorano perche' ci stia.
+   *
+   * I due piani convivono: three li applica in AND, quindi durante il finale il
+   * trasversale resta dov'e' e il longitudinale si aggiunge. Non si sostituisce
+   * -- sostituirlo richiuderebbe lo scafo sul meccanismo proprio mentre lo si
+   * sta guardando.
+   */
+  const pianoVerticale = new Plane(new Vector3(1, 0, 0), X_INTERO)
+  for (const m of guscio) m.material.clippingPlanes = [pianoSezione, pianoVerticale]
 
   /**
    * Chi proietta e chi riceve. Lo scafo e la coperta fanno tutti e due: la
@@ -532,6 +619,14 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * nessun numero riscritto, nessuna posa scelta a occhio.
    */
   const salone = LA_SCENA_E_UNA ? creaSalone3D(base, tuga) : null
+  /**
+   * LA TRAVERSATA e' appesa alla CAMERA, non alla scena, ed e' la differenza
+   * fra un finale e un'inserzione. Un piano nella scena avrebbe una posizione
+   * nel mondo: lo scafo gli passerebbe davanti, il rollio lo inclinerebbe, e
+   * ruotando la nave si vedrebbe da dietro. Appeso alla camera e' il
+   * fotogramma, e quando prende il comando non c'e' piu' niente davanti.
+   */
+  const traversata = creaTraversata(base, camera, scena)
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
@@ -558,6 +653,19 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   const sovra = creaSovrastruttura(base, { ambiente, pianoSezione })
   nave.add(sovra.gruppo)
+
+  /**
+   * LE DUE MACCHINE DELL'ATTO DUE, figlie della NAVE e non della scena: devono
+   * rollare con lei. Una linea d'assi che resta ferma mentre lo scafo si
+   * inclina non e' un dettaglio da poco -- si vede subito, e si legge come
+   * l'errore che e'.
+   */
+  const macchine = creaMacchine(base)
+  nave.add(macchine.gruppo)
+  /* gli interni obbediscono agli stessi due tagli del guscio: senza, si
+     vedrebbero attraverso lo scafo intatto. Le macchine no -- sono il soggetto */
+  macchine.caricate.then(() => macchine.taglia([pianoSezione, pianoVerticale]))
+    .catch(e => console.error('[macchine]', e.message))
   sovra.caricato
     // il valore si RESTITUISCE: il passo dopo lo destruttura, e con un
     // `then` che torna undefined la sovrastruttura moriva su
@@ -711,7 +819,67 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     avvicinamento = MathUtils.clamp(v, 0, 1)
   }
 
+  /**
+   * LA SEZIONE VERTICALE: 0 lo scafo e' intero, 1 la meta' di dritta e' via.
+   *
+   * Si muove con `dolce` in `regia.js`, non qui: questa funzione e' una
+   * manopola e non una regia. Se un giorno qualcuno la volesse comandare col
+   * dito invece che con lo scorrimento, non c'e' niente da riscrivere.
+   */
+  /**
+   * ─── LA LAMA DIVENTA UNO STRUMENTO — `docs/13` §2 e §7 punto 1
+   *
+   * Finche' il taglio e' una conseguenza dello scorrimento, il sito si guarda.
+   * Da qui in poi la posizione la decide la mano, e il padrone cambia **una
+   * volta sola, in un punto dichiarato**: e' la decadenza legittima del
+   * contratto D29, scritta come decisione invece che subita come deriva.
+   *
+   * `esplorando` e' quel punto. Finche' e' acceso, `impostaSpaccato` --
+   * l'unica strada per cui lo scorrimento comanda il taglio -- smette di
+   * scrivere. Non si disattiva la regia: si toglie a UNA manopola il suo
+   * padrone, e tutto il resto (rollio, mare, letture, filmato) continua a
+   * girare come prima.
+   *
+   * ─── LA CONVERSIONE, E PERCHE' NON E' UNA TARATURA
+   *
+   * `atto-due.js` tiene `x` da 0 (prua) a 1 (poppa) e dichiara di non essere
+   * una coordinata di scena. Qui diventa una, e la formula non ha numeri
+   * scelti: `PRUA_Z` e `POPPA_Z` sono letti da `ordinate.js` PER NOME, come
+   * vuole il §6 di quel documento -- i nomi sopravvivono alle riscritture, i
+   * numeri di riga e le costanti ricopiate no.
+   *
+   * La quota fa lo stesso fra il ponte del salone (1,453, la posa da cui il
+   * sito si apre) e la chiglia (-0,94, MISURATA sulla scena viva con
+   * `dove-stanno.mjs`, non dedotta).
+   */
+  let esplorando = false
+  const PONTE_Y = 1.453
+  const CHIGLIA_Y = -0.94
+  let bersaglioZ = null
+  let bersaglioY = null
+
+  function vaiACella (x, y) {
+    esplorando = true
+    bersaglioZ = PRUA_Z + x * (POPPA_Z - PRUA_Z)
+    bersaglioY = PONTE_Y + y * (CHIGLIA_Y - PONTE_Y)
+  }
+
+  function esciDallEsplorazione () {
+    esplorando = false
+    bersaglioZ = null
+    bersaglioY = null
+  }
+
+  let verticaleAperto = 0
+  function impostaVerticale (p) {
+    const q = MathUtils.clamp(p, 0, 1)
+    verticaleAperto = q
+    pianoVerticale.constant = MathUtils.lerp(X_INTERO, X_MEZZO, q)
+  }
+
   function impostaSpaccato (p) {
+    /* mentre si esplora il taglio ha un altro padrone: vedi `vaiACella` */
+    if (esplorando) return
     spaccato = MathUtils.clamp(p, 0, 1)
     pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
     spostaTappo(pianoSezione.constant)
@@ -796,6 +964,65 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      */
     nave.rotation.z = MathUtils.degToRad(sim.S.rollio) * (1 - 0.6 * spaccato)
 
+    /**
+     * L'ALBERO GIRA PERCHE' GIRA IL MOTORE, non perche' scorre il tempo.
+     * `S.giriPropulsione` e' l'uscita dell'inerzia della linea d'assi: quando
+     * si toglie propulsione, l'elica rallenta prima che la nave perda
+     * abbrivio, ed e' quell'ordine a rendere la catena leggibile.
+     */
+    macchine.gira(sim.S, dt)
+
+    /**
+     * ─── IL RIENTRO NEL SALONE, quando il filmato ha finito
+     *
+     * `uscita` va da 0 (dentro la tuga) a 1 (fuori, nave intera): e' la stessa
+     * manopola con cui il sito si apre. Quando la traversata finisce la si
+     * riporta verso 0, e la camera **rientra dalla stessa porta da cui era
+     * uscita** -- non e' un taglio e non e' una scena nuova, e' la corsa
+     * percorsa al contrario.
+     *
+     * Si scrive qui e non in `regia.js` perche' non dipende dallo scorrimento:
+     * dipende dal filmato, che ha un suo tempo. La regia continua a scrivere
+     * `uscita` dallo scorrimento e questa riga la tira verso lo zero con un
+     * peso che cresce -- quindi le due non litigano, e se qualcuno risale con
+     * la rotella il rientro si disfa da solo invece di incastrarsi.
+     */
+    /**
+     * IL TAGLIO SEGUE LA MANO, con un inseguimento del primo ordine invece che
+     * di colpo: uno scatto porta il piano a una stazione nuova, e senza
+     * ammorbidire si vedrebbe teletrasportare. 8 al secondo e' una costante di
+     * tempo di 125 ms -- sotto la soglia in cui un movimento smette di leggersi
+     * come continuo, sopra quella in cui sembra un salto.
+     */
+    if (esplorando && bersaglioZ !== null) {
+      const k = Math.min(1, dt * 8)
+      pianoSezione.constant = MathUtils.lerp(pianoSezione.constant, bersaglioZ, k)
+    }
+
+    const rientro = traversata.ritorno(dt)
+    if (rientro > 0) {
+      /**
+       * ─── SI RIPORTA A ZERO TUTTO, E DI COLPO, NON A POCO A POCO
+       *
+       * Il primo tentativo interpolava con `rientro` che cresce: si vedeva la
+       * camera risalire dal meccanismo in un secondo, cioe' un riavvolgimento.
+       * Il filmato quel viaggio l'ha GIA' fatto, e rifarlo in 3D a velocita'
+       * quadrupla dice che il filmato non contava.
+       *
+       * Quindi lo stato si azzera al primo fotogramma utile, MENTRE il piano e'
+       * ancora opaco: chi guarda non vede il salto, vede la dissolvenza. Sono
+       * tre manopole -- fuori dallo scafo, avvicinamento al meccanismo, taglio
+       * aperto -- e vanno chiuse tutte e tre, o si rientra nel salone con la
+       * nave ancora sezionata addosso. Preso guardando: azzerando la sola
+       * `uscita` la camera restava sulla pinna.
+       */
+      uscita = 0
+      avvicinamento = 0
+      spaccato = 0
+      pianoSezione.constant = Z_FUORI
+      pianoVerticale.constant = X_INTERO
+    }
+
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
     if (salone) {
@@ -826,7 +1053,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z, sim.S.velocita)
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
-    acqua.chiarisci(spaccato)
+    /**
+     * ─── L'ACQUA SI SCHIARISCE PER TUTTI E DUE I TAGLI, non solo per uno
+     *
+     * DIFETTO PRESO GUARDANDO LA SEZIONE VERTICALE. Il principio del sito e'
+     * gia' scritto e viene dal committente -- «sott'acqua togli l'acqua e
+     * mostra la qualita' del meccanismo» -- ma era legato al solo taglio
+     * trasversale. Aprendo lo scafo per il lungo, sopra la linea si vedevano i
+     * ponti in sezione e sotto restava un blocco verde: le due macchine, che
+     * stanno sotto il galleggiamento, erano dentro l'acqua opaca.
+     *
+     * Il taglio piu' aperto dei due comanda. Non e' una somma: sono due modi di
+     * aprire lo stesso scafo, e l'acqua deve togliersi da quello che e' aperto
+     * di piu' -- se si sommassero, due mezzi tagli darebbero acqua limpida su
+     * uno scafo ancora chiuso.
+     */
+    const aperto = Math.max(spaccato, verticaleAperto)
+    acqua.chiarisci(aperto)
     /**
      * ─── E ANCHE L'ASSORBIMENTO E' UNA QUOTA, DENTRO IL TAGLIO
      *
@@ -857,7 +1100,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * Il sito in quel momento non sta mostrando il mare: sta mostrando un
      * pezzo, e il mare e' gia' stato raccontato due battute prima.
      */
-    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - spaccato)
+    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - Math.max(spaccato, verticaleAperto))
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)
@@ -1276,10 +1519,19 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   return {
     render, camera, ridimensiona, ruota, disegna,
-    impostaSpaccato, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    impostaSpaccato, impostaVerticale, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    vaiACella, esciDallEsplorazione,
+    /**
+     * `q` da 0 a 1: 0 comanda il 3D, 1 comanda la traversata. La regia la
+     * chiama nell'ultima battuta e nessun altro: non e' uno stato del mondo,
+     * e' il passaggio di consegne finale.
+     */
+    impostaTraversata: (q) => traversata.mostra(q),
+    /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
+    traversataFinita: () => traversata.finita,
     /** Il capitolo si accende e si spegne: i video non decodificano fuori schermo. */
     accendi: () => salone?.riproduci(),
-    spegni: () => salone?.ferma(),
+    spegni: () => { salone?.ferma(); traversata.spegni() },
     tela: render.domElement
   }
 }

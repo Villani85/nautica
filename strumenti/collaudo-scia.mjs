@@ -60,8 +60,8 @@ const CAMPIONI = 10
 
 const esito = await pg.evaluate(async (CAMPIONI) => {
   const n = window.__nautica
-  const cur = document.querySelector('#velocita')
-  if (!cur) return { rotto: 'non trovo #velocita: il cursore dell andatura non c e piu' }
+  const comando = document.querySelector('#propulsione')
+  if (!comando) return { rotto: 'non trovo #propulsione: la causa dell andatura non e raggiungibile' }
   n.camera.position.set(24.3634, 3.0, 37.331)
   n.camera.lookAt(0, 1.7209, 0)
   n.camera.fov = 2 * Math.atan(12 / 85) * 180 / Math.PI

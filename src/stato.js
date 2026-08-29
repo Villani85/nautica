@@ -94,7 +94,11 @@ let inchiodata = false
  */
 export const sim = creaSimulazione({
   ridotto: preferenza.matches || forzato,
-  seme: FERMO_A !== null ? 20260829 : undefined
+  seme: FERMO_A !== null ? 20260829 : undefined,
+  /* Nel sito l'andatura e' una conseguenza della propulsione. I collaudi del
+     solo rollio possono lasciare questa opzione spenta e imporre un punto di
+     lavoro preciso senza che derivi durante la misura. */
+  velocitaDinamica: true
 })
 
 /**

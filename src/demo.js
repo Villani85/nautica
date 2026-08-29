@@ -4,6 +4,7 @@ import { collegaComandi, collegaPuntoDiVista } from './ui/comandi.js'
 import { creaLetture } from './ui/letture.js'
 import { creaRegia } from './regia.js'
 import { attritoDiApertura } from './ui/attrito.js'
+import { STAZIONI, QUOTE } from './ui/atto-due.js'
 
 const $ = (s) => document.querySelector(s)
 
@@ -150,24 +151,41 @@ export function avviaDimostrazione () {
   })
 
   comandi = collegaComandi({
-    contenitore: $('#mare'), toggle: $('#stab'), sim,
+    contenitore: $('#mare'), toggle: $('#stab'), propulsione: $('#propulsione'),
+    giroscopio: $('#giroscopio'), sim,
     // La regia va rivalutata anche quando cambia lo STATO, non solo la
     // posizione: accendendo il sistema da fermi il testo restava indietro.
     // Avvisa anche gli altri capitoli: il salone dorme mentre sei qui, e al
     // risveglio deve trovare lo stato giusto invece di quello di prima.
     alCambio: () => { risveglia(); regia?.rivaluta?.(); statoCambiato() }
   })
+
   /**
-   * L'ANDATURA. E' la seconda cosa che si scopre: le pinne producono portanza
-   * solo in moto, quindi sotto una certa velocita' l'interruttore si accende e
-   * non succede niente. Un <input type=range> vero, non un div con listener:
-   * arriva gia' accessibile da tastiera e annunciato.
+   * ─── QUI LA LAMA CAMBIA PADRONE, e l'aggancio e' una riga sola
+   *
+   * `src/ui/tocco.js` emette `nautica:cella` a ogni scatto e dichiarava nel
+   * proprio referto che «oggi non lo ascolta nessuno». Adesso lo ascolta la
+   * scena: la stazione muove il piano di taglio lungo lo scafo, la quota
+   * dice a che altezza si sta guardando.
+   *
+   * L'ascolto sta sul DOCUMENTO e non sul modulo del tocco, di proposito: il
+   * giorno in cui l'esplorazione arrivera' anche da desktop -- con la lama
+   * trascinata invece che con lo swipe -- bastera' che emetta lo stesso evento,
+   * e qui non si tocca niente. E' il contratto che tocco.js aveva gia' scelto
+   * bene: «altrimenti il desktop finirebbe per dipendere dal telefono invece
+   * che dalla mappa».
    */
-  const cursore = $('#velocita')
-  cursore.addEventListener('input', () => {
-    sim.S.velocita = Number(cursore.value)
-    sim.azzeraPicchi()
+  document.addEventListener('nautica:cella', (e) => {
+    const st = STAZIONI[e.detail.is]
+    const qt = QUOTE[e.detail.iq]
+    if (!st || !qt) return
+    scena.vaiACella?.(st.x, qt.y)
     risveglia()
+  })
+  /* Uscendo dall'esplorazione lo scorrimento si riprende il taglio: il padrone
+     cambia una volta sola per VOLTA, non una volta per sempre. */
+  document.addEventListener('nautica:esplorazione', (e) => {
+    if (e.detail?.aperta === false) { scena.esciDallEsplorazione?.(); risveglia() }
   })
 
   collegaPuntoDiVista({

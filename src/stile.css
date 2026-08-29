@@ -33,8 +33,44 @@
   --inchiostro-tenue:#5F6367;   /* 4,82:1 su --aria. Il #6A6E72 del prototipo
                                    dava 4,09:1 e non passava WCAG AA. */
   /* sotto il taglio — acqua profonda */
+  /* ─── I DUE COLORI DELL'ACQUA INSEGUONO IL RENDER, e la misura dice
+     QUALE dei due deve muoversi.
+
+     `index.js` e' passato da ACES@1,0 ad AgX@0,7 (li' c'e' il perche'). La
+     tela allora dipinge un mare diverso, e questi due valori — che sono la
+     dichiarazione CSS dello stesso mare — vanno riderivati. Misurato con
+     `strumenti/curva-tonale.mjs`, battuta 0,30, colonne di mare aperto
+     x 900-1200 (verificate da `collaudo-orizzonte.mjs`):
+
+       regione                     ACES @1,0        AgX @0,7        scarto
+       acqua disegnata 500-560   23,6 62,5 62,9  30,3 63,0 63,9  +6,7 +0,5 +1,0
+       acqua profonda  840-896   34,1 58,7 58,8  32,7 54,8 55,3  -1,4 -3,9 -3,5
+
+     LA PARTE ALTA SI MUOVE, LA PARTE PROFONDA NO. In alto il rosso sale di
+     6,7 livelli; in basso non cambia niente che si possa vedere (3,9 livelli
+     su un fondo scuro, sotto il velo a .62, quando il tremolio del gradiente
+     ne fa gia' 1,5 da solo). Quindi si tocca `--acqua-viva` e si lascia stare
+     `--acqua` — e lasciarla e' il risultato della misura, non una svista.
+
+     DA 6,7 A #173539. La fascia di fondo CSS fra la linea e l'acqua disegnata
+     (righe 452-497) non e' `--acqua-viva` pura: sopra ci passano il gradiente
+     dello spacco, il velo di `.palco .scena::after` e il bagliore di
+     `.linea::after`. Modellati i tre strati e verificato il modello contro
+     otto righe misurate (scarto sulla media di banda: 0,01 / 0,39 / 0,31
+     livelli), il peso di `--acqua-viva` in quella fascia e' **0,8598**.
+     Quindi 15 + 6,7/0,8598 = 22,8 -> 23, e le stesse briciole su verde e blu.
+
+     ─── E LA GIUNZIONE NON STA DOVE CREDEVO, che e' la scoperta vera
+     Il profilo riga per riga dice che la tela comincia a dipingere a **y=498**
+     su un viewport alto 900, cioe' QUARANTOTTO PIXEL sotto la mezzeria: fra
+     la linea e l'orizzonte 3D c'e' una fascia di fondo CSS puro, dove il tone
+     mapping non puo' cambiare un pixel (misurato: scarto 0,00 fra tutte le
+     curve provate). E la tela non entra di colpo, sfuma su una decina di
+     righe. La cucitura CSS-tela quindi non e' un bordo, e' una dissolvenza —
+     il che spiega perche' il sito reggeva pur avendo, gia' sotto ACES, sette
+     livelli di scarto sul rosso proprio li'. */
   --acqua:#071A1D;
-  --acqua-viva:#0F3438;
+  --acqua-viva:#173539;
 
   /* LO SPACCO: meta' aria e meta' acqua, con lo stacco secco al 50%. E' l'unica
      idea meccanica del sito, e da qui in poi vive in una riga sola — cosi' il
@@ -48,7 +84,24 @@
   --spacco:linear-gradient(to bottom,
     var(--aria) 0%,var(--aria) var(--pelo),
     var(--acqua-viva) var(--pelo),var(--acqua) 100%);
-  --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua */
+  --acqua-tenue:#7FA3A5;        /* 6,54:1 su --acqua — RICALCOLATO (WCAG 2.1,
+                                   luminanza relativa) dopo il passaggio ad
+                                   AgX, e NON e' cambiato: `--acqua` non si e'
+                                   mossa, quindi il numero dichiarato regge
+                                   identico. Restava da verificare l'altro
+                                   fondo, perche' `[data-lato="misto"]` passa
+                                   `--acqua-tenue` anche sopra `--acqua-viva`,
+                                   che invece si e' mossa: li' fa **4,79:1**,
+                                   dove prima ne faceva 4,90. Sopra il minimo
+                                   AA di 4,5 ma sotto 6, e ci stava gia' prima:
+                                   e' un debito che il cambio di curva ha
+                                   spostato di un decimo, non uno che ha
+                                   creato. Non l'ho schiarito perche' portarlo
+                                   a 6 su `--acqua-viva` vorrebbe dire
+                                   ritoccare il colore del testo di tutto il
+                                   lato acqua, che e' una decisione di
+                                   tavolozza e non una conseguenza del tone
+                                   mapping. */
   /* l'unico accento saturo, e sta sotto la linea */
   --recupero:#4FE0C4;
   --carico:#F5E3B8;
@@ -543,6 +596,34 @@ html[data-unica="si"] .atto--demo{margin-top:0}
   position:absolute;left:50%;transform:translateX(-50%);bottom:var(--u4);z-index:7;
   display:flex;gap:var(--u4);align-items:flex-end;
 }
+/* ─── I COMANDI SONO TRE, E A 1280x720 NON CI STAVANO PIU'
+
+   DIFETTO PRESO DAL CANCELLO, non a occhio: entrato il terzo interruttore
+   (il giroscopio), `collaudo-impaginato` ha trovato `.comandi` sovrapposto a
+   `.pannello--letture` e a `.pannello--energia` -- 16-19 px in orizzontale e 60
+   in verticale -- su ogni battuta a 1280x720.
+
+   La causa non e' il bottone: e' che la fila centrale cresce verso i lati
+   mentre i due pannelli stanno fermi ai bordi. Una finestra larga ma BASSA e'
+   il caso peggiore, ed e' anche quello che nessuno guarda mentre lavora su uno
+   schermo grande.
+
+   Lo stacco cede per primo, ed e' la cosa giusta a cedere: la distanza fra i
+   comandi e' respiro, la sovrapposizione e' un difetto. Sotto i 1400 px lo
+   stacco passa da --u4 a --u2 e la fila torna dentro. */
+@media (max-width:1400px){
+  .comandi{gap:var(--u2)}
+}
+
+/* ─── LA FILA DEI TRE INTERRUTTORI ESISTE A OGNI LARGHEZZA
+   DIFETTO PRESO DA UN PROVINO. `.comandi__fila` era dichiarata SOLO dentro la
+   media query del telefono: su desktop restava un blocco, e i tre pulsanti si
+   impilavano sfalsati uno sull'altro -- si leggeva come un menu rotto.
+   Il contenitore e' nel DOM a ogni larghezza, quindi la sua regola di layout
+   deve esserci a ogni larghezza. Una media query cambia i VALORI, non decide
+   se un elemento ha un layout. */
+.comandi__fila{display:flex;gap:var(--u4);align-items:flex-end}
+@media (max-width:1400px){ .comandi__fila{gap:var(--u2)} }
 .mare__scala{display:flex;align-items:flex-end}
 .mare__tacca{
   width:44px;height:44px;border:0;padding:0;background:none;cursor:pointer;
@@ -1019,16 +1100,40 @@ html[data-unica="si"] .atto--demo{margin-top:0}
     display:flex;flex-direction:column;gap:var(--u2);align-items:stretch;
   }
   .mare__scala{justify-content:space-between;width:100%}
-  .andatura{width:100%}
-  .interruttore{width:100%;justify-content:center}
+  .interruttore{justify-content:center}
 
   /* UNA misura sola, e tutto il resto la insegue. Con tre numeri scollegati
      ogni ritocco ai comandi ne sballava altri due, in silenzio.
      206px non e' una stima: e' l'altezza misurata della colonna dei comandi
-     (scala del mare 44 + andatura + interruttore, con due stacchi da 16). La
+     (scala del mare + propulsione + stabilizzatore, con due stacchi da 16). La
      prima volta avevo scritto 180 sommando a mente, e il cancello ha trovato i
      18 px che mancavano. */
-  .palco{--h-comandi:206px;--h-energia:29px}
+  /* ─── TRE INTERRUTTORI SUL TELEFONO NON STANNO IN COLONNA, E CEDONO LORO
+     Il terzo (il giroscopio) portava la colonna dei comandi da 206 a 269 px, e
+     il cancello ha subito trovato la conseguenza dall'altra parte: la
+     didascalia traboccava di 69 px, cioe' due righe e mezzo, sulla battuta del
+     salotto.
+     Questo file lo aveva gia' scritto vent'anni-righe piu' su -- «qui non ci
+     sta tutto e va deciso COSA cede» -- e la risposta e' la stessa di allora
+     rovesciata: la prima volta cedettero le barre dell'energia, adesso cedono i
+     comandi. La didascalia no: e' l'argomento del sito, e un argomento
+     troncato a meta' riga non e' un argomento.
+     I tre interruttori vanno in FILA invece che in colonna. Il conto: scala
+     del mare 44 + stacco 16 + fila da 47 = 107 px, contro i 269 della colonna.
+     Se ne recuperano 162, molti piu' dei 63 che il giroscopio aveva tolto.
+     I bersagli restano oltre i 44 px: tre pulsanti su 390 di larghezza fanno
+     circa 115 ciascuno, e l'altezza non cambia.
+
+     E IL NUMERO E' 112, NON 107. L'aritmetica dava 107 -- 44 + 16 + 47 -- e il
+     cancello ha trovato cinque pixel di sovrapposizione con le letture: la fila
+     e' alta 52 e non 47, perche' il bordo e il riempimento del pulsante non
+     stanno dentro l'altezza dichiarata. Cinque pixel sono esattamente il genere
+     di errore che una somma a mente non prende e una misura si': il numero qui
+     sotto viene dal cancello, non dal conto. */
+  .palco{--h-comandi:112px;--h-energia:29px}
+  .comandi{flex-direction:column;gap:var(--u2)}
+  .comandi .interruttore{width:auto;flex:1 1 0;min-width:0;padding-inline:var(--u)}
+  .comandi__fila{display:flex;gap:var(--u2);width:100%}
   /* le etichette dei comandi rubano altezza a un posto che non ce l'ha */
   .comandi .et{font-size:8px}
 
@@ -1109,26 +1214,6 @@ html[data-unica="si"] .atto--demo{margin-top:0}
     transition-duration:.01ms!important;scroll-behavior:auto!important;
   }
 }
-
-/* ═══ ANDATURA ═══
-   Un <input type="range"> vero, stilizzato — non un div con un listener.
-   La tastiera, il lettore di schermo e il trascinamento arrivano dal browser.
-   L'area sensibile e' 44px anche se il segno visibile e' una riga sottile. */
-.andatura{display:flex;flex-direction:column;gap:var(--u);align-items:center}
-.cursore{
-  -webkit-appearance:none;appearance:none;
-  width:132px;height:44px;background:none;cursor:pointer;margin:0;
-}
-.cursore::-webkit-slider-runnable-track{height:2px;background:rgba(127,163,165,.3)}
-.cursore::-moz-range-track{height:2px;background:rgba(127,163,165,.3)}
-.cursore::-webkit-slider-thumb{
-  -webkit-appearance:none;appearance:none;
-  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;margin-top:-8px;
-}
-.cursore::-moz-range-thumb{
-  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;
-}
-.cursore:focus-visible{outline:2px solid var(--recupero);outline-offset:4px}
 
 /* ═══ TESTATA CHE SEGUE IL LATO ═══
    DIFETTO CORRETTO — la testata e' fixed e non sta dentro nessuna sezione,
@@ -1257,7 +1342,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    e' lui la causa: senza, la nave comincia a rollare e sembra che il sito si
    sia rotto. Il richiamo e' lo stesso `chiama` gia' usato per invitare ad
    accendere -- una convenzione sola, non due. */
-:root[data-dimostra="spento"] .interruttore{
+:root[data-dimostra="spento"] #stab{
   animation:chiama 1.3s ease-in-out infinite;
   border-color:var(--carico);
 }
@@ -1268,7 +1353,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 :root[data-dimostra="spento"] .battuta__vivo{color:var(--carico)}
 
 @media (prefers-reduced-motion:reduce){
-  :root[data-dimostra="spento"] .interruttore{animation:none}
+  :root[data-dimostra="spento"] #stab{animation:none}
 }
 
 
@@ -1364,3 +1449,59 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 /* la voce di menu della scena in corso */
 /* stessa correzione: `--carico` sull'intestazione color carta era invisibile */
 .nav--qui{color:var(--acqua); text-decoration:underline; text-underline-offset:4px}
+
+/* ═══ IL FINALE: L'INTERFACCIA SI RITIRA ═══
+   Quando la traversata prende il comando, il cruscotto se ne va. La ragione
+   sta per esteso in `regia.js`, sopra `data-traversata`: per tutta la corsa
+   quei comandi sono la prova che il sito non e' un filmato, ma nel finale la
+   fisica ha gia' risposto e l'unica cosa da fare e' guardare due persone.
+
+   `opacity` e `visibility`, NON `display:none`: i nodi restano nel documento,
+   nel flusso di tabulazione e annunciati dal lettore di schermo. Chi naviga da
+   tastiera non deve perdere i comandi perche' l'immagine e' diventata bella.
+   E `visibility` ritarda di quanto dura la dissolvenza, cosi' non si perde il
+   fuoco a meta' transizione. */
+.palco[data-traversata="si"] .pannello,
+.palco[data-traversata="si"] .comandi,
+.palco[data-traversata="si"] .battuta,
+.palco[data-traversata="si"] .nota,
+.palco[data-traversata="si"] .patto,
+.palco[data-traversata="si"] .invito,
+.palco[data-traversata="si"] .richiamo{
+  opacity:0;visibility:hidden;
+  transition:opacity .5s ease,visibility 0s linear .5s;
+  pointer-events:none;
+}
+.palco[data-traversata="no"] .pannello,
+.palco[data-traversata="no"] .comandi{
+  transition:opacity .35s ease,visibility 0s;
+}
+@media (prefers-reduced-motion:reduce){
+  .palco[data-traversata="si"] .pannello,
+  .palco[data-traversata="si"] .comandi,
+  .palco[data-traversata="si"] .battuta,
+  .palco[data-traversata="si"] .nota,
+  .palco[data-traversata="si"] .patto,
+  .palco[data-traversata="si"] .invito,
+  .palco[data-traversata="si"] .richiamo{transition:none}
+}
+
+/* Il nudge sta sul corpo, non nel palco: la sua ritirata si comanda dalla
+   radice. Stessa regola, stessa ragione — vedi `regia.js`. */
+html[data-traversata="si"] .nudge{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .5s ease,visibility 0s linear .5s;
+}
+@media (prefers-reduced-motion:reduce){
+  html[data-traversata="si"] .nudge{transition:none}
+}
+
+/* ═══ COLOPHON ═══
+   Dichiara la pipeline. Piccolo e tenue perche' non compete col contatto, ma
+   selezionabile e leggibile: un colophon che si nasconde vale meno di uno che
+   non c'e'. Il contrasto resta quello di `--tenue`, gia' verificato. */
+.colophon{
+  margin-top:var(--u3);max-width:52ch;
+  font-size:11px;line-height:1.6;color:var(--tenue);
+  text-wrap:pretty;
+}

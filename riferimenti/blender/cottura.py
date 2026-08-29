@@ -356,6 +356,50 @@ def rimetti(salvato):
             nt.links.new(origine, out.inputs['Surface'])
 
 
+def accendi_gpu(scena):
+    """Accende OPTIX, e MUORE se non c'e'.
+
+    ─── PERCHE' QUESTA FUNZIONE ESISTE, E PERCHE' NON HA UN `try`
+
+    Prima qui c'era una riga sola:
+
+        scena.cycles.device = 'GPU' if a.gpu else 'CPU'
+
+    Non funziona, e il modo in cui non funziona e' il peggiore possibile.
+    `cycles.device = 'GPU'` dice a Cycles di USARE la GPU, ma non dice quale
+    backend (CUDA, OPTIX, HIP...) ne' quali schede accendere: quello sta nelle
+    preferenze dell'addon. Se il backend non e' impostato, l'elenco dei device
+    attivi e' vuoto e **Cycles ripiega su CPU senza una riga di avviso**.
+    Misurato su questo PC: `--gpu` non sollevava niente e cuoceva in CPU.
+
+    E non si protegge con un `try/except`, perche' NON C'E' ECCEZIONE da
+    prendere: su una macchina senza GPU, `compute_device_type = 'OPTIX'` viene
+    assegnato senza lamentarsi, `get_devices()` torna il solo processore, e
+    `cycles.device = 'GPU'` viene accettato. Un `except` li' non e' troppo
+    largo: e' INUTILE, messo a guardia di un guasto che non passa mai di li'.
+    L'unico modo perche' una cottura che ripiega su CPU se ne accorga e'
+    guardare l'elenco dei device e MORIRE se OPTIX non c'e'.
+
+    L'ordine conta e non e' quello intuitivo: prima si sceglie il backend, poi
+    si enumera. `get_devices()` chiamato per primo enumera col backend vecchio
+    e restituisce una lista che non c'entra con quella che verra' usata.
+    """
+    pr = bpy.context.preferences.addons['cycles'].preferences
+    pr.compute_device_type = 'OPTIX'          # prima il backend
+    pr.get_devices()                          # poi l'enumerazione
+    optix = [d for d in pr.devices if d.type == 'OPTIX']
+    if not optix:
+        morire('OPTIX assente: Cycles ripiegherebbe su CPU senza dirlo, e la '
+               'cottura consegnerebbe lo stesso i suoi PNG dopo ore. '
+               'Device visti: %s' % [(d.name, d.type) for d in pr.devices])
+    # solo la GPU: la CPU accesa accanto a OPTIX rallenta invece di aiutare,
+    # perche' Cycles aspetta il dispositivo piu' lento a ogni piastrella
+    for d in pr.devices:
+        d.use = (d.type == 'OPTIX')
+    scena.cycles.device = 'GPU'               # senza questa resta su CPU comunque
+    dice('OPTIX acceso su: %s' % ', '.join(d.name for d in optix))
+
+
 def cuoci(tipo, alta, bassa, est, raggio, margine, campioni, cage=None):
     scena = bpy.context.scene
     scena.cycles.samples = campioni
@@ -437,7 +481,9 @@ def main():
 
     scena = bpy.context.scene
     scena.render.engine = 'CYCLES'
-    scena.cycles.device = 'GPU' if a.gpu else 'CPU'
+    scena.cycles.device = 'CPU'
+    if a.gpu:
+        accendi_gpu(scena)
     scena.cycles.use_denoising = False
     if scena.world is None:
         scena.world = bpy.data.worlds.new("MONDO")

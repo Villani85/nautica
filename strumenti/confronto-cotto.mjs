@@ -75,9 +75,17 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    * --- E LA CURVA TONALE DEV'ESSERE LA STESSA, O SI CONFRONTANO DUE OCCHI
    *
    * Terzo strato dello stesso errore, dopo l'angolo di campo e l'ambiente. Il
-   * sito disegna con `ACESFilmicToneMapping` a esposizione 1; `cuoci.py` rende
-   * con `view_transform = 'AgX'` a **-1 EV**. Sono due curve diverse e uno stop
-   * di differenza, e nessuno dei due e' sbagliato: sono solo due occhi.
+   * sito disegnava con `ACESFilmicToneMapping` a esposizione 1; `cuoci.py`
+   * rende con `view_transform = 'AgX'` a **-1 EV**. Erano due curve diverse e
+   * uno stop di differenza, e nessuno dei due e' sbagliato: sono due occhi.
+   *
+   * AGGIORNATO: da quando `index.js` spedisce AgX a 0,7 la CURVA e' la stessa
+   * da entrambe le parti e resta solo un terzo di stop di esposizione. Il
+   * problema che questo blocco descrive e' quindi molto piu' piccolo di prima,
+   * ma il blocco resta perche' la differenza non e' zero — e perche' era
+   * proprio questa forzatura, applicata a un sito che spediva ACES, a far
+   * dire ai referti «il sito somiglia al render» su un'immagine che nessuno
+   * vedeva mai.
    *
    * Misurato prima di accorgersene, sulla sovrastruttura: il sito usciva
    * **+27,3 livelli piu' chiaro** (185,6 contro 158,2), e tolto quello
@@ -134,14 +142,33 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    * troppo cielo, quelle verticali troppo poco orizzonte. E si somma, non si
    * compensa, con l'altra misura: anche l'impianto di LUCI da' 41 livelli alla
    * sovrastruttura contro i 2 di Cycles. */
-  const ACES = 4, AGX = 6, NESSUNA = 0
+  /**
+   * ─── E ADESSO IL SITO SPEDISCE AgX ANCHE LUI, quindi il cancello cambia
+   *
+   * Fin qui la guardia diceva: «se il sito non e' ACES, fermati». Serviva a
+   * non forzare una curva a caso se three rinumerava le costanti. Ma con
+   * `index.js` passato ad AgX@0,7 quella guardia diventava un cancello che
+   * FALLISCE PER LA RAGIONE SBAGLIATA: avrebbe restituito un errore su una
+   * scena sana, e chi legge avrebbe cercato il guasto nel sito.
+   *
+   * Il controllo pero' NON si toglie, si sposta sul valore nuovo: il sito
+   * deve spedire AgX, cioe' 6. Se domani three rinumerasse le costanti, o se
+   * qualcuno rimettesse ACES in `index.js` senza passare di qui, questa riga
+   * lo dice invece di lasciar girare il confronto su una curva a caso. E' la
+   * stessa protezione di prima, riferita alla curva che il sito ha adesso.
+   *
+   * Resta lo scarto di esposizione, ed e' voluto: il sito spedisce 0,7 e qui
+   * si forza 0,5 perche' `cuoci.py` rende a -1 EV. Un terzo di stop, contro
+   * le due curve diverse di prima.
+   */
+  const AGX = 6, NESSUNA = 0
   if (lineare) {
     n.render.toneMapping = NESSUNA
     n.render.toneMappingExposure = 1
-  } else if (n.render.toneMapping !== ACES) {
-    return { errore: 'toneMapping del sito e ' + n.render.toneMapping + ', non ACESFilmic (' +
-                     ACES + '): le costanti di three sono cambiate e questo confronto ' +
-                     'userebbe una curva a caso' }
+  } else if (n.render.toneMapping !== AGX) {
+    return { errore: 'toneMapping del sito e ' + n.render.toneMapping + ', non AgX (' +
+                     AGX + '): o le costanti di three sono cambiate, o la curva spedita ' +
+                     'e tornata indietro. Questo confronto userebbe una curva a caso' }
   } else {
     n.render.toneMapping = AGX
     n.render.toneMappingExposure = 0.5

@@ -2,7 +2,7 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh, BoxGeometry, PlaneGeometry,
   MeshStandardMaterial, MeshBasicMaterial, VideoTexture, HemisphereLight,
   DirectionalLight, RectAreaLight, Clock, MathUtils, SRGBColorSpace,
-  ACESFilmicToneMapping, PMREMGenerator
+  AgXToneMapping, PMREMGenerator
 } from 'three'
 import { creaAmbiente } from './ambiente.js'
 import { avanza } from '../stato.js'
@@ -76,9 +76,31 @@ export function creaSalone (contenitore) {
    *
    * La cornice dell'apertura e' cio' che rende legittime le due scelte insieme:
    * dentro la cornice vale un registro, fuori l'altro, e il bordo lo dichiara.
+   *
+   * ─── LA CURVA SEGUE QUELLA DELLA DIMOSTRAZIONE, E QUI NON L'HO MISURATA
+   *
+   * `index.js` e' passato ad AgX a 0,7 perche' ACES teneva la sovrastruttura
+   * addossata al suo tetto di 242 (i numeri stanno la'). Qui la stessa riga si
+   * cambia per COERENZA, non per una misura fatta su questa scena — e va
+   * detto, perche' e' esattamente il genere di numero che verrebbe voglia di
+   * dichiarare senza averlo preso.
+   *
+   * La ragione per cui non l'ho misurata e' che questo file NON GIRA sulla
+   * pagina spedita, e ci ho messo un po' a scoprirlo: `main.js` rimuove la
+   * sezione `#salone` quando `LA_SCENA_E_UNA` (cioe' sempre, salvo
+   * `?doppia=1`), e `salone-atto.js` importa questo modulo solo con
+   * `?sagoma=1`. Il suo mestiere e' produrre le SAGOME che `sagoma.mjs` da' in
+   * pasto alla pipeline fotografica.
+   *
+   * Conseguenza pratica, e non e' un dettaglio: le sagome gia' in
+   * `riferimenti/sagome/` sono state cotte sotto ACES. Finche' non si rifa'
+   * `npm run sagome`, questa riga non ha cambiato NIENTE, ne' sulla pagina ne'
+   * sugli asset. Non l'ho rifatto io perche' rigenerare le fotografie del
+   * salone e' una decisione sull'opera, non una conseguenza di un cambio di
+   * curva.
    */
-  render.toneMapping = ACESFilmicToneMapping
-  render.toneMappingExposure = 1.0
+  render.toneMapping = AgXToneMapping
+  render.toneMappingExposure = 0.7
   contenitore.appendChild(render.domElement)
 
   /**

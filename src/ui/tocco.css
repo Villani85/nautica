@@ -1,0 +1,192 @@
+/* ═══ L'ATTO DUE COL DITO ═══
+
+   Foglio a se', e non tre righe dentro `stile.css`: quel file lo stanno
+   toccando altri in queste ore, e una modalita' che si accende con un
+   attributo sulla radice e' esattamente il genere di cosa che si legge meglio
+   tutta insieme. Arriva col modulo, quindi non pesa su chi non apre niente.
+
+   ─── COSA SPEGNE, E PERCHE' NON POTEVA AGGIUNGERSI E BASTA
+
+   Misurato prima di decidere, alla battuta del meccanismo:
+
+     360x640  -- fra `.patto` (finisce a 357) e `.comandi` (comincia a 441)
+                 restano OTTANTATRE pixel.
+     390x844  -- ne restano 186.
+     768x1024 -- ne restano 277.
+
+   Ottantatre pixel non sono un'esplorazione: sono una riga di testo e mezza.
+   Quindi la modalita' PRENDE la meta' bassa -- pila, invito alla rotazione e
+   comandi si spengono -- e la restituisce intera quando si esce.
+
+   La pila e i comandi tornano appena `data-atto-due` sparisce, e a modalita'
+   chiusa questo foglio non tocca un pixel: e' la ragione per cui i cancelli
+   che misurano l'impaginato del telefono continuano a misurare il sito che
+   misuravano prima.
+
+   L'invito «Drag to rotate» si spegne insieme al resto, e va detto perche' e'
+   una perdita vera -- e' l'unico posto in cui il sito dice che la nave si
+   gira, e il committente ci aveva messo del suo. Sta a y=406 su 360x640, cioe'
+   **dentro** il riquadro dell'esplorazione: lasciarlo acceso vorrebbe dire due
+   inchiostri sovrapposti. La rotazione continua a funzionare sulla meta' alta
+   della tela, dove il dito arriva. */
+
+html[data-atto-due="si"] .pila,
+html[data-atto-due="si"] .nota,
+html[data-atto-due="si"] .comandi,
+/* `#invito-scorri` e' `position:fixed` a `bottom:32vh`, cioe' dentro il
+   riquadro: in una schermata di prova a 360x640 la parola SCROLL stava
+   stampata sopra la riga della posizione. E' un invito a scorrere rivolto a
+   chi sta ancora attraversando la sequenza; qui il dito ha gia' altro da
+   fare. */
+html[data-atto-due="si"] #invito-scorri{ display:none }
+
+/* ─── IL RIQUADRO
+
+   Sta dentro il palco e sotto la linea. `bottom` e' un margine, non una quota
+   calcolata sui comandi: quelli, qui, non ci sono piu'. */
+.espl{
+  position:absolute;
+  left:var(--u2); right:var(--u2);
+  top:calc(50% + var(--u3) + 18px);
+  bottom:var(--u2);
+  z-index:10;
+  display:flex; flex-direction:column; gap:var(--u);
+  /* Il riquadro non cede MAI verso l'esterno: su un telefono un contenuto che
+     sborda si porta dietro lo scorrimento laterale, che il collaudo chiama
+     giustamente «il difetto peggiore che una pagina possa avere». Cede
+     l'annotazione, che ha `min-height:0` e si taglia. */
+  overflow:hidden;
+  font-family:var(--t-dato); font-variation-settings:var(--v-dato);
+  color:var(--acqua-tenue);
+}
+.espl[hidden]{ display:none }
+
+/* Su schermo largo la modalita' non viene offerta (il pulsante e' nascosto piu'
+   sotto), ma se qualcuno la apre da codice non deve diventare una fascia larga
+   milleduecento pixel. */
+@media (min-width:821px){
+  .espl{ left:50%; right:auto; transform:translateX(-50%); width:420px }
+}
+
+/* ─── IL CAMPO DEL GESTO
+
+   `touch-action:none` e' obbligatorio e non e' un'ottimizzazione: senza,
+   il browser si prende il trascinamento verticale per scorrere la pagina e
+   l'asse delle quote non esiste. Vale SOLO su questo riquadro -- il resto
+   della pagina continua a scorrere come sempre, che e' la regola D27. */
+.espl__campo{
+  touch-action:none;
+  display:flex; flex-direction:column; gap:var(--u);
+  outline-offset:2px;
+}
+.espl__riga{ display:flex; align-items:center; gap:var(--u) }
+.espl__riga--quota{ gap:0 }
+.espl__riga--quota .espl__passo + .espl__passo{ margin-right:var(--u) }
+.espl__riga--quota .espl__dove{ min-width:0 }
+
+/* ─── I BERSAGLI
+
+   44x44, e non 24: WCAG 2.2 SC 2.5.8 si accontenta di 24 al livello AA, ma
+   questo repo si e' gia' dato 44 in `comandi.js` e la regola non si negozia su
+   uno schermo che si tocca col pollice. Il segno dentro e' piccolo, il
+   bersaglio no -- e' la trappola numero 2 di `collaudo-telefono.mjs`, dove un
+   bersaglio dichiarato 44 era alto 7. */
+.espl__passo{
+  flex:0 0 auto;
+  width:44px; height:44px;
+  border:0; padding:0; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  color:inherit;
+}
+.espl__passo svg{
+  width:13px; height:13px;
+  fill:none; stroke:currentColor; stroke-width:1.3;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+/* `stazione:-1` punta gia' a sinistra: il tratto e' disegnato cosi'. */
+.espl__passo[data-passo="stazione:1"] svg{ transform:rotate(180deg) }
+.espl__passo[data-passo="quota:-1"] svg{ transform:rotate(90deg) }
+.espl__passo[data-passo="quota:1"] svg{ transform:rotate(-90deg) }
+/* `aria-disabled` e non `disabled`: la ragione -- il fuoco che sparisce da
+   sotto le dita di chi naviga da tastiera -- sta scritta in `tocco.js`. */
+.espl__passo[aria-disabled="true"]{ opacity:.28; cursor:default }
+
+/* ─── LO SCHEMA
+
+   Inchiostro sottile e nessun bagliore. La sola cosa piu' chiara del resto e'
+   dove SEI: e' l'unico punto della pagina che ha diritto di essere marcato,
+   perche' non e' una cosa da scoprire. */
+.espl__schema{ flex:1 1 auto; min-width:0; height:52px; display:block }
+.espl__scafo{ fill:none; stroke:rgba(127,163,165,.34); stroke-width:1 }
+.espl__quota-riga{ stroke:rgba(127,163,165,.18); stroke-width:1 }
+.espl__stazione-tacca{ stroke:rgba(127,163,165,.34); stroke-width:1 }
+.espl__guida{ stroke:rgba(127,163,165,.22); stroke-width:1; stroke-dasharray:2 3 }
+.espl__qui{
+  fill:none; stroke:var(--aria); stroke-width:1.5;
+  transition:cx .16s ease-out, cy .16s ease-out;
+}
+
+.espl__dove{
+  font-size:var(--etichetta); letter-spacing:.14em; text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  color:var(--aria);
+}
+
+/* L'annotazione e' l'unica cosa che puo' cedere quando lo schermo e' basso:
+   tutto il resto e' comando o posizione.
+
+   E cede col TAGLIO DICHIARATO, non con `overflow:hidden` e basta. Nella prima
+   schermata di prova a 360x640 la frase finiva a meta' di «so the propulsion»,
+   tranciata sul rigo: sembra un difetto di disegno, non una frase che continua.
+   `-webkit-line-clamp` mette i puntini, cioe' dice che manca qualcosa — ed e'
+   la stessa scelta gia' fatta in `stile.css` per la didascalia, con la stessa
+   ragione scritta li'. Due righe sotto i 720 px di altezza perche' li' ce ne
+   stanno due: e' aritmetica di riquadro, non una preferenza. */
+.espl__nota{
+  flex:1 1 auto; min-height:0; overflow:hidden;
+  font-family:var(--t-display); font-variation-settings:var(--v-display);
+  font-size:12px; line-height:1.45; color:var(--acqua-tenue);
+}
+.espl__nota > span{
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4;
+  overflow:hidden;
+}
+@media (max-height:720px){ .espl__nota > span{ -webkit-line-clamp:2 } }
+
+.espl__comando,
+.espl__esci{
+  flex:0 0 auto;
+  min-height:44px; padding:0 var(--u2);
+  display:flex; align-items:center; justify-content:center; gap:var(--u);
+  border:1px solid rgba(127,163,165,.34); background:none; cursor:pointer;
+  font-family:var(--t-dato); font-variation-settings:var(--v-dato);
+  font-size:var(--etichetta); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--acqua-tenue);
+}
+.espl__comando[aria-pressed="true"]{ color:var(--aria); border-color:rgba(255,255,255,.5) }
+/* La spia dice lo stato del nodo CANONICO, riletto: qui non c'e' uno stato da
+   cui disegnarla. */
+.espl__spia{ width:8px; height:8px; border:1px solid currentColor; border-radius:50% }
+.espl__comando[aria-pressed="true"] .espl__spia{ background:currentColor }
+.espl__comando[hidden]{ display:none }
+
+/* ─── IL PULSANTE CHE APRE
+
+   Sta nella navigazione, che su telefono e' gia' una riga che scorre di lato
+   con bersagli da 44 px. Non e' un'ancora perche' non porta a un posto del
+   documento: accende una modalita', e un `<a href>` che non naviga e' una
+   bugia detta al lettore di schermo. */
+.espl-entra{
+  border:0; background:none; cursor:pointer;
+  font-family:var(--t-dato); font-variation-settings:var(--v-dato);
+  font-size:var(--etichetta); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--inchiostro-tenue);
+  min-height:44px; min-width:44px; padding:var(--u) 0;
+  white-space:nowrap;
+}
+.espl-entra:hover{ color:var(--inchiostro) }
+/* Sopra gli 820 px l'atto due e' quello del desktop, e non e' questo: la lama
+   come strumento e la griglia a due assi sono il punto 1 e 2 di `docs/13` §11,
+   e le sta costruendo un altro. Offrire qui una scorciatoia col dito
+   significherebbe due esplorazioni diverse sullo stesso schermo. */
+@media (min-width:821px){ .espl-entra{ display:none } }

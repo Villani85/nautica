@@ -50,6 +50,70 @@ export const AMPIEZZA_MARE = [0, 3.0, 6.0, 9.0, 12.0, 15.0]
 export const V_RIF = 12
 export const V_MAX = 20
 
+/**
+ * LA PROPULSIONE NON E' UN SECONDO SPETTACOLO.
+ *
+ * L'atto due comincia quando l'andatura smette di essere un cursore e diventa
+ * una conseguenza. Il modello e' volutamente piccolo ma fisico:
+ *
+ *   - l'albero raggiunge il comando con una costante di tempo, quindi non si
+ *     ferma in un fotogramma;
+ *   - la spinta va con i giri al quadrato;
+ *   - la resistenza va con la velocita' al quadrato;
+ *   - a comando pieno le due si equilibrano a V_RIF.
+ *
+ * Non sono cavalli, tonnellate o kilowatt: senza il CAD propulsivo sarebbero
+ * unita' inventate. Il risultato osservabile, invece, e' onesto e sufficiente
+ * alla catena causale: tolta propulsione, la nave perde abbrivio; perdendo
+ * abbrivio, l'autorita' idrodinamica delle pinne cala da sola tramite
+ * `autorita(v)`. `propulsione` non compare mai nell'equazione del rollio.
+ */
+/**
+ * ─── IL GIROSCOPIO CHIUDE IL RAGIONAMENTO invece di aggiungere un pezzo
+ *
+ * Le pinne producono portanza SOLO in moto e la loro autorita' va col quadrato
+ * della velocita': e' la riga da cui discende tutto l'atto due. Un giroscopio
+ * no -- la sua coppia viene dalla precessione di una massa che gira, e quella
+ * massa gira anche a nave ferma.
+ *
+ * Non e' «migliore»: e' un ALTRO REGIME. Pinne efficienti in navigazione,
+ * giroscopio utile a bassa velocita' o all'ancora. E' il motivo per cui una
+ * barca puo' avere tutti e due, e il sito lo fa PROVARE invece di dirlo.
+ *
+ * IL MODELLO, e cosa non pretende di essere: a valle, sul rollio, un
+ * giroscopio si comporta come smorzamento in piu'. Qui e' `-C_GYRO * giri^2 *
+ * omega`, col quadrato che viene dal momento angolare che cresce coi giri e
+ * dalla coppia che cresce con esso. Non sono newton-metro: senza il CAD di un
+ * giroscopio vero sarebbero unita' inventate. Cio' che e' onesto e sufficiente
+ * e' il COMPORTAMENTO -- una coppia che non dipende dall'abbrivio.
+ *
+ * TAU_GYRO e' 20 secondi e NON e' realistico: un rotore vero ci mette
+ * mezz'ora. Venti secondi sono il tempo in cui l'attesa si SENTE -- i giri
+ * salgono, il rollio scende poco a poco -- senza che chi guarda se ne vada.
+ * Scelta di messa in scena, scritta qui perche' nessuno la scambi per una
+ * misura.
+ */
+const C_GYRO = 0.62
+const TAU_GYRO = 20.0
+
+const TAU_GIRI = 2.6             // s: inerzia di albero, riduttore e motore
+const ACCEL_RIF = 0.30           // kn/s: scala autorale, non una misura di cantiere
+
+export function dinamicaPropulsione ({ velocita, giri }, comando, dt) {
+  const passo = Math.max(0, Math.min(dt, 0.1))
+  const bersaglio = comando ? 1 : 0
+  const nuoviGiri = giri + (bersaglio - giri) * (1 - Math.exp(-passo / TAU_GIRI))
+  const rapporto = Math.max(0, velocita / V_RIF)
+  const spinta = nuoviGiri * nuoviGiri
+  const resistenza = rapporto * rapporto
+  const nuovaVelocita = MathUtils.clamp(
+    velocita + ACCEL_RIF * (spinta - resistenza) * passo,
+    0,
+    V_MAX
+  )
+  return { velocita: nuovaVelocita, giri: nuoviGiri, spinta, resistenza }
+}
+
 const W = 2 * Math.PI / 7        // pulsazione: periodo di rollio 7 s per uno scafo da 40 m
 const ZETA = 0.045               // carena nuda: smorzamento bassissimo. E' il motivo per cui
                                  // gli stabilizzatori esistono. Guadagno di risonanza 1/(2ζ) = 11,1
@@ -111,6 +175,41 @@ const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi 
  * IDENTICA a ogni stato del mare — cinque numeri uguali, che a schermo leggono
  * come un dato inventato anche essendo veri. Lo stallo e' cio' che rompe la
  * linearita' e fa variare il risultato con le condizioni, come nella realta'.
+ *
+ * ─── E QUESTA GIUSTIFICAZIONE E' FALSA AL PUNTO DI LAVORO. Misurata.
+ *
+ * Trovata da una revisione esterna che ha preso alla lettera il segnale del §3.1
+ * -- «un parametro che e' scritto e non arriva dove serve» -- e ha azzerato lo
+ * stallo per vedere se la misura si muoveva. Non si muove: a 12 nodi, l'andatura
+ * di servizio che il sito MOSTRA, togliere del tutto lo stallo cambia la
+ * riduzione di 0,00000 su tutti e cinque gli stati del mare.
+ *
+ *     picco della pinna a 12 nodi, misurato su 300 s
+ *       mare 1    3,6 gradi     in stallo 0,00%     (soglia 20)
+ *       mare 3   10,9 gradi     in stallo 0,00%
+ *       mare 5   17,7 gradi     in stallo 0,00%
+ *
+ * Al mare piu' grosso che il sito mostra la pinna sta 2,3 gradi SOTTO la soglia:
+ * la nonlinearita' e' tarata per stare appena fuori portata. Quindi la riduzione
+ * che il visitatore legge e' il numero che darebbe un modello lineare, e i
+ * «cinque numeri uguali» che questo commento diceva di voler evitare sono
+ * esattamente cio' che il sito mostra -- spread 0,025 punti fra mare 1 e mare 5.
+ *
+ * ─── MA LO STALLO NON E' CODICE MORTO, ed e' l'atto due a cambiarlo
+ *
+ * Lo stallo lavora sotto i 10 nodi, e fino a ieri quel regime era irraggiungibile
+ * perche' la velocita' era un cursore che nessuno abbassava. Adesso e' una
+ * conseguenza: spegnendo la propulsione la nave scende a 2,19 kn in quaranta
+ * secondi, e li' la pinna satura davvero.
+ *
+ *     riduzione a mare 5, lungo la velocita'
+ *       12 kn 90,8%   10 kn 38,9%   8 kn 17,2%   6 kn 8,2%   2 kn 0,7%
+ *     spread fra gli stati del mare, a 6 nodi:  59,96 punti  (a 12: 0,025)
+ *
+ * Quindi il modello e' lineare nel punto di PARTENZA e nonlineare nel punto di
+ * ARRIVO della scoperta. Il commento sopra resta falso dove il sito si apre, ed
+ * e' per questo che sta qui invece di essere cancellato: dice cosa fa lo stallo,
+ * e queste righe dicono DOVE.
  */
 export function portanza (a) {
   const A = Math.abs(a)
@@ -209,11 +308,14 @@ function creaCorsa () {
    * l'angolo con la velocita' nuova. E' simplettico, e regge venti minuti
    * simulati da 20 a 120 Hz senza divergere — verificato in collaudo-rollio.
    */
-  function passo (dt, t, mare, aut, momento) {
+  function passo (dt, t, mare, aut, momento, gyro = 0) {
     c.alfaPrec = c.alfa
     c.alfa = aut > 0 ? MathUtils.clamp(-K * c.omega, -A_MAX, A_MAX) : 0
     const correzione = aut * portanza(c.alfa)
-    const acc = momento(t, mare) + correzione - 2 * ZETA * W * c.omega - W * W * c.theta
+    /* Il giroscopio somma con le pinne invece di sostituirle: accesi tutti e
+       due la nave riceve tutte e due le coppie, come in mare. Ed e' anche cio'
+       che rende leggibile il confronto -- si accendono separatamente. */
+    const acc = momento(t, mare) + correzione - gyro * c.omega - 2 * ZETA * W * c.omega - W * W * c.theta
     c.omega += acc * dt
     c.theta += c.omega * dt
     registra(Math.abs(c.theta), dt)
@@ -223,7 +325,7 @@ function creaCorsa () {
   return { c, passo, azzera }
 }
 
-export function creaSimulazione ({ ridotto = false, seme } = {}) {
+export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = false } = {}) {
   /**
    * IL SEME E' OPZIONALE, e in pagina non si passa: le fasi del mare sono
    * casuali, cosi' due visite non danno la stessa onda. Ma un cancello non puo'
@@ -239,7 +341,16 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   const S = {
     mare: 3,
     stab: false,
+    propulsione: true,
+    giriPropulsione: 1,
+    spinta: 1,
+    resistenza: 1,
+    /** Il giroscopio parte SPENTO: e' la scoperta, non il punto di partenza. */
+    giroscopio: false,
+    giriGiroscopio: 0,
+    autoritaGiroscopio: 0,
     velocita: V_RIF,
+    autoritaPinna: 0,
     rollio: 0,
     /**
      * IL ROLLIO CHE LA NAVE AVREBBE SENZA PINNE, nello stesso istante e sullo
@@ -266,7 +377,32 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   let t = 0
 
   function passo (dt, tempoScena) {
+    if (velocitaDinamica) {
+      const p = dinamicaPropulsione(
+        { velocita: S.velocita, giri: S.giriPropulsione },
+        S.propulsione,
+        dt
+      )
+      S.velocita = p.velocita
+      S.giriPropulsione = p.giri
+      S.spinta = p.spinta
+      S.resistenza = p.resistenza
+    }
     const aut = S.stab ? autorita(S.velocita) : 0
+    S.autoritaPinna = aut
+
+    /**
+     * IL ROTORE SALE E SCENDE CON LA SUA INERZIA, e l'inerzia e' il punto: un
+     * giroscopio che si accende di colpo sarebbe un interruttore, non una
+     * macchina. Salendo, il rollio cala poco a poco -- ed e' quel «poco a poco»
+     * a dire che dentro c'e' una massa che deve prendere velocita'.
+     *
+     * `autoritaGiroscopio` NON dipende da `S.velocita`, e non deve: e' la
+     * differenza che l'atto due esiste per mostrare.
+     */
+    const volutoGyro = S.giroscopio ? 1 : 0
+    S.giriGiroscopio += (volutoGyro - S.giriGiroscopio) * Math.min(1, dt / TAU_GYRO)
+    S.autoritaGiroscopio = C_GYRO * S.giriGiroscopio * S.giriGiroscopio
 
     /**
      * --- IL MOVIMENTO RIDOTTO RIDUCE, NON SPEGNE
@@ -295,8 +431,11 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     riscala(dt)
     t += dt
     const onda = S.ridotto ? (tt, m) => momento(tt, m) * RIDOTTO : momento
-    viva.passo(dt, t, S.mare, aut, onda)
-    nuda.passo(dt, t, S.mare, 0, onda)
+    /* La corsa NUDA non riceve il giroscopio, come non riceve le pinne: e' il
+       metro, cioe' la stessa nave senza NIENTE. Se lo ricevesse, la riduzione
+       misurata smetterebbe di misurare quello che dichiara. */
+    viva.passo(dt, t, S.mare, aut, onda, S.autoritaGiroscopio)
+    nuda.passo(dt, t, S.mare, 0, onda, 0)
 
     S.rollio = MathUtils.radToDeg(viva.c.theta)
     S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)
@@ -486,6 +625,17 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     avvia(STAB, Math.min(Math.max(k, 0.05), 20), [viva.c])
   }
 
+  /**
+   * Spegnere la propulsione cambia UN solo comando. Non spegne le pinne, non
+   * cambia il mare, non riscrive la velocita' e non azzera il rollio. Tutto
+   * cio' che si vede dopo deve essere prodotto dai passi successivi dello
+   * stesso integratore, altrimenti l'atto due sarebbe un filmato travestito da
+   * simulazione.
+   */
+  function cambiaPropulsione (v) {
+    S.propulsione = Boolean(v)
+  }
+
 
   /**
    * --- IL TETTO AL SALTO E' UN GOVERNATORE, NON UNA DURATA INDOVINATA
@@ -641,7 +791,10 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     for (let k = 0; k < Math.round(secondi / dt); k++) passo(dt, t + dt)
   }
 
-  return { S, passo, azzeraPicchi, scalda, cambiaMare, cambiaStab }
+  return {
+    S, passo, azzeraPicchi, scalda, cambiaMare, cambiaStab,
+    cambiaPropulsione
+  }
 }
 
 /**

@@ -76,11 +76,47 @@ const misura = (n) => n >= 1024 * 1024
   ? (n / 1048576).toFixed(2).replace('.', ',') + ' MB'
   : kb(n)
 
-/** I filmati del salone, che il sito serve da `public/` e non da `dist/assets`. */
+/**
+ * I FILMATI, che il sito serve da `public/` e non da `dist/assets`.
+ *
+ * ─── E SI DISTINGUE CHI E' REFERENZIATO DA CHI NON LO E'
+ *
+ * DIFETTO SEGNALATO DA UNA REVISIONE, e aveva ragione: qui si sommava la
+ * CARTELLA, non il codice. `discesa.mp4` pesa 0,98 MB, non e' nominato da
+ * nessuna riga di `src/` -- la «discesa» in pagina e' un effetto CSS, non un
+ * video -- e finiva nel totale come se fosse in uso, sotto un'etichetta
+ * («Filmati del salone») che per giunta mentiva sul soggetto. Un cancello nato
+ * per scovare il gonfiore dei filmati lo avallava.
+ *
+ * Adesso i due totali si stampano separati. **Il tetto resta sul totale**, e
+ * non e' una svista: un file nel repo e' peso che viaggia comunque -- sta in
+ * `dist/`, sta su git, e nascondere gli orfani dal conto sarebbe il difetto
+ * opposto, cioe' un cancello che non vede quello che spedisce. Cambia che
+ * adesso la riga dice **quale parte del budget e' in uso**, e un orfano non
+ * puo' piu' passare inosservato.
+ */
 let byteFilmati = 0
+let byteOrfani = 0
+const orfani = []
 try {
+  /* i nomi che il codice nomina davvero: si leggono dal sorgente, non da una
+     lista scritta a mano -- una lista a mano diverge, un grep no */
+  const nominati = new Set()
+  const cerca = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const q = d + '/' + e.name
+      if (e.isDirectory()) { cerca(q); continue }
+      if (!/\.(js|mjs|html|css)$/.test(e.name)) continue
+      for (const m of readFileSync(q, 'utf8').matchAll(/filmati\/([a-z0-9-]+\.mp4)/g)) nominati.add(m[1])
+    }
+  }
+  cerca('src')
+  for (const m of readFileSync('index.html', 'utf8').matchAll(/filmati\/([a-z0-9-]+\.mp4)/g)) nominati.add(m[1])
   for (const f of readdirSync('public/filmati')) {
-    if (f.endsWith('.mp4')) byteFilmati += statSync('public/filmati/' + f).size
+    if (!f.endsWith('.mp4')) continue
+    const n = statSync('public/filmati/' + f).size
+    byteFilmati += n
+    if (!nominati.has(f)) { byteOrfani += n; orfani.push(f) }
   }
 } catch { /* nessuna cartella */ }
 /** I modelli, stessa ragione. */
@@ -289,9 +325,18 @@ try {
 } catch { /* nessuna cartella: niente da pesare */ }
 if (filmati.length) {
   const ok = pesoFilmati <= TETTO_FILMATI
-  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Filmati del salone'.padEnd(42)} ` +
+  /* «Filmati del salone» era gia' falso da un pezzo: dentro ci sono la discesa
+     e la traversata, che il salone non c'entra. Adesso l'etichetta dice il vero
+     e il conto separa cio' che il codice nomina da cio' che nessuno scarica. */
+  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Filmati'.padEnd(42)} ` +
               `${(pesoFilmati / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_FILMATI / 1e6).toFixed(1)}` +
               `   (${filmati.join(', ')})`)
+  if (orfani.length) {
+    console.log(`         di cui ${(byteOrfani / 1e6).toFixed(2)} MB che NESSUNA riga di src/ nomina: ` +
+                `${orfani.join(', ')}`)
+    console.log('         non e un guasto: e peso che viaggia e che nessuno scarica. ' +
+                'Si chiude montandoli o togliendoli, ed e una decisione di messa in scena.')
+  }
   if (!ok) {
     scarti.push(`i filmati pesano ${(pesoFilmati / 1e6).toFixed(2)} MB contro un tetto di ` +
                 `${(TETTO_FILMATI / 1e6).toFixed(1)}. Il tetto e' una decisione, non una misura: ` +

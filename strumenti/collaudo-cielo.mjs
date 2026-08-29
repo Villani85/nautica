@@ -37,7 +37,7 @@
  */
 import { spawn } from 'node:child_process'
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apriBrowser } from './browser.mjs'
@@ -53,16 +53,54 @@ const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true
 const browser = await apriBrowser({})
 const pg = await browser.newPage()
 
+/**
+ * ─── IL FILE TEMPORANEO HA UN NOME UNICO, e non e' pedanteria
+ *
+ * Era `orizzonte.png` / `cielo.png` fissi dentro la cartella temporanea di
+ * sistema. Basta che due corse si sovrappongano -- e stanotte ne giravano
+ * quattro, fra collaudi e misure -- perche' una scriva mentre l'altra legge:
+ * ffmpeg riceve mezzo PNG e muore con «Invalid PNG signature», il cancello
+ * esce 1, e sembra un difetto del sito.
+ *
+ * E' successo davvero: la suite e' uscita rossa su un file corrotto, non su
+ * una regressione, e rieseguita subito dopo era verde. Un cancello che fallisce
+ * per una ragione sua insegna a rieseguire finche' passa, che e' il modo piu'
+ * rapido di rendere inutile una suite.
+ *
+ * Nome col pid e col millisecondo -- e si cancella dopo. Il resto degli
+ * strumenti qui lo faceva gia': queste due erano rimaste indietro.
+ */
 const T = tmpdir()
-/** una riga di pixel, in luminanza */
-function riga (png, y, w) {
-  const f = join(T, 'cielo.png')
+const UNICO = `cielo-${process.pid}-${Date.now()}.png`
+
+/**
+ * ─── SI DECODIFICA UNA VOLTA SOLA, non una volta per riga
+ *
+ * Qui c'era un `ffmpeg` per ogni quota: dieci righe per due viewport, VENTI
+ * processi, ognuno che decodifica l'intero PNG per tenerne una riga. Funziona
+ * finche' la macchina e' scarica; stanotte, con Blender e quattro Chromium in
+ * giro, Windows ha smesso di concedere processi e la chiamata e' morta con
+ * `spawnSync ffmpeg UNKNOWN` (errno -4094). Il cancello e' uscito rosso senza
+ * che il sito avesse niente che non andasse.
+ *
+ * Un cancello che dipende dal carico della macchina non misura il sito: e' la
+ * stessa regola per cui in questo repo nessuna soglia e' in millisecondi. Qui
+ * la causa era piu' banale -- consumavo venti processi per leggere venti righe.
+ *
+ * Adesso: una decodifica per viewport, e le righe si leggono dal buffer.
+ */
+function decodifica (png, w, h) {
+  const f = join(T, UNICO)
   writeFileSync(f, png)
-  const b = execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', `crop=${w}:1:0:${y}`,
-    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1e8 })
+  return execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', `scale=${w}:${h}`,
+    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1e9 })
+}
+/** una riga di pixel, in luminanza, dal buffer gia' decodificato */
+function riga (b, y, w) {
   const l = []
   for (let i = 0; i < w; i++) {
-    l.push(0.2126 * b[i * 3] + 0.7152 * b[i * 3 + 1] + 0.0722 * b[i * 3 + 2])
+    const o = (y * w + i) * 3
+    l.push(0.2126 * b[o] + 0.7152 * b[o + 1] + 0.0722 * b[o + 2])
   }
   return l
 }
@@ -80,7 +118,7 @@ for (const v of VISTE) {
   /* solo gli strati CSS del cielo: i pseudo-elementi di body non sono figli */
   await pg.addStyleTag({ content: 'body > *{visibility:hidden !important}' })
   await pg.waitForTimeout(400)
-  const scatto = await pg.screenshot()
+  const scatto = decodifica(await pg.screenshot(), v.w, v.h)
 
   console.log('')
   console.log(v.nome)
@@ -96,6 +134,7 @@ for (const v of VISTE) {
 
 await browser.close()
 preview.kill()
+try { unlinkSync(join(T, UNICO)) } catch { /* gia' sparito */ }
 
 /**
  * IL CANCELLO, e la prima versione misurava la cosa sbagliata.

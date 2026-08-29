@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **29 agosto 2026, 09:21.** Da quando hai clonato potrei aver spinto
+Aggiornato: **29 agosto 2026, 11:24.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -25,6 +25,13 @@ altro: `git log --oneline -25` resta la fonte, non questo elenco.
 > esito, pur avendone raccolte le voci nel codice. Adesso ce l'hanno, in
 > [`revisore-drive-arretrati-2026-08-29.md`](revisore-drive-arretrati-2026-08-29.md):
 > quindici voci confermate e **tre ancora aperte**, elencate in testa al §5.
+>
+> **E il giro delle 10:24 ha corretto la mia QUARTA e la mia QUINTA
+> affermazione**, tutte e due dentro la tabella dei bersagli del §3.1: il
+> «93,6% dell'atlante» (è 66,2%) e il «+122 KB / −220 di geometria», che il mio
+> stesso `e2ae489` aveva già ritrattato e la tabella non aveva seguito per tre
+> revisioni. **Se attacchi un numero, guarda prima se un mio commit l'ha già
+> ucciso**: è successo due volte in un giro solo.
 
 ---
 
@@ -132,8 +139,8 @@ Le affermazioni attualmente in piedi. Prendine **una** e prova a farla cadere:
 | Lo scafo invece e' **1,29×** piu' chiaro (Cycles 39,0, sito 50,4, sulle sole facce anteriori) | idem — ed e' la domanda §3.4.3 |
 | La normale cotta recupera il **61,7%** dello scarto fra bassa e alta | `cuoci-impianto.py -- confronto` |
 | La silhouette persa passando alla bassa vale **632 px, l'1,41%** del meccanismo | `riferimenti/blender/uscite/confronto/` |
-| Rugosità e metallicità sono **costanti per materiale** — 9 e 2 picchi che coprono il 98,1% e il 99,0% dei texel — quindi non vanno spedite | istogramma dell'ORM, in `docs/15` |
-| Il corredo PBR costa **+122 KB** ma ne fa risparmiare 220 di geometria | `git show 3ab67d4` |
+| ~~Rugosità e metallicità costanti, non vanno spedite~~ | **decisione GIA' ESEGUITA, non un bersaglio.** Verificato sui quattro GLB spediti: `metallicRoughnessTexture` = **0** ovunque (impianto 0/9, sovrastruttura 0/5, propulsione 0/14, giroscopio 0/9). Escono come fattori scalari. L'istogramma sta su un ORM cotto che nel repo NON c'e' |
+| Il corredo PBR spedito pesa **43,5 KB** sul meccanismo (normale 33,3 + occlusione 10,3), e il netto contro l'alta e' **+30,8 KB** | `git show -s e2ae489`; i byte delle immagini nel GLB — vedi §5, giro 10:24 |
 | L'occlusione va cotta a **6 cm** di raggio, non al predefinito (1/8 della diagonale = 53 cm), o esce nera: media 0,004 sull'albero | `sh strumenti/rifai-impianto.sh` |
 
 **Bersagli gia' caduti — non riattaccarli, li ho smontati io dopo averli
@@ -143,7 +150,14 @@ tu); «lo scafo e' 2,5× e la causa e' il `DoubleSide`» (la maschera del
 materiale comprendeva le facce POSTERIORI, dove Cycles non disegna niente:
 il numero vero e' 1,29× e il `side` non c'entra); «`FrontSide` apre 9.786
 pixel di buco» (sono **zero** — contavo come vuoto ogni pixel scuro, e il
-vuoto si riconosce dall'**alfa**).
+vuoto si riconosce dall'**alfa**); «il corredo PBR costa +122 KB ma ne fa
+risparmiare 220 di geometria» (il +122 era l'uscita **grezza** di gltfpack,
+non il byte che parte: `e2ae489` l'ha ritrattato mesi di commit fa e la
+tabella qui sopra non l'aveva seguito per tre revisioni — **trovato dal giro
+delle 10:24**, ed era igiene mia); «l'isola della pinna cade nella meta'
+destra fittissima dell'atlante» (le UV di `carena` finiscono a `u = 0,7031`,
+cioe' **esattamente x = 360 su 512**: nella banda destra non ha un solo texel
+— stesso giro).
 
 ### 3.2 · Il giudizio che io non posso dare
 
@@ -179,25 +193,43 @@ una curva tonale che il sito non spedisce. **I rapporti qui sotto non cadono** �
 sono presi in lineare da tutte e due le parti, dove la curva è spenta. Cade la
 rassicurazione che ne avevo tratto guardando la colonna AgX. Vedi §5.)*
 
-**Perché lo scafo è più chiaro del 37% e la sovrastruttura più scura del 20%?**
-Con camera (0,05 px), cielo, curva tonale **e luci** allineati, e i rapporti
-presi **in lineare** a esposizione 0 da tutte e due le parti:
+**CORRETTO IL 29 AGOSTO, POMERIGGIO: il difetto e' UNO SOLO, ed e' lo scafo.**
+
+Questo paragrafo ha chiesto per giorni la spiegazione di «due errori di segno
+opposto». Il secondo segno non esiste, e a dirlo e' l'**ultima riga di
+`docs/15`** — cioe' la prima che si legge partendo dal fondo, come ordina il §1
+qui sopra:
+
+> `docs/15:842` — *«CORREZIONE: la sovrastruttura non e' scura del 20%,
+> combacia. Quel numero veniva dalla banda y 150-300, che comprende teak, vetro,
+> montanti, parapetti e sfondo. Sulla maschera ESATTA del materiale,
+> `sovra_guscio` da' **1,007x**. Il difetto e' uno solo: lo scafo.»*
+
+Il `0,797x` non era la sovrastruttura: era una banda di pixel contaminata. E il
+sospetto che restava -- «three non ha occlusione dell'ambiente» -- era stato
+introdotto per spiegare **proprio quel segno**, come questo paragrafo ammetteva
+da solo. Cade con lui.
+
+L'ha trovato il giro delle 12:14 leggendo `docs/15` fino in fondo, che nessuno
+aveva fatto. Io avevo propagato il quadro sbagliato anche in `STATO-2026-08-29`.
+
+**Quello che resta aperto, ed e' uno:**
 
 ```
-scafo           Cycles 0,0564   sito 0,0772   = 1,370x   (sito piu chiaro)
-sovrastruttura  Cycles 0,3267   sito 0,2605   = 0,797x   (sito piu SCURO)
+scafo   Cycles 0,0564   sito 0,0772   = 1,370x   (sito piu' chiaro del 37%)
 ```
 
-Due errori di **segno opposto**. Sette sospetti esclusi, ognuno con una misura:
-buccia d'arancia, guscio `interno`, parametri del materiale, `side`,
-risoluzione dell'ambiente, speculare a incidenza radente, e — dal giro
-scorso — **l'irradianza in armoniche sferiche**, che ho costruito e che non
-cambia niente (§5).
+Otto sospetti esclusi, ognuno con una misura: buccia d'arancia, guscio interno,
+parametri del materiale, `side`, risoluzione dell'ambiente, speculare a incidenza
+radente, irradianza in armoniche sferiche, e l'occlusione dello scafo -- che c'e'
+ed e' corretta (canale 0, UV presenti, AO 0,993 sulle murate: verificato due
+volte, una in modo indipendente dal giro delle 12:14).
 
-Sospetto rimasto, non provato: three **non ha occlusione dell'ambiente**.
-Cycles ombreggia il cielo con lo sbalzo della coperta e la curvatura dello
-scafo; three no. Spiegherebbe lo scafo più chiaro — ma **non** la sovrastruttura
-più scura, quindi le cause sono due e ne conosco zero.
+**E la domanda che merita davvero un giro adesso e' un'altra**, ed e' quella che
+`docs/15` lascia in sospeso in fondo: **la separazione fra i due materiali dentro
+ciascun motore vale 5,33x in Cycles e 3,95x nel sito**, con albedo puro 4,27. Il
+sito comprime, il path tracer allarga. Quella non passa dal fantasma dei due
+segni, e non l'ha ancora guardata nessuno.
 
 **Da riprodurre:**
 ```
@@ -274,6 +306,173 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 29 agosto, 14:10 — lo stallo non arriva dove il sito lo mostra
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1410.md`](revisore-drive-2026-08-29-1410.md).**
+Quinto giro sullo stesso fotogramma, terzo di fila che si rifiuta di rifare il
+giudizio visivo perche' il pixel non e' cambiato. Cinque giri, cinque bersagli
+diversi, zero ripetizioni: il §2 e' entrato.
+
+**VOCE 1 — CONFERMATA, e riprodotta qui.** Ha attaccato non il valore della
+riduzione ma **cio' che lo produce**. Il commento su `portanza` dice che lo
+stallo «fa variare il risultato con le condizioni»; a 12 nodi lo stallo **non
+ingaggia mai** -- picco pinna 3,6 / 10,9 / 17,7 gradi contro una soglia di 20,
+in stallo lo 0,00% del tempo. La nonlinearita' e' tarata per stare appena fuori
+portata, e la riduzione mostrata e' quella di un modello lineare.
+
+E' la forma d'errore che il §3.1 chiede di cercare: **un parametro scritto che
+non arriva dove serve.** Commento corretto coi numeri.
+
+**VOCE 2 — CONFERMATA sulla tabella.** A 12 nodi la resa non dipende dal mare:
+spread **0,025 punti** fra mare 1 e mare 5 (0,006 a 20 nodi). Uno stabilizzatore
+reale invece degrada col mare, perche' la pinna satura. Il revisore dichiara da
+solo il limite della sua voce -- la direzione e' dominio consolidato, il
+**quanto** non l'ha misurato -- e per questo non ho toccato il modello.
+
+**E UNA COSA CHE SUL BRANCH NON E' PIU' VERA.** La 1(b) dice «il mare e' una
+leva che muove la scena ma non il dato», e che un numero fermo sotto un gesto
+legge come hardcoded. Su `main` e' esatto. Sul branch **la propulsione muove
+quel numero da 90,8% a sotto l'uno** in quaranta secondi, e a 6 nodi lo spread
+fra gli stati del mare torna a **59,96 punti**. Lo stallo non e' codice morto:
+e' codice che si accende dove l'atto due porta chi guarda.
+
+Il modello e' lineare nel punto di PARTENZA e nonlineare nel punto di ARRIVO.
+
+**Cosa resta come numero sul tavolo:** far degradare la resa con lo stato del
+mare, e mettere il rollio nudo accanto alla riduzione. Il primo e' realismo e
+nessuno ha la magnitudine; il secondo e' messa in scena.
+
+---
+
+### Giri del 29 agosto, 10:24 e 12:14 — due giri che si coordinano da soli
+
+**Esito per esteso in
+[`revisore-drive-2026-08-29-1024-e-1214.md`](revisore-drive-2026-08-29-1024-e-1214.md).**
+Il 12:14 dichiara di non rifare il giudizio visivo perche' il pixel non e'
+cambiato, e sottoscrive quello del 10:24. E' la prima volta che due giri si
+coordinano invece di ripetersi: e' esattamente cio' che il §2 chiede.
+
+**12:14 VOCE 1 — CONFERMATA, ed e' un errore che avevo propagato io.** §3.4
+chiedeva due segni opposti; `docs/15:842` li aveva ritrattati il giorno prima --
+la sovrastruttura **combacia** (1,007x sulla maschera esatta), il `0,797x` veniva
+da una banda con dentro teak, vetro, montanti, parapetti e sfondo. §3.4 e'
+riscritto: **un difetto solo, lo scafo**. E il sospetto «three non ha occlusione
+dell'ambiente» cade col segno che doveva spiegare.
+
+Il revisore ha anche corroborato in modo indipendente che `aoMap` arriva ed e'
+corretta -- canale 0, UV presenti, AO 0,993 sulle murate -- **e lo scrive pur
+non essendo un difetto**, perche' e' una trappola three classica che il prossimo
+troverebbe e riporterebbe a torto. Un giro risparmiato a qualcun altro.
+
+**12:14 VOCE 2 — CONFERMATA sui quattro GLB.** Zero
+`metallicRoughnessTexture` ovunque, compresi i due modelli nuovi. La riga di
+§3.1 offriva come bersaglio una decisione gia' eseguita e un istogramma che nel
+repo non c'e'. Sostituita.
+
+**12:14 VOCE 3 — CONFERMATA, e vale ancora.** `discesa.mp4` non e' referenziato
+da nessuno: 0,98 MB su un tetto di 4,2 che nessun browser scarica. Il rilievo
+vero pero' e' sul CANCELLO, che sommava la cartella invece del codice: corretto,
+`peso.mjs` ora separa i filmati referenziati dagli orfani. Il file **non l'ho
+toccato**: montarlo o toglierlo e' messa in scena.
+
+**10:24 VOCE 1 — la mia pista sulla pinna era sbagliata.** `carena` non cade
+nella meta' fitta dell'atlante: ci sta a **0,0%**, misurato rasterizzando le UV
+vere. Cade con essa la prova che ci avevo appoggiato.
+
+**10:24 VOCE 2 — CONFERMATA, e riprodotta qui al texel. E' la piu' importante
+dei due giri.** La normale spedita ha **632 texel con z < 0** (0,241%) e **85
+speckle di croma** -- i suoi numeri, esatti. Un texel con z < 0 e' un microfacet
+rivolto all'indietro: sotto luce radente da' un lampo speculare, cioe' un
+puntino **chiaro**. Ed e' proprio quello che avevo descritto senza spiegarlo.
+
+La mia esclusione «tolta la normale, la grana resta» non scagionava niente:
+toglieva l'intera mappa, cioe' il rilievo buono E i texel corrotti insieme.
+**La causalita' pero' NON e' verificata**: che quei 632 texel producano la grana
+visibile resta un'ipotesi. La prova che manca -- spedire la normale in BC5 o
+webp lossless e riguardare il primo piano -- e' passata a chi sta rifacendo le
+mappe adesso.
+
+**Il giudizio visivo, e la voce piu' azionabile dei due giri:** `DRAW 0/100` e
+`RECOVERY 0/100` si leggono come strumenti **rotti**, non come «poco». Fondo
+scala 100 con l'ago a zero dice guasto, e il campo vive fra 0 e ~6 al punto di
+lavoro. Sta in due righe di markup. **Non corretto**: il fondo scala di una
+lettura e' una decisione su cosa il sito dichiara di misurare. Numero sul tavolo.
+
+---
+
+### Giro del 29 agosto, 10:24 (`nautica_2026-08-29_1024_8911bb8.md`)
+
+**Il primo giro che attacca l'atlante PBR, e arriva a qualcosa di vero su tutte
+e tre le voci. Esito per esteso in
+[`revisore-drive-2026-08-29-1024.md`](revisore-drive-2026-08-29-1024.md).**
+
+Verificato sui suoi stessi byte: `git diff --quiet 20fa37f HEAD --
+public/modelli/impianto.glb` torna 0, quindi il mio branch `atto-due-locale`
+non ha toccato il meccanismo e le misure sotto non sono una ricostruzione.
+
+**VOCE 1 — «la pinna NON cade nella meta' fitta dell'atlante». CONFERMATA, e
+piu' forte di come la scrive.** `carena` occupa 77.050 texel (29,4%) e nella
+banda `x>360` ne ha **zero esatti su 20.125 etichettati**. La ragione
+strutturale, che il suo script non stampa: le UV di `carena` dopo la
+`KHR_texture_transform` stanno in `u[0,0041–0,7031]`, e `0,7031 x 512 = 360,0`.
+Nessuno dei 96 vertici esce da `[0,1]` — quindi non e' un artefatto di ritaglio,
+che era l'unico modo in cui quel conto poteva mentire. **Il giro che `0017f12`
+stava per farmi spendere — colorare l'isola e guardare — non va speso.**
+
+E **cade il mio 93,6%**: il bbox del footprint misura **66,2%**. Quarta mia
+affermazione corretta, in tabella al §3.1 fra i bersagli caduti.
+
+**VOCE 2 — «632 normali puntano dentro la superficie, 197 sulla pinna».
+PREMESSA CONFERMATA, LOCALIZZAZIONE NON RIPRODOTTA.** I 632 texel `z<0`
+(0,241%) e gli 85 di speckle croma esistono davvero nella normale webp
+spedita, e il suo rilievo **metodologico** e' corretto senza bisogno di misure:
+togliere tutta la `normalMap` non separa il rilievo cotto dai texel corrotti,
+quindi la mia esclusione era un test troppo grosso. Ma i 197 «proprio sulla
+pinna» vengono da una **maschera ribaltata verticalmente** (il suo painter
+scrive `label[(N-1-y)*N+x]` e poi maschera con quella un'immagine che ha la
+riga 0 in alto). Con la maschera allineata:
+
+    nel gutter, mai campionati   436   (69,0%)
+    dentro le isole              196   (31,0%)   acciaio 116 · tenuta 80 · carena 0
+
+**Zero su `carena`.** Verso stabilito per misura, non per spec: texel identici
+al vicino sinistro nella normale, dentro 71,7% / fuori 17,8% con la maschera
+allineata, contro 50,9% / 43,8% con la sua — una separa quattro volte, l'altra
+non separa. Lo stesso ribaltamento tocca le statistiche AO della VOCE 1, ma **li'
+rafforza la sua tesi**: gli scuri isolati sotto la pinna non sono 27 (0,035%) ma
+**zero**, e la grana fine e' **0,79% contro 5,91% globale** invece di 7,93%.
+L'occlusione sotto la pinna e' sette volte e mezza piu' liscia della media.
+
+Quindi **la leva che propone — normale in BC5/lossless — non e' una cura per la
+pinna.** Se valga la pena spenderla per i 196 texel di `acciaio` e `tenuta` e'
+una decisione di costo: **numero sul tavolo, 196 su 262.144, lo 0,075%.**
+
+**VOCE 3 — «§3.1 tiene in vita +122 KB / −220». CONFERMATA, ed e' colpa mia.**
+Il corredo spedito e' **43,5 KB** (normale 33,3 + occlusione 10,3) su
+`impianto.glb` e 17,6 su `sovrastruttura.glb`; `e2ae489` aveva gia' ritrattato
+il −220 alla lettera e fissato il netto a **+30,8 KB**. La tabella non l'ha
+seguito per tre revisioni, cioe' teneva un bersaglio morto nel punto esatto in
+cui un giro nuovo va a scegliere. **Riga corretta** al §3.1: e' `feedback/`,
+la sistemo invece di lasciarla sul tavolo.
+
+**Cosa NON ho verificato:** niente di visivo e niente da browser — tutto il suo
+capitolo «Giudizio visivo» resta non riprodotto, ne' a favore ne' contro; niente
+Blender, quindi la prova di causalita' della VOCE 2 non e' stata fatta; non ho
+controllato che i 196 texel di `acciaio`/`tenuta` si vedano a schermo; non ho
+isolato la lama dentro `carena` (48 triangoli su due nodi); non ho ricostruito
+da dove venisse il 93,6%; e non ho rieseguito i 180 s della simulazione per
+`DRAW`/`RECOVERY` su questo branch. **La causa della grana resta ignota:** questo
+giro ha tolto due piste e non ne ha messa nessuna.
+
+**Le voci di messa in scena restano al committente, per intero:** il fondo scala
+`0/100` di `DRAW` e `RECOVERY` (righe confermate a `index.html:111-112` e
+`116-117`), il cielo piatto, l'accavallamento dei tre testi, la meta' crema su
+telefono, le tre proposte per i primi 3 secondi (§3.5) e il gradiente a due-tre
+fermi (§3.4.1). Non le istruisco io.
+
+---
 
 ### I NOVE giri che questo §5 non aveva mai risposto — saldati il 29 agosto, 09:21
 

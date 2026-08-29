@@ -47,23 +47,23 @@ const DURATA = 7000
  *   · «Change the sea» arrivava mentre le persone stavano ancora reagendo allo
  *     spegnimento dello stabilizzatore -- cioe' nel momento in cui chi guarda
  *     deve guardare loro;
- *   · «Drag the speed» compariva nella vista esterna della nave, dove il
- *     legame fra andatura e autorita' della pinna non si vede.
+ *   · «Drag the speed» trasformava una conseguenza in un parametro. L'atto
+ *     due comincia invece togliendo propulsione e osservando cosa viene meno.
  *
  * Quindi ogni nudge dichiara adesso DOVE ha senso (`battute`), COSA deve essere
  * gia' successo (`dopo`) e quante scene servono prima (`scene`). La sequenza
  * che ne esce: apertura niente, salone lo stabilizzatore, dopo l'esperimento il
- * mare, al meccanismo la velocita', il menu buon ultimo.
+ * mare, al meccanismo la propulsione, il menu buon ultimo.
  *
  * L'ordine E' la priorita'. Il primo non ancora soddisfatto e visibile vince.
  * Non e' alfabetico e non e' l'ordine sullo schermo: e' l'ordine in cui una
  * persona scopre il sito.
  *
  * Era stabilizzatore, velocita', mare, menu. Adesso il MARE viene prima della
- * velocita', e la ragione l'ha scritta una revisione esterna meglio di come
+ * propulsione, e la ragione l'ha scritta una revisione esterna meglio di come
  * l'avevo pensata io: la decisione emotiva nasce dal mare -- alzarlo e vedere
- * la nave reagire -- mentre la velocita' e' l'approfondimento tecnico che
- * viene dopo, ed e' anche il piu' controintuitivo.
+ * la nave reagire -- mentre la dipendenza dalla propulsione viene dopo, ed e'
+ * anche il passaggio piu' controintuitivo.
  */
 const NUDGE = [
   {
@@ -86,13 +86,12 @@ const NUDGE = [
     dopo: 'stab'
   },
   {
-    id: 'velocita',
-    bersaglio: '#velocita',
-    testo: 'Drag the speed - the number moves',
-    eventi: ['input'],
-    /* al MECCANISMO, non alla nave: il legame fra andatura e autorita' della
-       pinna e' quello che il primo piano mostra, e nella vista esterna non si
-       vede niente di quel rapporto */
+    id: 'propulsione',
+    bersaglio: '#propulsione',
+    testo: 'See what happens without propulsion',
+    eventi: ['click'],
+    /* al MECCANISMO: il gesto non anticipa la spiegazione sulla prima vista.
+       Qui albero, velocita' e pinna possono diventare una sola conseguenza. */
     battute: ['taglio', 'meccanismo']
   },
   {
