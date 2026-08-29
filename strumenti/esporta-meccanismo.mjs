@@ -38,6 +38,18 @@ import { fileURLToPath } from 'node:url'
  * meccanismo. Per ognuno: vertici, indici, matrice mondo e colore del
  * materiale — il colore e' anche l'etichetta con cui `cuoci.py` decide se e'
  * acciaio, bronzo o accento della cinematica.
+ *
+ * ─── DUE USI, DUE INVOCAZIONI, e da oggi non si sbagliano in silenzio
+ *
+ *   il MECCANISMO (il tetto serve, la carena non c'entra):
+ *       SCARTA_LA_NAVE=1 node strumenti/esporta-meccanismo.mjs meccanismo.json
+ *
+ *   la NAVE INTERA (per il ritratto in Cycles: la carena E' il soggetto):
+ *       TETTO_TRI=999999 node strumenti/esporta-meccanismo.mjs nave-scena.json
+ *
+ * Senza nessuna delle due esce con errore e dice quale pezzo della nave il
+ * tetto sta buttando via. Vedi il blocco sul TETTO piu' sotto per la ragione:
+ * il ritratto della nave e' stato cotto per settimane senza carena.
  */
 
 const INDIRIZZO = process.env.URL || 'http://localhost:4174/nautica/'
@@ -319,6 +331,40 @@ const tri = pezzi.reduce((s, p) => s + (p.idx ? p.idx.length / 3 : p.pos.length 
 const colori = [...new Set(pezzi.map(p => p.col))]
 console.log(`  ${pezzi.length} pezzi · ${tri} triangoli · ${(JSON.stringify(pezzi).length / 1048576).toFixed(1)} MB`)
 console.log(`  materiali: ${colori.join(' ')}`)
+/**
+ * ─── E SE IL TETTO BUTTA VIA IL SOGGETTO, NON E' UN TETTO: E' UN GUASTO
+ *
+ * Il filtro registrava gia' quello che scartava, e lo stampava. Non e' bastato:
+ * il ritratto della nave in Cycles e' stato cotto per settimane **senza la
+ * carena**, perche' `TETTO_TRI = 3000` la lasciava fuori e la riga che lo
+ * diceva scorreva via in mezzo al resto. Verificato: nel vecchio
+ * `nave-scena.json` il materiale `scafo` compare solo con 31 e 62 vertici --
+ * i due tappi di prua e poppa -- e il guscio da 2263 non c'e'. Ogni conclusione
+ * tratta da quel ritratto parlava di coperta e sovrastruttura.
+ *
+ * Un tetto che toglie un bullone fa il suo mestiere. Un tetto che toglie lo
+ * SCAFO da un ritratto della nave sta cancellando il soggetto, e la differenza
+ * si puo' dire in una riga: quali materiali sono la nave. Se ne cade uno, si
+ * esce con errore invece di stampare e proseguire.
+ *
+ * Il commento qui sopra diceva gia' «un filtro muto e' il modo in cui si perde
+ * un pezzo per settimane». Era muto abbastanza: stampava, e nessuno leggeva.
+ * Stampare non e' fallire.
+ */
+const NAVE = ['scafo', 'coperta', 'carena', 'interno']
+const persi = scartati.filter((x) => NAVE.includes(x.nome))
+if (persi.length && !process.env.SCARTA_LA_NAVE) {
+  console.error(`
+  ROTTO  il tetto di ${TETTO_TRI} triangoli ha buttato via ${persi.length} pezzo/i
+         della NAVE, non del contorno:`)
+  for (const x of persi) console.error(`           ${String(x.tri).padStart(6)} triangoli  ${x.nome}  ${x.nodo}`)
+  console.error(`
+         Per un ritratto della nave questo cancella il soggetto. Rilancia con
+         TETTO_TRI=999999, oppure con SCARTA_LA_NAVE=1 se davvero vuoi solo il
+         meccanismo e sai che la carena non ci sara'.`)
+  process.exit(1)
+}
+
 if (scartati.length) {
   const t = scartati.reduce((s, x) => s + x.tri, 0)
   console.log(`
