@@ -21,7 +21,10 @@ export function creaLetture (el) {
     el.recupero.textContent = Math.round(S.recupero)
     el.fCarico.style.right = `${100 - S.carico}%`
     el.fRecupero.style.right = `${100 - S.recupero}%`
-    if (el.velocita) el.velocita.textContent = Math.round(S.velocita)
+    /* L'andatura ora decade fisicamente: con un intero resterebbe immobile per
+       quasi due secondi dopo il gesto e poi salterebbe di un nodo. Il decimo
+       rende visibile l'inerzia senza trasformare il pannello in telemetria. */
+    if (el.velocita) el.velocita.textContent = grad(S.velocita)
     /**
      * --- LA RIGA VIVA: COSA STA SUCCEDENDO, ADESSO
      *

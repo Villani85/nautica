@@ -150,24 +150,12 @@ export function avviaDimostrazione () {
   })
 
   comandi = collegaComandi({
-    contenitore: $('#mare'), toggle: $('#stab'), sim,
+    contenitore: $('#mare'), toggle: $('#stab'), propulsione: $('#propulsione'), sim,
     // La regia va rivalutata anche quando cambia lo STATO, non solo la
     // posizione: accendendo il sistema da fermi il testo restava indietro.
     // Avvisa anche gli altri capitoli: il salone dorme mentre sei qui, e al
     // risveglio deve trovare lo stato giusto invece di quello di prima.
     alCambio: () => { risveglia(); regia?.rivaluta?.(); statoCambiato() }
-  })
-  /**
-   * L'ANDATURA. E' la seconda cosa che si scopre: le pinne producono portanza
-   * solo in moto, quindi sotto una certa velocita' l'interruttore si accende e
-   * non succede niente. Un <input type=range> vero, non un div con listener:
-   * arriva gia' accessibile da tastiera e annunciato.
-   */
-  const cursore = $('#velocita')
-  cursore.addEventListener('input', () => {
-    sim.S.velocita = Number(cursore.value)
-    sim.azzeraPicchi()
-    risveglia()
   })
 
   collegaPuntoDiVista({

@@ -50,6 +50,42 @@ export const AMPIEZZA_MARE = [0, 3.0, 6.0, 9.0, 12.0, 15.0]
 export const V_RIF = 12
 export const V_MAX = 20
 
+/**
+ * LA PROPULSIONE NON E' UN SECONDO SPETTACOLO.
+ *
+ * L'atto due comincia quando l'andatura smette di essere un cursore e diventa
+ * una conseguenza. Il modello e' volutamente piccolo ma fisico:
+ *
+ *   - l'albero raggiunge il comando con una costante di tempo, quindi non si
+ *     ferma in un fotogramma;
+ *   - la spinta va con i giri al quadrato;
+ *   - la resistenza va con la velocita' al quadrato;
+ *   - a comando pieno le due si equilibrano a V_RIF.
+ *
+ * Non sono cavalli, tonnellate o kilowatt: senza il CAD propulsivo sarebbero
+ * unita' inventate. Il risultato osservabile, invece, e' onesto e sufficiente
+ * alla catena causale: tolta propulsione, la nave perde abbrivio; perdendo
+ * abbrivio, l'autorita' idrodinamica delle pinne cala da sola tramite
+ * `autorita(v)`. `propulsione` non compare mai nell'equazione del rollio.
+ */
+const TAU_GIRI = 2.6             // s: inerzia di albero, riduttore e motore
+const ACCEL_RIF = 0.30           // kn/s: scala autorale, non una misura di cantiere
+
+export function dinamicaPropulsione ({ velocita, giri }, comando, dt) {
+  const passo = Math.max(0, Math.min(dt, 0.1))
+  const bersaglio = comando ? 1 : 0
+  const nuoviGiri = giri + (bersaglio - giri) * (1 - Math.exp(-passo / TAU_GIRI))
+  const rapporto = Math.max(0, velocita / V_RIF)
+  const spinta = nuoviGiri * nuoviGiri
+  const resistenza = rapporto * rapporto
+  const nuovaVelocita = MathUtils.clamp(
+    velocita + ACCEL_RIF * (spinta - resistenza) * passo,
+    0,
+    V_MAX
+  )
+  return { velocita: nuovaVelocita, giri: nuoviGiri, spinta, resistenza }
+}
+
 const W = 2 * Math.PI / 7        // pulsazione: periodo di rollio 7 s per uno scafo da 40 m
 const ZETA = 0.045               // carena nuda: smorzamento bassissimo. E' il motivo per cui
                                  // gli stabilizzatori esistono. Guadagno di risonanza 1/(2ζ) = 11,1
@@ -223,7 +259,7 @@ function creaCorsa () {
   return { c, passo, azzera }
 }
 
-export function creaSimulazione ({ ridotto = false, seme } = {}) {
+export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = false } = {}) {
   /**
    * IL SEME E' OPZIONALE, e in pagina non si passa: le fasi del mare sono
    * casuali, cosi' due visite non danno la stessa onda. Ma un cancello non puo'
@@ -239,7 +275,12 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   const S = {
     mare: 3,
     stab: false,
+    propulsione: true,
+    giriPropulsione: 1,
+    spinta: 1,
+    resistenza: 1,
     velocita: V_RIF,
+    autoritaPinna: 0,
     rollio: 0,
     /**
      * IL ROLLIO CHE LA NAVE AVREBBE SENZA PINNE, nello stesso istante e sullo
@@ -266,7 +307,19 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
   let t = 0
 
   function passo (dt, tempoScena) {
+    if (velocitaDinamica) {
+      const p = dinamicaPropulsione(
+        { velocita: S.velocita, giri: S.giriPropulsione },
+        S.propulsione,
+        dt
+      )
+      S.velocita = p.velocita
+      S.giriPropulsione = p.giri
+      S.spinta = p.spinta
+      S.resistenza = p.resistenza
+    }
     const aut = S.stab ? autorita(S.velocita) : 0
+    S.autoritaPinna = aut
 
     /**
      * --- IL MOVIMENTO RIDOTTO RIDUCE, NON SPEGNE
@@ -486,6 +539,17 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     avvia(STAB, Math.min(Math.max(k, 0.05), 20), [viva.c])
   }
 
+  /**
+   * Spegnere la propulsione cambia UN solo comando. Non spegne le pinne, non
+   * cambia il mare, non riscrive la velocita' e non azzera il rollio. Tutto
+   * cio' che si vede dopo deve essere prodotto dai passi successivi dello
+   * stesso integratore, altrimenti l'atto due sarebbe un filmato travestito da
+   * simulazione.
+   */
+  function cambiaPropulsione (v) {
+    S.propulsione = Boolean(v)
+  }
+
 
   /**
    * --- IL TETTO AL SALTO E' UN GOVERNATORE, NON UNA DURATA INDOVINATA
@@ -641,7 +705,10 @@ export function creaSimulazione ({ ridotto = false, seme } = {}) {
     for (let k = 0; k < Math.round(secondi / dt); k++) passo(dt, t + dt)
   }
 
-  return { S, passo, azzeraPicchi, scalda, cambiaMare, cambiaStab }
+  return {
+    S, passo, azzeraPicchi, scalda, cambiaMare, cambiaStab,
+    cambiaPropulsione
+  }
 }
 
 /**

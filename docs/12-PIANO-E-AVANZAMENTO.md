@@ -134,12 +134,31 @@ allungava un sito che si legge. Al suo posto c'è `13-ATTO-DUE.md`.
 | B | la nave che si divide | da fare |
 | **Il meccanismo** | far *sentire* che la macchina lavora — priorita' dichiarata | da fare |
 | atto due §2 | il passaggio di consegne | da fare |
-| atto due §4 | la catena causale | da fare |
+| atto due §4 | la catena causale | **FATTA — 29 agosto.** `dinamicaPropulsione()` porta i giri al comando con inerzia e integra spinta e resistenza quadratiche; `#propulsione` ha sostituito il cursore dell'andatura; `strumenti/collaudo-catena.mjs` verifica i CONFINI fra le cause, non che quattro numeri si muovano insieme |
 | atto due §5 | il finale, col salone | da fare |
-| — | la sezione che sostituisce il cliente (`#offerta` operativa) | da fare |
+| ~~—~~ | ~~la sezione che sostituisce il cliente (`#offerta` operativa)~~ | **abbandonata**: il committente ha fatto togliere §04 e §05 per intero, ~250 righe. Verificato il 29 agosto: zero occorrenze di `offerta` e `fattura` in `index.html` |
 | — | l'identità: il nome sulla nave, la firma dello studio | da fare |
 | ~~—~~ | ~~la linea come spina: testo raddoppiato nelle sezioni~~ | **abbandonata**: alza il Design ma allunga la lettura, che è il difetto |
 | ~~—~~ | ~~poster renderizzati in Blender per `#fattura` e `#offerta`~~ | **abbandonata**: immagini ferme in un sito che ha bisogno di mani |
+
+### Atto due — cosa e' chiuso, e con quale prova
+
+Si aggiorna a ogni pezzo finito, e ogni riga porta la misura che la sostiene.
+Una riga senza prova qui dentro non vale: e' il difetto che questo repo si
+vieta da solo.
+
+| §13 | pezzo | stato | la prova |
+|---|---|---|---|
+| §11.3-4 | la catena causale propulsione -> velocita' -> pinne -> rollio | **CHIUSO 29 ago** | `collaudo-catena.mjs`, 16 proprieta' verdi su questa macchina. Dopo 40 s a propulsione spenta: 12 -> **6,10 kn**, autorita' delle pinne **-70%**, rollio di ritorno **6,42 gradi RMS**, e le pinne continuano a tentare la correzione. Deriva fra 30/60/120 Hz: **6,099 / 6,101 / 6,102 kn**, sotto 0,01 |
+| §4 | la velocita' non e' piu' un comando pubblico | **CHIUSO 29 ago** | `#velocita` non esiste piu' in `index.html`; `#propulsione` e' un `<button>` con `aria-pressed`. `collaudo-telefono` e `collaudo-manopola` puntano al comando nuovo |
+| §9 | il cancello che vieta la scorciatoia | **CHIUSO 29 ago** | la prova che conta: **a velocita' uguale, il booleano della propulsione non cambia l'autorita' delle pinne**. Se qualcuno scrivesse «propulsione spenta -> riduzione = 0», quella riga fallirebbe |
+| §11.3 | la macchina VISIBILE della propulsione | in corso | albero, riduttore ed elica in Blender, collegati a `giriPropulsione` |
+| §11.5 | il giroscopio, il controesempio | in corso | — |
+| §11.1 | la lama come strumento, e il passaggio di consegne | da fare | — |
+| §11.2 | la navigazione a due assi | da fare | — |
+| §11.6 | il finale: l'inclinazione del salone dalla corsa viva | da fare | il cancello lo dichiara gia': scarto sotto 0,05 gradi su 200 fotogrammi |
+| §11.7 | il telefono, e §8 dice che vale quanto il resto | da fare | — |
+| §5 | l'inquadratura del finale | **decisione aperta**, tre strade, e il §5 dice di sceglierla guardando |
 
 ---
 

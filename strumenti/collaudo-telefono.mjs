@@ -337,7 +337,7 @@ const COMANDI = [
   ['#mare .mare__tacca:nth-of-type(1)', 'stato del mare, tacca 0'],
   ['#mare .mare__tacca:nth-of-type(3)', 'stato del mare, tacca 2'],
   ['#mare .mare__tacca:nth-of-type(6)', 'stato del mare, tacca 5'],
-  ['#velocita', 'andatura'],
+  ['#propulsione', 'comando della propulsione'],
   ['#stab', 'interruttore di stabilizzazione']
 ]
 

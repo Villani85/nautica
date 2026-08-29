@@ -106,13 +106,14 @@ ragione completamente diversa. Sotto la linea questo pesa meno, ma non zero.
 
 ---
 
-## 4. I quattro sistemi, e perché quattro
+## 4. I tre sistemi, e perché non quattro
 
-Propulsione · stabilizzatori · giroscopio · timoneria.
+Propulsione · stabilizzatori · giroscopio.
 
-Non venti. Quattro, scelti perché **si tengono per mano**. Venti sistemi
-scollegati sono un catalogo; quattro concatenati sono un modello mentale che ci
-si porta a casa.
+Non venti. Tre, scelti perché **si tengono per mano**. Sistemi scollegati sono
+un catalogo; tre conseguenze concatenate sono un modello mentale che ci si
+porta a casa. La timoneria resta fuori dal primo atto due: non chiude questa
+catena e aggiungerla adesso significherebbe aggiungere un'altra demo.
 
 ### La catena causale
 
@@ -141,17 +142,16 @@ E il giroscopio chiude il ragionamento invece di aggiungere un pezzo: **è il
 motivo per cui esistono entrambi**, e nessun sito lo ha mai fatto capire
 facendolo provare.
 
-### La velocità: la stessa grandezza, due modi opposti di incontrarla
+### La velocità è diventata una conseguenza
 
-La velocità **è già esposta**: `index.html:89` ha un `<input type="range">` da 0
-a 20 nodi con etichetta *Speed*.
+Il cursore pubblico da 0 a 20 nodi è stato rimosso. Il comando ora è
+`#propulsione`; la velocità resta una lettura. `dinamicaPropulsione()` porta i
+giri verso il comando con inerzia e integra spinta e resistenza quadratiche.
+La scia riceve la stessa `S.velocita`, mentre `autorita()` continua a ricavare
+da quella grandezza — e soltanto da quella — l'autorità delle pinne.
 
-Il punto dell'atto due non è *esporla*. È che nell'atto uno la velocità è un
-**cursore in un pannello**, e nell'atto due diventa una **conseguenza**. Non la
-si trascina: la si causa spegnendo la propulsione, e il crollo delle pinne
-arriva da solo perché il quadrato lo produce.
-
-Il primo modo si legge. Il secondo si scopre.
+Il banco numerico può ancora costruire una simulazione a velocità imposta: è
+una modalità di misura, non una superficie data al visitatore.
 
 **Cancello, ed è il più importante del documento:** con la propulsione spenta,
 la velocità deve scendere secondo una decelerazione dichiarata, e la riduzione
@@ -222,7 +222,8 @@ Più di quanto sembri. È il motivo per cui l'atto due è cablaggio.
 | `C(V) = C0·(V/V_rif)²` — `autorita()` | `simulazione.js` | fatto |
 | due corse parallele, viva e nuda | `simulazione.js`, `creaSimulazione` | fatto |
 | tabella riduzioni precalcolata | `src/scena/riduzioni.json` | fatto |
-| cursore velocità 0–20 nodi | `index.html`, `#velocita` | fatto |
+| comando propulsione e andatura dinamica | `#propulsione`, `dinamicaPropulsione()` | fatto, collaudato |
+| cancello della catena causale | `strumenti/collaudo-catena.mjs` | fatto |
 | meccanismo stabilizzatori | `nave.js` | fatto |
 | allestimento e fuoribordo | `costruisciAllestimento`, `costruisciFuoribordo` | scritti, invisibili |
 | contratto dei sistemi | `docs/08` §5 | specificato |
@@ -239,8 +240,11 @@ Più di quanto sembri. È il motivo per cui l'atto due è cablaggio.
 1. **La lama come strumento** — oggi è conseguenza dello scorrimento.
 2. **La navigazione a due assi** e il passaggio di consegne.
 3. **La camera libera sotto la linea**, entro il vincolo di beccheggio.
-4. **Tre sistemi nuovi**: propulsione, giroscopio, timoneria.
-5. **Il cablaggio delle conseguenze** — la catena del §4.
+4. **La macchina visibile della propulsione e il giroscopio.** Il comando e la
+   dinamica propulsiva esistono; albero, riduttore ed elica non hanno ancora
+   una rappresentazione Blender collegata a `giriPropulsione`.
+5. **Completare la catena del §4** — propulsione → velocità → pinne → rollio è
+   costruita e collaudata; manca il controesempio del giroscopio.
 6. **Le annotazioni** che compaiono per quiete, non per clic.
 7. **Il finale** — collegare l'inclinazione del salone alla corsa viva, e
    risolvere l'inquadratura lasciata aperta al §5.

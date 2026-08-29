@@ -10,7 +10,7 @@ import { AMPIEZZA_MARE } from '../scena/simulazione.js'
  * colorata che si vede resta sottile: il bersaglio e' piu' grande del segno,
  * che e' esattamente cio' che WCAG intende.
  */
-export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
+export function collegaComandi ({ contenitore, toggle, propulsione, sim, alCambio }) {
   /**
    * QUALUNQUE comando toccato annulla la dimostrazione automatica, non solo
    * l'interruttore. Chi sta gia' provando i comandi non va interrotto -- e
@@ -86,6 +86,24 @@ export function collegaComandi ({ contenitore, toggle, sim, alCambio }) {
     sim.azzeraPicchi()
     alCambio?.()
   })
+
+  /**
+   * L'ANDATURA NON SI COMANDA PIU'.
+   *
+   * Il vecchio cursore scriveva `S.velocita` direttamente: utile per un banco
+   * prova, ma narrativamente era una risposta prima della domanda. Qui si
+   * comanda soltanto la propulsione. La velocita' resta una lettura e cambia
+   * nei fotogrammi successivi, insieme a scia e autorita' delle pinne.
+   */
+  if (propulsione) {
+    propulsione.setAttribute('aria-pressed', String(sim.S.propulsione))
+    propulsione.addEventListener('click', () => {
+      toccato = true
+      sim.cambiaPropulsione(!sim.S.propulsione)
+      propulsione.setAttribute('aria-pressed', String(sim.S.propulsione))
+      alCambio?.()
+    })
+  }
 
   /**
    * --- IL SITO SPEGNE PER PRIMO, UNA VOLTA SOLA

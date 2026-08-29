@@ -124,15 +124,18 @@
       <p class="et et--centro" id="et-mare">Sea state</p>
       <div id="mare" class="mare__scala" role="group" aria-labelledby="et-mare"></div>
     </div>
-    <div class="andatura">
-      <label class="et et--centro" for="velocita">Speed</label>
-      <input type="range" id="velocita" class="cursore" min="0" max="20" step="1" value="12"
-             aria-describedby="v-velocita">
-    </div>
+    <!-- La velocita' non e' piu' un comando. Si toglie propulsione e si
+         guarda l'abbrivio calare: la lettura `v-velocita`, la scia e le pinne
+         ricevono lo stesso stato. -->
+    <button type="button" id="propulsione" class="interruttore interruttore--propulsione"
+            aria-describedby="v-velocita">
+      <span class="spia" aria-hidden="true"></span>
+      <span>Propulsion</span>
+    </button>
     <!-- `aria-pressed` NON si scrive qui: lo stato iniziale lo possiede
          `src/stato.js`, e averlo in due posti li ha fatti divergere.
          Lo imposta `collegaComandi` all'accensione. -->
-    <button type="button" id="stab" class="interruttore" aria-pressed="false">
+    <button type="button" id="stab" class="interruttore">
       <span class="spia" aria-hidden="true"></span>
       <span>Stabilisation</span>
     </button>
@@ -189,7 +192,7 @@
     </div>
     <div class="dato">
       <span class="et">Speed</span>
-      <span class="cifra"><output id="v-velocita">12</output><u>kn</u></span>
+      <span class="cifra"><output id="v-velocita">12,0</output><u>kn</u></span>
     </div>
     <div class="dato dato--evidenza" id="d-riduzione" data-attiva="no">
       <span class="et">Reduction, RMS</span>

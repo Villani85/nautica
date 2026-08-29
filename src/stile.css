@@ -1019,13 +1019,12 @@ html[data-unica="si"] .atto--demo{margin-top:0}
     display:flex;flex-direction:column;gap:var(--u2);align-items:stretch;
   }
   .mare__scala{justify-content:space-between;width:100%}
-  .andatura{width:100%}
   .interruttore{width:100%;justify-content:center}
 
   /* UNA misura sola, e tutto il resto la insegue. Con tre numeri scollegati
      ogni ritocco ai comandi ne sballava altri due, in silenzio.
      206px non e' una stima: e' l'altezza misurata della colonna dei comandi
-     (scala del mare 44 + andatura + interruttore, con due stacchi da 16). La
+     (scala del mare + propulsione + stabilizzatore, con due stacchi da 16). La
      prima volta avevo scritto 180 sommando a mente, e il cancello ha trovato i
      18 px che mancavano. */
   .palco{--h-comandi:206px;--h-energia:29px}
@@ -1109,26 +1108,6 @@ html[data-unica="si"] .atto--demo{margin-top:0}
     transition-duration:.01ms!important;scroll-behavior:auto!important;
   }
 }
-
-/* ═══ ANDATURA ═══
-   Un <input type="range"> vero, stilizzato — non un div con un listener.
-   La tastiera, il lettore di schermo e il trascinamento arrivano dal browser.
-   L'area sensibile e' 44px anche se il segno visibile e' una riga sottile. */
-.andatura{display:flex;flex-direction:column;gap:var(--u);align-items:center}
-.cursore{
-  -webkit-appearance:none;appearance:none;
-  width:132px;height:44px;background:none;cursor:pointer;margin:0;
-}
-.cursore::-webkit-slider-runnable-track{height:2px;background:rgba(127,163,165,.3)}
-.cursore::-moz-range-track{height:2px;background:rgba(127,163,165,.3)}
-.cursore::-webkit-slider-thumb{
-  -webkit-appearance:none;appearance:none;
-  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;margin-top:-8px;
-}
-.cursore::-moz-range-thumb{
-  width:3px;height:18px;background:var(--aria);border:0;border-radius:0;
-}
-.cursore:focus-visible{outline:2px solid var(--recupero);outline-offset:4px}
 
 /* ═══ TESTATA CHE SEGUE IL LATO ═══
    DIFETTO CORRETTO — la testata e' fixed e non sta dentro nessuna sezione,
@@ -1257,7 +1236,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    e' lui la causa: senza, la nave comincia a rollare e sembra che il sito si
    sia rotto. Il richiamo e' lo stesso `chiama` gia' usato per invitare ad
    accendere -- una convenzione sola, non due. */
-:root[data-dimostra="spento"] .interruttore{
+:root[data-dimostra="spento"] #stab{
   animation:chiama 1.3s ease-in-out infinite;
   border-color:var(--carico);
 }
@@ -1268,7 +1247,7 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 :root[data-dimostra="spento"] .battuta__vivo{color:var(--carico)}
 
 @media (prefers-reduced-motion:reduce){
-  :root[data-dimostra="spento"] .interruttore{animation:none}
+  :root[data-dimostra="spento"] #stab{animation:none}
 }
 
 
