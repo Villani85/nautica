@@ -9,6 +9,7 @@ import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua } from './acqua
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
+import { creaTraversata } from './traversata.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
@@ -579,6 +580,14 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * nessun numero riscritto, nessuna posa scelta a occhio.
    */
   const salone = LA_SCENA_E_UNA ? creaSalone3D(base, tuga) : null
+  /**
+   * LA TRAVERSATA e' appesa alla CAMERA, non alla scena, ed e' la differenza
+   * fra un finale e un'inserzione. Un piano nella scena avrebbe una posizione
+   * nel mondo: lo scafo gli passerebbe davanti, il rollio lo inclinerebbe, e
+   * ruotando la nave si vedrebbe da dietro. Appeso alla camera e' il
+   * fotogramma, e quando prende il comando non c'e' piu' niente davanti.
+   */
+  const traversata = creaTraversata(base, camera, scena)
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
@@ -1324,9 +1333,15 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   return {
     render, camera, ridimensiona, ruota, disegna,
     impostaSpaccato, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    /**
+     * `q` da 0 a 1: 0 comanda il 3D, 1 comanda la traversata. La regia la
+     * chiama nell'ultima battuta e nessun altro: non e' uno stato del mondo,
+     * e' il passaggio di consegne finale.
+     */
+    impostaTraversata: (q) => traversata.mostra(q),
     /** Il capitolo si accende e si spegne: i video non decodificano fuori schermo. */
     accendi: () => salone?.riproduci(),
-    spegni: () => salone?.ferma(),
+    spegni: () => { salone?.ferma(); traversata.spegni() },
     tela: render.domElement
   }
 }

@@ -1396,3 +1396,49 @@ html[data-unica="si"] .atto--demo{margin-top:0}
 /* la voce di menu della scena in corso */
 /* stessa correzione: `--carico` sull'intestazione color carta era invisibile */
 .nav--qui{color:var(--acqua); text-decoration:underline; text-underline-offset:4px}
+
+/* ═══ IL FINALE: L'INTERFACCIA SI RITIRA ═══
+   Quando la traversata prende il comando, il cruscotto se ne va. La ragione
+   sta per esteso in `regia.js`, sopra `data-traversata`: per tutta la corsa
+   quei comandi sono la prova che il sito non e' un filmato, ma nel finale la
+   fisica ha gia' risposto e l'unica cosa da fare e' guardare due persone.
+
+   `opacity` e `visibility`, NON `display:none`: i nodi restano nel documento,
+   nel flusso di tabulazione e annunciati dal lettore di schermo. Chi naviga da
+   tastiera non deve perdere i comandi perche' l'immagine e' diventata bella.
+   E `visibility` ritarda di quanto dura la dissolvenza, cosi' non si perde il
+   fuoco a meta' transizione. */
+.palco[data-traversata="si"] .pannello,
+.palco[data-traversata="si"] .comandi,
+.palco[data-traversata="si"] .battuta,
+.palco[data-traversata="si"] .nota,
+.palco[data-traversata="si"] .patto,
+.palco[data-traversata="si"] .invito,
+.palco[data-traversata="si"] .richiamo{
+  opacity:0;visibility:hidden;
+  transition:opacity .5s ease,visibility 0s linear .5s;
+  pointer-events:none;
+}
+.palco[data-traversata="no"] .pannello,
+.palco[data-traversata="no"] .comandi{
+  transition:opacity .35s ease,visibility 0s;
+}
+@media (prefers-reduced-motion:reduce){
+  .palco[data-traversata="si"] .pannello,
+  .palco[data-traversata="si"] .comandi,
+  .palco[data-traversata="si"] .battuta,
+  .palco[data-traversata="si"] .nota,
+  .palco[data-traversata="si"] .patto,
+  .palco[data-traversata="si"] .invito,
+  .palco[data-traversata="si"] .richiamo{transition:none}
+}
+
+/* Il nudge sta sul corpo, non nel palco: la sua ritirata si comanda dalla
+   radice. Stessa regola, stessa ragione — vedi `regia.js`. */
+html[data-traversata="si"] .nudge{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .5s ease,visibility 0s linear .5s;
+}
+@media (prefers-reduced-motion:reduce){
+  html[data-traversata="si"] .nudge{transition:none}
+}

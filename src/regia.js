@@ -89,10 +89,10 @@ export const S = LA_SCENA_E_UNA
    */
   ? { uscita: [0.05, 0.20], emerge: [0.15, 0.26], mare: [0.26, 0.38],
       invito: [0.38, 0.50], calma: [0.50, 0.64], taglio: [0.64, 1.00],
-      avvicina: [0.84, 1.00] }
+      avvicina: [0.84, 1.00], traversata: [0.93, 1.00] }
   : { uscita: [0.00, 0.00], emerge: [0.00, 0.13], mare: [0.13, 0.30],
       invito: [0.30, 0.44], calma: [0.44, 0.60], taglio: [0.60, 1.00],
-      avvicina: [0.82, 1.00] }
+      avvicina: [0.82, 1.00], traversata: [0.93, 1.00] }
 
 const SEQUENZA = [
   {
@@ -221,6 +221,68 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
 
     // 6 - 7 · il taglio entra e il meccanismo si scopre
     scena.impostaSpaccato(dolce(fra(p, S.taglio[0], S.taglio[1])))
+
+    /**
+     * 8 · LA TRAVERSATA, e il sito torna alle persone.
+     *
+     * ─── PERCHE' QUI E NON PRIMA
+     *
+     * `docs/13` §5: il finale e' la camera che risale attraverso lo stesso
+     * taglio, attraversa gli spazi interni e arriva alle stesse due persone
+     * della prima immagine. Non e' un capitolo nuovo: e' il cerchio che si
+     * chiude, e chiuderlo prima del primo piano del meccanismo vorrebbe dire
+     * tornare alle persone senza aver visto la macchina che le tiene comode --
+     * cioe' togliere la ragione per cui il ritorno commuove.
+     *
+     * ─── PERCHE' SOLO L'ULTIMO 7% DELLA CORSA
+     *
+     * Non e' una tacca scelta a occhio: la traversata dura DIECI SECONDI, e su
+     * una corsa che si percorre in circa un minuto e mezzo il 7% e' il tratto
+     * che le corrisponde. Piu' larga e il filmato finirebbe a meta' e
+     * resterebbe fermo sull'ultimo fotogramma mentre si scorre ancora -- una
+     * fotografia, cioe' proprio la cosa che questo finale ha scartato. Piu'
+     * stretta e la si attraverserebbe di corsa senza vederla.
+     *
+     * ─── E IL FILMATO NON E' SCRUBBATO, ed e' una decisione
+     *
+     * Lo scorrimento decide QUANDO comincia, non a che punto sta. Un video
+     * scrubbato dallo scorrimento singhiozza su iOS (e' scritto nella skill
+     * dello stack, ed e' gia' costato una volta), e soprattutto: la traversata
+     * ha un suo tempo: e' un movimento di camera girato, non una linea da
+     * spazzolare. Chi si ferma a meta' la vede continuare -- ed e' giusto,
+     * perche' a quel punto non e' piu' lui a guidare, e' arrivato.
+     */
+    scena.impostaTraversata?.(fra(p, S.traversata[0], S.traversata[1]))
+    /**
+     * ─── E L'INTERFACCIA SI RITIRA, o il finale non e' un finale
+     *
+     * DIFETTO PRESO GUARDANDO IL PRIMO PROVINO. La traversata partiva e
+     * funzionava, ma sopra restavano accesi il cruscotto, le due letture, la
+     * scala del mare, i due interruttori, la didascalia e il nudge. Il
+     * fotogramma non si leggeva come «sono tornato dalle persone»: si leggeva
+     * come **un video che gira dietro un pannello di controllo**.
+     *
+     * Non e' una questione di gusto. Per tutta la corsa quei comandi sono la
+     * ragione per cui il sito non e' un filmato -- si tocca e la fisica
+     * risponde. Nel finale la fisica ha gia' risposto: quello che resta da
+     * fare e' guardare due persone. Un comando li' non invita, distrae.
+     *
+     * Si spegne con un attributo e una regola di stile, non nascondendo i nodi:
+     * cosi' restano nel documento, raggiungibili da tastiera e annunciati,
+     * mentre l'occhio ha il fotogramma pulito. Nascondere i comandi davvero
+     * significherebbe togliere il controllo a chi non usa il mouse.
+     */
+    const inTraversata = fra(p, S.traversata[0], S.traversata[1]) > 0.02 ? 'si' : 'no'
+    palco.dataset.traversata = inTraversata
+    /**
+     * Il nudge NON e' figlio del palco -- e' appeso al corpo del documento,
+     * perche' deve poter puntare comandi che stanno in capitoli diversi. Quindi
+     * l'attributo va anche sulla radice, o nel finale resta acceso da solo
+     * sopra il fotogramma pulito. Preso guardando il secondo provino: il
+     * cruscotto era sparito e restava una sola bolla nera in mezzo al niente,
+     * che era peggio di quando c'erano tutti.
+     */
+    document.documentElement.dataset.traversata = inTraversata
 
     /**
      * ─── L'AVVICINAMENTO, ed e' la richiesta piu' esplicita che il sito abbia

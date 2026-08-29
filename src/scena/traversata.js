@@ -52,7 +52,7 @@ import { LinearFilter, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, V
 /** Dove sta il piano rispetto alla camera. Non e' un gusto: vedi `posiziona`. */
 const DISTANZA = 1.0
 
-export function creaTraversata (base, camera) {
+export function creaTraversata (base, camera, scena) {
   const v = document.createElement('video')
   v.src = base + 'filmati/traversata.mp4'
   v.muted = true
@@ -92,6 +92,26 @@ export function creaTraversata (base, camera) {
   piano.frustumCulled = false
   piano.visible = false
   camera.add(piano)
+  /**
+   * ─── E LA CAMERA VA MESSA NELLA SCENA, o questo piano non esiste
+   *
+   * DIFETTO PRESO GUARDANDO, non leggendo. Il primo provino mostrava il
+   * meccanismo in 3D dove doveva esserci la traversata; il `<video>` era
+   * `readyState 4`, arrivato a 10 secondi su 10, quindi decodificava
+   * davvero -- semplicemente il suo piano non veniva disegnato.
+   *
+   * La causa e' una regola di three che non da' nessun errore: `WebGLRenderer`
+   * attraversa il grafo a partire dalla SCENA, e la camera di questo sito non
+   * ci era mai stata aggiunta -- non serviva, perche' nessuno le aveva mai
+   * appeso niente. Un figlio della camera fuori dal grafo viene aggiornato
+   * (la sua matrice e' giusta, `visible` e' vero, l'opacita' e' 1) e **non
+   * viene mai disegnato**. Nessuna eccezione, nessun avviso: solo un
+   * fotogramma in cui manca una cosa.
+   *
+   * Aggiungere la camera alla scena non cambia niente per il resto: una camera
+   * nel grafo non si disegna, si limita a portarsi dietro i propri figli.
+   */
+  if (scena && camera.parent !== scena) scena.add(camera)
 
   /**
    * IL PIANO COPRE ESATTAMENTE IL CAMPO, e la misura non e' negoziabile.
