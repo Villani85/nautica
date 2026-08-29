@@ -303,29 +303,80 @@ due secondi.
 
 ---
 
-## PUNTO 1 — La falsa continuità: NON toccata, e perché
+## PUNTO 1 — La carta del salone: il tell è tolto. La traversata no.
 
-**L'affermazione è confermata e resta la più importante.** `traversata.mp4` è
-montato su un piano figlio della camera con `renderOrder = 999`, `depthTest =
-false`, copertura completa e opacità fino a 1. Tecnicamente è lo stesso canvas;
-percettivamente sostituisce il mondo.
+Il punto 1 sono **due** carte, e vanno separate perché costano cose diverse.
 
-**Non è stata toccata perché il punto 1 non è un lavoro di codice.** Chiede un
-interno continuo modellato in Blender (sala macchine, scala, corridoio, salone,
-porte e paratie) allineato allo scafo, illuminazione cotta, fotografia
-proiettata sulla shell, la coppia scontornata su un piano interno e mobili 3D in
-primo piano davanti alle persone. Il cancello di uscita che la direzione stessa
-scrive include *«cinque persone su cinque non segnalano spontaneamente qui
-cambia scena»*.
+### La carta del salone — curata, e si vede
 
-Una mezza misura — spostare il piano nello spazio dello yacht senza la shell
-dietro — produrrebbe un video che galleggia dentro una nave vuota: peggio di
-adesso, e con la stessa bugia.
+`feedback/prove/2026-08-29-salone-e-una-carta.png`: a scorrimento 0,235 il
+salone è un rettangolo con quattro bordi netti che galleggia contro lo scafo.
+*«Ruotando compaiono zone bianche intorno al rettangolo, il bordo destro appare
+come il margine di una scheda.»*
+
+**La causa non era il piano: era ciò che c'era dietro.** Un piano non ha bordi
+visibili se dietro c'è una stanza; li ha se dietro c'è il mare. E dietro c'era
+il mare, letteralmente — `nave.js` costruisce la tuga in due fasce, parapetto e
+tetto, e fra le due non c'è niente. Quella trasparenza non è un difetto: è la
+prova §5.1 che l'orizzonte non rolla con la stanza. Ma nel tratto in cui c'è la
+fotografia si vede **da parte a parte**, quindi il bordo si stacca contro il
+cielo e il rettangolo legge come una scheda.
+
+Adesso dietro la fotografia c'è un fondo che chiude la fascia **solo lì**, con
+un margine. Il resto della tuga resta passante e la prova dell'orizzonte regge
+intatta. Confronto: `feedback/prove/2026-08-30-salone-dentro-un-volume.png`.
+
+Il colore non è una tinta scelta a occhio: è la **stessa clip**, ingrandita
+quattro volte — a quell'ingrandimento non si riconosce più niente, resta il
+tono — e moltiplicata per un fattore scuro. Grana, temperatura e artefatti di
+compressione coincidono col bordo della fotografia per costruzione, che è la
+stessa ragione per cui il mare dietro il vetro è la stessa clip della stanza.
+
+**Tre giri per arrivarci, e i due errori valgono quanto il risultato:**
+
+1. La prima versione toglieva i bordi della fotografia e ci metteva i **propri**:
+   un rettangolo nero netto invece di uno chiaro. Meglio — almeno legge come
+   ombra e non come cielo — ma sempre un rettangolo.
+2. La sfumatura copiata dal mare **non sfumava niente**, e il codice sembrava
+   giusto. Il fondo magnifica la clip con `repeat = 1/4`, quindi `vMapUv` corre
+   solo fra 0,375 e 0,625: non si avvicina mai a 0 né a 1, e lo smoothstep
+   restituisce 1 dappertutto. Sul mare la stessa riga funziona perché lì
+   l'ingrandimento è 1,55 e la fascia è 0,06. Serviva la UV **grezza** del
+   piano, portata con un varying proprio.
+3. Con il fondo a 1,9 × 1,25 e una sfumatura di 0,24 per lato, il nucleo opaco
+   valeva `(1 − 2·0,24) × 1,9 = 0,99` volte la stanza: il fondo spariva
+   **proprio dove finisce la fotografia**, e il bordo di lei tornava. A 2,4 ×
+   2,8 il nucleo vale 1,44 × 1,68 e la fotografia finisce dentro la parte
+   piena.
+
+**Cosa NON è.** Non è il guscio Blender con la proiezione dalla posa calibrata
+che la direzione chiede. È il tell tolto con la geometria che c'era già. Da
+fuori, attraverso il taglio, un salotto illuminato dentro un volume scuro è
+esattamente ciò che si vede guardando dentro un ambiente da una fessura — ma
+non c'è occlusione vera: mobili e imbotti non passano davanti a niente.
+
+**E il guscio vero è più vicino di quanto sembri**, perché la calibrazione
+esiste già ed è seria: `riferimenti/salone/posa.json` porta la posa della camera
+sorgente (x −2,9322, y 1,17, z 0,8436 dal montante; imbardata −18,98°,
+beccheggio −2,827°), la matrice di rotazione, il guscio in metri (pavimento
+−0,5628, soffitto 1,7872, murata destra 4,5747), il vano, la focale 1177,51 px
+coerente con la `PerspectiveCamera(34)` del sito, **e il limite oltre cui la
+profondità non è più misurata** (1,90 m; la paratia di fondo è dichiarata non
+determinata). Errore di riproiezione 1,175 px medio. Chi costruirà il guscio non
+deve misurare niente: deve modellare quei numeri e proiettare.
+
+### La traversata a schermo pieno — NON toccata
+
+`traversata.js` monta ancora il filmato su un `PlaneGeometry` figlio della
+camera, con `depthTest:false`, `renderOrder = 999` e opacità fino a 1.
+Sostituirla chiede una traiettoria di camera dentro `interni.glb` e il filmato
+come proiezione world-space: è la parte del punto 1 che resta lavoro di asset e
+di regia, non di righe.
 
 **E il numero esiste già.** `collaudo-continuita` lo stampa a ogni corsa:
 
 ```
-LASTRA      copertura massima 1.00 — 3 campioni su 45 giudicano una texture, non la scena
+LASTRA      copertura massima 1.00 — 2 campioni su 45 giudicano una texture, non la scena
 ```
 
 Lo misura e non ci boccia sopra. Il tetto che la direzione chiede — *nessun
@@ -333,12 +384,6 @@ piano figlio della camera copra più del 10% del fotogramma* — si scrive in un
 riga di quel file. Metterla oggi renderebbe la CI rossa senza avvicinare di un
 metro la soluzione, e un cancello che si tiene disattivato non è un cancello:
 va acceso **insieme** alla shell, nello stesso commit che la rende vera.
-
-**Cosa c'è già, per chi lo farà:** `public/modelli/interni.glb` esiste ed è
-valido (0 errori dal validatore glTF, sia sul disco sia decompresso),
-`src/scena/salone3d.js` sa già montare un video come tessitura su geometria
-nello spazio della scena, e `riferimenti/blender/glb-interni.py` è la sorgente.
-Il pezzo che manca non è l'impalcatura: è la **materia**.
 
 ## PUNTO 4 — Il texturing degli interni: l'occlusione c'è
 

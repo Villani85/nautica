@@ -225,6 +225,142 @@ export function creaSalone3D (base, tuga) {
   gruppo.add(mare)
 
   /**
+   * 1-bis · IL FONDO DELLA STANZA — quello che toglie i quattro bordi.
+   *
+   * ═══ IL DIFETTO, FOTOGRAFATO
+   *
+   * `feedback/prove/2026-08-29-salone-e-una-carta.png`: a scorrimento 0,235 il
+   * salone e' un rettangolo con quattro bordi netti che galleggia contro lo
+   * scafo. Una revisione l'ha detto per intero -- *«si vede fisicamente che il
+   * salone e' un piano: ruotando compaiono zone bianche intorno al rettangolo,
+   * il bordo destro appare come il margine di una scheda»* -- ed e' uno dei due
+   * difetti che tengono il progetto fuori dal Site of the Year.
+   *
+   * ═══ E LA CAUSA NON E' IL PIANO. E' CIO' CHE C'E' DIETRO.
+   *
+   * Un piano non ha bordi visibili se dietro c'e' una stanza; li ha se dietro
+   * c'e' il mare. E dietro c'era il mare, letteralmente: `nave.js` costruisce
+   * la tuga in due fasce -- parapetto e tetto -- e **fra le due non c'e'
+   * niente**, per una ragione buona che va conservata:
+   *
+   *     «guardando la nave di traverso si passa da un finestrino all'altro e
+   *      si finisce sull'orizzonte, che sta in coordinate mondo e quindi non
+   *      rolla con la stanza»
+   *
+   * Quella trasparenza e' la prova che l'orizzonte non rolla, ed e' la tesi
+   * §5.1. Ma nel tratto in cui c'e' la fotografia produce il difetto: oltre il
+   * bordo della lastra si vede DA PARTE A PARTE, quindi il bordo si stacca
+   * contro il cielo e il rettangolo si legge come una scheda appoggiata.
+   *
+   * ═══ COSA FA QUESTO PIANO, E COSA NON FA
+   *
+   * Chiude la fascia **solo dietro la fotografia**, con un margine. Il resto
+   * della tuga resta passante, quindi la prova dell'orizzonte regge intatta:
+   * basta guardare la nave dove la stanza non c'e'.
+   *
+   * Non e' un guscio modellato e non pretende di esserlo -- quello e' il lavoro
+   * di Blender che la direzione chiede al punto 1, con proiezione dalla posa
+   * calibrata di `riferimenti/salone/posa.json`. Questo toglie il TELL con la
+   * geometria che c'e' gia': da fuori, attraverso il taglio, un salotto
+   * illuminato dentro un volume scuro e' esattamente cio' che si vede
+   * guardando dentro un ambiente da una fessura.
+   *
+   * ═══ IL COLORE VIENE DALLA CLIP, non da una tinta scelta a occhio
+   *
+   * Stessa sorgente della stanza, ingrandita quattro volte -- a
+   * quell'ingrandimento non si riconosce piu' niente, resta il TONO -- e
+   * moltiplicata per un fattore scuro. Cosi' grana, temperatura e artefatti di
+   * compressione coincidono col bordo della fotografia per COSTRUZIONE e non
+   * per taratura, che e' la stessa ragione per cui il mare dietro il vetro e'
+   * la stessa clip della stanza.
+   *
+   * Una tinta piatta scelta a mano avrebbe fatto la fine di tutte le tinte
+   * scelte a mano di questo repo: giusta sul monitor di chi la sceglie, e uno
+   * scalino visibile appena il video cambia.
+   */
+  /**
+   * ─── QUANTO GRANDE, e il conto e' vincolato dalla sfumatura
+   *
+   * Prima prova: 1,9 x 1,25 con una sfumatura larga 0,24 per lato. Guardata:
+   * il fondo spariva PROPRIO dove finisce la fotografia, e il bordo di lei
+   * tornava visibile. Il conto lo dice -- il nucleo opaco vale (1 - 2*0,24)
+   * cioe' il 52% del piano, e il 52% di 1,9 e' 0,99: appena la larghezza della
+   * stanza. Il fondo copriva tutto tranne l'unico posto che doveva coprire.
+   *
+   * Con 2,4 il nucleo opaco vale 1,44 volte la stanza: la fotografia finisce
+   * dentro la parte piena, e il suo bordo sfuma nel buio invece di tagliare.
+   *
+   * NON PIU' GRANDE DI COSI', e il limite non e' estetico: ogni unita' di
+   * fondo e' una fetta di fascia del finestrone che smette di essere passante,
+   * e la trasparenza da murata a murata e' la prova che l'orizzonte non rolla
+   * (§5.1). A 2,4 la stanza occupa circa meta' della tuga: l'altra meta' resta
+   * passante, e la prova si fa li'.
+   */
+  const FONDO_LARGO = 2.4      // volte la larghezza della stanza
+  /* 2,8 e non 1,8: a 1,8 il nucleo opaco valeva 1,08 volte l'altezza della
+     stanza e il bordo BASSO della fotografia restava un taglio dritto contro
+     lo scafo chiaro -- visto e corretto. Alzarlo non costa niente in
+     trasparenza: le due fasce della tuga sono geometria OPACA, quindi il
+     disegno le mette prima e il test di profondita' nasconde da solo cio' che
+     sporge sopra e sotto. */
+  const FONDO_ALTO = 2.8       // volte l'altezza
+  const FONDO_INGRANDIMENTO = 4.0
+  const fondoTex = tex(vCalma)
+  fondoTex.center.set(0.5, 0.5)
+  fondoTex.repeat.set(1 / FONDO_INGRANDIMENTO, 1 / FONDO_INGRANDIMENTO)
+  const fondo = new Mesh(
+    new PlaneGeometry(larg * FONDO_LARGO, alt * FONDO_ALTO),
+    new MeshBasicMaterial({ map: fondoTex, color: 0x3a2a1d, toneMapped: false, transparent: true, depthWrite: false })
+  )
+  /**
+   * ─── E ANCHE QUESTO SFUMA, o si e' solo cambiata la carta
+   *
+   * Prima prova, guardata: il fondo toglieva i bordi della fotografia e ci
+   * metteva i PROPRI. Un rettangolo nero netto invece di uno chiaro -- meglio,
+   * perche' almeno legge come ombra e non come cielo, ma sempre un rettangolo.
+   *
+   * La cura e' quella che la stanza e il mare hanno gia': l'alfa si spegne
+   * verso il bordo. Qui la fascia e' molto piu' larga -- 0,22 contro 0,06 --
+   * perche' i due casi sono diversi: la stanza sfuma per non mostrare il
+   * proprio taglio e deve restare nitida quasi ovunque, questo e' uno SFONDO e
+   * il suo mestiere e' non finire da nessuna parte.
+   */
+  /**
+   * ─── E LA SFUMATURA SI CALCOLA SULLA UV GREZZA, non su `vMapUv`
+   *
+   * DIFETTO MIO, preso guardando: la prima stesura copiava la sfumatura del
+   * mare, che usa `vMapUv`, e **non sfumava niente**. Il fondo pero' magnifica
+   * la clip con `repeat = 1/4` e `center = 0,5`, quindi `vMapUv` corre solo fra
+   * 0,375 e 0,625: non si avvicina mai a 0 ne' a 1, `min(b.x, b.y)` vale sempre
+   * circa 0,375 e lo smoothstep restituisce 1 dappertutto. Un bordo netto
+   * identico a prima, con dentro il codice che avrebbe dovuto toglierlo.
+   *
+   * Sul mare quella riga funziona perche' li' l'ingrandimento e' 1,55 e la
+   * fascia di sfumatura e' 0,06: il margine c'e' comunque. E' il genere di cosa
+   * che si copia senza accorgersene, e che non da' nessun errore.
+   *
+   * Serve la UV del PIANO, che nessuna trasformazione tocca. Si porta con un
+   * varying proprio: due righe nel vertice, una nel frammento.
+   */
+  fondo.material.onBeforeCompile = (sh) => {
+    sh.vertexShader = 'varying vec2 vGrezza;\n' + sh.vertexShader
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\n  vGrezza = uv;')
+    sh.fragmentShader = 'varying vec2 vGrezza;\n' + sh.fragmentShader
+      .replace('#include <map_fragment>', `#include <map_fragment>
+{
+  vec2 b = min(vGrezza, 1.0 - vGrezza);
+  diffuseColor.a *= smoothstep(0.0, 0.24, min(b.x, b.y));
+}`)
+  }
+  fondo.material.customProgramCacheKey = () => 'salone-fondo-bordo-2'
+  /* dietro il mare, che e' gia' dietro la stanza; `renderOrder` e non la
+     distanza, perche' su piani quasi complanari l'ordinamento per distanza dei
+     materiali trasparenti e' instabile */
+  fondo.position.z = -PROFONDITA - 0.05
+  fondo.renderOrder = -1
+  gruppo.add(fondo)
+
+  /**
    * 2 · LA STANZA — e adesso e' LEI che rolla.
    *
    * --- ERA AL CONTRARIO, E IL COMMITTENTE L'AVEVA GIA' DETTO
