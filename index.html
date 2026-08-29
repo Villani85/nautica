@@ -201,6 +201,22 @@
   </div>
   </div>
 
+  <!--
+    L'ATTO DUE COL DITO — il riquadro vuoto, riempito da `src/ui/tocco.js`.
+
+    Sta QUI dentro, e non in una sezione sua dopo la dimostrazione, per una
+    ragione misurata: `demo.js` disegna solo mentre `#dimostrazione` e' sullo
+    schermo (l'osservatore in fondo a quel file, soglia 0,05). Una sezione
+    successiva avrebbe avuto l'esplorazione senza la scena da esplorare — cioe'
+    una mappa, non un'esplorazione.
+
+    Nasce `hidden`: a modalita' chiusa non e' nel quadro e non cambia un pixel
+    della pagina. E' vuoto perche' il suo contenuto dipende dalla mappa di
+    `src/ui/atto-due.js`, e due elenchi — uno qui e uno li' — divergerebbero
+    alla prima stazione aggiunta.
+  -->
+  <div id="esplorazione" hidden></div>
+
   <p id="ripiego" class="ripiego" hidden>
     This demonstration draws a stabiliser system in real time and needs WebGL,
     which this browser does not expose. The rest of the page still works: the
@@ -258,5 +274,13 @@
 </dialog>
 
 <script type="module" src="/src/main.js"></script>
+<!--
+  L'atto due su telefono ha un'entrata sua, e non passa da `main.js`: quel file
+  e' il percorso critico della prima schermata e in queste ore lo stanno
+  toccando altri. Una riga additiva si toglie con una riga; una modifica dentro
+  un file conteso si paga in conflitti. Cosa costa: il foglio di stile del
+  pulsante, e nient'altro — l'interfaccia arriva al primo tocco.
+-->
+<script type="module" src="/src/ui/tocco-avvio.js"></script>
 </body>
 </html>
