@@ -394,54 +394,68 @@ const tocca = async (sel) => {
  * numero di fotogrammi DISEGNATI nello stesso intervallo: senza quello,
  * "meccanismo fermo" e "scena non aggiornata" sono lo stesso numero.
  */
-const campiona = () => pagina.evaluate(([finestra, minimo, tetto, fondo]) => new Promise((res) => {
+const campiona = () => pagina.evaluate(([finestra, fondo]) => {
+  /**
+   * ─── SI AVANZA A PASSO DICHIARATO, non a fotogrammi. E' la cura, non un
+   *     ripiego.
+   *
+   * Prima questa funzione campionava dentro `requestAnimationFrame` per un
+   * TEMPO di orologio. Sulla macchina vera faceva 480 fotogrammi in 20 s e
+   * misurava 3,63 volte di escursione fra mare 2 e mare 5, nel verso giusto.
+   * Sul runner della CI, senza GPU, faceva **12 fotogrammi** negli stessi
+   * 20 s -- mezzo campione al secondo su un rollio da 7 s di periodo -- e il
+   * verdetto usciva ROVESCIATO: 0,71 volte, cioe' mare 5 che agita il
+   * meccanismo MENO di mare 2. Non e' un difetto del sito: e' aliasing.
+   *
+   * Adesso il tempo simulato lo detta il cancello. `passoDichiarato(dt, n)`
+   * avanza la simulazione e aggiorna i nodi del meccanismo senza disegnare --
+   * i pixel qui non servono, serve che il tempo passi. La misura vale uguale
+   * su questa macchina e su un runner senza scheda video.
+   *
+   * `dt` e' 1/60: lo stesso passo che l'integratore riceve quando la macchina
+   * va bene, e sotto il tetto di 0,05 s che `index.js` impone per stabilita'.
+   */
+  const n = window.__nautica.passoDichiarato
+  if (typeof n !== 'function') {
+    return { nonMisurabile: 'la scena non espone passoDichiarato: non e stato possibile far avanzare il meccanismo' }
+  }
   const nodo = window.__nautica.scena.getObjectByName('RIG_INPUT')
-  const primo = window.__nautica.fotogrammi
-  const t0 = performance.now()
-  let aMin = Infinity, aMax = -Infinity, i = 0
-  let prec = nodo.rotation.x, tPrec = t0, saturi = 0, pinnaMax = 0
+  const DT = 1 / 60
+  const passi = Math.round((finestra / 1000) / DT)
+
+  let aMin = Infinity, aMax = -Infinity
+  let prec = nodo.rotation.x, saturi = 0, pinnaMax = 0, strada = 0
   const vel = []
-  let strada = 0
-  const passo = () => {
+  for (let i = 0; i < passi; i++) {
+    window.__nautica.passoDichiarato(DT, 1)
     const a = nodo.rotation.x
-    const ora = performance.now(), passoMs = ora - tPrec
-    if (i > 0) strada += Math.abs(a - prec)
-    if (i > 0 && passoMs > 0) vel.push(Math.abs(a - prec) / (passoMs / 1000))
+    strada += Math.abs(a - prec)
+    vel.push(Math.abs(a - prec) / DT)
     const pinna = Math.abs(window.__nautica.stato.pinna)
     if (pinna > pinnaMax) pinnaMax = pinna
     if (pinna >= fondo - 1e-4) saturi++
-    prec = a; tPrec = ora
+    prec = a
     if (a < aMin) aMin = a
     if (a > aMax) aMax = a
-    i++
-    const trascorso = performance.now() - t0
-    // si campiona per un TEMPO, non per un numero di fotogrammi; e se la
-    // macchina ne disegna pochi si aspetta di piu', invece di fallire
-    if ((trascorso < finestra || i < minimo) && trascorso < tetto) requestAnimationFrame(passo)
-    else res({
-      albero: aMax - aMin,
-      strada,
-      durata: performance.now() - t0,
-      vMax: (() => {
-        /* Il novantacinquesimo percentile, non il massimo. Un massimo su
-         * singolo fotogramma legge il rumore di temporizzazione: misurato, a
-         * mare 2 usciva 126,9 rad/s contro i 62-83 degli altri nove giri, e il
-         * cancello diventava rosso per un fotogramma corto. E' la stessa
-         * lezione che questo file aveva gia' imparato per il fondo naturale. */
-        if (!vel.length) return 0
-        vel.sort((x, y) => x - y)
-        return vel[Math.min(vel.length - 1, Math.floor(vel.length * 0.95))]
-      })(),
-      satura: saturi / Math.max(i, 1),
-      pinnaMax,
-      disegnati: window.__nautica.fotogrammi - primo,
-      rollio: window.__nautica.stato.rollio,
-      stab: window.__nautica.stato.stab,
-      mare: window.__nautica.stato.mare
-    })
   }
-  requestAnimationFrame(passo)
-}), [FINESTRA, CAMPIONI_MIN, ATTESA_MAX, A_MAX_DICHIARATO])
+  vel.sort((x, y) => x - y)
+  return {
+    albero: aMax - aMin,
+    strada,
+    /* la durata e' quella SIMULATA, dichiarata: non l'orologio del runner */
+    durata: passi * DT * 1000,
+    /* il novantacinquesimo percentile e non il massimo: un massimo su singolo
+       passo legge il rumore. Con dt dichiarato il rumore di temporizzazione
+       non c'e' piu', ma il criterio resta quello gia' scelto e validato. */
+    vMax: vel.length ? vel[Math.min(vel.length - 1, Math.floor(vel.length * 0.95))] : 0,
+    satura: saturi / Math.max(passi, 1),
+    pinnaMax,
+    passi,
+    rollio: window.__nautica.stato.rollio,
+    stab: window.__nautica.stato.stab,
+    mare: window.__nautica.stato.mare
+  }
+}, [FINESTRA, A_MAX_DICHIARATO])
 
 /**
  * Prima di misurare si aspetta che il transitorio finisca. `simulazione.js`
@@ -456,18 +470,42 @@ const campiona = () => pagina.evaluate(([finestra, minimo, tetto, fondo]) => new
 const ASSESTAMENTO = 2200
 
 const misura = async (dove) => {
-  await new Promise(r => setTimeout(r, ASSESTAMENTO))
+  /**
+   * ─── ANCHE L'ASSESTAMENTO E' A PASSO DICHIARATO, e non e' pedanteria
+   *
+   * Portata la MISURA al passo dichiarato restava una dipendenza dalla
+   * macchina: l'attesa del transitorio era di orologio, quindi su un
+   * rasterizzatore lento la nave arrivava al campione in un'altra FASE.
+   * Misurato, stesso codice e stessi 480 passi: a mare 2 l'escursione usciva
+   * 3,8 rad con la GPU e 16,8 senza -- la nave stava ancora scendendo da mare
+   * 5 -- e il rapporto scendeva da 6,62 a 1,51 contro un minimo di 1,30.
+   * Passava, ma per un soffio e per caso: un runner ancora piu' lento lo
+   * avrebbe fatto cadere.
+   *
+   * Una condizione iniziale che dipende dalla macchina rende la misura
+   * irriproducibile anche quando la misura in se' non lo e' piu'.
+   */
+  await pagina.evaluate((ms) => {
+    const DT = 1 / 60
+    window.__nautica.passoDichiarato?.(DT, Math.round((ms / 1000) / DT))
+  }, ASSESTAMENTO)
   const c = await campiona()
-  if (c.disegnati < CAMPIONI_MIN) {
-    guai.push(`campione "${dove}": la scena ha disegnato ${c.disegnati} fotogrammi in ` +
-              `${(ATTESA_MAX / 1000).toFixed(0)} s. Non si sta misurando il meccanismo, ` +
-              'si sta misurando una scena ferma')
+  if (c.nonMisurabile) {
+    guai.push(`campione "${dove}": ${c.nonMisurabile}`)
+    return c
+  }
+  /* non si guarda piu' quanti fotogrammi ha disegnato la macchina -- e' cio'
+     che rendeva questo cancello un misuratore di runner. Si guarda che i passi
+     dichiarati siano stati fatti davvero: `passoDichiarato` torna quanti ne ha
+     eseguiti, cosi' un mancato avanzamento e' un guasto e non uno zero muto. */
+  if (c.passi < 60) {
+    guai.push(`campione "${dove}": eseguiti solo ${c.passi} passi dichiarati`)
   }
   nota(`      strada ${c.strada.toFixed(1)} rad in ${(c.durata / 1000).toFixed(1)} s = ` +
        `${(c.strada / (c.durata / 1000)).toFixed(1)} rad/s medi`)
   nota(`${dove}: albero p-p ${c.albero.toFixed(3)} rad, velocita p95 ${c.vMax.toFixed(1)} rad/s, ` +
        `pinna a fondo corsa il ${(c.satura * 100).toFixed(0)}% del transitorio ` +
-       `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.disegnati} fotogrammi disegnati]`)
+       `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.passi} passi dichiarati da 1/60 s]`)
   if (c.pinnaMax > A_MAX_DICHIARATO + 1e-3) {
     guai.push(`la pinna supera il fine corsa dichiarato: ${(c.pinnaMax * 180 / Math.PI).toFixed(1)} gradi ` +
               `contro ${(A_MAX_DICHIARATO * 180 / Math.PI).toFixed(0)}. O il sito e cambiato, o questo ` +

@@ -131,18 +131,29 @@ export const IPOTESI_GESTO_VERO_PX = 8
  * in cui nessuno tocca niente. E il rollio torna perche' la pinna ha perso
  * acqua, cioe' a una certa andatura.
  *
- * Perche' e' un'IPOTESI e non una soglia. Il numero e' PLAUSIBILE e viene da
- * una misura vera fatta oggi -- a 6,1 kn la pinna e' in stallo l'87,5% del
- * tempo, contro lo 0,0% a 12,0 -- ma quella misura dice quando la pinna
- * satura, NON quando una persona che guarda si accorge che la nave rolla di
- * nuovo. Sono due cose diverse, e la seconda non l'ho misurata su nessuno.
- * Sette nodi cade fra i 10,0 (stallo 71%) e i 6,1 (stallo 87,5%) della
- * tabella; e' una scelta per poter costruire, non un risultato.
+ * ─── ERA 7,0 E ARRIVAVA TROPPO TARDI
+ *
+ * Con 7,0 il suggerimento compariva **29,5 secondi** dopo lo spegnimento --
+ * misurato. Una revisione ha fatto notare la conseguenza: nel filmato il
+ * visitatore arriva al finale molto prima, quindi il nudge poteva essere
+ * corretto nel codice e non essere mai vissuto. Un suggerimento che non arriva
+ * mai e' peggio di nessun suggerimento, che e' la regola gia' scritta in
+ * `nudge.js` per il caso opposto.
+ *
+ * Dieci nodi non e' un numero nuovo: e' una RIGA della tabella misurata oggi,
+ * quella in cui la pinna e' gia' in stallo il **71% del tempo**. Cioe' il punto
+ * in cui l'autorita' e' gia' persa per tre quarti — che e' esattamente cio' che
+ * il suggerimento deve nominare. Con 7,0 avevo scelto un valore FRA due righe
+ * misurate; adesso ne uso una.
+ *
+ * Perche' resta un'IPOTESI e non diventa una soglia. La tabella dice quando la
+ * pinna satura, NON quando una persona che guarda si accorge che la nave rolla
+ * di nuovo. Sono due cose diverse, e la seconda non l'ho misurata su nessuno.
  *
  * Si chiude guardando delle persone: a che andatura dicono «sta ricominciando
  * a rollare». Allora cambia nome.
  */
-export const IPOTESI_ANDATURA_GYRO_KN = 7.0
+export const IPOTESI_ANDATURA_GYRO_KN = 10.0
 
 /**
  * L'elenco delle ipotesi vive, cosi' chi arriva le trova tutte in un posto

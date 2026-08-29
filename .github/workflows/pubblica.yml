@@ -140,6 +140,21 @@ jobs:
         run: node strumenti/collaudo-manopola.mjs
         env: { CHROMIUM: '1' }
 
+      # ─── IL NUDGE DEL GIROSCOPIO, e perche' puo' stare qui
+      #
+      # E' la scoperta conclusiva dell'atto due, e fino a stasera non era
+      # protetta da niente: il cancello esisteva ma non stava ne' in
+      # `npm run collaudo` ne' qui. Segnalato da una revisione.
+      #
+      # Puo' stare in CI perche' non misura la RESA e non aspetta l'orologio:
+      # fa scendere la velocita' a passo dichiarato, come la manopola. Le
+      # uniche attese d'orologio sono i 600 ms fra un avanzamento e la lettura,
+      # e non sono cieche -- il giro dei nudge gira su un intervallo da 250 ms,
+      # quindi si aspetta il meccanismo che accende la bolla, non "un po'".
+      - name: 'Cancello · il suggerimento del giroscopio arriva'
+        run: node strumenti/collaudo-nudge.mjs
+        env: { CHROMIUM: '1' }
+
       # Con `prefers-reduced-motion` il sito si riduce, non si spegne. Il
       # difetto che questo cancello ha trovato: il ciclo di disegno spento
       # fermava anche il VIDEO del salone -- che nessuno aveva deciso di

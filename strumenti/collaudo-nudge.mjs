@@ -83,17 +83,41 @@ await pg.waitForTimeout(6500)                       /* piu' della pausa di 5,2 s
 const prima = await leggi()
 console.log(`  a propulsione accesa   velocita ${prima.velocita} kn   bolla: ${prima.bolla ?? 'nessuna'}`)
 
-/* ─── si spegne la propulsione e si aspetta che la nave rallenti DAVVERO */
+/**
+ * ─── SI SPEGNE LA PROPULSIONE E SI AVANZA A PASSO DICHIARATO
+ *
+ * Aspettare che la nave rallenti in tempo di OROLOGIO avrebbe dato a questo
+ * cancello la stessa malattia di `collaudo-manopola`: la velocita' scende col
+ * tempo SIMULATO, che su un rasterizzatore software avanza quaranta volte piu'
+ * lento. In CI, quarantacinque secondi d'attesa sarebbero stati meno di un
+ * secondo di nave, la bolla non sarebbe mai comparsa, e il cancello avrebbe
+ * dichiarato rotto un nudge che funziona.
+ *
+ * Quindi il tempo lo detta il cancello. Restano 600 ms d'orologio dopo ogni
+ * avanzamento, e non sono un'attesa cieca: il giro dei nudge gira su un
+ * `setInterval` da 250 ms, quindi la bolla puo' comparire solo a intervallo
+ * scattato. Si aspetta il MECCANISMO che la accende, non "un po'".
+ */
 await pg.click('#propulsione').catch(() => {})
 let dopo = null
-let atteso = 0
-for (let i = 0; i < 90; i++) {
-  await pg.waitForTimeout(500)
-  atteso += 0.5
+let simulati = 0
+const PASSO_S = 2
+for (let i = 0; i < 30; i++) {
+  const fatti = await pg.evaluate((sec) => {
+    const DT = 1 / 60
+    return window.__nautica.passoDichiarato?.(DT, Math.round(sec / DT)) ?? 0
+  }, PASSO_S)
+  if (!fatti) {
+    console.log('\n  ROTTO  la scena non espone passoDichiarato: non ho potuto far scendere la velocita\n')
+    await browser.close(); preview.kill(); process.exit(1)
+  }
+  simulati += PASSO_S
+  await pg.waitForTimeout(600)
   dopo = await leggi()
   if (dopo.bolla && /gyro/i.test(dopo.bolla)) break
 }
-console.log(`  dopo ${atteso.toFixed(1)} s senza propulsione   velocita ${dopo.velocita} kn   bolla: ${dopo.bolla ?? 'nessuna'}`)
+const atteso = simulati
+console.log(`  dopo ${atteso.toFixed(1)} s SIMULATI senza propulsione   velocita ${dopo.velocita} kn   bolla: ${dopo.bolla ?? 'nessuna'}`)
 
 await browser.close()
 preview.kill()
@@ -106,7 +130,7 @@ if (prima.bolla && /gyro/i.test(prima.bolla)) {
   rossi.push('la bolla del giroscopio c era gia a propulsione accesa: non e un nudge di stato')
 }
 if (!dopo.bolla || !/gyro/i.test(dopo.bolla)) {
-  rossi.push(`la bolla del giroscopio non e mai comparsa in ${atteso.toFixed(0)} s, ` +
+  rossi.push(`la bolla del giroscopio non e mai comparsa in ${atteso.toFixed(0)} s simulati, ` +
              `con velocita scesa a ${dopo.velocita} kn`)
 }
 if (rossi.length) {
