@@ -87,17 +87,76 @@ export const V_MAX = 20
  * giroscopio vero sarebbero unita' inventate. Cio' che e' onesto e sufficiente
  * e' il COMPORTAMENTO -- una coppia che non dipende dall'abbrivio.
  *
- * TAU_GYRO e' 20 secondi e NON e' realistico: un rotore vero ci mette
- * mezz'ora. Venti secondi sono il tempo in cui l'attesa si SENTE -- i giri
- * salgono, il rollio scende poco a poco -- senza che chi guarda se ne vada.
- * Scelta di messa in scena, scritta qui perche' nessuno la scambi per una
+ * TAU_GYRO NON e' realistico: un rotore vero ci mette mezz'ora. E' il tempo in
+ * cui l'attesa si SENTE -- i giri salgono, il rollio scende poco a poco --
+ * senza che chi guarda se ne vada. Scelta di messa in scena, scritta qui
+ * perche' nessuno la scambi per una misura.
+ *
+ * ─── ERA VENTI SECONDI, ED ERANO TROPPI. Il conto lo dice da solo.
+ *
+ * Una costante di tempo e' il 63%: con venti secondi, venti secondi dopo il
+ * clic il rotore ha preso meno di due terzi della coppia, e la meta' inferiore
+ * della curva -- quella in cui il rollio cala VISIBILMENTE -- comincia dopo il
+ * minuto. Nei filmati del sito il visitatore e' gia' al finale.
+ *
+ * Non e' un difetto del modello: e' un difetto di TEMPO NARRATIVO, ed e' la
+ * distinzione che tiene onesta questa riga. Il comportamento che il sito
+ * rivendica -- una massa che deve prendere velocita', quindi un'attesa e non
+ * un interruttore -- e' identico a 4,5 secondi e a 20. Cambia solo quanto dura,
+ * e quanto dura e' una scelta di regia che non ha mai preteso di essere una
  * misura.
+ *
+ * QUATTRO E MEZZO, e cosa compra: 63% a 4,5 s, 86% a 9, 95% a 13,5. Cioe' la
+ * presa di coppia si LEGGE dentro i 6-8 secondi che seguono il clic, e resta
+ * comunque una salita e non uno scatto. Sotto i 3 secondi diventerebbe un
+ * interruttore e la tesi cadrebbe; sopra i 6 si torna a perdere chi guarda.
+ *
+ * ─── E si integra in forma ESATTA, non piu' col rapporto dt/tau
+ *
+ * `Math.min(1, dt / TAU_GYRO)` e' l'approssimazione di Eulero di
+ * `1 - exp(-dt/tau)`: coincidono per dt piccolo e divergono quando il passo
+ * cresce, cioe' proprio quando qualcuno misura a 30 Hz o avanza la simulazione
+ * a passo dichiarato. `TAU_GIRI` usa gia' la forma esatta due righe piu' giu';
+ * non c'era ragione perche' il rotore avesse una regola diversa.
  */
 const C_GYRO = 0.62
-const TAU_GYRO = 20.0
+const TAU_GYRO = 4.5
 
 const TAU_GIRI = 2.6             // s: inerzia di albero, riduttore e motore
-const ACCEL_RIF = 0.30           // kn/s: scala autorale, non una misura di cantiere
+
+/**
+ * LA SCALA DEL TEMPO DELL'ABBRIVIO — autorale, e adesso DICHIARATA in pagina.
+ *
+ * `ACCEL_RIF` non e' un'accelerazione di cantiere e non lo e' mai stata: e'
+ * l'unico fattore che decide quanto DURA la decadenza. All'equilibrio spinta e
+ * resistenza si pareggiano a `V_RIF` qualunque sia il suo valore, quindi
+ * cambiarlo non sposta di un nodo il punto di servizio ne' la forma della
+ * curva: sposta solo l'orologio.
+ *
+ * ─── ERA 0,30, E LA SCOPERTA ARRIVAVA DOPO LA FINE DEL SITO
+ *
+ * Con 0,30, tolta la propulsione: 11 kn a 4,9 s, 10 a 9,3, 9 a 14,7, 8 a 21,3,
+ * 7 a **29,9**. Il suggerimento del giroscopio dipende dall'andatura scesa
+ * sotto i 7 nodi -- la soglia di allora -- quindi arrivava a mezzo minuto
+ * dal clic -- e mezzo minuto e' piu' del percorso critico intero. Il nudge era
+ * corretto e nasceva morto: nessuno era ancora li' quando compariva.
+ *
+ * 0,80 non e' un numero rotondo scelto a caso. In caduta libera la resistenza
+ * quadratica da' 1/V lineare nel tempo:
+ *
+ *     1/V = 1/V_RIF + ACCEL_RIF / V_RIF^2 * t
+ *
+ * e imponendo V = 7 kn a circa 12 secondi -- il budget che l'atto due deve
+ * rispettare perche' la conseguenza si veda mentre la si sta ancora
+ * guardando -- esce 0,80 con l'inerzia dell'albero gia' contata dentro.
+ *
+ * Cosa NON cambia, e va detto perche' e' cio' che tiene in piedi la tesi: le
+ * tabelle di stallo di questo file sono indicizzate sulla VELOCITA', non sul
+ * tempo. A 10 nodi la pinna e' in stallo il 71% del tempo e a 6,1 l'87,5%
+ * adesso come prima; la riduzione a mare 5 vale 90,8% a 12 kn e 8,2% a 6.
+ * Quelle misure restano vere parola per parola. Cambia quando ci si arriva.
+ */
+const ACCEL_RIF = 0.80           // kn/s: scala autorale, non una misura di cantiere
 
 export function dinamicaPropulsione ({ velocita, giri }, comando, dt) {
   const passo = Math.max(0, Math.min(dt, 0.1))
@@ -162,6 +221,7 @@ const RESIDUO = 0.45                      // quanta portanza resta a fondo corsa
 const RIDOTTO = 1 / 3
 
 const FINESTRA_PICCO = 10        // secondi
+const TAU_RMS = 4.0              // s: la finestra di `S.rollioRms`, vedi la voce nello stato
 const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi sotto
 
 /**
@@ -208,27 +268,27 @@ const MAX_CAMPIONI = 1200        // tetto rigido: due difese indipendenti, vedi 
  *
  * Lo stallo lavora sotto i 10 nodi, e fino a ieri quel regime era irraggiungibile
  * perche' la velocita' era un cursore che nessuno abbassava. Adesso e' una
- * conseguenza: spegnendo la propulsione la nave scende a **6,10 kn in quaranta
+ * conseguenza: spegnendo la propulsione la nave scende a **3,36 kn in quaranta
  * secondi**, e molto prima di arrivarci la pinna satura.
  *
- * IL NUMERO ERA SBAGLIATO, e l'ha trovato una revisione. Qui c'era «2,19 kn in
- * quaranta secondi»: falso di un fattore cinque nel tempo. A 2,19 kn la nave ci
- * arriva in **180,5 s**, e i 2,1 kn che avevo in mente sono il regime del
- * CONTROESEMPIO del giroscopio, dove `collaudo-catena` lascia planare la nave
- * per centonovanta secondi. Avevo incollato la velocita' di una scena sul
- * titolo di un'altra.
+ * IL NUMERO E' STATO SBAGLIATO DUE VOLTE, e la seconda l'ho corretta io
+ * cambiando `ACCEL_RIF`. La prima stesura scriveva «2,19 kn in quaranta
+ * secondi» -- falso di un fattore cinque nel tempo, trovato da una revisione.
+ * La correzione, 6,10 kn, era vera finche' la scala del tempo era 0,30 kn/s.
+ * Con 0,80 il quaranta secondi porta a 3,36, MISURATO qui sopra e non dedotto.
  *
- * E lo dicevano gia' due file di questo stesso commit: `collaudo-catena` stampa
- * «dopo 40 s ... (6.10 kn)» e `docs/12` scrive 6,10. Tre punti dello stesso
- * albero, due d'accordo e uno no -- ed era il commento, cioe' l'unico che
- * nessun cancello legge.
+ * La lezione della prima volta vale ancora e vale di piu': un numero di TEMPO
+ * scritto in un commento e' l'unico punto dell'albero che nessun cancello
+ * legge, quindi e' il primo a marcire quando una costante cambia. Le voci
+ * qui sotto sono sopravvissute al cambio proprio perche' sono indicizzate
+ * sulla VELOCITA': la fisica della pinna non sa che ora e'.
  *
  * LA FRASE QUALITATIVA REGGE, e va detto: la pinna satura davvero. Solo che
  * satura MOLTO prima, e il numero giusto lo rende piu' forte, non piu' debole:
  *
  *     12,0 kn   picco 18,1 gradi   in stallo  0,0%
- *     10,0 kn   picco 25,0 gradi   in stallo 71,0%     (dopo ~10 s di planata)
- *      6,1 kn   picco 25,0 gradi   in stallo 87,5%     (il punto di 40 s)
+ *     10,0 kn   picco 25,0 gradi   in stallo 71,0%     (dopo ~4,3 s di planata)
+ *      6,1 kn   picco 25,0 gradi   in stallo 87,5%     (dopo ~15 s)
  *
  * Al primo calo di velocita' la pinna e' gia' a fondo corsa i tre quarti del
  * tempo. Non serve aspettare tre minuti: succede subito.
@@ -394,6 +454,33 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
      * destini**. Nessun evento di interfaccia: solo la fisica che diverge.
      */
     rollioNudo: 0,
+    /**
+     * ─── QUANTO LA NAVE E' AGITATA, e non e' il rollio istantaneo
+     *
+     * Il valore efficace del rollio su una finestra scorrevole di quattro
+     * secondi. Serve a chi deve REAGIRE al movimento invece che leggerlo:
+     * oggi le due persone del salone, domani il suono.
+     *
+     * Perche' non basta `rollio`. Una nave che rolla attraversa lo zero due
+     * volte per ciclo: qualunque cosa agganciata all'angolo istantaneo si
+     * spegne e si riaccende cinque volte in ventidue secondi, e a schermo non
+     * si legge come sollievo -- si legge come un lampeggio. `composito.js` lo
+     * ha misurato e lo aveva gia' curato con una isteresi sull'angolo; questa
+     * e' la stessa cura fatta dove va fatta, cioe' sulla GRANDEZZA, una volta
+     * sola e per tutti quelli che la useranno.
+     *
+     * Perche' non e' nemmeno `picco`. Il picco su finestra finita non converge
+     * -- l'intestazione di questo file lo dichiara, le tre armoniche hanno
+     * periodi incommensurabili -- quindi cresce con la durata e non torna mai
+     * indietro. Una persona che si rilassa ha bisogno di una grandezza che
+     * SCENDA.
+     *
+     * Quattro secondi non e' un numero libero: e' poco piu' di mezzo periodo
+     * di rollio (7 s), abbastanza per non contare le due traversate dello zero
+     * e abbastanza poco perche' il ritorno del rollio nell'atto due si veda
+     * entro i 10-12 secondi che l'atto due ha a disposizione.
+     */
+    rollioRms: 0,
     pinna: 0,
     pinnaVel: 0,
     picco: 0,
@@ -406,6 +493,8 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
   }
 
   let t = 0
+  /* il quadrato medio del rollio: lo stato del filtro di `S.rollioRms` */
+  let msRollio = 0
 
   function passo (dt, tempoScena) {
     if (velocitaDinamica) {
@@ -432,7 +521,7 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
      * differenza che l'atto due esiste per mostrare.
      */
     const volutoGyro = S.giroscopio ? 1 : 0
-    S.giriGiroscopio += (volutoGyro - S.giriGiroscopio) * Math.min(1, dt / TAU_GYRO)
+    S.giriGiroscopio += (volutoGyro - S.giriGiroscopio) * (1 - Math.exp(-Math.max(0, dt) / TAU_GYRO))
     S.autoritaGiroscopio = C_GYRO * S.giriGiroscopio * S.giriGiroscopio
 
     /**
@@ -492,6 +581,13 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
      * senza che nessun numero venga addolcito.
      */
     S.piccoNudo = MathUtils.radToDeg(nuda.c.picco)
+
+    /* Media mobile esponenziale del QUADRATO, poi radice: e' la RMS su una
+       finestra di TAU_RMS senza tenere in memoria nessun campione. La forma
+       esatta `1 - exp(-dt/tau)` e non il rapporto `dt/tau`, cosi' la misura non
+       cambia fra 30, 60 e 120 Hz ne' a passo dichiarato. */
+    msRollio += (S.rollio * S.rollio - msRollio) * (1 - Math.exp(-Math.max(0, dt) / TAU_RMS))
+    S.rollioRms = Math.sqrt(msRollio)
     S.pinna = viva.c.alfa
     S.pinnaVel = dt > 0 ? (viva.c.alfa - viva.c.alfaPrec) / dt : 0
 

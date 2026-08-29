@@ -83,7 +83,10 @@ export async function avviaSalone () {
     avanza(dt, marca)
 
     if (scena.disegna) scena.disegna(sim, marca)
-    else scena.aggiorna(sim.S.rollio, dt)
+    /* LA STANZA riceve l'angolo istantaneo, LE PERSONE il valore efficace su
+       quattro secondi: `composito.js` spiega perche' sono due grandezze
+       diverse per due cose diverse. Sono lo stesso stato, letto due volte. */
+    else scena.aggiorna(sim.S.rollio, dt, sim.S.rollioRms)
     palco.dataset.spento = sim.S.stab ? 'no' : 'si'
     tasto?.setAttribute('aria-pressed', String(sim.S.stab))
     /**

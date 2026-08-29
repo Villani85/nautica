@@ -36,6 +36,24 @@ const PAUSA = 5200
 const DURATA = 7000
 
 /**
+ * ─── LA DURATA DELL'ATTO DUE E' PIU' CORTA, e il conto e' vincolante
+ *
+ * Sette secondi vanno bene per un suggerimento che aspetta la noia: c'e' tutto
+ * il tempo. Nella catena causale no, perche' i messaggi si mettono in FILA --
+ * uno alla volta e' la prima regola di questo file, e resta giusta -- e la fila
+ * non puo' essere piu' lunga della conseguenza che racconta.
+ *
+ * Misurato sulla simulazione, dopo lo spegnimento della propulsione: sotto i
+ * 10 nodi a 4,3 s, sotto i 7 a 12,1. Con sette secondi a testa, la seconda
+ * battuta occuperebbe lo schermo fino a 7 s e la terza fino a 14 -- e il
+ * suggerimento del giroscopio, che la fisica merita a 12,1, arriverebbe a 14
+ * scavalcato dalla coda. Quattro secondi lasciano ogni battuta scoperta prima
+ * che la successiva la meriti, e il giroscopio arriva quando arriva la sua
+ * causa.
+ */
+const DURATA_ATTO_DUE = 4000
+
+/**
  * ─── E NON BASTA L'ORDINE: CONTA DOVE E QUANDO
  *
  * La prima versione sceglieva solo per priorita' e visibilita' del comando.
@@ -65,7 +83,7 @@ const DURATA = 7000
  * la nave reagire -- mentre la dipendenza dalla propulsione viene dopo, ed e'
  * anche il passaggio piu' controintuitivo.
  */
-import { IPOTESI_ANDATURA_GYRO_KN } from './soglie.js'
+import { IPOTESI_ROLLIO_AVVERTITO_RMS, IPOTESI_ANDATURA_PINNE_KN } from './soglie.js'
 
 const NUDGE = [
   {
@@ -87,6 +105,40 @@ const NUDGE = [
        momento chi guarda deve guardare loro, non ricevere un'altra istruzione */
     dopo: 'stab'
   },
+  /**
+   * ─── LE QUATTRO BATTUTE DELL'ATTO DUE, e nessuna aspetta che ci si annoi
+   *
+   * Fino a ieri l'atto due aveva UN suggerimento a inattivita' («Switch
+   * propulsion off») e uno di stato («Try the gyro»), e in mezzo il silenzio.
+   * Una revisione esterna ha guardato il filmato e ha trovato il buco: il
+   * primo compariva a 48 s e non veniva seguito, il secondo dipendeva
+   * dall'andatura sotto i 7 nodi che con la vecchia scala del tempo arrivava a
+   * **trenta secondi** dal clic. Il ragionamento era corretto e nasceva morto.
+   *
+   * Adesso sono quattro, e la regola e' una sola: **ogni messaggio dell'atto
+   * due dipende dallo stato fisico**, mai dalla sola inattivita'. Chi scorre
+   * non azzera la catena, e chi si ferma non riceve un messaggio che la fisica
+   * non ha ancora meritato.
+   *
+   * La fila, coi tempi MISURATI sulla simulazione (spegnimento a t = 0):
+   *
+   *     t ~ 0      la propulsione e' ancora accesa   «Switch propulsion off»
+   *     t ~ 0,2    albero al 68% dei giri            «The shaft slows...»
+   *     t ~ 4,3    autorita' pinne sotto il 70%      «The fins are still on...»
+   *     t ~ 12,8   rollio avvertibile (1,8 RMS)      «Try the gyro»
+   *     dopo       niente. Si guarda.
+   *
+   * Fra la terza e la quarta ci sono circa quattro secondi di silenzio, e sono
+   * voluti: e' il tratto in cui la nave rallenta e non c'e' niente da dire che
+   * non sia gia' scritto sulla lettura della velocita'. Un quinto messaggio li'
+   * in mezzo riempirebbe un vuoto che serve.
+   *
+   * L'ULTIMO SILENZIO E' UNA DECISIONE, non una dimenticanza. Dopo il
+   * giroscopio la nave si calma da sola e le due persone si rilassano: e' il
+   * momento emotivo del sito, e un'etichetta sopra lo trasformerebbe in una
+   * conferma di sistema. Lo garantisce `quando`, che su tutte e quattro
+   * pretende `!S.giroscopio`.
+   */
   {
     id: 'propulsione',
     bersaglio: '#propulsione',
@@ -94,11 +146,61 @@ const NUDGE = [
     eventi: ['click'],
     /* al MECCANISMO: il gesto non anticipa la spiegazione sulla prima vista.
        Qui albero, velocita' e pinna possono diventare una sola conseguenza. */
-    battute: ['taglio', 'meccanismo']
+    battute: ['taglio', 'meccanismo'],
+    /**
+     * ERA UN NUDGE DI NOIA, ADESSO E' DI STATO. La condizione dice cosa deve
+     * essere vero perche' la frase abbia senso: c'e' una propulsione accesa da
+     * togliere, e ci sono delle pinne accese che ne dipendono. Se qualcuno
+     * arriva qui con la propulsione gia' spenta, il suggerimento non compare --
+     * prima invece compariva lo stesso, dopo 5,2 s di quiete, suggerendo un
+     * gesto gia' fatto.
+     */
+    quando: (S) => S.propulsione && S.stab && !S.giroscopio
   },
   {
     /**
-     * IL GIROSCOPIO — l'unico nudge che NON aspetta che ci si annoi.
+     * LA SECONDA BATTUTA — nomina cio' che sta gia' succedendo.
+     *
+     * Non chiede niente: dice dove guardare. L'albero rallenta subito (68% dei
+     * giri a un secondo) ma la velocita' scende dopo, ed e' quel RITARDO la
+     * cosa da capire -- una nave non si ferma quando si spegne il motore.
+     *
+     * Il bersaglio e' la lettura della velocita', non un comando: e' l'unico
+     * nudge del sito che punta a un numero invece che a un bottone, e lo fa
+     * perche' quel numero e' cio' che sta per muoversi.
+     */
+    id: 'albero',
+    bersaglio: '#v-velocita, #propulsione',
+    testo: 'The shaft slows. Speed follows.',
+    battute: ['taglio', 'meccanismo'],
+    durata: DURATA_ATTO_DUE,
+    quando: (S) => !S.propulsione && !S.giroscopio && S.velocita > IPOTESI_ANDATURA_PINNE_KN
+  },
+  {
+    /**
+     * LA TERZA — la contraddizione, detta mentre e' vera.
+     *
+     * Le pinne sono ANCORA ACCESE. `aria-pressed` sul comando lo conferma, la
+     * scena le mostra muoversi. Eppure la nave ricomincia a rollare, e questa
+     * e' la riga per cui esiste tutto l'atto due: non e' stato spento niente
+     * che le riguardi, hanno solo perso l'acqua che le faceva funzionare.
+     *
+     * «They are losing water» e' letterale, non una metafora: l'autorita' va
+     * col quadrato della velocita' (`autorita()` in `simulazione.js`) perche'
+     * una pinna produce portanza solo in moto.
+     */
+    id: 'pinne',
+    bersaglio: '#stab',
+    testo: 'The fins are still on. They are losing water.',
+    battute: ['taglio', 'meccanismo'],
+    durata: DURATA_ATTO_DUE,
+    quando: (S) => !S.propulsione && S.stab && !S.giroscopio &&
+                   S.velocita < IPOTESI_ANDATURA_PINNE_KN
+  },
+  {
+    /**
+     * LA QUARTA — l'unico nudge che NON aspetta che ci si annoi (e adesso non
+     * e' piu' l'unico: lo sono tutti e quattro).
      *
      * Una revisione esterna ha trovato il buco e l'ha detto meglio di come
      * l'avevo pensato: in un sito guidato dallo scorrimento un suggerimento
@@ -107,22 +209,36 @@ const NUDGE = [
      * essere vissuto. E fra i cinque testi non ce n'era **nessuno** che
      * nominasse il giroscopio, che e' la scoperta conclusiva.
      *
-     * Questo arriva quando la CATENA CAUSALE lo merita: propulsione spenta,
-     * pinne ancora accese, e l'andatura scesa sotto l'ipotesi. Cioe' nel
-     * momento in cui la nave ha ricominciato a rollare **con gli
-     * stabilizzatori inseriti** — la contraddizione che il giroscopio esiste
-     * per sciogliere.
+     * Arriva quando la CATENA CAUSALE lo merita: propulsione spenta, pinne
+     * ancora accese, e l'andatura scesa sotto l'ipotesi. Cioe' nel momento in
+     * cui la nave ha ricominciato a rollare **con gli stabilizzatori
+     * inseriti** — la contraddizione che il giroscopio esiste per sciogliere.
      *
-     * `quando` lo esenta dalla pausa d'inattivita': non serve a chi si e'
-     * fermato, serve a chi ha appena provocato una conseguenza.
+     * Prima ci metteva 29,9 secondi ad arrivare, perche' `ACCEL_RIF` valeva
+     * 0,30. Adesso 12,8 a mare 4, misurati. Non e' cambiata la forma della
+     * condizione: e' cambiato l'orologio, ed e' la ragione per cui la
+     * condizione sta scritta in FISICA e non in secondi.
+     *
+     * ─── E LA CONDIZIONE GUARDA IL ROLLIO, non piu' l'andatura
+     *
+     * Diceva «andatura sotto i 7 nodi», che era un SURROGATO del rollio.
+     * Misurato, sbagliava in tutti e due i versi: a mare 3 il rollio diventa
+     * avvertibile a 24,7 s e l'andatura passa i 7 nodi a 12,1 -- dodici secondi
+     * in cui il sito avrebbe suggerito una cura per un male invisibile. A mare
+     * 5 arrivava tardi.
+     *
+     * Adesso legge `S.rollioRms`, cioe' la cosa stessa, con la soglia a cui le
+     * due persone del salone si irrigidiscono. Il suggerimento e la reazione
+     * umana scattano sullo stesso numero: `IPOTESI_ROLLIO_AVVERTITO_RMS`.
      */
     id: 'giroscopio',
     bersaglio: '#giroscopio',
     testo: 'Try the gyro',
     eventi: ['click'],
     battute: ['taglio', 'meccanismo'],
+    durata: DURATA_ATTO_DUE,
     quando: (S) => !S.propulsione && S.stab && !S.giroscopio &&
-                   S.velocita < IPOTESI_ANDATURA_GYRO_KN
+                   S.rollioRms > IPOTESI_ROLLIO_AVVERTITO_RMS
   },
   {
     id: 'menu',
@@ -132,7 +248,24 @@ const NUDGE = [
     /* dopo che almeno due scene sono state viste. Compariva sull'apertura, a
        otto secondi, sopra la frase principale: invitava a saltare una storia
        non ancora cominciata */
-    scene: 2
+    scene: 2,
+    /**
+     * E NON DURANTE L'ATTO DUE, che e' il buco aperto dalle quattro battute
+     * nuove.
+     *
+     * Fra la terza e la quarta c'e' un tratto di silenzio di circa quattro
+     * secondi. Senza questa riga, in quel tratto il nudge del menu era
+     * ammissibile -- nessuna battuta lo escludeva e la pausa d'inattivita' era
+     * scaduta da un pezzo -- e compariva «Jump to any scene» **nel mezzo
+     * dell'esperimento**: un invito ad andarsene proprio nell'istante in cui il
+     * sito sta dimostrando l'unica cosa che ha da dimostrare.
+     *
+     * E' lo stesso errore di regia che una revisione esterna aveva gia' trovato
+     * una volta su questo identico nudge, quando compariva sull'apertura sopra
+     * la frase principale. Allora si era curato con `scene`, che dice QUANDO e'
+     * troppo presto. Serviva anche il dire DOVE e' fuori posto.
+     */
+    battute: ['emerge', 'mare', 'invito', 'calma']
   }
 ]
 
@@ -145,8 +278,22 @@ const NUDGE = [
  * si finiva a giudicare la visibilita' di un bottone che non c'entrava, e il
  * suggerimento non compariva mai.
  */
+/**
+ * E L'ORDINE E' QUELLO DEL SELETTORE, non quello del documento.
+ *
+ * `document.querySelectorAll('a, b')` restituisce in ordine di DOCUMENTO, non
+ * nell'ordine in cui i due selettori sono scritti. Finche' la virgola serviva
+ * solo a scegliere fra due copie dello stesso comando -- `#stab-salone, #stab`,
+ * di cui una sola e' mai in scena -- non faceva differenza. Serve adesso, che
+ * la seconda battuta dell'atto due dichiara un RIPIEGO: punta alla lettura
+ * della velocita' e, se quella non e' in campo, al comando che l'ha mossa. In
+ * ordine di documento il comando viene prima, e il ripiego avrebbe vinto
+ * sempre -- cioe' non sarebbe stato un ripiego.
+ */
 const primoVisibile = (sel) => {
-  for (const el of document.querySelectorAll(sel)) if (visibile(el)) return el
+  for (const parte of sel.split(',')) {
+    for (const el of document.querySelectorAll(parte.trim())) if (visibile(el)) return el
+  }
   return null
 }
 
@@ -211,9 +358,12 @@ export function creaNudge () {
     fatti.add(n.id)
     if (acceso === n.id) nascondi()
   }
+  /* `eventi` e' FACOLTATIVO: due battute dell'atto due non nominano un gesto,
+     nominano una conseguenza. Non c'e' niente da cliccare che le soddisfi, e
+     a spegnerle basta `giaMostrati` -- una battuta detta e' detta. */
   for (const n of NUDGE) {
     for (const el of document.querySelectorAll(n.bersaglio)) {
-      for (const ev of n.eventi) el.addEventListener(ev, () => segnaFatto(n), { passive: true })
+      for (const ev of (n.eventi || [])) el.addEventListener(ev, () => segnaFatto(n), { passive: true })
     }
   }
   /* qualunque gesto rimanda il prossimo suggerimento: chi e' attivo non va spinto */
@@ -272,7 +422,7 @@ export function creaNudge () {
     bolla.style.left = Math.round(x) + 'px'
     bolla.style.top = Math.round(sopra ? r.top - l.height - 10 : r.bottom + 10) + 'px'
     clearTimeout(spegni)
-    spegni = setTimeout(nascondi, DURATA)
+    spegni = setTimeout(nascondi, n.durata || DURATA)
   }
 
   function giro () {

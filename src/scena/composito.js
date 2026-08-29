@@ -86,6 +86,12 @@ const VELOCITA = 8
 
 const TRASF_MARE = 'scale(1.55)'
 
+/* L'unica dipendenza di questo modulo, e sta qui e non in testa al file perche'
+   la testa e' occupata dal ragionamento che spiega cos'e' un composito. Il
+   ritardo della reazione umana e' un'IPOTESI, e le ipotesi di questo repo
+   stanno tutte in un posto solo: `src/ui/soglie.js` dice perche'. */
+import { IPOTESI_RITARDO_UMANO_S, IPOTESI_ROLLIO_AVVERTITO_RMS } from '../ui/soglie.js'
+
 export function creaComposito (contenitore, base) {
   const nuovo = (classe, tag = 'div') => {
     const e = document.createElement(tag)
@@ -274,22 +280,93 @@ export function creaComposito (contenitore, base) {
    * un'onda: si resta all'erta finche' non si e' convinti che sia finita. E a
    * schermo non si legge come sollievo, si legge come due clip che lampeggiano.
    */
-  const ACCENDE = 5.0     // gradi: sopra questo, ci si irrigidisce
-  const CALMO = 2.0       // gradi: sotto questo si comincia a contare la calma
-  const CONVINCE = 1.6    // secondi di calma prima di rilassarsi davvero
-  const VELOCITA = 8      // ln10/8 = 0,29 s per passare: quanto ci mette un braccio
+  /**
+   * ─── E LA GRANDEZZA NON E' PIU' L'ANGOLO ISTANTANEO, MA LA SUA RMS
+   *
+   * L'isteresi qui sopra curava il sintomo giusto con la grandezza sbagliata.
+   * Un angolo istantaneo attraversa lo zero due volte per ciclo, quindi
+   * serviva una memoria (`CONVINCE`) per non farlo lampeggiare -- cioe' un
+   * secondo meccanismo per compensare il primo.
+   *
+   * `S.rollioRms` -- valore efficace su quattro secondi, calcolato una volta
+   * sola in `simulazione.js` -- non attraversa lo zero. La memoria resta
+   * perche' serve comunque (nessuno si rilassa a meta' di un'onda), ma adesso
+   * lavora su una grandezza che dice davvero **quanto la nave e' agitata**, che
+   * e' cio' a cui un corpo reagisce.
+   *
+   * LE SOGLIE SONO MISURATE, non scelte. Sullo stesso mare e alla stessa
+   * andatura, `rollioRms` a regime:
+   *
+   *     stabilizzatore ACCESO    mare 2  0,14-0,35    mare 5  0,35-0,89 gradi
+   *     stabilizzatore SPENTO    mare 2  2,07-3,70    mare 5  5,17-9,24
+   *
+   * Fra 0,89 e 2,07 c'e' un vuoto largo piu' del doppio, e le due soglie ci
+   * stanno dentro con margine da tutte e due le parti. Non e' una taratura a
+   * occhio: e' una separazione che la fisica produce da sola, perche' fra le
+   * due condizioni ci sono undici punti di guadagno di risonanza.
+   *
+   * ─── IL RITARDO E' BIOLOGICO, E NON E' UN RITARDO DI SISTEMA
+   *
+   * La reazione non parte nel fotogramma in cui la soglia viene superata.
+   * Nessuno si irrigidisce nell'istante in cui la nave si muove: si registra il
+   * movimento, poi il corpo risponde. Senza questo ritardo la coppia si
+   * muoveva **insieme al clic**, e a schermo si leggeva come un'animazione
+   * innescata da un bottone -- che e' esattamente cio' che il sito sostiene di
+   * non essere.
+   *
+   * `IPOTESI_RITARDO_UMANO_S` porta il suo grado di verita' nel nome, come
+   * tutte le altre soglie non validate su persone.
+   *
+   * ─── E LA PRESA E' PIU' RAPIDA DEL RILASCIO, che e' come funziona un corpo
+   *
+   * Afferrare un bicchiere che scivola e' un riflesso; lasciarlo andare e'
+   * una decisione, e arriva quando si e' convinti. Due costanti diverse, e la
+   * differenza si vede: la coppia si irrigidisce in circa un terzo di secondo e
+   * si scioglie in poco piu' di uno. Con una costante sola il ritorno alla
+   * calma sembrava uno stacco di montaggio invece di due spalle che scendono.
+   */
+  /* La soglia della TENSIONE non e' locale, e non deve esserlo: la legge anche
+     `src/ui/nudge.js` per far comparire «Try the gyro». Il suggerimento arriva
+     nell'istante in cui questa coppia si irrigidisce, ed e' la tesi del sito --
+     due numeri separati prima o poi divergono, e allora il sito suggerirebbe
+     una cura per un male che nessuno sta vedendo. */
+  const ACCENDE_RMS = IPOTESI_ROLLIO_AVVERTITO_RMS
+  /* Il RILASCIO invece e' solo di chi sta seduto qui: non c'e' nessun altro che
+     debba sapere quando queste due persone si convincono che sia finita. */
+  const CALMO_RMS = 1.1     // gradi RMS: sotto questo si comincia a contare la calma
+  const CONVINCE = 1.6      // secondi di calma prima di rilassarsi davvero
+  const PRENDE = 3.4        // 1/s: circa 0,29 s per irrigidirsi -- un riflesso
+  const LASCIA = 0.9        // 1/s: circa 1,1 s per sciogliersi -- una decisione
 
   let allerta = false
   let calmaDa = 0
+  let daQuando = 0          // secondi da quando la soglia e' stata superata
   let q = 0
 
-  function aggiorna (gradi, dt = 1 / 60) {
-    const g = Math.abs(gradi)
-    if (g > ACCENDE) { allerta = true; calmaDa = 0 }
-    else if (g < CALMO) { calmaDa += dt; if (calmaDa > CONVINCE) allerta = false }
-    else calmaDa = 0
+  /**
+   * @param {number} gradi il rollio istantaneo: serve alla STANZA, che deve
+   *   inclinarsi adesso e non fra quattro secondi.
+   * @param {number} [dt] il passo, in secondi.
+   * @param {number} [rms] il valore efficace su quattro secondi: serve alle
+   *   PERSONE. Se manca si ripiega sull'angolo istantaneo -- e' cio' che serve
+   *   a `?sagoma=1`, che genera le fotografie da una posa e non da una storia.
+   */
+  function aggiorna (gradi, dt = 1 / 60, rms) {
+    const agitata = Number.isFinite(rms) ? rms : Math.abs(gradi)
 
-    q += ((allerta ? 1 : 0) - q) * Math.min(1, dt * VELOCITA)
+    if (agitata > ACCENDE_RMS) {
+      calmaDa = 0
+      /* il ritardo si conta da quando la soglia e' stata superata: finche' non
+         e' passato, la persona ha visto il movimento e non ha ancora risposto */
+      daQuando += dt
+      if (daQuando > IPOTESI_RITARDO_UMANO_S) allerta = true
+    } else {
+      daQuando = 0
+      if (agitata < CALMO_RMS) { calmaDa += dt; if (calmaDa > CONVINCE) allerta = false }
+      else calmaDa = 0
+    }
+
+    q += ((allerta ? 1 : 0) - q) * Math.min(1, dt * (allerta ? PRENDE : LASCIA))
 
     /**
      * ─── LA STANZA STA FERMA E IL MARE ROLLA, ed e' il contrario di prima.

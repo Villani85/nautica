@@ -14,6 +14,8 @@ import { LA_SCENA_E_UNA } from './regia.js'
  */
 import { creaMenu } from './ui/menu.js'
 import { creaNudge } from './ui/nudge.js'
+import { creaEsperimento } from './ui/esperimento.js'
+import { creaSuono } from './ui/suono.js'
 
 /**
  * Questo modulo non importa three. Deve restare cosi'.
@@ -25,6 +27,11 @@ import { creaNudge } from './ui/nudge.js'
 
 creaMenu()
 creaNudge()
+/* il richiamo dell'esperimento aperto: non blocca niente, si ricorda */
+creaEsperimento()
+/* il suono e' facoltativo e non costruisce nemmeno un AudioContext finche'
+   nessuno lo chiede: `ui/suono.js` dice perche' */
+creaSuono()
 
 collegaModale({
   apri: document.querySelector('#apri-chiusura'),

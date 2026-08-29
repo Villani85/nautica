@@ -109,11 +109,17 @@ export function collegaComandi ({ contenitore, toggle, propulsione, giroscopio, 
    * IL GIROSCOPIO, e non azzera niente accendendosi.
    *
    * Gli altri due comandi cambiano lo stato e la scena risponde nel fotogramma
-   * dopo. Questo no: il rotore ci mette venti secondi a salire, e in quei venti
-   * secondi il rollio scende POCO A POCO. E' l'unico comando del sito che non
-   * ha una risposta immediata, ed e' voluto -- dentro c'e' una massa che deve
-   * prendere velocita', e un giroscopio che si accende come una lampadina
-   * sarebbe un interruttore, non una macchina.
+   * dopo. Questo no: il rotore ha una costante di tempo di 4,5 secondi -- 63%
+   * della coppia a 4,5 s, 86% a 9, 95% a 13,5 -- e in quei secondi il rollio
+   * scende POCO A POCO. E' l'unico comando del sito che non ha una risposta
+   * immediata, ed e' voluto: dentro c'e' una massa che deve prendere velocita',
+   * e un giroscopio che si accende come una lampadina sarebbe un interruttore,
+   * non una macchina.
+   *
+   * Erano venti secondi, ed era troppo per il tempo che una persona resta a
+   * guardare: la meta' leggibile della curva cominciava dopo il minuto, cioe'
+   * dopo la fine del percorso. `TAU_GYRO` in `simulazione.js` porta il conto e
+   * la ragione per cui accorciarlo non tocca la tesi.
    */
   if (giroscopio) {
     giroscopio.setAttribute('aria-pressed', String(sim.S.giroscopio))
