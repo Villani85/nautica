@@ -44,7 +44,7 @@ const PROVA = [
 ]
 
 const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare, PROVA,
-                                senzaLuci, lineare, senzaAo]) => {
+                                senzaLuci, lineare, senzaAo, rug, senzaInterno]) => {
   const n = window.__nautica
   // Il ciclo del sito riscrive la camera a ogni fotogramma: si disegna UNA
   // volta a mano, subito dopo averla messa, e si legge la tela prima che il
@@ -159,7 +159,44 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
     })
   }
 
+  /**
+   * --- E LA RUGOSITA' DELLA MURATA SI PUO' FORZARE, per una prova sola
+   *
+   * `RUGOSITA=<n>` la scrive sul materiale `scafo` da questa parte; dall'altra
+   * si genera un json col numero cambiato. Serve a decidere UNA cosa: se il
+   * divario di 18 livelli sulla murata viene dal modo in cui three approssima
+   * un dielettrico quasi a specchio illuminato da una mappa prefiltrata. A
+   * rugosita' bassa le due strade divergono di piu'; se alzandola da entrambe
+   * le parti il divario si chiude, il colpevole ha un nome.
+   */
+  const rugosita = []
+  if (rug !== null) {
+    n.scena.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])
+      for (const m of ms) {
+        if (m && m.name === 'scafo') { rugosita.push([m, m.roughness]); m.roughness = rug }
+      }
+    })
+  }
+
+  /**
+   * --- E LA FACCIA INTERNA, che dall'altra parte NON c'e'
+   *
+   * `cuoci.py` scarta `interno` per il ritratto della nave, con una ragione
+   * scritta li': e' una faccia in BackSide, disegnata solo da dentro, e Blender
+   * la renderebbe anche da fuori. Se pero' nel sito quella faccia si vede su
+   * qualche pixel della murata -- e' a doppia faccia, con uno scostamento di
+   * poligono che le fa vincere la contesa -- allora li' i due confronti
+   * mettono a paragone due materiali diversi: una vernice lucida contro una
+   * quasi opaca. `SENZA_INTERNO=1` toglie il dubbio invece di ragionarci.
+   */
   const nascosti = []
+  if (senzaInterno) {
+    n.scena.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])
+      if (o.visible && ms.some((m) => m.name === 'interno')) { o.visible = false; nascosti.push(o) }
+    })
+  }
   if (senzaMare) {
     n.scena.traverse((o) => {
       const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])
@@ -252,6 +289,7 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
   for (const o of nascosti) o.visible = true
   for (const [o, i] of spente) o.intensity = i
   for (const [m, i] of ao) m.aoMapIntensity = i
+  for (const [m, r] of rugosita) m.roughness = r
   return { url: n.render.domElement.toDataURL('image/png'), fov: n.camera.fov,
            nascosti: nascosti.length, ingombro: B, vertici, spente: spente.length, ao: ao.length,
            sezione: n.sezione.costante,
@@ -259,7 +297,9 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
            navePos: [n.nave.position.x, n.nave.position.y, n.nave.position.z] }
 }, [px, py, pz, mx, my, mz, fuoco, L, H, process.env.SENZA_MARE === '1', PROVA,
     process.env.SENZA_LUCI === '1', process.env.LINEARE === '1',
-    process.env.SENZA_AO === '1'])
+    process.env.SENZA_AO === '1',
+    process.env.RUGOSITA ? Number(process.env.RUGOSITA) : null,
+    process.env.SENZA_INTERNO === '1'])
 
 writeFileSync(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`,
   Buffer.from(dati.url.split(',')[1], 'base64'))
