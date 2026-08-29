@@ -46,11 +46,26 @@ for (const q of QUOTE) {
   await pg.waitForTimeout(2500)
   const nome = `${FUORI}/q${String(q).replace('.', '')}.png`
   await pg.screenshot({ path: nome })
+  /**
+   * Si stampa anche la BATTUTA e lo spaccato, perche' la frazione di PAGINA non
+   * e' la `p` della regia -- la dimostrazione e' una sezione dentro un
+   * documento piu' lungo. Senza questi due numeri si tarano le soglie a
+   * tentativi, e il primo giro l'ho perso cosi': a pagina 0,90 il filmato era
+   * gia' al secondo 2,78.
+   */
   const stato = await pg.evaluate(() => {
     const v = document.querySelector('video[src*="traversata"]')
-    return v ? { pronto: v.readyState, istante: Number(v.currentTime.toFixed(2)), fermo: v.paused } : null
+    const palco = document.querySelector('#dimostrazione .palco')
+    const tela = document.querySelector('#scena')
+    return {
+      video: v ? { pronto: v.readyState, istante: Number(v.currentTime.toFixed(2)), fermo: v.paused } : null,
+      battuta: palco?.dataset.battuta ?? '?',
+      spaccato: tela?.dataset.spaccato ?? '?',
+      traversata: palco?.dataset.traversata ?? '?'
+    }
   })
-  console.log(`  ${nome}   traversata: ${stato ? `pronta ${stato.pronto}, a ${stato.istante}s, ${stato.fermo ? 'ferma' : 'in corsa'}` : 'nessun video'}`)
+  console.log(`  ${nome}  battuta ${stato.battuta}  spaccato ${stato.spaccato}  traversata ${stato.traversata}` +
+    (stato.video ? `  video a ${stato.video.istante}s` : ''))
 }
 
 await browser.close()

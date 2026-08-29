@@ -19,6 +19,17 @@ import { avanza, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
 const RAGGIO_SEZIONE = 7.2
+/**
+ * Dove sta il piano longitudinale quando NON taglia. 2,5 e' fuori dallo scafo:
+ * la semilarghezza massima e' 1,95, MISURATA sulla scena viva con
+ * `strumenti/dove-stanno.mjs` e non dedotta dalle ordinate, perche' fra le
+ * ordinate e la mesh in scena ci sono una scala e uno spessore di fasciame.
+ * Il margine e' mezza unita': abbastanza da non mordere il fasciame per un
+ * errore di arrotondamento, poco da non far perdere corsa all'animazione.
+ */
+const X_INTERO = 2.5
+/** A zero resta esattamente la meta' di babordo. */
+const X_MEZZO = 0.0
 /** L'ultima battuta: abbastanza vicino da leggere i bulloni della fondazione. */
 /**
  * QUANTO SI ALZA LA CAMERA SUL PRIMO PIANO DEL MECCANISMO, in unita' di scena
@@ -544,7 +555,34 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * vicina alla camera. Lo scafo va da z = -1,5 a z = +1,5.
    */
   const pianoSezione = new Plane(new Vector3(0, 0, -1), Z_FUORI)
-  for (const m of guscio) m.material.clippingPlanes = [pianoSezione]
+  /**
+   * ─── E IL SECONDO TAGLIO, QUELLO CHE GIRA LA LAMA DI NOVANTA GRADI
+   *
+   * `docs/13` §5 chiude il finale con una SEZIONE VERTICALE COMPLETA:
+   * meccanismo sotto, salone e persone sopra, un taglio solo. Il piano
+   * trasversale qui sopra non puo' farlo, ed e' misurato in `docs/20`: e'
+   * `Plane(0,0,-1)`, tiene `z < C`, e il meccanismo si legge solo da C = -0,65
+   * -- a quel punto il salone, che sta a z = +0,6, e' gia' dentro la fetta che
+   * e' stata tolta. Nessuna costante di quel piano contiene tutti e due.
+   *
+   * Quindi si gira la lama. Normale (1,0,0), tiene `x < C`: portando C da 2,5
+   * (fuori dallo scafo, che ha semilarghezza MISURATA 1,95) a 0,0 si toglie
+   * l'intera meta' di dritta e resta una sezione longitudinale sulla mezzeria.
+   *
+   * Dentro ci sono tutti e quattro i soggetti, e non per fortuna: l'impianto
+   * stabilizzatore e' DOPPIO -- `agganci` lo istanzia per lato, e quello di
+   * babordo resta dalla parte che non si toglie. Propulsione e giroscopio
+   * stanno sulla mezzeria. Il salone e' centrato e ne resta la meta'. E' la
+   * tesi del sito in un fotogramma: sopra la gente sta comoda, sotto le
+   * macchine lavorano perche' ci stia.
+   *
+   * I due piani convivono: three li applica in AND, quindi durante il finale il
+   * trasversale resta dov'e' e il longitudinale si aggiunge. Non si sostituisce
+   * -- sostituirlo richiuderebbe lo scafo sul meccanismo proprio mentre lo si
+   * sta guardando.
+   */
+  const pianoVerticale = new Plane(new Vector3(1, 0, 0), X_INTERO)
+  for (const m of guscio) m.material.clippingPlanes = [pianoSezione, pianoVerticale]
 
   /**
    * Chi proietta e chi riceve. Lo scafo e la coperta fanno tutti e due: la
@@ -775,6 +813,18 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   function impostaAvvicinamento (v) {
     avvicinamento = MathUtils.clamp(v, 0, 1)
+  }
+
+  /**
+   * LA SEZIONE VERTICALE: 0 lo scafo e' intero, 1 la meta' di dritta e' via.
+   *
+   * Si muove con `dolce` in `regia.js`, non qui: questa funzione e' una
+   * manopola e non una regia. Se un giorno qualcuno la volesse comandare col
+   * dito invece che con lo scorrimento, non c'e' niente da riscrivere.
+   */
+  function impostaVerticale (p) {
+    const q = MathUtils.clamp(p, 0, 1)
+    pianoVerticale.constant = MathUtils.lerp(X_INTERO, X_MEZZO, q)
   }
 
   function impostaSpaccato (p) {
@@ -1350,7 +1400,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
 
   return {
     render, camera, ridimensiona, ruota, disegna,
-    impostaSpaccato, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    impostaSpaccato, impostaVerticale, impostaEmersione, impostaAvvicinamento, impostaUscita,
     /**
      * `q` da 0 a 1: 0 comanda il 3D, 1 comanda la traversata. La regia la
      * chiama nell'ultima battuta e nessun altro: non e' uno stato del mondo,

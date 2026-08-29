@@ -89,10 +89,10 @@ export const S = LA_SCENA_E_UNA
    */
   ? { uscita: [0.05, 0.20], emerge: [0.15, 0.26], mare: [0.26, 0.38],
       invito: [0.38, 0.50], calma: [0.50, 0.64], taglio: [0.64, 1.00],
-      avvicina: [0.84, 1.00], traversata: [0.93, 1.00] }
+      avvicina: [0.84, 0.93], verticale: [0.74, 0.86], traversata: [0.93, 1.00] }
   : { uscita: [0.00, 0.00], emerge: [0.00, 0.13], mare: [0.13, 0.30],
       invito: [0.30, 0.44], calma: [0.44, 0.60], taglio: [0.60, 1.00],
-      avvicina: [0.82, 1.00], traversata: [0.93, 1.00] }
+      avvicina: [0.82, 0.93], verticale: [0.72, 0.86], traversata: [0.93, 1.00] }
 
 const SEQUENZA = [
   {
@@ -252,6 +252,46 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
      * spazzolare. Chi si ferma a meta' la vede continuare -- ed e' giusto,
      * perche' a quel punto non e' piu' lui a guidare, e' arrivato.
      */
+    /**
+     * 7bis · LA SEZIONE VERTICALE — il climax razionale, prima di quello
+     * emotivo.
+     *
+     * Sta FRA il primo piano del meccanismo e la traversata, e l'ordine e' la
+     * decisione del committente: prima si vede il perche' (una nave intera in
+     * sezione, con le macchine sotto e le persone sopra), poi si torna dalle
+     * persone. Invertirli darebbe il finale prima della ragione.
+     *
+     * Finisce dove comincia la traversata, non prima: la camera non deve
+     * trovarsi con lo scafo richiuso addosso mentre il filmato entra.
+     */
+    /**
+     * ─── L'AVVICINAMENTO DEVE FINIRE PRIMA CHE IL FILMATO COMINCI
+     *
+     * DIFETTO MISURATO, non sospettato. `avvicina` arrivava a 1,00 e
+     * `traversata` partiva a 0,93: le due fasce si sovrapponevano per il 7%, e
+     * il filmato prendeva il comando MENTRE la camera stava ancora arrivando.
+     *
+     * Misurato spegnendo il piano del filmato: nell'istante dello scambio la
+     * camera sta a (2,30 0,09 2,35), distanza 3,29; il fotogramma che il primo
+     * fotogramma del filmato ricostruisce sta a distanza 1,95. UNA VOLTA E
+     * SETTE piu' lontano, e li' la pinna misura una cinquantina di pixel
+     * contro i 168,5 del filmato: uno stacco di scala di oltre tre volte. Non
+     * i sedici pixel del primo piano -- quello era il confronto giusto fatto
+     * nel punto sbagliato.
+     *
+     * Ne' l'istante ne' il raggio lo chiudono: spazzolati sedici istanti, il
+     * migliore resta a -10,5 px e la linea d'acqua non si muove di una riga.
+     * L'istante cambia la posa, non sposta la camera lungo la corsa. La leva
+     * era una terza, ed e' questa riga.
+     *
+     * E la sezione verticale si sposta PRIMA dell'avvicinamento invece che
+     * dopo: si vede la nave intera in sezione -- macchine sotto, persone sopra
+     * -- poi la camera scende sul meccanismo, poi il filmato riparte da li'.
+     * Il climax razionale prima di quello emotivo, come vuole la decisione, ma
+     * senza che l'uno rompa la cucitura dell'altro.
+     */
+    scena.impostaVerticale?.(dolce(fra(p, S.verticale[0], S.verticale[1])))
+
     scena.impostaTraversata?.(fra(p, S.traversata[0], S.traversata[1]))
     /**
      * ─── E L'INTERFACCIA SI RITIRA, o il finale non e' un finale
