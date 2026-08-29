@@ -15,7 +15,7 @@ import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
-import { avanza, FERMO_A } from '../stato.js'
+import { avanza, tempoSimulato, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
 /** `?senzaFilmato=1`: vedi `impostaTraversata` in fondo al file. */
@@ -1472,6 +1472,20 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
         for (let i = 0; i < n; i++) disegna(ultimaSim, undefined, { dt, senzaDisegno: true })
         return n
       },
+      /**
+       * ─── E QUANTO TEMPO HA VISSUTO LA NAVE, che e' l'altra meta'
+       *
+       * `passoDichiarato` serve a chi COMPRA il tempo. Questo serve a chi deve
+       * misurare un tempo che non ha comprato: fra due letture a cavallo di un
+       * clic passano dei fotogrammi veri, e quanti non si sa.
+       *
+       * Senza, l'unico denominatore per un salto e' il fotogramma -- 16 ms qui
+       * e 830 sul runner -- e «gradi per fotogramma» diventa una grandezza
+       * diversa su ogni macchina. Con, un salto temporale torna alla sua
+       * definizione vera: la nave si e' spostata piu' di quanto il tempo
+       * trascorso le consenta.
+       */
+      get tempoSimulato () { return tempoSimulato() },
       // le uniformi dell'acqua: senza, la prova del rosso sulla nebbia non si
       // puo' fare, e uno shader che non si puo' spegnere non e' verificato
       uniAcqua,

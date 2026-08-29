@@ -30,6 +30,40 @@
 import { spawn } from 'node:child_process'
 import { apriBrowser } from './browser.mjs'
 
+/**
+ * IL BUDGET, e perche' e' un numero di questo cancello e non del sito.
+ *
+ * ─── LA DOMANDA CHE MANCAVA
+ *
+ * Questo cancello chiedeva «la bolla compare?» e si fermava li'. Una revisione
+ * esterna ha fatto la domanda successiva, ed era quella che conta: **dopo
+ * quanto?** Con la soglia di prima -- 7,0 kn -- la risposta era 29,9 secondi di
+ * nave dopo lo spegnimento, e nel filmato di collaudo il visitatore era gia'
+ * arrivato al finale. Il cancello era VERDE su un suggerimento che nessuno
+ * poteva vedere.
+ *
+ * E' lo stesso difetto per cui questo file esiste, arrivato da un lato che non
+ * guardava. Non «una condizione che non si verifica mai», ma **una condizione
+ * che si verifica troppo tardi per la vita della pagina**. La differenza fra le
+ * due, per chi guarda il sito, e' nessuna.
+ *
+ * ─── PERCHE' STA QUI E NON IN `soglie.js`
+ *
+ * `IPOTESI_ANDATURA_GYRO_KN` dice a che andatura il suggerimento ha diritto di
+ * comparire; questo dice entro quanto deve succedere perche' qualcuno possa
+ * viverlo. Sono due decisioni diverse: se domani la soglia salisse a 11 kn il
+ * budget non cambierebbe, perche' non parla della nave -- parla di quanto una
+ * persona resta a guardare dopo aver spento qualcosa.
+ *
+ * Quindici secondi non sono una misura su persone e non fingono di esserlo:
+ * sono il tetto sotto cui la scelta corrente (10,0 kn, che arriva a 9,3 s) sta
+ * comoda e sopra cui quella precedente (7,0 kn, 29,9 s) non ci stava. Serve a
+ * far scattare un cancello se qualcuno rimette la soglia dov'era -- provato,
+ * rimettendo 7,0 questo file esce con 1 -- non a certificare che quindici sia
+ * il numero giusto.
+ */
+const BUDGET_S = 15
+
 const PORTA = process.env.PORTA_COLLAUDO || 5321
 const BASE = `http://localhost:${PORTA}/nautica/`
 
@@ -131,7 +165,11 @@ console.log(`  a propulsione accesa   velocita ${prima.velocita} kn   bolla: ${p
 await pg.click('#propulsione').catch(() => {})
 let dopo = null
 let simulati = 0
+let arrivata = null
 const PASSO_S = 2
+/* si va OLTRE il budget di proposito: fermarsi a quindici secondi direbbe solo
+   «non e' arrivata», e non e' la stessa diagnosi di «e' arrivata a ventinove».
+   La prima fa cercare una condizione rotta, la seconda un numero da abbassare. */
 for (let i = 0; i < 30; i++) {
   const fatti = await pg.evaluate((sec) => {
     const DT = 1 / 60
@@ -144,10 +182,13 @@ for (let i = 0; i < 30; i++) {
   simulati += PASSO_S
   await pg.waitForTimeout(600)
   dopo = await leggi()
-  if (dopo.bolla && /gyro/i.test(dopo.bolla)) break
+  if (dopo.bolla && /gyro/i.test(dopo.bolla)) { arrivata = simulati; break }
 }
 const atteso = simulati
 console.log(`  dopo ${atteso.toFixed(1)} s SIMULATI senza propulsione   velocita ${dopo.velocita} kn   bolla: ${dopo.bolla ?? 'nessuna'}`)
+if (arrivata !== null) {
+  console.log(`  il suggerimento e arrivato a ${arrivata.toFixed(0)} s simulati (budget ${BUDGET_S} s)`)
+}
 
 await browser.close()
 preview?.kill()
@@ -159,9 +200,13 @@ if (prima.velocita === null || dopo.velocita === null) {
 if (prima.bolla && /gyro/i.test(prima.bolla)) {
   rossi.push('la bolla del giroscopio c era gia a propulsione accesa: non e un nudge di stato')
 }
-if (!dopo.bolla || !/gyro/i.test(dopo.bolla)) {
+if (arrivata === null) {
   rossi.push(`la bolla del giroscopio non e mai comparsa in ${atteso.toFixed(0)} s simulati, ` +
              `con velocita scesa a ${dopo.velocita} kn`)
+} else if (arrivata > BUDGET_S) {
+  rossi.push(`la bolla del giroscopio arriva a ${arrivata.toFixed(0)} s simulati dopo lo ` +
+             `spegnimento, oltre il budget di ${BUDGET_S} s. E corretta nel codice e non ` +
+             'viene vissuta: chi guarda e gia andato avanti')
 }
 if (rossi.length) {
   console.log('')

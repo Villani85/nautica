@@ -387,6 +387,45 @@ const tocca = async (sel) => {
   await pagina.mouse.click(b.x, b.y)
 }
 
+/* --- 2 bis - E LA SCENA DEVE DISEGNARE, che adesso va chiesto a parte ---- */
+
+/**
+ * --- IL TESTIMONE DI VITALITA' HA CAMBIATO POSTO, e senza dirlo era sparito
+ *
+ * L'errore numero 2 in cima a questo file dice: **il testimone deve stare dalla
+ * parte della cosa misurata**. Era il conteggio dei fotogrammi, e per un motivo
+ * buono: un albero fermo e una scena non aggiornata si leggono identici.
+ *
+ * Col passo dichiarato la cosa misurata ha cambiato padrone -- l'albero adesso
+ * lo muove il cancello -- quindi quel conteggio non proteggeva piu' niente ed
+ * e' stato tolto, giustamente. Ma insieme a lui e' sparita **la sola cosa che
+ * diceva che il sito disegna**: la raggiungibilita' si prova con
+ * `elementFromPoint`, che vive di layout e non di pixel, e `passoDichiarato`
+ * salta apposta `render.render`. Questo cancello passerebbe intero davanti a
+ * uno schermo nero.
+ *
+ * Allora si chiede a parte, e si chiede la cosa giusta: **che il ciclo di
+ * disegno esista**. Non quanti fotogrammi fa -- quello sarebbe di nuovo un
+ * cancello sulla velocita' della macchina, ed e' l'errore da cui viene tutta
+ * questa riscrittura. Uno solo basta: uno vuol dire che il ciclo gira, zero
+ * vuol dire che e' morto.
+ */
+{
+  const primo = await pagina.evaluate(() => window.__nautica.fotogrammi)
+  await new Promise(r => setTimeout(r, 3000))
+  const dopo = await pagina.evaluate(() => window.__nautica.fotogrammi)
+  if (dopo <= primo) {
+    console.error('')
+    console.error('  IN TRE SECONDI LA SCENA NON HA DISEGNATO NEMMENO UN FOTOGRAMMA.')
+    console.error('  Il ciclo di disegno e fermo: sotto i comandi non c e niente da comandare,')
+    console.error('  e tutto cio che questo cancello misura piu sotto lo misurerebbe al buio.')
+    console.error('')
+    await finisci(1)
+  }
+  nota(`il ciclo di disegno e vivo (${dopo - primo} fotogrammi in 3 s di orologio; ` +
+       'e un si o no, non una misura di velocita)')
+}
+
 /* --- 3 - CAMPIONARE IL LAVORO DEL MECCANISMO ---------------------------- */
 
 /**
@@ -640,7 +679,10 @@ const VOLTE_MAX = 6
  * uno solo dei due, il cancello e' rosso per costruzione in un verso -- e
  * quale dei due verso dipende solo da quale si e' scelto.
  */
-const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
+/* 0,10 gradi per fotogramma a 60 Hz -- che era la forma storica di questo
+   numero -- sono 6 gradi al secondo. Stessa severita', unita' che non dipende
+   piu' da chi esegue il cancello: vedi la nota lunga sotto `attraverso`. */
+const SALTO_INVISIBILE = 6      // gradi al secondo di simulazione
 
 /**
  * --- IL METRO E' UN PERCENTILE, L'EVENTO E' UN MASSIMO
@@ -661,66 +703,74 @@ const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
  * finestra di TRE SECONDI -- non di N fotogrammi, perche' in CI si disegna a
  * 1,2 fotogrammi al secondo e un conteggio diventa un tempo diverso su ogni
  * macchina. E' lo stesso difetto che teneva rossa la CI su collaudo-ridotto.
+ *
+ * --- E POI IL PASSO DICHIARATO E' ARRIVATO SOLO FINO A META' DEL FILE
+ *
+ * La misura dell'escursione e' passata al passo dichiarato e la CI e' tornata
+ * verde; questa parte no, ed e' rimasta a inseguire fotogrammi. Passava, quindi
+ * non si vedeva -- che e' il modo peggiore in cui una cosa puo' restare rotta.
+ *
+ * Due difetti, tutti e due della stessa famiglia gia' nominata qui sopra:
+ *
+ * 1. **«Gradi per fotogramma» e' un'unita' della macchina.** Un fotogramma vale
+ *    16 ms qui e 830 sul runner. La stessa soglia di 0,10 significa quindi 6
+ *    gradi al secondo su una macchina e 0,12 sull'altra: il cancello cambiava
+ *    severita' di cinquanta volte a seconda di dove girava.
+ *
+ * 2. **A un fotogramma ogni 830 ms, «il fotogramma del clic» non e' un
+ *    evento.** E' un intervallo dentro cui la nave si muove parecchio per
+ *    ragioni sue, e il massimo che si legge non descrive il gesto: descrive
+ *    l'intervallo di campionamento.
+ *
+ * Un salto temporale ha una definizione che non ha bisogno di fotogrammi:
+ * **la nave si e' spostata piu' di quanto il tempo trascorso le consenta.**
+ * Quindi si leggono angolo e tempo simulato prima del clic, si clicca, si
+ * rileggono, e si divide. Ne esce una velocita' angolare in gradi al secondo,
+ * confrontabile con quella che la nave fa da sola.
+ *
+ * E il colpevole storico ci finisce dentro perfettamente: `sim.scalda()`
+ * integra 150 secondi SENZA far avanzare l'orologio di `stato.js`, quindi
+ * arriva al denominatore quasi zero. E' impossibile che passi inosservato.
  */
-const naturale = (n, durata = 3000) => pagina.evaluate(([n, durata]) => new Promise((res) => {
-  const t0 = performance.now()
-  let i = 0, prec = window.__nautica.stato.rollio
-  const passi = []
-  const passo = () => {
-    const v = window.__nautica.stato.rollio
-    passi.push(Math.abs(v - prec)); prec = v
-    if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
-    else {
-      passi.sort((a, b) => a - b)
-      res(passi.length ? passi[Math.floor(passi.length * 0.95)] : 0)
-    }
+const naturale = (secondi = 3) => pagina.evaluate(([dt, secondi]) => {
+  const S = window.__nautica.stato
+  const passi = Math.round(secondi / dt)
+  let prec = S.rollio
+  const v = []
+  for (let k = 0; k < passi; k++) {
+    window.__nautica.passoDichiarato(dt, 1)
+    v.push(Math.abs(S.rollio - prec) / dt)
+    prec = S.rollio
   }
-  requestAnimationFrame(passo)
-}), [n, durata])
+  v.sort((a, b) => a - b)
+  return v.length ? v[Math.floor(v.length * 0.95)] : 0
+}, [1 / 60, secondi])
 
 const attraverso = async (sel, etichetta) => {
-  // si campiona SENZA INTERRUZIONE mentre il clic arriva
-  /**
-   * --- ANCHE QUI LA FINESTRA E' UN TEMPO
-   *
-   * Erano 150 fotogrammi. Su questa macchina sono due secchi e mezzo; in CI,
-   * dove si disegna in software a 1,2 fotogrammi al secondo, sono **due
-   * minuti** -- per quattro prove, otto minuti su un solo cancello. E' la
-   * stessa ragione per cui `collaudo-ridotto` e `collaudo-cinematica` erano
-   * gia' stati curati: nessun cancello deve misurare la velocita' della
-   * macchina, nemmeno nel proprio tempo di esecuzione.
-   *
-   * Il salto che si cerca arriva subito dopo il clic, quindi tre secondi
-   * bastano e avanzano: quello che si perde e' solo la coda in cui non
-   * succede niente.
-   */
-  const natPrima = await naturale(600)
-  const promessa = pagina.evaluate(([n, durata]) => new Promise((res) => {
-    const t0 = performance.now()
-    let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
-    const passo = () => {
-      const v = window.__nautica.stato.rollio
-      const d = Math.abs(v - prec)
-      if (d > max) { max = d; quando = i }
-      prec = v
-      if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
-      else res({ max, quando })
-    }
-    requestAnimationFrame(passo)
-  }), [150, 3000])
-  await new Promise(r => setTimeout(r, 250))
+  const natPrima = await naturale(3)
+  const leggi = () => pagina.evaluate(() => ({
+    r: window.__nautica.stato.rollio,
+    t: window.__nautica.tempoSimulato
+  }))
+  const prima = await leggi()
   await tocca(sel)
-  const { max, quando } = await promessa
+  const dopo = await leggi()
+  /* fra le due letture passano dei fotogrammi VERI, e quanti non si sa: il
+     punto di tutto questo e' che non serve saperlo, basta leggere il tempo che
+     hanno prodotto */
+  const dt = Math.max(dopo.t - prima.t, 1e-6)
+  const vClic = Math.abs(dopo.r - prima.r) / dt
 
   // il metro si prende DOPO, quando la nave e' nello stato nuovo
   /* Il fondo si prende sui DUE lati del clic e si tiene il maggiore: preso da
    * un lato solo, il cancello e' rosso per costruzione nell'altro verso. */
-  const nat = Math.max(natPrima, await naturale(600))
-  const volte = max / Math.max(1e-6, nat)
-  nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
-       `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)
-  if (max > SALTO_INVISIBILE && volte > VOLTE_MAX) {
-    guai.push(`${etichetta}: il clic sposta la nave di ${max.toFixed(2)} gradi in un fotogramma, ` +
+  const nat = Math.max(natPrima, await naturale(3))
+  const volte = vClic / Math.max(1e-6, nat)
+  nota(`${etichetta}: al clic ${Math.abs(dopo.r - prima.r).toFixed(3)} gradi in ` +
+       `${dt.toFixed(3)} s di simulazione = ${vClic.toFixed(1)} gradi/s, ` +
+       `naturale ${nat.toFixed(1)} gradi/s — ${volte.toFixed(1)} volte`)
+  if (vClic > SALTO_INVISIBILE && volte > VOLTE_MAX) {
+    guai.push(`${etichetta}: il clic sposta la nave a ${vClic.toFixed(0)} gradi al secondo, ` +
               `${volte.toFixed(0)} volte quello che fa da sola. E un salto temporale, e questo sito ` +
               'se lo e vietato')
   }
@@ -728,9 +778,14 @@ const attraverso = async (sel, etichetta) => {
 
 await metti(true)
 await tocca(MARE_ALTO)
-await new Promise(r => setTimeout(r, 800))
+/* anche questi 0,8 s sono di NAVE e non d'orologio: servono a far assestare
+   il mare nuovo prima di misurare il gesto successivo, e un'attesa d'orologio
+   qui rimetterebbe la fase della nave in mano al runner -- che e' il difetto
+   che questo file ha gia' pagato due volte */
+const respira = () => pagina.evaluate(() => window.__nautica.passoDichiarato(1 / 60, 48))
+await respira()
 await attraverso(MARE_BASSO, 'clic da mare 5 a mare 2')
-await new Promise(r => setTimeout(r, 800))
+await respira()
 await attraverso(MARE_ALTO, 'clic da mare 2 a mare 5')
 
 /* --- REFERTO ------------------------------------------------------------ */
