@@ -165,8 +165,44 @@ export const materiali = {
    * scura. Fuori non cambia niente, perche' li' davanti c'e' la faccia esterna
    * vera e propria.
    */
+  /**
+   * ─── E IL COLORE E' QUELLO DELLO SCAFO, non il nero di prima
+   *
+   * Era 0x1b2224, cioe' quasi nero, con la ragione scritta qui sopra: «dentro
+   * una carena e' buio». Vera per la CAVITA' della sezione. Falsa per l'altra
+   * meta' del lavoro che fa questa stessa mesh: il pozzo di prua, che e' aperto
+   * al cielo e verniciato come tutto il resto.
+   *
+   * E si vedeva. Alla battuta della nave la prua aveva un cuneo nero che legge
+   * come un BUCO nello scafo -- segnalato da due revisioni, e mai attribuito a
+   * niente. Isolato spegnendo un pezzo alla volta e contando i pixel sotto 40
+   * nel riquadro del cuneo, su 19.550:
+   *
+   *     come spedito           13.055
+   *     nascondendo `interno`   1.215     <- e' lui
+   *     nascondendo `scafo`    13.209
+   *     nascondendo `coperta`  13.195
+   *
+   * Poi spazzolato il colore: 0x1b2224 -> 13.069, 0x2a3438 -> 13.105,
+   * 0x39464b -> 12.394, 0x48575e -> 12.394, 0x5a6a71 -> 9.655, e col colore
+   * dello scafo **173**. Non c'e' un valore intermedio che chiuda il buco: fino
+   * a 0x5a6a71 meta' del cuneo resta sotto 40, perche' quella superficie e'
+   * anche in ombra, e un'ombra su una vernice gia' scura va a zero.
+   *
+   * ─── COSA COSTA, detto invece che nascosto
+   *
+   * La cavita' della sezione diventa piu' chiara di prima. E' un errore piu'
+   * mite di un buco nella prua -- li' dentro ci sono comunque il piano di
+   * sezione e il meccanismo a dire che si sta guardando dentro -- ma e' un
+   * errore, e la cura vera non e' il colore: e' l'OCCLUSIONE. La stessa mesh
+   * fa un pozzo aperto al cielo e una cavita' chiusa, e nessun singolo albedo
+   * puo' essere giusto per tutte e due. Il buio di una carena deve venire da
+   * quanta luce ci arriva, non da quanto e' scura la vernice.
+   *
+   * Verificato guardando due battute, `mare` e `taglio`, prima e dopo.
+   */
   interno: new MeshStandardMaterial({
-    color: 0x1b2224, metalness: 0.05, roughness: 0.95, side: BackSide,
+    color: 0x707c82, metalness: 0.05, roughness: 0.95, side: BackSide,
     polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4
   }),
 
