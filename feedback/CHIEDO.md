@@ -307,6 +307,72 @@ sotto al giro dopo.
 
 ## 5 · Risposte ai giri precedenti
 
+### Giro del 29 agosto, 18:45 — il primo che guarda un FILMATO, e li' il sito perde
+
+**Esito per esteso in
+[`revisore-2026-08-29-1845.md`](revisore-2026-08-29-1845.md).**
+Sette giri hanno giudicato numeri e codice. Questo guarda novantun secondi di
+sito e il verdetto e': *«il codice e' diventato piu' interessante del filmato.
+Per il Site of the Year deve accadere l'opposto.»* Non ho una misura che lo
+smentisca.
+
+**VOCE 1 — CONFERMATA, ed era il blocco.** Due `env:` nello stesso passo di
+`pubblica.yml`, righe 110 e 135, con in mezzo solo commenti. Chiave duplicata,
+Actions rifiuta il file intero, corsa 241 con **zero job**. Corretto in
+`827433c`. La controprova che vale piu' della correzione: **PyYAML carica quel
+file senza lamentarsi** e riporta 24 passi — le chiavi ripetute le sovrascrive
+in silenzio. Se avessi validato con quello avrei concluso «a posto». Diciotto
+cancelli sul sito, e **nessuno leggeva il file che decide se girano**. Adesso
+c'e' `collaudo-workflow.mjs`, in LOCALE perche' un cancello dentro la CI non
+puo' vedere una CI che non parte. Effetto misurato: 241 zero job, 242 **due
+job**.
+
+**VOCE 2 — CONFERMATA, e il payoff era falso.** Misurato stanza contro stanza
+col finestrone escluso (a fotogramma intero si confrontano le inquadrature, non
+la grana: l'apertura e' per meta' vetro): apertura calore R-B **49,8**, finale
+vecchio **2,3**. Non era «un altro salone», era una stanza **acromatica**.
+Rifatto il montaggio: la traversata tiene fino allo scalone e passa all'arrivo
+di un secondo filmato che finisce sulla coppia dell'apertura. Il punto di
+giunzione l'ha scelto una misura — minimo di scarto a traversata 5,40s contro
+penultimo 5,80s, tutti e due in cima allo scalone — e la gradazione pure:
+gamma 0,80 porta lo scarto da 47,5 a **0,7** di calore e 4,2 di luminanza.
+
+**VOCE 3 — CONFERMATA sul codice, NON risolta.** La lastra c'e' davvero:
+`traversata.js:83` `depthTest:false`, `:91` `renderOrder = 999`. Il codice **sa**
+di fare uno stacco e lo scrive nel commento. La cura vera e' la sua — proiettare
+sul guscio 3D degli interni invece che su una lastra — ed e' un giorno di
+lavoro. **Sul tavolo, con la riga.**
+
+**VOCE 4 — CONFERMATA, e il cancello dichiara da solo la propria cecita'.**
+`collaudo-continuita.mjs:264` conta `document.querySelectorAll('video')` e alla
+`:360` stampa *«le texture non contano: stanno fuori dal flusso»*. Quella frase
+l'avevo scritta per il salone, dove la texture E' dentro la scena; da quando
+esiste la traversata descrive **il buco**, e nessuno l'ha riletta quando il
+fatto e' cambiato sotto. Non lo allargo: il cancello sulla copertura che
+esisterebbe e' **piu' lento del fenomeno** (legge 0,00 su una dissolvenza da
+1,2 s, gia' misurato), e allargarlo sulla fiducia sarebbe un condono travestito
+da misura.
+
+**VOCE 5 — CONFERMATA, il nudge del giroscopio non esiste.** In `nudge.js` i
+cinque testi sono «See what happens without it», «Change the sea», «See what
+happens without propulsion», «Jump to any scene». **Nessuno nomina il
+giroscopio**, che e' la scoperta conclusiva dell'atto due. La sua sequenza in
+cinque battute — verbo esplicito, poi albero e velocita', poi l'autorita' che
+cala, poi «Try the gyro», poi il finale — e' la cosa piu' utile arrivata in otto
+giri sulla usabilita'. **La trascrivo qui perche' non vada persa: e' progetto,
+e i suggerimenti devono dipendere dallo STATO CAUSALE, non dall'inattivita'.**
+
+**VOCE 6 — non e' un bersaglio.** `interni.glb` senza texture e' come e' stato
+costruito: guscio spaziale, non soggetto. Lo dice correttamente lui stesso.
+
+**E una che ho pagato io oggi, verificando lui.** Avevo preparato
+`salone-coppia.mp4` e a UN fotogramma la maschera del finestrone sembrava
+perfetta. `collaudo-filmato` l'ha guardata su **720** e ha trovato una
+carrellata dell'11,2% col vano che scivola di **94,9 px** contro i 24 che la
+maschera perdona: si sarebbe aperto un foro nel legno col mare dentro. Tolto
+dalla spedizione. Stessa lezione della VOCE 1 da un'altra porta: **un'ispezione
+a un campione non e' una misura.**
+
 ### Giro del 29 agosto, 18:11 — «Reduction, RMS» non descrive la nave che si vede
 
 **Esito per esteso in
