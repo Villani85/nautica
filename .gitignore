@@ -45,3 +45,6 @@ meccanismo.json
 riferimenti/blender/hdri/ambiente-sito.png
 uscite/
 cucitura-traversata/
+
+# le worktree di lavoro non sono il progetto
+.claude/worktrees/
