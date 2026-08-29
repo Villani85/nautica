@@ -1404,12 +1404,38 @@ async function misuraCopertura (browser) {
     }, [iS, iQ])
 
     /**
-     * SI ASPETTA IL TRIPLO DELLA QUIETE DICHIARATA. Non e' una verifica del
-     * numero -- quello e' un'ipotesi -- e' un margine: se l'annotazione non
-     * c'e' dopo tre volte il tempo che il sito dichiara di aspettare, non e'
-     * lenta, non c'e'.
+     * SI ASPETTA L'ANNOTAZIONE, NON UN TEMPO. E la correzione di un
+     * ragionamento mio, sbagliato in un punto preciso.
+     *
+     * Qui c'era `setTimeout(IPOTESI_QUIETE_MS * 3)` col commento: «se
+     * l'annotazione non c'e' dopo tre volte il tempo che il sito dichiara di
+     * aspettare, non e' lenta, non c'e'». Il margine sembra generoso e non lo
+     * e', perche' presuppone una cosa che non ho verificato: che il timer da
+     * 400 ms del sito possa GIRARE dentro quei 1200 ms.
+     *
+     * Un `setTimeout` e' indipendente dalla macchina per quando viene
+     * PROGRAMMATO, non per quando puo' essere eseguito: il suo callback aspetta
+     * che il thread principale si liberi. Sul runner della CI un fotogramma
+     * occupa il thread per oltre un secondo, quindi 400 ms di quiete letti a
+     * 1200 ms sono una gara che il timer perde. Misurato: in CI falliscono
+     * tutti e tre i sistemi, in locale senza GPU uno su tre, in locale con la
+     * GPU nessuno -- e una sonda diretta sul telefono legge l'annotazione
+     * giusta, «Propulsion. Shaft, reduction, propeller...». Il sito la promessa
+     * la mantiene; era questo controllo a leggerla troppo presto.
+     *
+     * Adesso si aspetta il FATTO, fino a venti volte la quiete dichiarata, e si
+     * riporta quanto ci ha messo. Il criterio non si e' allargato -- resta
+     * «l'annotazione compare e nomina il sistema» -- e' cambiata la pazienza,
+     * che e' l'unica cosa che una macchina lenta ha il diritto di cambiare.
      */
-    await new Promise(r => setTimeout(r, IPOTESI_QUIETE_MS * 3))
+    let attesaNota = 0
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, IPOTESI_QUIETE_MS))
+      attesaNota += IPOTESI_QUIETE_MS
+      const testo = await pT.evaluate(() =>
+        document.querySelector('#esplorazione .espl__nota')?.textContent.trim() || '')
+      if (testo.includes(s.nome)) break
+    }
     const v = await pT.evaluate(([sel]) => {
       const c = document.querySelector('#esplorazione')
       const cm = c.querySelector('.espl__comando')
@@ -1437,8 +1463,9 @@ async function misuraCopertura (browser) {
       continue
     }
     if (!v.nota.includes(s.nome)) {
-      R.guai.push(`copertura: fermi sulla cella di "${s.id}" per ${IPOTESI_QUIETE_MS * 3} ms, ` +
-                  `l annotazione non lo nomina (dice: "${v.nota.slice(0, 60)}"). ` +
+      R.guai.push(`copertura: fermi sulla cella di "${s.id}" per ${attesaNota} ms ` +
+                  `(venti volte la quiete dichiarata), l annotazione non lo nomina ` +
+                  `(dice: "${v.nota.slice(0, 60)}"). ` +
                   'Da desktop l annotazione compare per quiete: qui non compare, e la parita e rotta')
     }
     if (s.comando) {
