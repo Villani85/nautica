@@ -4,7 +4,7 @@ import {
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
-import { POPPA_Z } from '../scafo/ordinate.js'
+import { POPPA_Z, PRUA_Z } from '../scafo/ordinate.js'
 import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
@@ -822,12 +822,58 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * manopola e non una regia. Se un giorno qualcuno la volesse comandare col
    * dito invece che con lo scorrimento, non c'e' niente da riscrivere.
    */
+  /**
+   * ─── LA LAMA DIVENTA UNO STRUMENTO — `docs/13` §2 e §7 punto 1
+   *
+   * Finche' il taglio e' una conseguenza dello scorrimento, il sito si guarda.
+   * Da qui in poi la posizione la decide la mano, e il padrone cambia **una
+   * volta sola, in un punto dichiarato**: e' la decadenza legittima del
+   * contratto D29, scritta come decisione invece che subita come deriva.
+   *
+   * `esplorando` e' quel punto. Finche' e' acceso, `impostaSpaccato` --
+   * l'unica strada per cui lo scorrimento comanda il taglio -- smette di
+   * scrivere. Non si disattiva la regia: si toglie a UNA manopola il suo
+   * padrone, e tutto il resto (rollio, mare, letture, filmato) continua a
+   * girare come prima.
+   *
+   * ─── LA CONVERSIONE, E PERCHE' NON E' UNA TARATURA
+   *
+   * `atto-due.js` tiene `x` da 0 (prua) a 1 (poppa) e dichiara di non essere
+   * una coordinata di scena. Qui diventa una, e la formula non ha numeri
+   * scelti: `PRUA_Z` e `POPPA_Z` sono letti da `ordinate.js` PER NOME, come
+   * vuole il §6 di quel documento -- i nomi sopravvivono alle riscritture, i
+   * numeri di riga e le costanti ricopiate no.
+   *
+   * La quota fa lo stesso fra il ponte del salone (1,453, la posa da cui il
+   * sito si apre) e la chiglia (-0,94, MISURATA sulla scena viva con
+   * `dove-stanno.mjs`, non dedotta).
+   */
+  let esplorando = false
+  const PONTE_Y = 1.453
+  const CHIGLIA_Y = -0.94
+  let bersaglioZ = null
+  let bersaglioY = null
+
+  function vaiACella (x, y) {
+    esplorando = true
+    bersaglioZ = PRUA_Z + x * (POPPA_Z - PRUA_Z)
+    bersaglioY = PONTE_Y + y * (CHIGLIA_Y - PONTE_Y)
+  }
+
+  function esciDallEsplorazione () {
+    esplorando = false
+    bersaglioZ = null
+    bersaglioY = null
+  }
+
   function impostaVerticale (p) {
     const q = MathUtils.clamp(p, 0, 1)
     pianoVerticale.constant = MathUtils.lerp(X_INTERO, X_MEZZO, q)
   }
 
   function impostaSpaccato (p) {
+    /* mentre si esplora il taglio ha un altro padrone: vedi `vaiACella` */
+    if (esplorando) return
     spaccato = MathUtils.clamp(p, 0, 1)
     pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
     spostaTappo(pianoSezione.constant)
@@ -935,6 +981,18 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * peso che cresce -- quindi le due non litigano, e se qualcuno risale con
      * la rotella il rientro si disfa da solo invece di incastrarsi.
      */
+    /**
+     * IL TAGLIO SEGUE LA MANO, con un inseguimento del primo ordine invece che
+     * di colpo: uno scatto porta il piano a una stazione nuova, e senza
+     * ammorbidire si vedrebbe teletrasportare. 8 al secondo e' una costante di
+     * tempo di 125 ms -- sotto la soglia in cui un movimento smette di leggersi
+     * come continuo, sopra quella in cui sembra un salto.
+     */
+    if (esplorando && bersaglioZ !== null) {
+      const k = Math.min(1, dt * 8)
+      pianoSezione.constant = MathUtils.lerp(pianoSezione.constant, bersaglioZ, k)
+    }
+
     const rientro = traversata.ritorno(dt)
     if (rientro > 0) {
       /**
@@ -1440,6 +1498,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   return {
     render, camera, ridimensiona, ruota, disegna,
     impostaSpaccato, impostaVerticale, impostaEmersione, impostaAvvicinamento, impostaUscita,
+    vaiACella, esciDallEsplorazione,
     /**
      * `q` da 0 a 1: 0 comanda il 3D, 1 comanda la traversata. La regia la
      * chiama nell'ultima battuta e nessun altro: non e' uno stato del mondo,

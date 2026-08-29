@@ -64,11 +64,22 @@ for (const q of QUOTE) {
       video: v ? { pronto: v.readyState, istante: Number(v.currentTime.toFixed(2)), fermo: v.paused } : null,
       battuta: palco?.dataset.battuta ?? '?',
       spaccato: tela?.dataset.spaccato ?? '?',
-      traversata: palco?.dataset.traversata ?? '?'
+      traversata: palco?.dataset.traversata ?? '?',
+      /* la posa della camera: serve a confrontare l'apertura col rientro senza
+         fidarsi dell'occhio -- due inquadrature simili possono venire da due
+         pose molto diverse, e il contrario e' peggio */
+      camera: (() => {
+        const c = window.__nautica?.camera
+        if (!c) return null
+        return { p: [+c.position.x.toFixed(3), +c.position.y.toFixed(3), +c.position.z.toFixed(3)],
+                 r: [+c.rotation.x.toFixed(3), +c.rotation.y.toFixed(3), +c.rotation.z.toFixed(3)],
+                 fov: +c.fov.toFixed(2) }
+      })()
     }
   })
   console.log(`  ${nome}  battuta ${stato.battuta}  spaccato ${stato.spaccato}  traversata ${stato.traversata}` +
     (stato.video ? `  video a ${stato.video.istante}s` : ''))
+  if (stato.camera) console.log(`      camera pos ${stato.camera.p.join(' ')}  rot ${stato.camera.r.join(' ')}  fov ${stato.camera.fov}`)
 }
 
 await browser.close()
