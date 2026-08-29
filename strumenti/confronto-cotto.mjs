@@ -329,6 +329,21 @@ if (process.env.COTTA) {
   for (let y = 0; y < H; y++) col.push(A[y * L + 2])
   col.sort((a, b) => a - b)
   const fondoA = col[Math.floor(col.length / 2)]
+  /**
+   * ─── E SI CONTANO ANCHE LE DUE SAGOME SEPARATE
+   *
+   * Il numero che conta e' quello sull'INTERSEZIONE. Ma se le due sagome hanno
+   * dimensioni molto diverse, l'intersezione e' piccola e sta misurando un
+   * ritaglio, non la nave -- e chi legge deve poterlo vedere senza fidarsi.
+   *
+   * Ci sono cascato una volta, misurando i livelli assoluti per fascia con due
+   * criteri di sagoma diversi: dal lato Blender il criterio prendeva anche il
+   * piano d'acqua, e la murata risultava 117.969 pixel contro i 43.729 del
+   * sito. Il confronto diceva 52 contro 135 livelli, cioe' un divario enorme,
+   * e non parlava della nave: parlava del mare che era finito dentro il conto
+   * da una parte sola. Due sagome scritte con due regole non si confrontano.
+   */
+  let soloA = 0; let soloB = 0
   let n = 0; let somma = 0; let sommaAss = 0
   /**
    * ─── E SI STAMPA ANCHE LA MEDIANA, che qui non e' un dettaglio
@@ -347,8 +362,11 @@ if (process.env.COTTA) {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < L; x++) {
       const a = A[y * L + x]; const b = B[y * L + x]
-      if (b < 12) continue                       // fondo nero del sito
-      if (Math.abs(a - fondoA) < 6) continue     // fondo dell ambiente nella cotta
+      const inA = Math.abs(a - fondoA) >= 6      // c e la nave nella cotta
+      const inB = b >= 12                        // c e la nave nel sito (fondo nero)
+      if (inA) soloA++
+      if (inB) soloB++
+      if (!inA || !inB) continue
       const d = b - a
       n++; somma += d; sommaAss += Math.abs(d); tutti.push(d)
       const f = fasce[Math.min(4, Math.floor(y / (H / 5)))]
@@ -386,7 +404,29 @@ if (process.env.COTTA) {
   if (!n) {
     console.log('  nessun pixel in comune: le due sagome non si sovrappongono')
   } else {
-    console.log(`  pixel in comune       ${n}`)
+    console.log(`  pixel della cotta     ${soloA}`)
+    console.log(`  pixel del sito        ${soloB}`)
+    const piccola = Math.min(soloA, soloB)
+    console.log(`  pixel in comune       ${n}   (${(100 * n / piccola).toFixed(0)}% della sagoma piu STRETTA)`)
+    /**
+     * IL CONFRONTO SI FA COL RAPPORTO SULLA SAGOMA PIU' STRETTA, non sulla piu'
+     * larga -- e la prima versione di questa riga usava la piu' larga e gridava
+     * al lupo. Le due regole non sono simmetriche per costruzione: nel sito il
+     * fondo e' nero pieno e la sagoma esce tagliata sul soggetto; nella cotta
+     * il fondo e' l'ambiente e la stessa regola prende anche il piano d'acqua e
+     * i riflessi. Misurato: 510.037 pixel contro 79.117.
+     *
+     * Quello che rende onesto il confronto non e' che le due sagome siano
+     * uguali: e' che la piu' stretta stia dentro la piu' larga. Se ci sta, i
+     * pixel comuni SONO il soggetto. Qui ci sta al 94%.
+     */
+    if (n < 0.9 * piccola) {
+      console.log('  ATTENZIONE: la sagoma piu stretta NON sta dentro l altra. I pixel')
+      console.log('  comuni non sono il soggetto, sono un ritaglio: il numero non vale.')
+    } else if (Math.max(soloA, soloB) > 2 * piccola) {
+      console.log('  (le due regole di sagoma non sono simmetriche: quella larga prende')
+      console.log('   anche sfondo. Il confronto gira sulla piu stretta, ed e corretto.)')
+    }
     console.log(`  scarto medio          ${(somma / n).toFixed(2)} livelli   (sito meno cotta: positivo = il sito e piu chiaro)`)
     console.log(`  scarto medio assoluto ${(sommaAss / n).toFixed(2)} livelli`)
     const mediana = (a) => { const c = a.slice().sort((p, q) => p - q); return c[Math.floor(c.length / 2)] }
