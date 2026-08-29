@@ -1,6 +1,6 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  PointLight, Clock, MathUtils, SRGBColorSpace, ACESFilmicToneMapping, Plane, Vector3,
+  Clock, MathUtils, SRGBColorSpace, ACESFilmicToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
@@ -107,18 +107,37 @@ const LUCI = {
   sole: 3.6,
   controluce: 1.4,
   /**
-   * DIFETTO TROVATO GUARDANDO, E ISOLATO CON UNA PROVA.
+   * ─── LA QUARTA LUCE NON C'E' PIU', ed e' stata tolta perche' non arrivava
    *
-   * Questa luce serviva a dare fondo all'acqua profonda. Con lo scafo
-   * sezionato pero' si e' trovata DENTRO la carena, e a intensita' 12 con
-   * portata 22 ne illuminava l'interno di verde: una cavita' accesa dove
-   * doveva esserci buio.
+   * C'era una `fondale`, puntiforme verde-acqua a y=-9,5, intensita' 3,2,
+   * portata 14, decadimento 1,6. Doveva «dare fondo all'acqua profonda».
    *
-   * Isolata togliendo l'acqua (`?senzaAcqua=1`): il verde restava, quindi non
-   * era il mare. Ora e' piu' debole e piu' in basso, e la portata non arriva
-   * piu' all'interno dello scafo.
+   * Prima era 12 con portata 22 e illuminava di verde l'INTERNO della carena
+   * sezionata -- una cavita' accesa dove doveva esserci buio. Abbassata e
+   * spostata in basso, quel difetto e' sparito. Ed e' sparita anche la luce:
+   * la stessa correzione l'ha portata sotto la soglia di visibilita' OVUNQUE,
+   * compreso il fondo dell'acqua che era il suo mestiere.
+   *
+   * Segnalato da una revisione esterna e verificato qui, con la scena
+   * inchiodata (`?fermo=12`, o il mare in movimento copre tutto con un rumore
+   * di 155 livelli e la prova non si puo' fare):
+   *
+   *     spegnendola      acqua sotto la nave   0,000 di media, massimo 0
+   *                      acqua attorno         -0,004, massimo 1
+   *                      tutto il fotogramma   -0,001, massimo 2
+   *     a 200 volte      tutto il fotogramma   +0,155, massimo 61
+   *
+   * A duecento volte la sua intensita' si vede appena. Al valore vero non
+   * esiste.
+   *
+   * E costava piu' del niente che dava: la diagnosi sull'impianto, misurata
+   * spegnendo TUTTE le luci insieme, contava quattro sorgenti mentre erano
+   * tre. Una costante che il render ignora non e' innocua: falsa il conto di
+   * chi viene dopo.
+   *
+   * Il fondo dell'acqua ora lo fa l'estinzione di Beer-Lambert col sigma
+   * derivato dal disco di Secchi, che e' fisica invece di una lampada.
    */
-  fondale: 3.2
 }
 
 /**
@@ -250,6 +269,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const EMISFERO = Number.isFinite(_l[0]) ? _l[0] : LUCI.emisfero
   const SOLE = Number.isFinite(_l[1]) ? _l[1] : LUCI.sole
   const SOLE_Y = Number.isFinite(_l[2]) ? _l[2] : 7
+  /* anche il controluce, o l'impianto si poteva provare solo a meta' */
+  const CONTROLUCE = Number.isFinite(_l[3]) ? _l[3] : LUCI.controluce
 
   scena.add(new HemisphereLight(0xe9e5dd, 0x071a1d, EMISFERO))
   const sole = new DirectionalLight(0xfff6e4, SOLE)
@@ -264,7 +285,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * cervello non riceve l'unico segnale che dice «questi volumi stanno uno
    * davanti all'altro». Nessun materiale e nessun riflesso lo sostituisce.
    *
-   * Una sola luce le proietta — il sole. Il controluce e la luce di fondale
+   * Una sola luce le proietta — il sole. Il controluce
    * no: due sorgenti che proiettano danno due ombre, e due ombre su una barca
    * ferma al sole sono il primo indizio che la scena e' finta.
    *
@@ -322,10 +343,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   c.near = 0.5; c.far = 34
   c.updateProjectionMatrix()
   sole.shadow.normalBias = 0.03
-  const controluce = new DirectionalLight(0x9fd8cc, LUCI.controluce)
+  const controluce = new DirectionalLight(0x9fd8cc, CONTROLUCE)
   controluce.position.set(-6, 2.5, -4); scena.add(controluce)
-  const fondale = new PointLight(0x3fbfa8, LUCI.fondale, 14, 1.6)
-  fondale.position.set(0, -9.5, 2.5); scena.add(fondale)
 
   const { nave, agganci, guscio, tappo, spostaTappo, tuga, allestimento } = costruisciNave(base)
 
