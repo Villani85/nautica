@@ -151,7 +151,8 @@ export function avviaDimostrazione () {
   })
 
   comandi = collegaComandi({
-    contenitore: $('#mare'), toggle: $('#stab'), propulsione: $('#propulsione'), sim,
+    contenitore: $('#mare'), toggle: $('#stab'), propulsione: $('#propulsione'),
+    giroscopio: $('#giroscopio'), sim,
     // La regia va rivalutata anche quando cambia lo STATO, non solo la
     // posizione: accendendo il sistema da fermi il testo restava indietro.
     // Avvisa anche gli altri capitoli: il salone dorme mentre sei qui, e al

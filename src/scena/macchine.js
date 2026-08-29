@@ -93,6 +93,7 @@ export function creaMacchine (base, { applicaMateria } = {}) {
   let prop = null
   let gyro = null
   let fase = 0
+  let faseGyro = 0
 
   const caricate = Promise.all([
     carica(base, 'propulsione.glb', RICHIESTI_PROP),
@@ -122,6 +123,18 @@ export function creaMacchine (base, { applicaMateria } = {}) {
     fase += (S.giriPropulsione || 0) * GIRI_AL_SECONDO * dt * Math.PI * 2
     prop.nodi.prop_albero.rotation.z = fase
     prop.nodi.prop_elica.rotation.z = fase
+    /**
+     * Il rotore gira PIU' VELOCE dell'elica, ed e' l'unico modo per dire senza
+     * parole che e' un'altra macchina: un'elica fa qualche giro al secondo, un
+     * rotore da stabilizzatore ne fa migliaia al minuto. Qui e' 2,4 volte --
+     * abbastanza da leggersi come «piu' veloce», poco da entrare
+     * nell'aliasing che a 60 Hz farebbe sembrare l'elica ferma (la ragione sta
+     * sopra GIRI_AL_SECONDO).
+     */
+    if (gyro) {
+      faseGyro += (S.giriGiroscopio || 0) * GIRI_AL_SECONDO * 2.4 * dt * Math.PI * 2
+      gyro.nodi.gyro_rotore.rotation.y = faseGyro
+    }
   }
 
   return { gruppo, gira, caricate, get pronto () { return !!prop } }

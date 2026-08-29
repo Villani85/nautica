@@ -68,6 +68,34 @@ export const V_MAX = 20
  * abbrivio, l'autorita' idrodinamica delle pinne cala da sola tramite
  * `autorita(v)`. `propulsione` non compare mai nell'equazione del rollio.
  */
+/**
+ * ─── IL GIROSCOPIO CHIUDE IL RAGIONAMENTO invece di aggiungere un pezzo
+ *
+ * Le pinne producono portanza SOLO in moto e la loro autorita' va col quadrato
+ * della velocita': e' la riga da cui discende tutto l'atto due. Un giroscopio
+ * no -- la sua coppia viene dalla precessione di una massa che gira, e quella
+ * massa gira anche a nave ferma.
+ *
+ * Non e' «migliore»: e' un ALTRO REGIME. Pinne efficienti in navigazione,
+ * giroscopio utile a bassa velocita' o all'ancora. E' il motivo per cui una
+ * barca puo' avere tutti e due, e il sito lo fa PROVARE invece di dirlo.
+ *
+ * IL MODELLO, e cosa non pretende di essere: a valle, sul rollio, un
+ * giroscopio si comporta come smorzamento in piu'. Qui e' `-C_GYRO * giri^2 *
+ * omega`, col quadrato che viene dal momento angolare che cresce coi giri e
+ * dalla coppia che cresce con esso. Non sono newton-metro: senza il CAD di un
+ * giroscopio vero sarebbero unita' inventate. Cio' che e' onesto e sufficiente
+ * e' il COMPORTAMENTO -- una coppia che non dipende dall'abbrivio.
+ *
+ * TAU_GYRO e' 20 secondi e NON e' realistico: un rotore vero ci mette
+ * mezz'ora. Venti secondi sono il tempo in cui l'attesa si SENTE -- i giri
+ * salgono, il rollio scende poco a poco -- senza che chi guarda se ne vada.
+ * Scelta di messa in scena, scritta qui perche' nessuno la scambi per una
+ * misura.
+ */
+const C_GYRO = 0.62
+const TAU_GYRO = 20.0
+
 const TAU_GIRI = 2.6             // s: inerzia di albero, riduttore e motore
 const ACCEL_RIF = 0.30           // kn/s: scala autorale, non una misura di cantiere
 
@@ -245,11 +273,14 @@ function creaCorsa () {
    * l'angolo con la velocita' nuova. E' simplettico, e regge venti minuti
    * simulati da 20 a 120 Hz senza divergere — verificato in collaudo-rollio.
    */
-  function passo (dt, t, mare, aut, momento) {
+  function passo (dt, t, mare, aut, momento, gyro = 0) {
     c.alfaPrec = c.alfa
     c.alfa = aut > 0 ? MathUtils.clamp(-K * c.omega, -A_MAX, A_MAX) : 0
     const correzione = aut * portanza(c.alfa)
-    const acc = momento(t, mare) + correzione - 2 * ZETA * W * c.omega - W * W * c.theta
+    /* Il giroscopio somma con le pinne invece di sostituirle: accesi tutti e
+       due la nave riceve tutte e due le coppie, come in mare. Ed e' anche cio'
+       che rende leggibile il confronto -- si accendono separatamente. */
+    const acc = momento(t, mare) + correzione - gyro * c.omega - 2 * ZETA * W * c.omega - W * W * c.theta
     c.omega += acc * dt
     c.theta += c.omega * dt
     registra(Math.abs(c.theta), dt)
@@ -279,6 +310,10 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
     giriPropulsione: 1,
     spinta: 1,
     resistenza: 1,
+    /** Il giroscopio parte SPENTO: e' la scoperta, non il punto di partenza. */
+    giroscopio: false,
+    giriGiroscopio: 0,
+    autoritaGiroscopio: 0,
     velocita: V_RIF,
     autoritaPinna: 0,
     rollio: 0,
@@ -322,6 +357,19 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
     S.autoritaPinna = aut
 
     /**
+     * IL ROTORE SALE E SCENDE CON LA SUA INERZIA, e l'inerzia e' il punto: un
+     * giroscopio che si accende di colpo sarebbe un interruttore, non una
+     * macchina. Salendo, il rollio cala poco a poco -- ed e' quel «poco a poco»
+     * a dire che dentro c'e' una massa che deve prendere velocita'.
+     *
+     * `autoritaGiroscopio` NON dipende da `S.velocita`, e non deve: e' la
+     * differenza che l'atto due esiste per mostrare.
+     */
+    const volutoGyro = S.giroscopio ? 1 : 0
+    S.giriGiroscopio += (volutoGyro - S.giriGiroscopio) * Math.min(1, dt / TAU_GYRO)
+    S.autoritaGiroscopio = C_GYRO * S.giriGiroscopio * S.giriGiroscopio
+
+    /**
      * --- IL MOVIMENTO RIDOTTO RIDUCE, NON SPEGNE
      *
      * Qui c era un ramo che congelava tutto: niente oscillazione, la nave
@@ -348,8 +396,11 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
     riscala(dt)
     t += dt
     const onda = S.ridotto ? (tt, m) => momento(tt, m) * RIDOTTO : momento
-    viva.passo(dt, t, S.mare, aut, onda)
-    nuda.passo(dt, t, S.mare, 0, onda)
+    /* La corsa NUDA non riceve il giroscopio, come non riceve le pinne: e' il
+       metro, cioe' la stessa nave senza NIENTE. Se lo ricevesse, la riduzione
+       misurata smetterebbe di misurare quello che dichiara. */
+    viva.passo(dt, t, S.mare, aut, onda, S.autoritaGiroscopio)
+    nuda.passo(dt, t, S.mare, 0, onda, 0)
 
     S.rollio = MathUtils.radToDeg(viva.c.theta)
     S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)

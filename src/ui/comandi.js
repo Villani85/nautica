@@ -10,7 +10,7 @@ import { AMPIEZZA_MARE } from '../scena/simulazione.js'
  * colorata che si vede resta sottile: il bersaglio e' piu' grande del segno,
  * che e' esattamente cio' che WCAG intende.
  */
-export function collegaComandi ({ contenitore, toggle, propulsione, sim, alCambio }) {
+export function collegaComandi ({ contenitore, toggle, propulsione, giroscopio, sim, alCambio }) {
   /**
    * QUALUNQUE comando toccato annulla la dimostrazione automatica, non solo
    * l'interruttore. Chi sta gia' provando i comandi non va interrotto -- e
@@ -101,6 +101,26 @@ export function collegaComandi ({ contenitore, toggle, propulsione, sim, alCambi
       toccato = true
       sim.cambiaPropulsione(!sim.S.propulsione)
       propulsione.setAttribute('aria-pressed', String(sim.S.propulsione))
+      alCambio?.()
+    })
+  }
+
+  /**
+   * IL GIROSCOPIO, e non azzera niente accendendosi.
+   *
+   * Gli altri due comandi cambiano lo stato e la scena risponde nel fotogramma
+   * dopo. Questo no: il rotore ci mette venti secondi a salire, e in quei venti
+   * secondi il rollio scende POCO A POCO. E' l'unico comando del sito che non
+   * ha una risposta immediata, ed e' voluto -- dentro c'e' una massa che deve
+   * prendere velocita', e un giroscopio che si accende come una lampadina
+   * sarebbe un interruttore, non una macchina.
+   */
+  if (giroscopio) {
+    giroscopio.setAttribute('aria-pressed', String(sim.S.giroscopio))
+    giroscopio.addEventListener('click', () => {
+      toccato = true
+      sim.S.giroscopio = !sim.S.giroscopio
+      giroscopio.setAttribute('aria-pressed', String(sim.S.giroscopio))
       alCambio?.()
     })
   }

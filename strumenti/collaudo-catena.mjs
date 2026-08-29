@@ -107,6 +107,69 @@ prova(sim.S.velocita > 11.4 && sim.S.velocita <= V_RIF,
 prova(sim.S.autoritaPinna > prima.autoritaPinna * 0.90,
   'recuperando andatura torna anche l autorita delle pinne')
 
+/* --- IL CONTROESEMPIO: il giroscopio lavora dove le pinne non possono ------ */
+/**
+ * E' la voce per cui esiste l'atto due, e va verificata come PROPRIETA' e non
+ * come numero: a nave quasi ferma l'autorita' delle pinne e' crollata col
+ * quadrato della velocita', e quella del giroscopio NO. Se un giorno qualcuno
+ * legasse il giroscopio alla velocita' -- per errore o per far tornare un
+ * numero -- questa riga diventa rossa, ed e' l'unico modo in cui puo'.
+ */
+console.log('')
+console.log('il controesempio')
+const g = creaSimulazione({ seme: 31, velocitaDinamica: true })
+g.S.mare = 5
+g.S.stab = true
+g.scalda()
+const autPiena = autorita(g.S.velocita)
+g.cambiaPropulsione(false)
+
+const rollioSenzaGyro = []
+avanza(g, 60, 60, (S, t) => { if (t >= 40) rollioSenzaGyro.push(S.rollio) })
+const vLenta = g.S.velocita
+/**
+ * LE DUE SOGLIE VENGONO DALLA FORMA CHIUSA, non dall'occhio -- e la prima
+ * stesura le aveva indovinate, uscendo rossa su un sito sano.
+ *
+ * In caduta libera la resistenza quadratica da' 1/V lineare nel tempo:
+ *
+ *     1/V = 1/12 + ACCEL_RIF/V_RIF^2 * t   ->   a 60 s, V = 4,8 kn
+ *
+ * e l'autorita' segue il quadrato: (4,8/12)^2 = 16%. Avevo scritto «< 4 kn» e
+ * «< 12%», cioe' numeri piu' stretti di quelli che la fisica produce: il
+ * cancello bocciava il modello per non essere piu' veloce di se stesso.
+ *
+ * I margini qui sotto stanno SOPRA il valore atteso e sotto quello di
+ * servizio: bocciano una decelerazione che non avviene, non una che avviene
+ * come prevista.
+ */
+prova(vLenta < 5.5, `la nave ha perso l'abbrivio (${vLenta.toFixed(2)} kn, atteso ~4,8)`)
+prova(g.S.autoritaPinna < autPiena * 0.20,
+  `li' le pinne hanno perso quasi tutto (${(100 * g.S.autoritaPinna / autPiena).toFixed(1)}% di quella di servizio, atteso ~16%)`)
+prova(g.S.autoritaGiroscopio === 0, 'e il giroscopio e spento, quindi non contribuisce')
+
+g.S.giroscopio = true
+/* venti secondi non bastano: il rotore ha una costante di tempo di venti, e a
+   una costante di tempo e' al 63%. Se ne aspettano cento, cioe' cinque. */
+const rollioConGyro = []
+avanza(g, 130, 60, (S, t) => { if (t >= 100) rollioConGyro.push(S.rollio) })
+
+prova(g.S.giriGiroscopio > 0.99, `il rotore e a regime (${g.S.giriGiroscopio.toFixed(3)})`)
+prova(g.S.autoritaGiroscopio > 0.5,
+  `e produce autorita a ${g.S.velocita.toFixed(2)} kn, dove le pinne non possono`)
+prova(rms(rollioConGyro) < rms(rollioSenzaGyro) * 0.6,
+  `il rollio scende da ${rms(rollioSenzaGyro).toFixed(2)} a ${rms(rollioConGyro).toFixed(2)} gradi RMS a nave quasi ferma`)
+
+/* E la prova che non e' la velocita' a farlo: due corse a velocita' IMPOSTA
+   diverse devono dare la stessa autorita' del giroscopio. Se il giroscopio
+   dipendesse da V -- la scorciatoia -- questa riga cadrebbe. */
+const lento = creaSimulazione({ seme: 5 })
+const veloce = creaSimulazione({ seme: 5 })
+lento.S.velocita = 2; veloce.S.velocita = 16
+for (const x of [lento, veloce]) { x.S.mare = 4; x.S.giroscopio = true; for (let k = 0; k < 3000; k++) x.passo(1 / 60, k / 60) }
+prova(vicino(lento.S.autoritaGiroscopio, veloce.S.autoritaGiroscopio, 1e-12),
+  'a 2 e a 16 nodi il giroscopio produce ESATTAMENTE la stessa autorita')
+
 if (guai.length) {
   console.error(`\n${guai.length} proprieta causali rotte.`)
   process.exit(1)

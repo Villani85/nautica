@@ -119,6 +119,15 @@ export const SISTEMI = [
     comando: '#stab',
     annotazione: 'Two fins, one per side. Their authority falls with the square ' +
                  'of speed, so the propulsion decides how well they work.'
+  },
+  {
+    id: 'giroscopio',
+    nome: 'Gyro stabiliser',
+    stazione: 'centro',
+    quota: 'macchine',
+    comando: '#giroscopio',
+    annotazione: 'A spinning mass. Its torque does not need forward motion — ' +
+                 'which is why a boat can carry both.'
   }
 ]
 
@@ -142,7 +151,8 @@ export const SISTEMI = [
 export const COMANDI_NOTI = [
   { sel: '#mare', dentroLaGriglia: false, nome: 'Sea state' },
   { sel: '#propulsione', dentroLaGriglia: true, sistema: 'propulsione', nome: 'Propulsion' },
-  { sel: '#stab', dentroLaGriglia: true, sistema: 'stabilizzatori', nome: 'Fin stabilisers' }
+  { sel: '#stab', dentroLaGriglia: true, sistema: 'stabilizzatori', nome: 'Fin stabilisers' },
+  { sel: '#giroscopio', dentroLaGriglia: true, sistema: 'giroscopio', nome: 'Gyro stabiliser' }
 ]
 
 /** Le dodici celle, nell'ordine in cui le percorre un ciclo di prova. */
