@@ -31,11 +31,41 @@ import { spawn } from 'node:child_process'
 import { apriBrowser } from './browser.mjs'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5321
-const preview = spawn('npx', ['vite', 'preview', '--port', PORTA, '--strictPort'], { shell: true, stdio: 'ignore' })
+const BASE = `http://localhost:${PORTA}/nautica/`
+
+/**
+ * ─── SI ASPETTA CHE IL SERVER RISPONDA, e non e' una precauzione teorica
+ *
+ * La prima corsa in CI di questo cancello e' morta con
+ * `net::ERR_CONNECTION_REFUSED`: lanciava `vite preview` e ci navigava
+ * subito. In locale il server si alza in tempo, sul runner no -- ed e' un
+ * modo di fallire che dice «rotto» su un sito che sta benissimo.
+ *
+ * Il modo giusto era gia' nel repo, in `collaudo-manopola`: prima si prova a
+ * RIUSARE un server gia' acceso (piu' collaudi in fila condividono la
+ * preview), e solo se non c'e' se ne alza uno e si aspetta che risponda,
+ * interrogandolo invece di dormire un tempo scelto a caso.
+ */
+async function serviteci () {
+  try {
+    const r = await fetch(BASE, { redirect: 'manual' })
+    if (r.status < 500) return null
+  } catch {}
+  const s = spawn('npm', ['run', 'preview', '--', '--port', String(PORTA)], { shell: true, stdio: 'ignore' })
+  for (let i = 0; i < 60; i++) {
+    try { await fetch(BASE, { redirect: 'manual' }); return s } catch {}
+    await new Promise(r => setTimeout(r, 500))
+  }
+  s.kill()
+  console.error('  il server non si e alzato')
+  process.exit(2)
+}
+
+const preview = await serviteci()
 const browser = await apriBrowser({ conGpu: !process.env.CHROMIUM })
 const pg = await browser.newPage()
 await pg.setViewportSize({ width: 1440, height: 900 })
-await pg.goto(`http://localhost:${PORTA}/nautica/?ispeziona=1`, { waitUntil: 'load' })
+await pg.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
 
 /** porta la pagina alla battuta del meccanismo, dove il nudge dichiara di vivere */
@@ -57,7 +87,7 @@ const battuta = await vaiAlMeccanismo()
 if (!battuta) {
   console.log('\n  NON MISURABILE: non ho raggiunto ne "taglio" ne "meccanismo".')
   console.log('  Non e un difetto del nudge: e la regia che non passa di li in questa corsa.\n')
-  await browser.close(); preview.kill(); process.exit(0)
+  await browser.close(); preview?.kill(); process.exit(0)
 }
 console.log(`\n  battuta raggiunta: ${battuta}`)
 
@@ -109,7 +139,7 @@ for (let i = 0; i < 30; i++) {
   }, PASSO_S)
   if (!fatti) {
     console.log('\n  ROTTO  la scena non espone passoDichiarato: non ho potuto far scendere la velocita\n')
-    await browser.close(); preview.kill(); process.exit(1)
+    await browser.close(); preview?.kill(); process.exit(1)
   }
   simulati += PASSO_S
   await pg.waitForTimeout(600)
@@ -120,7 +150,7 @@ const atteso = simulati
 console.log(`  dopo ${atteso.toFixed(1)} s SIMULATI senza propulsione   velocita ${dopo.velocita} kn   bolla: ${dopo.bolla ?? 'nessuna'}`)
 
 await browser.close()
-preview.kill()
+preview?.kill()
 
 const rossi = []
 if (prima.velocita === null || dopo.velocita === null) {
