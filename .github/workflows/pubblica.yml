@@ -187,8 +187,43 @@ jobs:
         run: node strumenti/collaudo-scia.mjs
         env: { CHROMIUM: '1' }
 
+      # ─── QUESTO CANCELLO VERSA IL SUO REFERTO, e la ragione e' misurata
+      #
+      # Nella corsa 250 e' caduto qui, e per la prima volta: fino ad allora un
+      # cancello prima di lui era sempre caduto per primo, quindi il varco in CI
+      # non aveva mai finito una corsa. E' rimasto invisibile finche' non e'
+      # diventato l'ultimo ostacolo.
+      #
+      # NON e' un avvio che esplode, e va detto perche' era la prima ipotesi:
+      # ha girato 14 s contro i 10 che impiega in locale nella stessa
+      # configurazione (`CHROMIUM=1`, porta fredda, uscita 0). Quattordici
+      # secondi sono una corsa intera, non una connessione rifiutata. Quindi ha
+      # MISURATO, e ha misurato un numero diverso.
+      #
+      # Quale numero, qui non si sa: i registri di GitHub non si leggono senza
+      # credenziali, ed e' lo stesso muro che ha gia' fatto indovinare piu' di
+      # una volta in questo file. Le annotazioni si leggono. Quindi questo
+      # cancello versa le sue ultime righe li', come gia' fa l'impaginato --
+      # e per la stessa ragione, che e' l'unica buona: **un cancello che non si
+      # puo' leggere quando cade non e' un cancello, e' un dado.**
+      #
+      # Il sospetto, da confermare col referto e non da assumere: il varco
+      # misura la STRUTTURA TONALE di cio' che il motore disegna -- APERTO
+      # gamma >= 60, CHIUSO gamma <= 35 -- ed e' la stessa specie di
+      # `collaudo-orizzonte` e `collaudo-cielo`, che stanno fuori dalla CI
+      # proprio perche' su SwiftShader la resa non e' quella che riceve un
+      # visitatore. Se il referto lo confermera', la scelta e' fra ricalibrare
+      # le soglie sul rasterizzatore software e spostarlo fra i cancelli locali,
+      # con la ragione scritta. Non prima di averlo letto.
       - name: 'Cancello · il varco nel pelo si apre col taglio'
-        run: node strumenti/collaudo-varco.mjs
+        run: |
+          set -o pipefail
+          if ! node strumenti/collaudo-varco.mjs 2>&1 | tee /tmp/varco.txt; then
+            tail -25 /tmp/varco.txt | while IFS= read -r r; do
+              echo "::error::$r"
+            done
+            exit 1
+          fi
         env: { CHROMIUM: '1' }
 
       # Layout, bersagli e raggiungibilita' su tre viewport da telefono. I
