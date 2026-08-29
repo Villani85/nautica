@@ -44,7 +44,7 @@ const PROVA = [
 ]
 
 const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare, PROVA,
-                                senzaLuci, lineare]) => {
+                                senzaLuci, lineare, senzaAo]) => {
   const n = window.__nautica
   // Il ciclo del sito riscrive la camera a ogni fotogramma: si disegna UNA
   // volta a mano, subito dopo averla messa, e si legge la tela prima che il
@@ -139,6 +139,26 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    * due immagini TRONCATE ALLA STESSA QUOTA: il rapporto di altezza che ne
    * usciva (1,07) non diceva niente sulla nave, diceva dov'era il taglio.
    */
+  /**
+   * --- E L'OCCLUSIONE VA POTUTA SPEGNERE, perche' Blender non ce l'ha
+   *
+   * `cuoci.py` costruisce i materiali dal sito con colore, metalness e
+   * roughness: **nessuna mappa di occlusione**. Il sito invece ne ha una cotta
+   * sullo scafo. Quindi una parte dello scarto fra i due non e' resa: e' un
+   * termine che sta da una parte sola. `SENZA_AO=1` lo toglie e permette di
+   * sapere quanto vale, invece di attribuirlo al renderer -- che e' l'errore
+   * gia' fatto con l'ambiente, e costava 56,85 livelli.
+   */
+  const ao = []
+  if (senzaAo) {
+    n.scena.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])
+      for (const m of ms) {
+        if (m && m.aoMap && m.aoMapIntensity > 0) { ao.push([m, m.aoMapIntensity]); m.aoMapIntensity = 0 }
+      }
+    })
+  }
+
   const nascosti = []
   if (senzaMare) {
     n.scena.traverse((o) => {
@@ -231,13 +251,15 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
 
   for (const o of nascosti) o.visible = true
   for (const [o, i] of spente) o.intensity = i
+  for (const [m, i] of ao) m.aoMapIntensity = i
   return { url: n.render.domElement.toDataURL('image/png'), fov: n.camera.fov,
-           nascosti: nascosti.length, ingombro: B, vertici, spente: spente.length,
+           nascosti: nascosti.length, ingombro: B, vertici, spente: spente.length, ao: ao.length,
            sezione: n.sezione.costante,
            rollio: n.stato.rollio, rotZ: n.nave.rotation.z,
            navePos: [n.nave.position.x, n.nave.position.y, n.nave.position.z] }
 }, [px, py, pz, mx, my, mz, fuoco, L, H, process.env.SENZA_MARE === '1', PROVA,
-    process.env.SENZA_LUCI === '1', process.env.LINEARE === '1'])
+    process.env.SENZA_LUCI === '1', process.env.LINEARE === '1',
+    process.env.SENZA_AO === '1'])
 
 writeFileSync(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`,
   Buffer.from(dati.url.split(',')[1], 'base64'))
@@ -262,9 +284,94 @@ if (process.env.VERTICI_BLENDER) {
   }
 }
 console.log(`  ingombro nave (sito): min (${f3(dati.ingombro.min)})  max (${f3(dati.ingombro.max)})`)
-console.log(`  luci spente: ${dati.spente}`)
+console.log(`  luci spente: ${dati.spente}   occlusioni spente: ${dati.ao ?? 0}`)
 console.log(`  mare ${dati.nascosti ? 'nascosto (' + dati.nascosti + ' nodi)' : 'presente'}`)
 console.log(`  rollio ${dati.rollio.toFixed(3)} gradi, nave.rotation.z ${dati.rotZ.toFixed(5)} rad, ` +
             `posizione (${dati.navePos.map(v => v.toFixed(3)).join(', ')})`)
 console.log(`  -> ${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`)
+
+/**
+ * ─── E SE C'E' ANCHE LA COTTA, SI MISURA invece di guardarla
+ *
+ *     COTTA=<render.png> ...
+ *
+ * Il paragone a occhio dice «il fianco cotto ha un gradiente e quello del sito
+ * e' piu' piatto», e va bene per accorgersene. Non va bene per sapere se una
+ * modifica ha migliorato qualcosa: due immagini simili si giudicano uguali, e
+ * un miglioramento del 10% non si vede.
+ *
+ * ─── SI CONFRONTA SOLO DOVE C'E' LA NAVE IN TUTTE E DUE
+ *
+ * Lo sfondo dei due e' diverso per costruzione: nel sito il mare si nasconde
+ * (fondo nero), in Blender c'e' l'ambiente. Confrontare tutto il fotogramma
+ * misurerebbe soprattutto quella differenza, che non interessa a nessuno --
+ * l'ennesimo numero vero che risponde a un'altra domanda.
+ *
+ * La sagoma comune si prende dai pixel che in ENTRAMBI si staccano dal proprio
+ * fondo. Il fondo del sito e' nero pieno; quello della cotta e' la mediana
+ * della colonna piu' esterna, che li' e' solo ambiente.
+ *
+ * ─── E SI STAMPA ANCHE PER FASCE ORIZZONTALI
+ *
+ * Un solo numero medio nasconde dove sta il divario. Cinque fasce dicono se il
+ * problema e' la murata, la coperta o la sovrastruttura -- cioe' cosa andare a
+ * toccare.
+ */
+if (process.env.COTTA) {
+  const { execFileSync } = await import('node:child_process')
+  const grezzo = (f) => execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', 'scale=1000:620',
+    '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1e9 })
+  const A = grezzo(process.env.COTTA)
+  const B = grezzo(`${process.env.FUORI}/sito-${process.env.ETICHETTA || 'stessa-camera'}.png`)
+  const L = 1000; const H = 620
+  /* il fondo della cotta: mediana della colonna 2, che e' solo ambiente */
+  const col = []
+  for (let y = 0; y < H; y++) col.push(A[y * L + 2])
+  col.sort((a, b) => a - b)
+  const fondoA = col[Math.floor(col.length / 2)]
+  let n = 0; let somma = 0; let sommaAss = 0
+  /**
+   * ─── E SI STAMPA ANCHE LA MEDIANA, che qui non e' un dettaglio
+   *
+   * Il sito dipinge sulla murata cose che nella cotta NON esistono: la fascia
+   * al galleggiamento e le finestre di murata, che lo shader disegna e la
+   * geometria non ha. Sono pixel molto scuri e in minoranza, ed e' esattamente
+   * la forma di dato che sposta la MEDIA di parecchio e la MEDIANA di poco.
+   *
+   * Se media e mediana divergono, lo scarto e' fatto di poche macchie nere --
+   * cioe' di contenuto in piu' da una parte. Se coincidono, e' un livello
+   * generale, e allora si sta parlando di resa.
+   */
+  const tutti = []
+  const fasce = Array.from({ length: 5 }, () => ({ n: 0, s: 0, v: [] }))
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < L; x++) {
+      const a = A[y * L + x]; const b = B[y * L + x]
+      if (b < 12) continue                       // fondo nero del sito
+      if (Math.abs(a - fondoA) < 6) continue     // fondo dell ambiente nella cotta
+      const d = b - a
+      n++; somma += d; sommaAss += Math.abs(d); tutti.push(d)
+      const f = fasce[Math.min(4, Math.floor(y / (H / 5)))]
+      f.n++; f.s += d; f.v.push(d)
+    }
+  }
+  console.log('')
+  console.log('SCARTO FRA COTTA E DISEGNATA, sui pixel dove c e la nave in tutte e due')
+  if (!n) {
+    console.log('  nessun pixel in comune: le due sagome non si sovrappongono')
+  } else {
+    console.log(`  pixel in comune       ${n}`)
+    console.log(`  scarto medio          ${(somma / n).toFixed(2)} livelli   (sito meno cotta: positivo = il sito e piu chiaro)`)
+    console.log(`  scarto medio assoluto ${(sommaAss / n).toFixed(2)} livelli`)
+    const mediana = (a) => { const c = a.slice().sort((p, q) => p - q); return c[Math.floor(c.length / 2)] }
+    console.log(`  scarto MEDIANO        ${mediana(tutti).toFixed(2)} livelli`)
+    console.log('  per fascia (dall alto in basso):')
+    fasce.forEach((f, i) => {
+      if (!f.n) { console.log(`    ${i + 1}  -`); return }
+      const c = f.v.slice().sort((p, q) => p - q)
+      console.log(`    ${i + 1}  ${String(f.n).padStart(6)} px   media ${(f.s / f.n).toFixed(2).padStart(7)}   mediana ${String(c[Math.floor(c.length / 2)]).padStart(5)}`)
+    })
+  }
+}
+
 await browser.close(); preview.kill(); process.exit(0)
