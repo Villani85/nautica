@@ -461,12 +461,28 @@ regge invariato.
 
 ### Quello che resta aperto
 
-L'occlusione è cotta, agganciata e spedita dentro il budget. **Non ho ancora
-una prova visiva a schermo che migliori le inquadrature del sito**: negli
-scorrimenti che ho catturato (0,80–0,86) gli interni sono piccoli e in ombra
-dietro lo scafo, e la differenza non si legge. È la prossima cosa da guardare,
-e va guardata dove gli interni riempiono il quadro — non dove li ho cercati io
-stanotte.
+L'occlusione è cotta, agganciata, spedita dentro il budget e difesa da un
+cancello. **Ma non ho una prova visiva che migliori le inquadrature del sito**,
+e questo va detto per intero invece che lasciato intendere.
+
+Ho catturato sei scorrimenti — 0,785 · 0,79 · 0,80 · 0,815 · 0,83 · 0,86 — che
+è tutta la finestra in cui il repo stesso archivia «gli interni in scena». In
+tutti e sei gli interni stanno **sotto la linea d'acqua, piccoli e in ombra
+dietro lo scafo**: si distinguono il riduttore, l'albero e il gruppo pinna, e
+la struttura che li contiene è una macchia scura. A quella scala un termine di
+occlusione non si legge, e sarebbe disonesto sostenere il contrario.
+
+Quindi la domanda vera non è «l'occlusione è giusta» — lo è, misurata — ma
+**se questa sia la spesa giusta di 53 KB per il sito com'è oggi**. La risposta
+dipende da una cosa che non decido io: se la sezione longitudinale completa che
+la direzione chiede al punto 5 («persone sopra, propulsione a poppa,
+stabilizzatori sotto la linea, gyro al centro, tutto nello stesso quadro») verrà
+costruita, gli interni diventano il soggetto di un fotogramma eroico e
+l'occlusione è esattamente ciò che li fa leggere come volume. Se invece restano
+lo sfondo sommerso di adesso, quei 53 KB comprano poco.
+
+La pipeline è pronta o in un caso o nell'altro, e si spegne togliendo un passo
+da `rifai-interni.sh`.
 
 Restano intatti gli altri capi del punto 4: raccordi scafo/coperta, curvature
 dei finestrini, cornici con spessore, battagliola, scarichi, flange e bulloni
