@@ -866,8 +866,10 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     bersaglioY = null
   }
 
+  let verticaleAperto = 0
   function impostaVerticale (p) {
     const q = MathUtils.clamp(p, 0, 1)
+    verticaleAperto = q
     pianoVerticale.constant = MathUtils.lerp(X_INTERO, X_MEZZO, q)
   }
 
@@ -1047,7 +1049,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     acqua.anima(t, sim.S.mare, frame, camera.position.x, camera.position.z, sim.S.velocita)
     // e nel taglio si schiarisce, altrimenti copre proprio il pezzo che il
     // taglio serve a mostrare: la nota sta in acqua.js
-    acqua.chiarisci(spaccato)
+    /**
+     * ─── L'ACQUA SI SCHIARISCE PER TUTTI E DUE I TAGLI, non solo per uno
+     *
+     * DIFETTO PRESO GUARDANDO LA SEZIONE VERTICALE. Il principio del sito e'
+     * gia' scritto e viene dal committente -- «sott'acqua togli l'acqua e
+     * mostra la qualita' del meccanismo» -- ma era legato al solo taglio
+     * trasversale. Aprendo lo scafo per il lungo, sopra la linea si vedevano i
+     * ponti in sezione e sotto restava un blocco verde: le due macchine, che
+     * stanno sotto il galleggiamento, erano dentro l'acqua opaca.
+     *
+     * Il taglio piu' aperto dei due comanda. Non e' una somma: sono due modi di
+     * aprire lo stesso scafo, e l'acqua deve togliersi da quello che e' aperto
+     * di piu' -- se si sommassero, due mezzi tagli darebbero acqua limpida su
+     * uno scafo ancora chiuso.
+     */
+    const aperto = Math.max(spaccato, verticaleAperto)
+    acqua.chiarisci(aperto)
     /**
      * ─── E ANCHE L'ASSORBIMENTO E' UNA QUOTA, DENTRO IL TAGLIO
      *
@@ -1078,7 +1096,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * Il sito in quel momento non sta mostrando il mare: sta mostrando un
      * pezzo, e il mare e' gia' stato raccontato due battute prima.
      */
-    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - spaccato)
+    uniAcqua.sigma.value = ACQUA_SIGMA * (1 - Math.max(spaccato, verticaleAperto))
     // Il fuoribordo E' la manopola dello stato del mare, non un commento su di
     // essa: non puo' contraddire cio' che l'utente controlla.
     fuoribordo.impostaMare(sim.S.mare)
