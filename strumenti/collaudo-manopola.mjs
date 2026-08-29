@@ -121,9 +121,38 @@ const BASE = `http://localhost:${PORTA}/nautica/`
  * Un conteggio di fotogrammi misurerebbe anche la velocita' della macchina --
  * 90 fotogrammi sono 1,5 s qui e 75 s in CI, dove si disegna in software.
  */
-const FINESTRA = 8000        // ms: un periodo di rollio INTERO (7 s) piu' margine
-const CAMPIONI_MIN = 12      // sotto, un picco-picco non significa niente
-const ATTESA_MAX = 30000     // ms: oltre, non e' una scena lenta, e' una scena ferma
+/**
+ * --- E POI NEMMENO UN TEMPO BASTAVA, PERCHE' ERA IL TEMPO SBAGLIATO
+ *
+ * La nota qui sopra ha ragione su tutto tranne che su quale orologio guardare,
+ * e questo cancello ha bloccato la pubblicazione per scoprirlo.
+ *
+ * Otto secondi di OROLOGIO non sono otto secondi di MARE. `index.js` avanza la
+ * simulazione di `min(getDelta(), 0.05)` per fotogramma -- tetto giusto, non si
+ * tocca -- quindi il tempo simulato scorre quanto la macchina disegna. Qui, a
+ * 60 fotogrammi al secondo, i due orologi coincidono. In CI, dove il disegno e'
+ * software a circa 1,2 fotogrammi al secondo, otto secondi di orologio sono
+ * **0,4 secondi di nave**: un diciassettesimo del periodo di rollio.
+ *
+ * Che e' esattamente il difetto che la nota qui sopra descrive -- una finestra
+ * piu' corta del fenomeno, la pinna ferma a fondo corsa, l'albero a zero p-p --
+ * ricomparso da un'altra porta. La prima volta la causa era un conteggio di
+ * fotogrammi; la seconda un conteggio di millisecondi. Tutte e due misuravano
+ * la macchina, e solo la prima lo faceva in modo evidente.
+ *
+ * **La finestra adesso e' in secondi di SIMULAZIONE, e li compra il cancello.**
+ * `__nautica.passoDichiarato` integra la stessa fisica a passo fisso, in un
+ * ciclo sincrono: otto secondi di mare costano 480 passi e nessuna attesa, sul
+ * portatile come sul runner senza scheda grafica. Non c'e' piu' un tetto
+ * d'attesa da tarare, perche' non si aspetta piu' niente.
+ *
+ * Regola generale, la terza volta che questo file la impara: **un cancello non
+ * deve misurare nel tempo della macchina, nemmeno quando il tempo della
+ * macchina si chiama "secondi".**
+ */
+const PASSO = 1 / 60         // s di simulazione per passo: lo stesso ordine del disegno
+const FINESTRA_S = 8         // s di SIMULAZIONE: un periodo di rollio (7 s) piu' margine
+const ASSESTAMENTO_S = 2.2   // s di SIMULAZIONE: piu' della rampa dichiarata di 1,6 s
 
 /**
  * --- LA SOGLIA ERA GIUSTA, ERA LA MISURA CHE NON POTEVA REGGERLA
@@ -264,6 +293,10 @@ await pagina.waitForFunction(() => window.__nautica && window.__nautica.scena, n
 await pagina.waitForFunction(
   () => !!window.__nautica.scena.getObjectByName('RIG_INPUT'),
   null, { timeout: 60000 })
+/* `passoDichiarato` muove il meccanismo leggendo `stato`, che esiste solo dal
+   primo fotogramma in poi: chiederlo prima vorrebbe dire integrare la fisica
+   senza aggiornare i nodi, cioe' misurare zero e non sapere perche'. */
+await pagina.waitForFunction(() => !!window.__nautica.stato, null, { timeout: 60000 })
 
 /* --- 1 - IL PRIMO PIANO E' DOVE LA BATTUTA E IL PALCO SONO D'ACCORDO ----- */
 
@@ -387,61 +420,102 @@ const tocca = async (sel) => {
   await pagina.mouse.click(b.x, b.y)
 }
 
+/* --- 2 bis - E LA SCENA DEVE DISEGNARE, che adesso va chiesto a parte ---- */
+
+/**
+ * --- IL TESTIMONE DI VITALITA' HA CAMBIATO POSTO, e va detto perche'
+ *
+ * Finche' l'albero lo muoveva il ciclo di disegno, il conteggio dei fotogrammi
+ * era dentro la misura: un albero fermo e una scena non aggiornata si leggono
+ * identici, e il contatore li separava. Col passo dichiarato l'albero lo muove
+ * il cancello, quindi quel contatore non protegge piu' niente -- la misura
+ * verrebbe verde anche davanti a uno schermo nero.
+ *
+ * Allora si chiede a parte, e si chiede la cosa giusta: **che il ciclo di
+ * disegno esista**. Non quanti fotogrammi fa -- quello sarebbe di nuovo un
+ * cancello sulla velocita' della macchina, ed e' l'errore da cui viene tutta
+ * questa riscrittura. Uno solo basta: uno vuol dire che il ciclo gira, zero
+ * vuol dire che e' morto.
+ */
+{
+  const primo = await pagina.evaluate(() => window.__nautica.fotogrammi)
+  await new Promise(r => setTimeout(r, 3000))
+  const dopo = await pagina.evaluate(() => window.__nautica.fotogrammi)
+  if (dopo <= primo) {
+    guai.push('in tre secondi la scena non ha disegnato nemmeno un fotogramma: ' +
+              'il ciclo di disegno e fermo, e sotto i comandi non c e niente da comandare')
+  } else {
+    nota(`il ciclo di disegno e vivo (${dopo - primo} fotogrammi in 3 s di orologio; ` +
+         'e un si o no, non una misura di velocita)')
+  }
+  if (guai.length) {
+    console.error('')
+    for (const g of guai) console.error('   - ' + g)
+    console.error('')
+    await finisci(1)
+  }
+}
+
 /* --- 3 - CAMPIONARE IL LAVORO DEL MECCANISMO ---------------------------- */
 
 /**
- * Escursione picco-picco dell'albero d'ingresso su N fotogrammi, insieme al
- * numero di fotogrammi DISEGNATI nello stesso intervallo: senza quello,
- * "meccanismo fermo" e "scena non aggiornata" sono lo stesso numero.
+ * Escursione picco-picco dell'albero d'ingresso su una finestra di SIMULAZIONE,
+ * comprata a passo dichiarato invece che aspettata a fotogrammi.
+ *
+ * Il ciclo e' sincrono: nessun `requestAnimationFrame` puo' infilarsi in mezzo,
+ * quindi il tempo che scorre qui e' tutto tempo che questo cancello ha comprato
+ * e nessun altro lo sta spendendo. Otto secondi di mare costano 480 passi e
+ * nessuna attesa, sul portatile come sul runner senza scheda grafica.
  */
-const campiona = () => pagina.evaluate(([finestra, minimo, tetto, fondo]) => new Promise((res) => {
+const campiona = () => pagina.evaluate(([dt, secondi, fondo]) => {
   const nodo = window.__nautica.scena.getObjectByName('RIG_INPUT')
+  const S = window.__nautica.stato
   const primo = window.__nautica.fotogrammi
-  const t0 = performance.now()
-  let aMin = Infinity, aMax = -Infinity, i = 0
-  let prec = nodo.rotation.x, tPrec = t0, saturi = 0, pinnaMax = 0
+  const t0 = window.__nautica.tempoSimulato
+  const passi = Math.round(secondi / dt)
+  let aMin = Infinity, aMax = -Infinity, prec = nodo.rotation.x
+  let strada = 0, saturi = 0, pinnaMax = 0
   const vel = []
-  let strada = 0
-  const passo = () => {
+  for (let k = 0; k < passi; k++) {
+    window.__nautica.passoDichiarato(dt)
     const a = nodo.rotation.x
-    const ora = performance.now(), passoMs = ora - tPrec
-    if (i > 0) strada += Math.abs(a - prec)
-    if (i > 0 && passoMs > 0) vel.push(Math.abs(a - prec) / (passoMs / 1000))
-    const pinna = Math.abs(window.__nautica.stato.pinna)
+    strada += Math.abs(a - prec)
+    vel.push(Math.abs(a - prec) / dt)
+    prec = a
+    const pinna = Math.abs(S.pinna)
     if (pinna > pinnaMax) pinnaMax = pinna
     if (pinna >= fondo - 1e-4) saturi++
-    prec = a; tPrec = ora
     if (a < aMin) aMin = a
     if (a > aMax) aMax = a
-    i++
-    const trascorso = performance.now() - t0
-    // si campiona per un TEMPO, non per un numero di fotogrammi; e se la
-    // macchina ne disegna pochi si aspetta di piu', invece di fallire
-    if ((trascorso < finestra || i < minimo) && trascorso < tetto) requestAnimationFrame(passo)
-    else res({
-      albero: aMax - aMin,
-      strada,
-      durata: performance.now() - t0,
-      vMax: (() => {
-        /* Il novantacinquesimo percentile, non il massimo. Un massimo su
-         * singolo fotogramma legge il rumore di temporizzazione: misurato, a
-         * mare 2 usciva 126,9 rad/s contro i 62-83 degli altri nove giri, e il
-         * cancello diventava rosso per un fotogramma corto. E' la stessa
-         * lezione che questo file aveva gia' imparato per il fondo naturale. */
-        if (!vel.length) return 0
-        vel.sort((x, y) => x - y)
-        return vel[Math.min(vel.length - 1, Math.floor(vel.length * 0.95))]
-      })(),
-      satura: saturi / Math.max(i, 1),
-      pinnaMax,
-      disegnati: window.__nautica.fotogrammi - primo,
-      rollio: window.__nautica.stato.rollio,
-      stab: window.__nautica.stato.stab,
-      mare: window.__nautica.stato.mare
-    })
   }
-  requestAnimationFrame(passo)
-}), [FINESTRA, CAMPIONI_MIN, ATTESA_MAX, A_MAX_DICHIARATO])
+  /* Il novantacinquesimo percentile, non il massimo. Col passo dichiarato il
+   * rumore di temporizzazione che lo aveva reso necessario non c'e' piu' -- il
+   * dt e' costante per costruzione -- ma il percentile resta, perche' e' anche
+   * cio' che tiene questa misura confrontabile con quelle gia' scritte qui. */
+  vel.sort((x, y) => x - y)
+  return {
+    albero: aMax - aMin,
+    strada,
+    /* si LEGGE, non si suppone. Se non fossero i secondi chiesti vorrebbe dire
+       che qualcuno ha inchiodato la scena con `?fermo`, e allora la misura non
+       varrebbe niente: e' il testimone di vitalita', spostato dalla parte del
+       tempo simulato perche' e' quello che adesso muove la cosa misurata. */
+    durata: window.__nautica.tempoSimulato - t0,
+    passi,
+    vMax: vel.length ? vel[Math.min(vel.length - 1, Math.floor(vel.length * 0.95))] : 0,
+    satura: saturi / Math.max(passi, 1),
+    pinnaMax,
+    /* Zero per costruzione: il ciclo di campionamento e' sincrono e nessun
+       fotogramma puo' cadere dentro. Resta letto e NON stampato, perche' un
+       giorno qualcuno rendera' asincrono questo ciclo e allora questo numero
+       tornera' a dire qualcosa; stamparlo adesso sarebbe pubblicare uno zero
+       che non e' una misura. La vitalita' del disegno si chiede al passo 2 bis. */
+    disegnati: window.__nautica.fotogrammi - primo,
+    rollio: S.rollio,
+    stab: S.stab,
+    mare: S.mare
+  }
+}, [PASSO, FINESTRA_S, A_MAX_DICHIARATO])
 
 /**
  * Prima di misurare si aspetta che il transitorio finisca. `simulazione.js`
@@ -451,23 +525,27 @@ const campiona = () => pagina.evaluate(([finestra, minimo, tetto, fondo]) => new
  * rollava ancora da mare 5.
  *
  * Non e' un cancello che misura millisecondi: e' un'attesa pari alla durata
- * che il sito dichiara per la propria transizione.
+ * che il sito dichiara per la propria transizione -- e adesso quella durata si
+ * COMPRA a passo dichiarato invece di aspettarla, perche' 2,2 secondi di
+ * orologio in CI sono un decimo di secondo di nave e la rampa non finirebbe.
  */
-const ASSESTAMENTO = 2200
+const assesta = () => pagina.evaluate(
+  ([dt, secondi]) => window.__nautica.passoDichiarato(dt, Math.round(secondi / dt)),
+  [PASSO, ASSESTAMENTO_S])
 
 const misura = async (dove) => {
-  await new Promise(r => setTimeout(r, ASSESTAMENTO))
+  await assesta()
   const c = await campiona()
-  if (c.disegnati < CAMPIONI_MIN) {
-    guai.push(`campione "${dove}": la scena ha disegnato ${c.disegnati} fotogrammi in ` +
-              `${(ATTESA_MAX / 1000).toFixed(0)} s. Non si sta misurando il meccanismo, ` +
-              'si sta misurando una scena ferma')
+  if (Math.abs(c.durata - FINESTRA_S) > 0.05) {
+    guai.push(`campione "${dove}": chiesti ${FINESTRA_S} s di simulazione, ne sono passati ` +
+              `${c.durata.toFixed(2)}. Il tempo della nave non avanza: la scena e inchiodata, ` +
+              'e non si sta misurando il meccanismo')
   }
-  nota(`      strada ${c.strada.toFixed(1)} rad in ${(c.durata / 1000).toFixed(1)} s = ` +
-       `${(c.strada / (c.durata / 1000)).toFixed(1)} rad/s medi`)
+  nota(`      strada ${c.strada.toFixed(1)} rad in ${c.durata.toFixed(1)} s di simulazione = ` +
+       `${(c.strada / Math.max(c.durata, 1e-6)).toFixed(1)} rad/s medi`)
   nota(`${dove}: albero p-p ${c.albero.toFixed(3)} rad, velocita p95 ${c.vMax.toFixed(1)} rad/s, ` +
        `pinna a fondo corsa il ${(c.satura * 100).toFixed(0)}% del transitorio ` +
-       `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.disegnati} fotogrammi disegnati]`)
+       `[mare ${c.mare}, stab ${c.stab ? 'acceso' : 'spento'}, ${c.passi} passi dichiarati]`)
   if (c.pinnaMax > A_MAX_DICHIARATO + 1e-3) {
     guai.push(`la pinna supera il fine corsa dichiarato: ${(c.pinnaMax * 180 / Math.PI).toFixed(1)} gradi ` +
               `contro ${(A_MAX_DICHIARATO * 180 / Math.PI).toFixed(0)}. O il sito e cambiato, o questo ` +
@@ -602,7 +680,10 @@ const VOLTE_MAX = 6
  * uno solo dei due, il cancello e' rosso per costruzione in un verso -- e
  * quale dei due verso dipende solo da quale si e' scelto.
  */
-const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
+/* 0,10 gradi per fotogramma a 60 Hz, che era la forma storica di questo numero,
+   sono 6 gradi al secondo. Stessa severita', unita' che non dipende piu' da chi
+   esegue il cancello. */
+const SALTO_INVISIBILE = 6      // gradi al secondo di simulazione
 
 /**
  * --- IL METRO E' UN PERCENTILE, L'EVENTO E' UN MASSIMO
@@ -623,66 +704,72 @@ const SALTO_INVISIBILE = 0.10   // gradi per fotogramma
  * finestra di TRE SECONDI -- non di N fotogrammi, perche' in CI si disegna a
  * 1,2 fotogrammi al secondo e un conteggio diventa un tempo diverso su ogni
  * macchina. E' lo stesso difetto che teneva rossa la CI su collaudo-ridotto.
+ *
+ * --- E POI ANCHE "GRADI PER FOTOGRAMMA" ERA UN'UNITA' DELLA MACCHINA
+ *
+ * Un fotogramma qui vale 16 ms e in CI 830. Dire «0,10 gradi per fotogramma»
+ * significa quindi due velocita' diverse sulle due macchine, e il cancello
+ * cambiava severita' a seconda di dove girava. Adesso tutto e' in **gradi al
+ * secondo di simulazione**, che e' la stessa grandezza ovunque; la soglia
+ * storica si converte una volta sola, qui sotto.
  */
-const naturale = (n, durata = 3000) => pagina.evaluate(([n, durata]) => new Promise((res) => {
-  const t0 = performance.now()
-  let i = 0, prec = window.__nautica.stato.rollio
-  const passi = []
-  const passo = () => {
-    const v = window.__nautica.stato.rollio
-    passi.push(Math.abs(v - prec)); prec = v
-    if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
-    else {
-      passi.sort((a, b) => a - b)
-      res(passi.length ? passi[Math.floor(passi.length * 0.95)] : 0)
-    }
+const naturale = (secondi = 3) => pagina.evaluate(([dt, secondi]) => {
+  const S = window.__nautica.stato
+  const passi = Math.round(secondi / dt)
+  let prec = S.rollio
+  const v = []
+  for (let k = 0; k < passi; k++) {
+    window.__nautica.passoDichiarato(dt)
+    v.push(Math.abs(S.rollio - prec) / dt)
+    prec = S.rollio
   }
-  requestAnimationFrame(passo)
-}), [n, durata])
+  v.sort((a, b) => a - b)
+  return v.length ? v[Math.floor(v.length * 0.95)] : 0
+}, [PASSO, secondi])
 
+/**
+ * --- E L'EVENTO NON SI INSEGUE PIU' A FOTOGRAMMI: SI DIVIDE PER IL TEMPO CHE
+ *     L'HA PRODOTTO
+ *
+ * La stesura precedente apriva una finestra di tre secondi a cavallo del clic e
+ * cercava il fotogramma piu' anomalo. Funzionava solo dove i fotogrammi sono
+ * fitti: in CI, con uno ogni 830 ms, «il fotogramma del clic» e' un intervallo
+ * dentro cui la nave si muove parecchio per ragioni sue, e il massimo che si
+ * legge non e' piu' un evento -- e' l'intervallo di campionamento.
+ *
+ * Un salto temporale ha una definizione che non ha bisogno di fotogrammi:
+ * **la nave si e' spostata piu' di quanto il tempo trascorso le consenta.**
+ * Quindi si legge angolo e tempo simulato PRIMA del clic, si clicca, si
+ * rileggono tutti e due, e si divide. Quello che ne esce e' una velocita'
+ * angolare in gradi al secondo, confrontabile con quella che la nave fa da
+ * sola -- e `sim.scalda()`, che era il colpevole storico, integra 150 secondi
+ * senza far avanzare l'orologio di `stato.js`: nel rapporto finisce al
+ * denominatore quasi zero, ed e' impossibile che passi inosservato.
+ *
+ * Il fondo si prende sui DUE lati del clic e si tiene il maggiore: preso da un
+ * lato solo, il cancello e' rosso per costruzione in uno dei due versi. La
+ * ragione lunga sta qui sopra e vale ancora parola per parola.
+ */
 const attraverso = async (sel, etichetta) => {
-  // si campiona SENZA INTERRUZIONE mentre il clic arriva
-  /**
-   * --- ANCHE QUI LA FINESTRA E' UN TEMPO
-   *
-   * Erano 150 fotogrammi. Su questa macchina sono due secchi e mezzo; in CI,
-   * dove si disegna in software a 1,2 fotogrammi al secondo, sono **due
-   * minuti** -- per quattro prove, otto minuti su un solo cancello. E' la
-   * stessa ragione per cui `collaudo-ridotto` e `collaudo-cinematica` erano
-   * gia' stati curati: nessun cancello deve misurare la velocita' della
-   * macchina, nemmeno nel proprio tempo di esecuzione.
-   *
-   * Il salto che si cerca arriva subito dopo il clic, quindi tre secondi
-   * bastano e avanzano: quello che si perde e' solo la coda in cui non
-   * succede niente.
-   */
-  const natPrima = await naturale(600)
-  const promessa = pagina.evaluate(([n, durata]) => new Promise((res) => {
-    const t0 = performance.now()
-    let i = 0, prec = window.__nautica.stato.rollio, max = 0, quando = 0
-    const passo = () => {
-      const v = window.__nautica.stato.rollio
-      const d = Math.abs(v - prec)
-      if (d > max) { max = d; quando = i }
-      prec = v
-      if (++i < n && performance.now() - t0 < durata) requestAnimationFrame(passo)
-      else res({ max, quando })
-    }
-    requestAnimationFrame(passo)
-  }), [150, 3000])
-  await new Promise(r => setTimeout(r, 250))
+  const natPrima = await naturale(3)
+  const leggi = () => pagina.evaluate(() => ({
+    r: window.__nautica.stato.rollio,
+    t: window.__nautica.tempoSimulato
+  }))
+  const prima = await leggi()
   await tocca(sel)
-  const { max, quando } = await promessa
+  const dopo = await leggi()
+  const dt = Math.max(dopo.t - prima.t, 1e-6)
+  const vClic = Math.abs(dopo.r - prima.r) / dt
 
   // il metro si prende DOPO, quando la nave e' nello stato nuovo
-  /* Il fondo si prende sui DUE lati del clic e si tiene il maggiore: preso da
-   * un lato solo, il cancello e' rosso per costruzione nell'altro verso. */
-  const nat = Math.max(natPrima, await naturale(600))
-  const volte = max / Math.max(1e-6, nat)
-  nota(`${etichetta}: salto massimo ${max.toFixed(3)} gradi/fotogramma (al ${quando}esimo), ` +
-       `naturale ${nat.toFixed(3)} — ${volte.toFixed(1)} volte`)
-  if (max > SALTO_INVISIBILE && volte > VOLTE_MAX) {
-    guai.push(`${etichetta}: il clic sposta la nave di ${max.toFixed(2)} gradi in un fotogramma, ` +
+  const nat = Math.max(natPrima, await naturale(3))
+  const volte = vClic / Math.max(1e-6, nat)
+  nota(`${etichetta}: al clic ${Math.abs(dopo.r - prima.r).toFixed(3)} gradi in ` +
+       `${dt.toFixed(3)} s di simulazione = ${vClic.toFixed(1)} gradi/s, ` +
+       `naturale ${nat.toFixed(1)} gradi/s — ${volte.toFixed(1)} volte`)
+  if (vClic > SALTO_INVISIBILE && volte > VOLTE_MAX) {
+    guai.push(`${etichetta}: il clic sposta la nave a ${vClic.toFixed(0)} gradi al secondo, ` +
               `${volte.toFixed(0)} volte quello che fa da sola. E un salto temporale, e questo sito ` +
               'se lo e vietato')
   }
@@ -690,9 +777,9 @@ const attraverso = async (sel, etichetta) => {
 
 await metti(true)
 await tocca(MARE_ALTO)
-await new Promise(r => setTimeout(r, 800))
+await assesta()
 await attraverso(MARE_BASSO, 'clic da mare 5 a mare 2')
-await new Promise(r => setTimeout(r, 800))
+await assesta()
 await attraverso(MARE_ALTO, 'clic da mare 2 a mare 5')
 
 /* --- REFERTO ------------------------------------------------------------ */

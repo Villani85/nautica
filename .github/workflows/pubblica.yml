@@ -94,11 +94,25 @@ jobs:
       # nessuna GPU. Aggiunti, `orizzonte` e' uscito rosso su questo runner
       # mentre in locale passa.
       #
-      # ATTENZIONE, e va detto perche' e' l'errore che ho appena fatto:
-      # `CHROMIUM=1` forza il browser interno ma NON il disegno in software.
-      # Su una macchina con la GPU quella prova non riproduce questo runner, e
-      # io l'avevo trattata come se lo facesse. La causa vera non e' verificata:
-      # i log del job servono i diritti di amministratore.
+      # CORREZIONE, ed e' costata un'altra pubblicazione. Qui c'era scritto:
+      # «`CHROMIUM=1` forza il browser interno ma NON il disegno in software,
+      # quindi su una macchina con la GPU quella prova non riproduce questo
+      # runner». E' FALSO, e finche' e' rimasto scritto ha impedito di
+      # riprodurre in locale un guasto riproducibilissimo -- si e' indovinato
+      # invece di misurare, che e' l'errore che questo repo si vieta.
+      #
+      # `browser.mjs` lo dice gia', due paragrafi sopra la riga che serve:
+      # `chromium.launch({ headless: true })` senza `channel` non lancia
+      # Chromium, lancia `chrome-headless-shell`, che lo stack GPU non ce l'ha
+      # proprio. `CHROMIUM=1` prende esattamente quel ramo.
+      #
+      # MISURATO su questa macchina, stesso collaudo, stesso commit:
+      #     senza CHROMIUM   132 fotogrammi in 3 s
+      #     con CHROMIUM       4 fotogrammi in 3 s
+      # Trentatre volte. Non e' «quasi come il runner»: e' il runner.
+      #
+      # Resta vero che i log del job non si leggono senza diritti. Ma adesso non
+      # servono: il guasto si rifa' in locale con una variabile d'ambiente.
       #
       # Restano quindi LOCALI, dichiarati qui: sono cancelli sulla RESA, e la
       # resa di un rasterizzatore software non e' quella che riceve un
@@ -138,6 +152,27 @@ jobs:
       # da dimostrare. Nessun altro cancello poteva vederlo.
       - name: 'Cancello · la manopola comanda il meccanismo'
         run: node strumenti/collaudo-manopola.mjs
+        env: { CHROMIUM: '1' }
+
+      # ─── IL SUGGERIMENTO DEL GIROSCOPIO, E QUANDO ARRIVA
+      #
+      # Questo cancello esisteva da ieri notte e non era agganciato a niente:
+      # ne' a `npm run collaudo` ne' a questo file. Una revisione esterna l'ha
+      # detto nella forma giusta -- «la nuova scoperta centrale non e' ancora
+      # protetta» -- ed e' la terza volta che questo repo scopre di avere un
+      # cancello che non ferma niente. Un collaudo fuori dalla CI protegge solo
+      # finche' qualcuno si ricorda di eseguirlo.
+      #
+      # Non guarda solo che la bolla compaia: guarda DOPO QUANTI SECONDI DI
+      # NAVE. Con la soglia di prima -- 7,0 kn -- ci metteva 29,9 s, e in quei
+      # trenta secondi il visitatore del filmato era gia' arrivato al finale.
+      # Verde nel codice e invisibile nella pagina e' la coppia peggiore.
+      #
+      # E puo' stare qui, dove `collaudo-cinematica` non puo', perche' compra il
+      # tempo simulato a passo dichiarato invece di aspettare i fotogrammi: e'
+      # esattamente la cura che quella nota chiedeva.
+      - name: 'Cancello · il suggerimento del giroscopio arriva in tempo'
+        run: node strumenti/collaudo-nudge.mjs
         env: { CHROMIUM: '1' }
 
       # Con `prefers-reduced-motion` il sito si riduce, non si spegne. Il

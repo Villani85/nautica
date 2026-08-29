@@ -182,3 +182,18 @@ export function avanza (dt, marca) {
 const ascoltatori = new Set()
 export const alCambioDiStato = (f) => { ascoltatori.add(f); return () => ascoltatori.delete(f) }
 export const statoCambiato = () => { for (const f of ascoltatori) f() }
+
+/**
+ * ─── IL TEMPO SIMULATO SI PUO' LEGGERE, e serve a distinguere due cose che si
+ *     assomigliano
+ *
+ * Un cancello che vuole sapere se un gesto ha TELETRASPORTATO la nave deve
+ * poter dividere lo spostamento per il tempo che lo ha prodotto. Finche' il
+ * tempo restava chiuso qui dentro, l'unico denominatore disponibile era il
+ * fotogramma -- cioe' la velocita' della macchina -- e infatti e' esattamente
+ * quello che ha tenuto rosso `collaudo-manopola` in CI.
+ *
+ * Non e' uno stato del mondo e nessuna parte del sito lo legge: e' il
+ * denominatore onesto di una misura.
+ */
+export const tempoSimulato = () => tempo

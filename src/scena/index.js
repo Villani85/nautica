@@ -15,7 +15,7 @@ import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
-import { avanza, FERMO_A } from '../stato.js'
+import { avanza, tempoSimulato, FERMO_A } from '../stato.js'
 
 const RAGGIO = 19.5
 /** `?senzaFilmato=1`: vedi `impostaTraversata` in fondo al file. */
@@ -1436,6 +1436,74 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       // La simulazione arriva a `disegna` come parametro, quindi qui si legge
       // l'ultima vista — scritta ogni fotogramma, non catturata alla nascita.
       get stato () { return ultimoStato },
+      /**
+       * ─── IL PASSO DICHIARATO, e perche' e' l'unico modo di misurare questo
+       *     meccanismo su una macchina senza scheda grafica
+       *
+       * `disegna` avanza la simulazione di `min(getDelta(), 0.05)`: il tetto e'
+       * giusto e non si tocca -- e' cio' che tiene stabile l'integratore quando
+       * la scheda perde un fotogramma. Ma ha una conseguenza che non e' stata
+       * scritta da nessuna parte finche' non ha bloccato una pubblicazione:
+       * **su un rasterizzatore software il tempo simulato avanza piu' di dieci
+       * volte piu' lento di quello dell'orologio.**
+       *
+       * Misurato riproducendo il runner su questa macchina -- `CHROMIUM=1`
+       * senza `CON_GPU`, che secondo `browser.mjs` da' `chrome-headless-shell`,
+       * il binario che lo stack GPU non ce l'ha: **4 fotogrammi in 3 secondi**,
+       * cioe' 0,067 s di nave per ogni secondo d'orologio. Quindici volte piu'
+       * lento. (Va detto perche' e' scritto al contrario nel workflow: li' una
+       * nota sostiene che `CHROMIUM=1` non forza il disegno in software. Lo
+       * forza, e per questo il guasto della CI si e' potuto riprodurre in
+       * locale invece che indovinare.)
+       *
+       * In CI si disegna a circa 1,2 fotogrammi al secondo. Ogni fotogramma
+       * porta avanti 0,05 s di nave. Otto secondi di orologio -- la finestra
+       * che `collaudo-manopola` apre per vedere un periodo di rollio intero --
+       * diventano **mezzo secondo di mare**: un quattordicesimo del periodo. In
+       * quel pezzetto la pinna sta ferma a fondo corsa, l'albero d'ingresso non
+       * escursiona, e il cancello conclude che la manopola non comanda niente.
+       * Il difetto era vero e il difetto non c'era: la misura durava meno del
+       * fenomeno.
+       *
+       * Allungare la finestra non e' una cura -- vorrebbe dire un quarto d'ora
+       * per campione, e `collaudo-cinematica` e' gia' escluso dalla CI per
+       * questa identica ragione, con la nota che chiama la cura vera per nome:
+       * «il giorno in cui il meccanismo si puo' far avanzare a passo dichiarato
+       * invece che a fotogrammi». E' questo giorno.
+       *
+       * ─── E NON E' UNA POSA FINTA, che e' l'obiezione da farsi per prima
+       *
+       * Qui non si scrive uno stato: si INTEGRA la stessa simulazione, con lo
+       * stesso integratore, allo stesso passo fisso che `?fermo` usa gia' per
+       * rendere ripetibile un fotogramma (`stato.js`, `PASSO_FERMO`). Cambia
+       * solo CHI batte il tempo: il ciclo di disegno o il cancello. Lo stato
+       * che ne esce e' uno stato che la fisica del sito produce davvero.
+       *
+       * Nessun cancello puo' usarlo per far tornare un numero: non prende
+       * scorciatoie sul modello, non tocca i comandi e non salta il transitorio
+       * -- se una misura ha bisogno di due secondi di assestamento, deve
+       * comprarli anche qui, un passo alla volta.
+       *
+       * Aggiorna anche il meccanismo, perche' cio' che si misura e' l'albero
+       * d'ingresso e quello lo muove `impianto.aggiorna`, non l'integratore. E'
+       * la stessa regola del testimone di vitalita', al contrario: se si misura
+       * un nodo della scena, a muoverlo dev'essere la scena.
+       *
+       * Vive solo con `?ispeziona=1`, come tutto il resto di questo oggetto.
+       */
+      passoDichiarato (dt = 1 / 60, passi = 1) {
+        // lo stesso tetto del disegno: un passo dichiarato piu' lungo sarebbe
+        // un'integrazione che il sito non fa mai, quindi non proverebbe il sito
+        const h = Math.max(1e-4, Math.min(dt, 0.05))
+        for (let k = 0; k < passi; k++) {
+          avanza(h)
+          if (!ultimoStato) continue
+          for (const i of impianti) i.aggiorna({ pinna: ultimoStato.pinna * i.lato })
+        }
+        return tempoSimulato()
+      },
+      /** Il denominatore onesto: vedi `stato.js`. */
+      get tempoSimulato () { return tempoSimulato() },
       /**
        * LA TELA DELL'AMBIENTE, per darla a Blender.
        *

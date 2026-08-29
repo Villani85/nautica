@@ -132,17 +132,52 @@ export const IPOTESI_GESTO_VERO_PX = 8
  * acqua, cioe' a una certa andatura.
  *
  * Perche' e' un'IPOTESI e non una soglia. Il numero e' PLAUSIBILE e viene da
- * una misura vera fatta oggi -- a 6,1 kn la pinna e' in stallo l'87,5% del
- * tempo, contro lo 0,0% a 12,0 -- ma quella misura dice quando la pinna
- * satura, NON quando una persona che guarda si accorge che la nave rolla di
- * nuovo. Sono due cose diverse, e la seconda non l'ho misurata su nessuno.
- * Sette nodi cade fra i 10,0 (stallo 71%) e i 6,1 (stallo 87,5%) della
- * tabella; e' una scelta per poter costruire, non un risultato.
+ * una misura vera -- a 6,1 kn la pinna e' in stallo l'87,5% del tempo, contro
+ * lo 0,0% a 12,0 -- ma quella misura dice quando la pinna satura, NON quando
+ * una persona che guarda si accorge che la nave rolla di nuovo. Sono due cose
+ * diverse, e la seconda non l'ho misurata su nessuno.
  *
- * Si chiude guardando delle persone: a che andatura dicono «sta ricominciando
- * a rollare». Allora cambia nome.
+ * ─── ERA 7,0, ED ERA UN SUGGERIMENTO CHE NON POTEVA ESSERE VISSUTO
+ *
+ * Sette nodi cadeva fra i 10,0 (stallo 71%) e i 6,1 (stallo 87,5%) della
+ * tabella, e dentro quella forchetta era una scelta legittima. Ma la scelta era
+ * stata fatta guardando SOLO la tabella dello stallo, e alla tabella mancava un
+ * asse: **quanto ci mette la nave ad arrivarci.**
+ *
+ * Integrando `dinamicaPropulsione` a passo fisso da 12,0 kn con la propulsione
+ * appena spenta -- che e' la sola strada per cui un visitatore ci arriva:
+ *
+ *     10,0 kn      9,3 s
+ *      9,0 kn     14,7 s
+ *      7,0 kn     29,9 s      <- la soglia di prima
+ *      6,1 kn     40,0 s
+ *
+ * Trenta secondi. Il nudge vive nelle battute `taglio` e `meccanismo`, cioe'
+ * nell'ultimo quarto della corsa: chiedere a chi guarda di spegnere la
+ * propulsione e poi restare li' mezzo minuto senza scorrere e' chiedere una
+ * cosa che nel filmato di collaudo non e' successa. Una revisione esterna l'ha
+ * detto nella forma piu' scomoda possibile: **il nudge poteva essere corretto
+ * nel codice e non essere mai vissuto** -- che e' precisamente il difetto per
+ * cui `collaudo-nudge` era stato scritto, arrivato da un lato che quel cancello
+ * non guardava.
+ *
+ * Dieci nodi e' lo stesso genere di scelta di prima, dentro la stessa
+ * forchetta, ma adesso decisa su due misure invece che su una: a 10,0 kn la
+ * pinna e' gia' in stallo il 71% del tempo -- il rollio E' tornato, che e'
+ * l'unica cosa che il nudge dichiara -- e ci si arriva in 9,3 s, che e' un
+ * tempo che una persona passa davvero a guardare cosa succede dopo aver
+ * spento qualcosa.
+ *
+ * Resta un'IPOTESI: nessuna delle due misure dice quando una PERSONA se ne
+ * accorge. Si chiude guardando delle persone: a che andatura dicono «sta
+ * ricominciando a rollare». Allora cambia nome.
+ *
+ * Il tempo d'arrivo adesso ha un cancello: `strumenti/collaudo-nudge.mjs`
+ * spegne la propulsione, avanza la simulazione a passo dichiarato e pretende
+ * la bolla entro un budget di secondi SIMULATI. Se un giorno questo numero
+ * tornasse a valere trenta secondi, la CI lo direbbe prima del filmato.
  */
-export const IPOTESI_ANDATURA_GYRO_KN = 7.0
+export const IPOTESI_ANDATURA_GYRO_KN = 10.0
 
 /**
  * L'elenco delle ipotesi vive, cosi' chi arriva le trova tutte in un posto
