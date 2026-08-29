@@ -101,7 +101,39 @@ const dati = await pg.evaluate(([px, py, pz, mx, my, mz, fuoco, L, H, senzaMare,
    *
    * `LINEARE=1` spegne la curva da tutte e due le parti (qui NoToneMapping,
    * in `cuoci.py` il view transform 'Standard'): restano valori sRGB, che si
-   * invertono esattamente, e i rapporti tornano confrontabili fra loro. */
+   * invertono esattamente, e i rapporti tornano confrontabili fra loro.
+   *
+   * ─── E QUANTO NASCONDE, misurato: TRENTA LIVELLI
+   *
+   * Sulla nave intera, a luce uguale da entrambe le parti (solo ambiente),
+   * mediana dello scarto per fascia -- sito meno cotta:
+   *
+   *       fascia            con AgX    in lineare
+   *       1 albero, tuga      -3          +30
+   *       2 timoneria          0          +32
+   *       3 sovrastruttura    +6          +35
+   *       4 coperta           -3          +11
+   *       5 murata           -18          -20
+   *
+   * Con la curva le prime quattro fasce sembrano combaciare. **Non combaciano:
+   * in lineare il sito e' 30-35 livelli piu' chiaro.** AgX comprime le alte
+   * luci, e due radianze molto diverse finiscono sullo stesso valore a schermo.
+   * Ho riportato quell'accordo due volte prima di accorgermene, e l'avvertimento
+   * era gia' scritto tre righe piu' su.
+   *
+   * Le due letture sono tutte e due vere e rispondono a domande diverse: a
+   * schermo il sito SOMIGLIA al render, in lineare riceve molta piu' luce in
+   * alto e molta meno di fianco. Chi vuole giudicare l'aspetto legge la prima;
+   * chi cerca la causa deve leggere la seconda.
+   *
+   * La murata invece non cambia (-18 contro -20): **la curva non c'entra col
+   * suo divario**, e quell'ipotesi e' chiusa.
+   *
+   * Un solo difetto rende conto di entrambi i segni: l'illuminazione d'ambiente
+   * del sito e' sbilanciata verso l'alto -- le superfici orizzontali vedono
+   * troppo cielo, quelle verticali troppo poco orizzonte. E si somma, non si
+   * compensa, con l'altra misura: anche l'impianto di LUCI da' 41 livelli alla
+   * sovrastruttura contro i 2 di Cycles. */
   const ACES = 4, AGX = 6, NESSUNA = 0
   if (lineare) {
     n.render.toneMapping = NESSUNA
