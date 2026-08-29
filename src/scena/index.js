@@ -920,6 +920,45 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      */
     macchine.gira(sim.S, dt)
 
+    /**
+     * ─── IL RIENTRO NEL SALONE, quando il filmato ha finito
+     *
+     * `uscita` va da 0 (dentro la tuga) a 1 (fuori, nave intera): e' la stessa
+     * manopola con cui il sito si apre. Quando la traversata finisce la si
+     * riporta verso 0, e la camera **rientra dalla stessa porta da cui era
+     * uscita** -- non e' un taglio e non e' una scena nuova, e' la corsa
+     * percorsa al contrario.
+     *
+     * Si scrive qui e non in `regia.js` perche' non dipende dallo scorrimento:
+     * dipende dal filmato, che ha un suo tempo. La regia continua a scrivere
+     * `uscita` dallo scorrimento e questa riga la tira verso lo zero con un
+     * peso che cresce -- quindi le due non litigano, e se qualcuno risale con
+     * la rotella il rientro si disfa da solo invece di incastrarsi.
+     */
+    const rientro = traversata.ritorno(dt)
+    if (rientro > 0) {
+      /**
+       * ─── SI RIPORTA A ZERO TUTTO, E DI COLPO, NON A POCO A POCO
+       *
+       * Il primo tentativo interpolava con `rientro` che cresce: si vedeva la
+       * camera risalire dal meccanismo in un secondo, cioe' un riavvolgimento.
+       * Il filmato quel viaggio l'ha GIA' fatto, e rifarlo in 3D a velocita'
+       * quadrupla dice che il filmato non contava.
+       *
+       * Quindi lo stato si azzera al primo fotogramma utile, MENTRE il piano e'
+       * ancora opaco: chi guarda non vede il salto, vede la dissolvenza. Sono
+       * tre manopole -- fuori dallo scafo, avvicinamento al meccanismo, taglio
+       * aperto -- e vanno chiuse tutte e tre, o si rientra nel salone con la
+       * nave ancora sezionata addosso. Preso guardando: azzerando la sola
+       * `uscita` la camera restava sulla pinna.
+       */
+      uscita = 0
+      avvicinamento = 0
+      spaccato = 0
+      pianoSezione.constant = Z_FUORI
+      pianoVerticale.constant = X_INTERO
+    }
+
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
     if (salone) {
@@ -1407,6 +1446,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * e' il passaggio di consegne finale.
      */
     impostaTraversata: (q) => traversata.mostra(q),
+    /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
+    traversataFinita: () => traversata.finita,
     /** Il capitolo si accende e si spegne: i video non decodificano fuori schermo. */
     accendi: () => salone?.riproduci(),
     spegni: () => { salone?.ferma(); traversata.spegni() },

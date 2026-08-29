@@ -43,7 +43,10 @@ for (const q of QUOTE) {
    * dopo il `play()`. Meno, e si fotografa un piano ancora vuoto — che si
    * leggerebbe come «la traversata non parte» invece che «non l'ho aspettata».
    */
-  await pg.waitForTimeout(2500)
+  /* con ATTESA= si aspetta di piu': il rientro parte quando il filmato FINISCE,
+     cioe' dieci secondi dopo che e' partito, e con l'attesa corta si fotografa
+     sempre il filmato in corsa senza mai vedere la consegna al 3D. */
+  await pg.waitForTimeout(Number(process.env.ATTESA || 2500))
   const nome = `${FUORI}/q${String(q).replace('.', '')}.png`
   await pg.screenshot({ path: nome })
   /**

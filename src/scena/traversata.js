@@ -138,6 +138,27 @@ export function creaTraversata (base, camera, scena) {
   }
 
   let avviata = false
+  /**
+   * ─── QUANDO IL FILMATO FINISCE, IL COMANDO TORNA AL 3D
+   *
+   * E' la terza strada di `docs/13` §5, e non costa settimane come sembrava: il
+   * salone 3D **esiste gia'**, e' la prima battuta del sito. Il filmato fa la
+   * traversata -- corridoi, scale, spazi tecnici, dove non c'e' niente da
+   * inclinare -- e l'ultimo tratto lo riprende la scena, dove il rollio e'
+   * vero.
+   *
+   * Cosi' la frase che regge tutto il progetto torna vera: *le due persone
+   * viste tranquille nella prima schermata adesso non lo sono, e la causa e'
+   * chi guarda*. Con un filmato non lo era piu': un filmato non risponde al
+   * rollio, e il finale sarebbe stato un effetto proprio nel punto in cui il
+   * sito rivendica di non mentire.
+   *
+   * L'evento e' `ended` e non lo scorrimento, e la ragione e' gia' scritta
+   * sopra: il filmato ha un suo tempo. Legarlo alla corsa vorrebbe dire o
+   * troncarlo o lasciarlo fermo sull'ultimo fotogramma -- cioe' una fotografia.
+   */
+  let finita = false
+  v.addEventListener('ended', () => { finita = true })
 
   /**
    * `q` va da 0 a 1: 0 il 3D comanda, 1 comanda la traversata.
@@ -162,5 +183,22 @@ export function creaTraversata (base, camera, scena) {
   /** Il ciclo di disegno spento non deve lasciare un decodificatore acceso. */
   function spegni () { v.pause() }
 
-  return { mostra, spegni, piano, video: v }
+  /**
+   * `0` il filmato comanda ancora, `1` ha finito da un pezzo. Il ritorno dura
+   * 1,2 secondi: piu' corto sembra uno stacco, piu' lungo sembra un'esitazione
+   * -- e in mezzo c'e' un fotogramma in cui si vedono tutti e due i saloni, che
+   * e' il momento in cui la cucitura si giudica.
+   */
+  let daFine = 0
+  function ritorno (dt) {
+    if (!finita) return 0
+    daFine = Math.min(1, daFine + dt / 1.2)
+    /* mentre il 3D rientra, il piano si ritira: sono la stessa dissolvenza
+       vista dalle due parti, non due animazioni da tenere d'accordo */
+    mat.opacity = 1 - daFine
+    if (daFine >= 1) piano.visible = false
+    return daFine
+  }
+
+  return { mostra, spegni, ritorno, piano, video: v, get finita () { return finita } }
 }

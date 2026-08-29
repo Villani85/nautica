@@ -312,7 +312,15 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
      * mentre l'occhio ha il fotogramma pulito. Nascondere i comandi davvero
      * significherebbe togliere il controllo a chi non usa il mouse.
      */
-    const inTraversata = fra(p, S.traversata[0], S.traversata[1]) > 0.02 ? 'si' : 'no'
+    /**
+     * Il cruscotto torna quando il filmato ha finito, non quando lo scorrimento
+     * finisce: dopo il rientro la scena e' di nuovo viva e comandabile, e senza
+     * i comandi il sito si chiuderebbe su una cartolina. E' anche il momento in
+     * cui la tesi si puo' RIFARE dall'interno -- si spegne lo stabilizzatore e
+     * il salone si inclina, con la stessa corsa che ha inclinato lo scafo.
+     */
+    const finito = scena.traversataFinita?.() === true
+    const inTraversata = !finito && fra(p, S.traversata[0], S.traversata[1]) > 0.02 ? 'si' : 'no'
     palco.dataset.traversata = inTraversata
     /**
      * Il nudge NON e' figlio del palco -- e' appeso al corpo del documento,
