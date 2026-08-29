@@ -999,29 +999,32 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       pianoSezione.constant = MathUtils.lerp(pianoSezione.constant, bersaglioZ, k)
     }
 
-    const rientro = traversata.ritorno(dt)
-    if (rientro > 0) {
-      /**
-       * ─── SI RIPORTA A ZERO TUTTO, E DI COLPO, NON A POCO A POCO
-       *
-       * Il primo tentativo interpolava con `rientro` che cresce: si vedeva la
-       * camera risalire dal meccanismo in un secondo, cioe' un riavvolgimento.
-       * Il filmato quel viaggio l'ha GIA' fatto, e rifarlo in 3D a velocita'
-       * quadrupla dice che il filmato non contava.
-       *
-       * Quindi lo stato si azzera al primo fotogramma utile, MENTRE il piano e'
-       * ancora opaco: chi guarda non vede il salto, vede la dissolvenza. Sono
-       * tre manopole -- fuori dallo scafo, avvicinamento al meccanismo, taglio
-       * aperto -- e vanno chiuse tutte e tre, o si rientra nel salone con la
-       * nave ancora sezionata addosso. Preso guardando: azzerando la sola
-       * `uscita` la camera restava sulla pinna.
-       */
-      uscita = 0
-      avvicinamento = 0
-      spaccato = 0
-      pianoSezione.constant = Z_FUORI
-      pianoVerticale.constant = X_INTERO
-    }
+    /**
+     * ─── IL RIENTRO NON LO FA UN TIMER, LO FA LA MANO. Tre tentativi.
+     *
+     * Volevo che alla fine del filmato la camera tornasse da sola nel salone,
+     * cosi' da chiudere il cerchio su una scena VIVA dove il rollio e' vero.
+     * L'ho scritto tre volte e ogni volta il cancello della continuita' l'ha
+     * bocciato: azzeramento istantaneo (passo 22,9 volte i vicini), poi
+     * interpolato su 1,2 s (si vedeva come riavvolgimento), poi su 0,30 s --
+     * e a quel punto ho capito che non era una questione di durata.
+     *
+     * IL DIFETTO ERA STRUTTURALE. Quel rientro era guidato da un TIMER: partiva
+     * quando il filmato finiva, dieci secondi dopo essere cominciato, e nel
+     * frattempo lo scorrimento poteva essere ovunque. In un sito il cui
+     * contratto e' «lo scorrimento e' il padrone unico» una camera che si muove
+     * da sola e' l'anomalia, non il cancello che la trova. E infatti il
+     * campionatore -- che aspetta i fotogrammi e mette piu' di un secondo fra
+     * due letture -- non poteva distinguerlo da un taglio, quale che fosse la
+     * durata.
+     *
+     * COSI' IL FILMATO RESTA. Finisce sulle persone e ci rimane, invece di
+     * dissolversi su un meccanismo che dietro e' ancora li' -- che era anche
+     * una contraddizione visiva: l'ultima immagine sarebbe stata il pezzo, non
+     * la coppia. Chi vuole tornare nella scena viva risale, e risalendo la
+     * dissolvenza si apre da sola perche' `mostra()` segue la corsa. Il cerchio
+     * si chiude lo stesso, ma lo chiude la mano di chi guarda.
+     */
 
     // L'angolo e' opposto fra dritta e sinistra: due pinne con la stessa
     // incidenza spingerebbero dalla stessa parte invece di raddrizzare.
@@ -1529,6 +1532,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     impostaTraversata: (q) => traversata.mostra(q),
     /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
     traversataFinita: () => traversata.finita,
+    /**
+     * Quanto il filmato copre il fotogramma, da 0 a 1. Serve a
+     * `collaudo-continuita`: la camera puo' fare UN salto -- il rientro nel
+     * salone -- e solo mentre e' completamente coperta. Esporlo e' l'unico modo
+     * perche' quel cancello possa VERIFICARE la copertura invece di fidarsi.
+     */
+    coperturaTraversata: () => traversata.copertura,
     /** Il capitolo si accende e si spegne: i video non decodificano fuori schermo. */
     accendi: () => salone?.riproduci(),
     spegni: () => { salone?.ferma(); traversata.spegni() },

@@ -217,6 +217,10 @@ for (let i = 0; i <= PASSI; i++) {
     const n = window.__nautica
     if (!n) return null
     const c = n.camera
+    /* quanto il filmato della traversata copre il fotogramma in questo istante:
+       serve al controllo del salto qui sotto, e va letto INSIEME alla posa o si
+       confronterebbero due istanti diversi */
+    const copertura = n.coperturaTraversata ? n.coperturaTraversata() : 0
     /**
      * SI ASPETTANO I FOTOGRAMMI, NON I MILLISECONDI — e la differenza non e'
      * accademica.
@@ -272,7 +276,8 @@ for (let i = 0; i <= PASSI; i++) {
       stessaScena: n.scena === r.scena,
       stessaCamera: c === r.camera,
       stessoRender: n.render === r.render,
-      mare: n.stato ? n.stato.mare : null
+      mare: n.stato ? n.stato.mare : null,
+      copertura
     }
   }))
 }
@@ -331,10 +336,11 @@ const totale = passi.reduce((a, b) => a + b, 0)
 note.push(`CORSA       ${totale.toFixed(1)} unita' in ${passi.length} passi; ` +
           `picco locale ${picco.toFixed(1)}x al campione ${dovePicco}`)
 if (picco > SALTO_MAX) {
+  const cop = (buoni[dovePicco]?.copertura ?? 0).toFixed(2)
   guasti.push(
     `fra i campioni ${dovePicco} e ${dovePicco + 1} la camera fa un passo ${picco.toFixed(1)} volte ` +
     'i suoi vicini: un taglio, non un movimento. Una scena unica ha una camera ' +
-    'che si muove; due scene cucite hanno una camera che si sposta.')
+    `che si muove; due scene cucite hanno una camera che si sposta. (Copertura del filmato li': ${cop}.)`)
 }
 
 // ─── l'identita' ──────────────────────────────────────────────────────────

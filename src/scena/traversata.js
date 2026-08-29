@@ -189,16 +189,23 @@ export function creaTraversata (base, camera, scena) {
    * -- e in mezzo c'e' un fotogramma in cui si vedono tutti e due i saloni, che
    * e' il momento in cui la cucitura si giudica.
    */
-  let daFine = 0
-  function ritorno (dt) {
-    if (!finita) return 0
-    daFine = Math.min(1, daFine + dt / 1.2)
-    /* mentre il 3D rientra, il piano si ritira: sono la stessa dissolvenza
-       vista dalle due parti, non due animazioni da tenere d'accordo */
-    mat.opacity = 1 - daFine
-    if (daFine >= 1) piano.visible = false
-    return daFine
+  /**
+   * Il filmato NON si dissolve da solo quando finisce: resta sull'ultimo
+   * fotogramma, cioe' sulle due persone. La ragione sta in `index.js`, sopra il
+   * rientro che non c'e' piu' -- una dissolvenza automatica riporterebbe in
+   * campo il meccanismo, che dietro e' ancora li', e l'ultima immagine del sito
+   * diventerebbe il pezzo invece della coppia.
+   *
+   * Si apre risalendo: `mostra()` segue la corsa, quindi scorrendo indietro
+   * l'opacita' cala e si rientra nella scena viva. Il cerchio lo chiude la mano.
+   */
+  return {
+    mostra,
+    spegni,
+    piano,
+    video: v,
+    get finita () { return finita },
+    /** Quanto copre il fotogramma adesso: 1 = il 3D dietro non si vede. */
+    get copertura () { return piano.visible ? mat.opacity : 0 }
   }
-
-  return { mostra, spegni, ritorno, piano, video: v, get finita () { return finita } }
 }
