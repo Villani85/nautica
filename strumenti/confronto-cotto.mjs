@@ -357,6 +357,32 @@ if (process.env.COTTA) {
   }
   console.log('')
   console.log('SCARTO FRA COTTA E DISEGNATA, sui pixel dove c e la nave in tutte e due')
+  /**
+   * ─── E SE LE LUCI SONO ACCESE, IL NUMERO NON PARLA DEL RENDER
+   *
+   * Gli impianti di luce sono DUE E DIVERSI: il sito ha emisferica, sole,
+   * controluce e una puntiforme; `cuoci.py` due luci ad area. Con tutti e due
+   * accesi, quello che si misura e' in gran parte la differenza fra i due
+   * impianti.
+   *
+   * Sta scritto piu' su in questo stesso file da prima che io arrivassi -- e
+   * l'ho ignorato lo stesso, tirandone una conclusione sbagliata che e' finita
+   * in un commit: «scarto quasi uniforme, quindi esposizione». Coi numeri qui
+   * sotto, misurati subito dopo:
+   *
+   *     con le due luci accese     sovra -9,1   coperta -1,5   murata -27,6
+   *     solo ambiente, tutti e due sovra -1     coperta +5     murata -6
+   *
+   * Non era ne' uniforme ne' esposizione: erano le luci. Ventidue livelli sulla
+   * murata venivano da li'.
+   *
+   * Quindi l'avviso e' stampato dove si legge il risultato, non in un commento.
+   */
+  if (process.env.SENZA_LUCI !== '1') {
+    console.log('  ATTENZIONE: le luci sono ACCESE da tutte e due le parti, e sono due')
+    console.log('  impianti diversi. Questo numero misura soprattutto quella differenza.')
+    console.log('  Per misurare la RESA: SENZA_LUCI=1 qui e LUCE=0 in cuoci.py.')
+  }
   if (!n) {
     console.log('  nessun pixel in comune: le due sagome non si sovrappongono')
   } else {
