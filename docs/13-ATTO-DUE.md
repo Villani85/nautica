@@ -87,7 +87,23 @@ al visitatore che il mondo è finto e che le cose interessanti sono state
 marcate. Qui le cose **stanno lì**. Si trovano muovendo il taglio, e
 l'annotazione compare **perché ci si è fermati**, non perché si è cliccato.
 
-**Soglia:** l'annotazione appare dopo 400 ms di quiete della lama entro il
+**Soglia — ed e' un'IPOTESI, non un requisito.** Deciso il 29 agosto: i
+valori provvisori sono ammessi, spacciarli per dimostrati no. Le tre specie
+sono ora distinte e il nome le dichiara: `IPOTESI_*` in `src/ui/soglie.js` per
+i valori provvisori, `SOGLIA_*` per quelli validati su persone, e **un cancello
+automatico puo' nascere solo dalla seconda specie** -- un cancello costruito su
+un'ipotesi certificherebbe la mia congettura invece del sito. Nessun test deve
+sostenere che 400 ms siano corretti, e `?studio=1` (`src/ui/studio.js`) misura
+cio' che serve a sostituirli: tempo al primo gesto efficace, tentativi a vuoto,
+permanenza per macchina, annotazioni aperte e abbandonate subito, ritorno o
+mancato ritorno al salone. Si chiude dopo cinque persone che non conoscono il
+sito.
+
+**E nessun ritardo artificiale prima che la lama risponda: la lama risponde
+subito.** L'attrito del passaggio di consegne e' una cosa che si guarda addosso
+a qualcuno; la prontezza della mano si da' e basta.
+
+L'annotazione appare dopo 400 ms di quiete della lama entro il
 raggio del sistema, e scompare al primo movimento. Va tarata guardando.
 
 ### La camera si libera, e la regola lo prevedeva già
@@ -206,7 +222,40 @@ Tre strade, e va scelta **guardando**, non ragionando:
 3. **Il salone appare in un'apertura** nella parte alta dell'inquadratura, con
    la composizione del riferimento. Sicura, e la meno legata al gesto.
 
-Registrata come decisione aperta invece che scelta di nascosto.
+### CHIUSA — 29 agosto. La prima strada, ma non come fotogramma
+
+Il committente ha scelto, e ha corretto la domanda: **la sezione intera non e'
+l'ultima immagine, e' il climax razionale**. Il finale emotivo viene dopo, ed e'
+il ritorno alle persone.
+
+La sequenza, in sei passi:
+
+1. la camera **arretra fisicamente** dal meccanismo, dentro lo stesso scafo
+   aperto;
+2. compare la **sezione verticale completa**: il meccanismo sotto, il salone e
+   le persone sopra, un taglio solo;
+3. l'utente risolve il problema;
+4. rollio, pinne, mare e persone reagiscono **contemporaneamente**;
+5. la camera **risale attraverso lo stesso taglio** ed entra nel salone;
+6. il sito finisce sulle stesse persone della prima immagine, **ora rilassate**.
+
+**Le altre due strade sono scartate, con la ragione.** Guardare in alto dal
+meccanismo rende il salone troppo piccolo e prospetticamente difficile.
+Il salone dentro un'apertura e' un picture-in-picture mascherato: contraddice
+la scena continua, che e' la conquista piu' costosa di questo repo. E in nessuna
+delle due deve esserci un salto di camera o una fotografia che compare dentro un
+riquadro.
+
+**E il vecchio `finale.js` e' stato cancellato**, non collegato: implementava
+esattamente la soluzione respinta. Diciannove kilobyte non importati da nessuno,
+un'architettura vietata, e una trappola per chi fosse arrivato dopo. La storia
+resta in git; il perche' sta in `docs/20-FINALE.md`, che ora e' la lapide di
+quella strada e porta le tre misure geometriche che il finale nuovo deve
+battere.
+
+Se servira' un modulo separato potra' contenere **soltanto** la traiettoria
+continua della camera e la composizione finale. Mai un renderer, una scena o
+una lastra alternativi.
 
 ---
 
