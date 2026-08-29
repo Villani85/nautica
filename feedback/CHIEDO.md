@@ -7,7 +7,7 @@ trovato la volta scorsa. Cambia a ogni giro.
 Progetto: <https://github.com/Villani85/nautica> — sito pubblicato su
 <https://villani85.github.io/nautica/>
 
-Aggiornato: **28 agosto 2026, pomeriggio.** Da quando hai clonato potrei aver spinto
+Aggiornato: **29 agosto 2026, mattina.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -162,6 +162,11 @@ Se sì, di quanto, e in che verso? (`src/scena/simulazione.js`, le armoniche e
 *(Due delle tre domande che stavano qui sono chiuse dal giro delle 10:17 —
 il cielo e la cura del diffuso. Vedi §5.)*
 
+*(E il giro delle 06:22 ha trovato che il banco che valida questi numeri forza
+una curva tonale che il sito non spedisce. **I rapporti qui sotto non cadono** —
+sono presi in lineare da tutte e due le parti, dove la curva è spenta. Cade la
+rassicurazione che ne avevo tratto guardando la colonna AgX. Vedi §5.)*
+
 **Perché lo scafo è più chiaro del 37% e la sovrastruttura più scura del 20%?**
 Con camera (0,05 px), cielo, curva tonale **e luci** allineati, e i rapporti
 presi **in lineare** a esposizione 0 da tutte e due le parti:
@@ -244,6 +249,11 @@ COME LA VERIFICO   il comando, il file e la riga, o la misura ripetibile
 SE HO RAGIONE      cosa cambia nel sito
 ```
 
+**Se una voce sta in piedi su uno script che hai scritto tu, lo script va
+INCOLLATO nel giro, per intero.** Non descritto, non lasciato nel tuo clone: da
+qui non lo vedo, e la voce resta in piedi per premessa invece che per misura. E'
+successo col giro delle 08:23 e mi e' costato mezza verifica.
+
 **Tre voci verificabili valgono più di trenta pagine.** E una voce che dice «la
 tua misura X è sbagliata, ecco perché» vale più di tutte le altre messe insieme
 — anche se poi ha torto: quella la verifico comunque, e l'esito lo scrivo qui
@@ -252,6 +262,104 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 29 agosto, 08:23 (`nautica_2026-08-29_0823_20fa37f.md`)
+
+**Stesso HEAD del 06:22, misura diversa, e il giudizio visivo NON ripetuto —
+dichiarandolo. Esito per esteso in
+[`revisore-drive-2026-08-29-0823.md`](revisore-drive-2026-08-29-0823.md).**
+
+**VOCE 1 — «la generosita' cambia segno sotto la normalizzazione giusta».
+PREMESSA CONFERMATA, magnitudine non riprodotta.**
+
+Verificato sul codice, ed e' il perno:
+
+```
+simulazione.js:46-47  AMPIEZZA_MARE = [0,3,6,9,12,15]
+                      "Ampiezza nominale di rollio a CARENA NUDA, per stato del mare"
+simulazione.js:56     A1 = 0.002851   "forzante, TARATA numericamente"
+simulazione.js:53     W = 2*PI/7      risonanza a 7 s
+```
+
+Lo stato del mare in questo modello **e' definito dal rollio che produce a
+carena nuda**, non da un'energia d'onda: `A1` e' il numero che fa tornare
+`AMPIEZZA_MARE`, non un'ampiezza fisica. Quindi confrontare i due mari **a pari
+rollio nudo** e' la normalizzazione del modello, e a quel confronto un JONSWAP
+raddrizza **meglio** delle tre righe (+5,3 pt sul plateau), non peggio.
+
+**Ed e' un mio errore di premessa**, non suo: al 06:22 ho accettato «e'
+generoso» come conferma di dominio senza chiedermi rispetto a **cosa** i due
+mari fossero tenuti uguali. Il −9 punti esiste, ma sotto un'ipotesi — pari
+energia della forzante — che il mio stesso modello non fa.
+
+**VOCE 2 — il segno lo decide il periodo modale, crossover a ~5,8 s.**
+Coerente con la riga 53 (risonanza 7 s, crossover a 1,2·W), non riprodotta.
+Con il mare a tre righe che pesca a 8,4 s, il sito sta dalla parte
+conservativa. E il fattore di cresta non spiega il segno: il JONSWAP ha picchi
+peggiori (omega_max 13,98 contro 10,02 gradi/s) e raddrizza meglio lo stesso.
+
+**Cosa cambia in pagina: niente.** «Measured, not declared» resta vero, cambia
+l'interpretazione. Ma **la nota «lo spettro a tre righe e' generoso» non si
+scrive**: sotto la definizione di mare del modello e' falsa. Il §3.3 e' chiuso
+come domanda e riaperto come numero.
+
+**Quello che manca per chiuderlo davvero**, e diventa una richiesta fissa al
+§4: `strumenti/spettro-mare.mjs` sta nel **clone del revisore**. Senza, non
+rieseguo ne' la prova di sanita' (Δ 0,0000 contro `_riduzioneCruda`) ne' le
+tabelle. Un attrezzo che dimostra una voce e resta fuori dal repo non e'
+verificabile — ed e' la cosa che questo repo si vieta da solo.
+
+---
+
+### Giro del 29 agosto, 06:22 (`nautica_2026-08-29_0622_20fa37f.md`)
+
+**Sul mio HEAD, e la VOCE 1 e' confermata. Esito per esteso in
+[`revisore-drive-2026-08-29-0622.md`](revisore-drive-2026-08-29-0622.md).**
+
+**VOCE 1 — «il banco valida AgX@0,5, il sito spedisce ACES@1,0». CONFERMATA,
+sulle righe, non su una ricostruzione.**
+
+```
+src/scena/index.js:201-202     ACESFilmicToneMapping, esposizione 1,0   <- spedito
+src/scena/salone.js:80-81      idem
+confronto-cotto.mjs:145-146    AGX, esposizione 0,5                     <- validato
+cuoci.py:809                   view_transform = 'AgX'
+```
+
+Il banco **controlla** che il sito sia ACES e poi lo **cambia**: il controllo
+alla riga 141 sorveglia che la sostituzione parta dal punto giusto, non che il
+risultato somigli a cio' che ricevo io. Sul fotogramma della nave le due curve
+divergono di 51,7 livelli sulla sovrastruttura, 38 sulla murata, 40 sull'acqua.
+
+Quindi la riga di `fab0905` — «a schermo (AgX)... **ed e' cio' che vede chi apre
+il sito**» — descrive un fotogramma che nessun visitatore riceve. Ha la sua nota
+adesso.
+
+**Cosa NON cade, e va detto perche' e' meta' del valore della voce:** i rapporti
+del §3.4 (1,370x e 0,797x) sono presi **in lineare** da tutte e due le parti,
+con la curva spenta. Quelli restano. Cade la lettura rassicurante che avevo
+tratto dalla colonna AgX — che era un accordo della curva, non della materia, e
+lo avevo gia' scritto io stesso in `fab0905` due paragrafi sopra.
+
+**VOCE 2 — la sovrastruttura a 228,9 sulla spalla di ACES. PLAUSIBILE, non
+riprodotta.** I riquadri sono messi a occhio — lo dichiara lui — e non sono le
+maschere di fascia. La direzione pero' e' la stessa della VOCE 1, che sta in
+piedi sul codice.
+
+**E la parte che vale piu' del numero:** dice che «sembrava plastica» e che
+stava per fermarsi li'. Ha misurato invece, e la causa non e' una faccia persa
+ne' un difetto di materia — e' la luminanza assoluta nella curva spedita.
+«Plastica» da solo mi avrebbe mandato a cercare la cosa sbagliata. **E' questa
+la forma di feedback che chiedo al §3.1.**
+
+**Cosa non decido io.** Spedire AgX e' una riga in due file, ma i colori
+`--acqua` sono ricalcolati su ACES (`index.js:198-200`): la giunzione
+fondo-CSS/tela va riderivata, e quella e' l'idea meccanica del sito. Tenere ACES
+obbliga a riprendere i numeri del §3.4 nella curva vera contro un Cycles
+riportato alla stessa curva. E' una scelta di tavolozza, come `0x061412` per il
+vetro: la prende il committente, non io e non voi.
+
+---
 
 ### Giro del 28 agosto, 10:17 (`nautica_2026-08-28_1017_3c87e66.md`)
 
