@@ -35,7 +35,20 @@ il perché.
 - [ ] **Il profilo Awwwards.** Conta dal giorno in cui esiste. Serve il 6,5
       **dagli utenti** già per l'Honorable Mention, ed è il voto che matura solo
       col tempo.
-- [ ] **Aprire il sito da un telefono vero.** Nessuna emulazione lo sostituisce.
+- [x] **Aprire il sito da un telefono vero** — fatto il 29 agosto, e adesso e'
+      uno strumento invece di un evento: `strumenti/telefono-vero.mjs` parla al
+      Chrome del telefono via CDP. Note 20, Android 13. **A regime il sito tiene
+      60,0 fotogrammi al secondo con zero intervalli oltre 50 ms**, memoria
+      piatta a 11 MB, batteria +0,3 gradi in sedici secondi, LCP 384 ms.
+      Tutto il costo sta nell'avvio a freddo: quattro stalli nei primi 3,1
+      secondi, il peggiore da 982 ms.
+      **Resta dovuto quello che una macchina non puo' fare:** guardare una
+      persona vera usarlo col dito. La misura dice che il sito gira; non dice
+      che si capisce.
+      *(La trappola pagata per arrivarci: `vite preview` senza `--host` si lega
+      solo a `localhost`, che su Windows risolve prima su IPv6; `adb reverse`
+      inoltra in IPv4 e trovava la porta chiusa. Il tunnel c'era, dall'altra
+      parte non rispondeva nessuno, e si vedeva come un errore di rete.)*
 - [ ] **Metterlo davanti a persone che non lo conoscono.** Se meno di 12 su 15
       raccontano la stessa storia, la narrazione non è abbastanza chiara.
 

@@ -157,7 +157,8 @@ vieta da solo.
 | §11.1 | la lama come strumento, e il passaggio di consegne | da fare | — |
 | §11.2 | la navigazione a due assi | da fare | — |
 | §11.6 | il finale: l'inclinazione del salone dalla corsa viva | da fare | il cancello lo dichiara gia': scarto sotto 0,05 gradi su 200 fotogrammi |
-| §11.7 | il telefono, e §8 dice che vale quanto il resto | da fare | — |
+| §11.7 | il telefono: MISURATO su un Note 20 vero | **prima misura 29 ago** | a regime **60,0 fps**, mediano 16,6 ms, p95 16,7, peggiore 33,3, **zero** intervalli oltre 50. Memoria 11 -> 11 MB. Batteria +0,3 gradi in 16 s. LCP **384 ms**, CLS 0,024. A freddo invece **quattro stalli nei primi 3,1 s**, il peggiore 982 ms: e' l'avvio, non il regime |
+| §11.7 | l'atto due su telefono (gesto, celle, copertura) | in corso | — |
 | §5 | l'inquadratura del finale | **decisione aperta**, tre strade, e il §5 dice di sceglierla guardando |
 
 ---
