@@ -40,10 +40,14 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 /* misurato 1,43 schermate: il minimo sta un terzo sotto */
 const SCHERMATE_MINIME = 1.0
 const PORTA = process.env.PORTA_COLLAUDO || 5221
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 for (let i = 0; i < 60; i++) {

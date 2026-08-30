@@ -50,8 +50,12 @@ import { writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apriBrowser } from './browser.mjs'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5223
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 /**
  * Il minimo sta FRA i due valori misurati SUL MARE, ed e' stato spostato una
  * volta: con la camera dentro il piano dell'acqua il mare sta a **8,6**, con

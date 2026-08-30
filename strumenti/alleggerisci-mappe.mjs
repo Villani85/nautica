@@ -127,6 +127,47 @@ if (dopo.length >= prima.length) {
   process.exit(0)
 }
 
+/**
+ * ─── IL FILE DEVE DIRE CHE COS'E' DIVENTATO
+ *
+ * DIFETTO REALE DI QUESTO STRUMENTO, trovato dal validatore Khronos e per un
+ * giro soltanto AGGIRATO invece che corretto.
+ *
+ * Qui dentro si scrivono byte webp dentro la vista dell'immagine, e fin qui
+ * tutto bene. Poi si riscriveva il GLB **lasciando `mimeType: "image/png"`**.
+ * Il file dichiarava una cosa e ne conteneva un'altra:
+ *
+ *     IMAGE_MIME_TYPE_INVALID        il tipo dichiarato non e' quello dei byte
+ *     IMAGE_NON_ENABLED_MIME_TYPE    webp in glTF vuole EXT_texture_webp
+ *
+ * Non si vedeva sulle macchine perche' `glb-macchine.py` esporta gia' in webp
+ * e li' lo strumento sostituiva webp con webp: il `mimeType` era gia' giusto
+ * per caso. Si e' visto sugli interni, che uscivano in PNG. La prima cura fu
+ * allineare l'esportazione di Blender a WEBP -- cioe' evitare il difetto, non
+ * toglierlo: chiunque avesse usato questo strumento su un GLB con immagini PNG
+ * avrebbe ripagato lo stesso errore.
+ *
+ * Adesso il file lo dichiara. `EXT_texture_webp` porta la sorgente e `source`
+ * se ne va: senza un PNG di riserva l'estensione non e' facoltativa, quindi
+ * finisce anche in `extensionsRequired`. Un lettore che non la conosce deve
+ * rifiutare il file, non disegnarlo storto.
+ *
+ * E' idempotente: rigirare lo strumento su un file gia' webp non aggiunge
+ * niente due volte.
+ */
+if (img.mimeType !== 'image/webp') {
+  console.log(`  ${quale}: il file dichiarava ${img.mimeType}, adesso dichiara image/webp`)
+}
+img.mimeType = 'image/webp'
+const tex = j.textures[rif.index]
+tex.extensions = tex.extensions || {}
+tex.extensions.EXT_texture_webp = { source: iImg }
+delete tex.source
+j.extensionsUsed = j.extensionsUsed || []
+if (!j.extensionsUsed.includes('EXT_texture_webp')) j.extensionsUsed.push('EXT_texture_webp')
+j.extensionsRequired = j.extensionsRequired || []
+if (!j.extensionsRequired.includes('EXT_texture_webp')) j.extensionsRequired.push('EXT_texture_webp')
+
 /* Si riscrive il blob: viste in ordine di offset, allineate a 4. */
 const ordine = j.bufferViews
   .map((v, i) => ({ v, i }))

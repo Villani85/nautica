@@ -13,6 +13,7 @@ import { apriBrowser } from './browser.mjs'
  */
 import { STAZIONI, QUOTE, SISTEMI, CELLE, COMANDI_NOTI } from '../src/ui/atto-due.js'
 import { IPOTESI_QUIETE_MS, IPOTESI_BLOCCO_ASSE_PX, IPOTESI_PASSO_CELLA_PX } from '../src/ui/soglie.js'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 /**
  * IL SITO SU UNO SCHERMO DA TELEFONO — misurato, non supposto.
@@ -247,6 +248,9 @@ import { IPOTESI_QUIETE_MS, IPOTESI_BLOCCO_ASSE_PX, IPOTESI_PASSO_CELLA_PX } fro
  * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
  */
 const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 const PORTA_MIA = 5181
 const RADICE = fileURLToPath(new URL('..', import.meta.url))
 /** Riempito da `serviteci()`: puo' essere la 5180 di qualcun altro o la mia. */

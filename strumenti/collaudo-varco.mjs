@@ -22,10 +22,14 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const GAMMA_MIN = 60      // col taglio aperto
 const GAMMA_MAX_CHIUSO = 35   // col taglio chiuso
 const PORTA = process.env.PORTA_COLLAUDO || 5216
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 await new Promise(r => setTimeout(r, 4000))

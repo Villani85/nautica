@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { apriBrowser } from './browser.mjs'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 /**
  * COLLAUDO DELLA CONTINUITA' — l'atto e' uno solo, e non si taglia.
@@ -60,6 +61,9 @@ import { apriBrowser } from './browser.mjs'
  * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
  */
 const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 const BASE = `http://localhost:${PORTA}/nautica/`
 const PASSI = 44
 const PITCH_MAX = 1e-4        // il quaternione di una camera livellata

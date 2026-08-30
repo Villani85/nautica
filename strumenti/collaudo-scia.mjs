@@ -18,8 +18,12 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5195
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 /* i due numeri vengono dalla misura di stasera, non da un gusto: accendendo
    l'andatura la murata cambia molto e il largo quasi niente. */
 const MINIMO_MURATA = 6

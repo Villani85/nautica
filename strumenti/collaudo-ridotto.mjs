@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { apriBrowser } from './browser.mjs'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 /**
  * CON `prefers-reduced-motion` IL SITO SI RIDUCE. NON SI SPEGNE.
@@ -52,6 +53,9 @@ import { apriBrowser } from './browser.mjs'
  * `PORTA_COLLAUDO=5181 npm run collaudo` da' a questa corsa un server suo.
  */
 const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 const BASE = `http://localhost:${PORTA}/nautica/`
 /**
  * --- LA FINESTRA E' UN TEMPO, NON UN CONTEGGIO DI FOTOGRAMMI

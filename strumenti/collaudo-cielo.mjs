@@ -41,8 +41,12 @@ import { writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apriBrowser } from './browser.mjs'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const PORTA = process.env.PORTA_COLLAUDO || 5231
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 const QUOTE = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.38, 0.40, 0.42, 0.43]
 const VISTE = [
   { nome: 'DESKTOP 1440x900', w: 1440, h: 900 },

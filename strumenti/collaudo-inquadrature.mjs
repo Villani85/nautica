@@ -77,11 +77,15 @@
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
 import { SOGGETTI, misuraInPagina, trovaArco, vaiA, attendiCameraFerma } from './inquadratura-comune.mjs'
+import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const PRESENZA_MINIMA = 6.0     // misurato 7,87 al peggio, su tre corse
 const OCCLUSIONE_MASSIMA = 22.0 // misurato 15,3 al peggio, su tre corse
 const QUANTI = 5
 const PORTA = process.env.PORTA_COLLAUDO || 5219
+/* se sulla porta risponde gia' qualcuno, questo referto puo' essere
+   la misura del `dist` di un altro processo: si dice, non si tace */
+await avvisaSePortaAltrui(PORTA)
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 for (let i = 0; i < 60; i++) {
