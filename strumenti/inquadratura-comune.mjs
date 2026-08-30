@@ -35,10 +35,35 @@ export const SOGGETTI = {
   invito: { come: 'nave', cosa: 'la nave, col comando a portata' },
   calma: { come: 'nave', cosa: 'la nave che smette di rollare' },
   taglio: { come: 'nave', cosa: 'la sezione aperta' },
+  /**
+   * ─── IL MECCANISMO SI DEFINISCE PER RADICE, NON PER NOMI DI MATERIALE
+   *
+   * Qui c'era la lista dei materiali -- acciaio, lucido, carter, motore,
+   * tenuta, gomma, cavo, bronzo, sezione -- copiata da `collaudo-varco`. Per
+   * quel cancello va bene: gli serve accendere un'emissiva su tutto cio' che e'
+   * meccanico, e qualche pezzo in piu' non sposta un contrasto.
+   *
+   * Per una misura di INQUADRATURA no. Misurato, sulle 74 mesh che quella lista
+   * raccoglie:
+   *
+   *     IMPIANTO      48 mesh   x -1,95 .. 1,95 nello scafo
+   *     (senza nome)  10 mesh
+   *     PROPULSIONE   10 mesh
+   *     GIROSCOPIO     6 mesh
+   *
+   * **Sedici mesh su settantaquattro non sono l'impianto delle pinne**: sono la
+   * propulsione e il giroscopio, due apparati diversi che stanno altrove nella
+   * nave. Presenza e occlusione calcolate su quel miscuglio non descrivono
+   * nessuno dei tre, e nessuna posa di camera puo' migliorarle -- una parte del
+   * "soggetto" e' sempre da un'altra parte.
+   *
+   * La battuta dice cosa vuole mostrare: *«Servomotor, cycloidal reduction,
+   * output carrier, shaft, gland, fin»*. E' `IMPIANTO`. E' quello il soggetto.
+   */
   meccanismo: {
-    come: 'materiali',
-    nomi: ['acciaio', 'lucido', 'carter', 'motore', 'tenuta', 'gomma', 'cavo', 'bronzo', 'sezione'],
-    cosa: 'il meccanismo'
+    come: 'sottoalbero',
+    chiave: 'IMPIANTO',
+    cosa: 'l impianto delle pinne'
   }
 }
 
@@ -48,7 +73,7 @@ export const SOGGETTI = {
  * Non fa riferimento a niente fuori da se': Playwright la serializza e la
  * esegue nel browser, dove nessun identificatore di questo modulo esiste.
  */
-export function misuraInPagina ({ def, conColpevoli }) {
+export function misuraInPagina ({ def, conColpevoli, soloLato }) {
   const n = window.__nautica
   const t = n.render.domElement
   const c = document.createElement('canvas'); c.width = t.width; c.height = t.height
@@ -99,11 +124,139 @@ export function misuraInPagina ({ def, conColpevoli }) {
   } else if (def.come === 'nave') {
     n.nave.traverse(aggiungi)
   } else {
-    let radice = null
-    n.scena.traverse(o => { if (!radice && (o.name === def.chiave || o.nome === def.chiave)) radice = o })
-    if (radice) radice.traverse(aggiungi)
+    /**
+     * TUTTE le radici con quel nome, non la prima.
+     *
+     * Gli impianti sono due, uno per fianco, e possono comparire come due nodi
+     * con lo stesso nome. Fermarsi al primo avrebbe misurato mezzo soggetto e
+     * chiamato baseline il risultato -- e per giunta in silenzio, che e' il
+     * modo in cui questi errori sopravvivono.
+     */
+    const radici = []
+    n.scena.traverse(o => { if (o.name === def.chiave || o.nome === def.chiave) radici.push(o) })
+    for (const r of radici) r.traverse(aggiungi)
   }
   if (!mesh.length) return { rotto: 'nessuna mesh per questo soggetto: i nomi sono cambiati' }
+
+  /**
+   * ─── SE IL SOGGETTO E' DOPPIO, SI MISURA IL BERSAGLIO, NON LA MEDIA
+   *
+   * Il meccanismo di questa nave e' **doppio**: un impianto per fianco.
+   * Misurato: 29 mesh a sinistra, 30 a dritta, 15 sulla mezzeria, da -4,18 a
+   * +4,16 metri.
+   *
+   * Chi calcola «il centro dell'ingombro del soggetto» ottiene un punto **sulla
+   * mezzeria, dove non c'e' nessuna macchina**. Una camera che inquadra
+   * benissimo l'impianto di dritta risulta puntata di fianco a un fantasma: la
+   * prima versione del registratore stampava **86,5 gradi di scarto** su una
+   * macchina che occupava il 6-11% del quadro. Numero assurdo, e l'ho creduto
+   * per qualche minuto.
+   *
+   * E presenza e occlusione, mescolando i due impianti, danno un numero che non
+   * descrive nessuna delle due macchine -- e che nessuna posa di camera puo'
+   * migliorare, perche' meta' del soggetto e' dall'altra parte dello scafo.
+   *
+   * Quindi il bersaglio non si deduce da una media: si SCEGLIE, si dichiara, e
+   * l'altro fianco resta come controllo. Con la regia attuale la mira narrativa
+   * e' `MIRA_MECCANISMO = 1.15`, positiva: il bersaglio e' **dritta**.
+   *
+   * ─── E UNA MESH A CAVALLO NON SI ASSEGNA A CASO
+   *
+   * Alcune parti stanno legittimamente sulla mezzeria, simmetriche attorno allo
+   * zero: quelle sono centrali e vanno bene. Una che invece sborda da una parte
+   * sola in modo asimmetrico non e' ne' di un fianco ne' centrale: e' AMBIGUA,
+   * e metterla da una parte falserebbe l'ingombro del bersaglio. Si dichiara e
+   * si ferma, invece di sceglierne una in silenzio.
+   *
+   * Vive dentro questa funzione e non fuori perche' Playwright la serializza e
+   * la esegue NEL BROWSER, dove nessun identificatore di questo modulo esiste.
+   * L'ho scoperto scrivendola fuori.
+   *
+   * ─── E IL FIANCO SI DECIDE NEL SISTEMA DELLO SCAFO, NON DEL MONDO
+   *
+   * La prima versione classificava sulla X di MONDO, ed e' quello che chiedeva
+   * la specifica. Il controllo severo l'ha bocciata subito, e aveva ragione:
+   * le mesh «a cavallo» erano **11, poi 16, poi 13, poi 1** a seconda del
+   * campione.
+   *
+   * Il motivo e' che **la nave rolla**. Un pezzo che appartiene senza dubbio
+   * all'impianto di dritta ha il proprio ingombro di mondo che scavalca lo zero
+   * appena lo scafo si inclina, e cambia fianco fra un fotogramma e l'altro. Una
+   * classificazione che dipende dal rollio non e' una classificazione: e' un
+   * sorteggio con la faccia seria.
+   *
+   * Il fianco di un pezzo e' una proprieta' della NAVE, non del mondo. Quindi si
+   * misura nel sistema dello scafo -- `nave.matrixWorld` invertita -- dove
+   * dritta resta dritta a qualunque angolo di rollio.
+   *
+   * (`Matrix4` non serve importarlo: le matrici che la scena gia' possiede
+   * hanno `clone`, `invert` e `multiply` come metodi d'istanza.)
+   */
+  const inversaNave = n.nave && n.nave.matrixWorld ? n.nave.matrixWorld.clone().invert() : null
+  const scatolaMondo = (lista) => {
+    if (!lista.length) return null
+    let a = Infinity, b = Infinity, cc = Infinity, d = -Infinity, e = -Infinity, f = -Infinity
+    for (const m of lista) {
+      if (!m.geometry) continue
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox()
+      m.updateWorldMatrix(true, false)
+      const q = m.matrixWorld.elements
+      const bb = m.geometry.boundingBox
+      for (const vx of [bb.min.x, bb.max.x]) for (const vy of [bb.min.y, bb.max.y]) for (const vz of [bb.min.z, bb.max.z]) {
+        const wx = q[0] * vx + q[4] * vy + q[8] * vz + q[12]
+        const wy = q[1] * vx + q[5] * vy + q[9] * vz + q[13]
+        const wz = q[2] * vx + q[6] * vy + q[10] * vz + q[14]
+        if (wx < a) a = wx; if (wx > d) d = wx
+        if (wy < b) b = wy; if (wy > e) e = wy
+        if (wz < cc) cc = wz; if (wz > f) f = wz
+      }
+    }
+    return { min: [a, b, cc], max: [d, e, f], centro: [(a + d) / 2, (b + e) / 2, (cc + f) / 2] }
+  }
+
+  const TOLL = 0.02
+  const fianchi = { dritta: [], sinistra: [], centrale: [], ambigua: [] }
+  for (const m of mesh) {
+    const g = m.geometry
+    if (!g) { fianchi.ambigua.push(m); continue }
+    if (!g.boundingBox) g.computeBoundingBox()
+    m.updateWorldMatrix(true, false)
+    /* la X che conta e' quella nello scafo: col rollio la X di mondo cambia
+       fianco a un pezzo che non si e' mosso di un millimetro dalla nave */
+    const q = (inversaNave ? inversaNave.clone().multiply(m.matrixWorld) : m.matrixWorld).elements
+    const bb = g.boundingBox
+    let xmin = Infinity, xmax = -Infinity
+    for (const vx of [bb.min.x, bb.max.x]) for (const vy of [bb.min.y, bb.max.y]) for (const vz of [bb.min.z, bb.max.z]) {
+      const wx = q[0] * vx + q[4] * vy + q[8] * vz + q[12]
+      if (wx < xmin) xmin = wx
+      if (wx > xmax) xmax = wx
+    }
+    if (xmin > TOLL) fianchi.dritta.push(m)
+    else if (xmax < -TOLL) fianchi.sinistra.push(m)
+    else {
+      const a = Math.abs(xmin), b = Math.abs(xmax), gr = Math.max(a, b)
+      ;(gr < 1e-6 || Math.abs(a - b) / gr < 0.2 ? fianchi.centrale : fianchi.ambigua).push(m)
+    }
+  }
+  const scatole = {
+    dritta: scatolaMondo(fianchi.dritta),
+    sinistra: scatolaMondo(fianchi.sinistra),
+    centrale: scatolaMondo(fianchi.centrale)
+  }
+  const conteggio = {
+    dritta: fianchi.dritta.length, sinistra: fianchi.sinistra.length,
+    centrale: fianchi.centrale.length, ambigua: fianchi.ambigua.length
+  }
+  let mie = mesh
+  if (soloLato) {
+    if (fianchi.ambigua.length) {
+      return { rotto: `${fianchi.ambigua.length} mesh stanno a cavallo della mezzeria in modo ` +
+        'asimmetrico: non sono ne di un fianco ne centrali, e assegnarle falserebbe ' +
+        'l ingombro del bersaglio', conteggio, scatole }
+    }
+    mie = fianchi[soloLato]
+    if (!mie || !mie.length) return { rotto: `nessuna mesh sul fianco "${soloLato}"`, conteggio, scatole }
+  }
 
   /**
    * ─── LA MASCHERA SI FA NASCONDENDO, NON ACCENDENDO L'EMISSIVA
@@ -120,7 +273,7 @@ export function misuraInPagina ({ def, conColpevoli }) {
    * soggetto identico allo sfondo dietro di lui, e in una scena illuminata non
    * capita.
    */
-  const suo = new Set(mesh)
+  const suo = new Set(mie)
   const nascondi = (quali) => {
     const spente = []
     quali.forEach(o => { if (o.visible) { spente.push(o); o.visible = false } })
@@ -131,7 +284,7 @@ export function misuraInPagina ({ def, conColpevoli }) {
 
   /* 1 - com'e' adesso contro com'e' senza il soggetto: i suoi pixel visibili */
   const pieno = leggi()
-  let torna = nascondi(mesh)
+  let torna = nascondi(mie)
   const senzaSoggetto = leggi()
   torna()
   const visibili = differenza(pieno, senzaSoggetto)
@@ -139,12 +292,12 @@ export function misuraInPagina ({ def, conColpevoli }) {
   /* 2 - solo il soggetto contro il vuoto: la sua sagoma intera, coperta o no */
   torna = nascondi(altre)
   const soloSoggetto = leggi()
-  const torna2 = nascondi(mesh)
+  const torna2 = nascondi(mie)
   const vuoto = leggi()
   torna2(); torna()
   const nudi = differenza(soloSoggetto, vuoto)
 
-  const base = { visibili, nudi, quadro: c.width * c.height, mesh: mesh.length }
+  const base = { visibili, nudi, quadro: c.width * c.height, mesh: mie.length, conteggio, scatole, lato: soloLato || 'tutti' }
   if (!conColpevoli || nudi === 0 || visibili >= nudi * 0.995) return { ...base, colpevoli: [] }
 
   /* 3 - e chi lo copre: per ogni ramo di primo livello, quanto risale la
@@ -156,7 +309,7 @@ export function misuraInPagina ({ def, conColpevoli }) {
     if (!suoiRami.length) return
     const rip = nascondi(suoiRami)
     const senzaRamo = leggi()
-    const rip2 = nascondi(mesh)
+    const rip2 = nascondi(mie)
     const senzaRamoNeSoggetto = leggi()
     rip2(); rip()
     const recuperati = differenza(senzaRamo, senzaRamoNeSoggetto) - visibili

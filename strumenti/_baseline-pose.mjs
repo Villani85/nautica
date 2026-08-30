@@ -37,6 +37,20 @@ const BATTUTE = (process.env.BATTUTE || 'taglio,meccanismo').split(',')
 const QUANTI = Number(process.env.CAMPIONI || 5)
 const GIRI = Number(process.env.GIRI || 3)
 const M_PER_UNITA = 2.5
+/**
+ * IL BERSAGLIO SI DICHIARA, e viene dalla regia.
+ *
+ * `MIRA_MECCANISMO = 1.15` in `src/scena/index.js` e' positiva: la camera, alla
+ * battuta del meccanismo, punta il fianco di DRITTA. Quindi il bersaglio
+ * narrativo e' quel gruppo, e l'altro resta controllo.
+ *
+ * La prima versione sceglieva «il piu' vicino». Sembrava innocuo e non lo e':
+ * un criterio geometrico puo' scegliere l'impianto sbagliato in una posa in cui
+ * la camera passa dall'altra parte, e allora la baseline confronta due cose
+ * diverse fra un giro e l'altro. Il bersaglio di una misura non si scopre a
+ * ogni fotogramma: si decide una volta e si scrive.
+ */
+const LATO = process.env.LATO || 'dritta'
 
 await avvisaSePortaAltrui(PORTA)
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
@@ -58,143 +72,49 @@ await pg.waitForTimeout(2500)
  * solo l'orientamento. Si ricostruisce proiettando la direzione di vista fino
  * al soggetto: e' la mira che conta per una traiettoria, non un punto astratto.
  */
-const dovEra = (def) => pg.evaluate((d) => {
+/**
+ * DOVE STA LA CAMERA E QUANTO E' LONTANA DAL BERSAGLIO.
+ *
+ * ─── E NON CLASSIFICA PIU' NIENTE
+ *
+ * DIFETTO PRESO NEL REFERTO STESSO, e per due volte. La prima versione di
+ * questa funzione si divideva gli impianti per conto suo, sulla X di MONDO. Il
+ * risultato era che la stessa riga diceva «presenza misurata su dritta» e
+ * «scarto verso sinistra»: due soggetti diversi, un rigo solo.
+ *
+ * La causa non era il criterio, era **la duplicazione**. `misuraInPagina` gia'
+ * divide per fianco, nel sistema dello scafo, e sa quale gruppo e' il bersaglio.
+ * Averne una seconda copia qui significava tenerne due che prima o poi
+ * divergono -- e sono divergute subito, perche' quella qui usava il mondo e
+ * quella la' lo scafo.
+ *
+ * Adesso il bersaglio arriva da fuori, gia' scelto. Questa funzione fa una cosa
+ * sola: dice dove sta la camera e come e' messa rispetto a quel punto.
+ */
+const dovEra = (bersaglio) => pg.evaluate((b) => {
   const n = window.__nautica
   const c = n.camera
   c.updateMatrixWorld(true)
   const e = c.matrixWorld.elements
   /* -Z della matrice: la direzione in cui la camera guarda */
   const dir = { x: -e[8], y: -e[9], z: -e[10] }
-
-  /* il centro del soggetto, dal suo ingombro in coordinate mondo */
-  const mesh = []
-  const agg = (o) => { if (o.isMesh && o.material) mesh.push(o) }
-  if (d.come === 'materiali') {
-    const suoi = new Set(d.nomi)
-    n.nave.traverse(o => {
-      if (!o.isMesh || !o.material) return
-      if ([].concat(o.material).some(m => suoi.has(String(m.name)))) agg(o)
-    })
-  } else if (d.come === 'nave') n.nave.traverse(agg)
-  else {
-    let r = null
-    n.scena.traverse(o => { if (!r && (o.name === d.chiave || o.nome === d.chiave)) r = o })
-    if (r) r.traverse(agg)
-  }
-  /**
-   * --- IL SOGGETTO PUO' ESSERE DOPPIO, E ALLORA IL SUO CENTRO NON ESISTE
-   *
-   * QUINTO DIFETTO DI IDENTITA' DELLA SERATA, e l'ho preso prima di scriverlo
-   * in `ciao2.md` solo perche' il numero era assurdo.
-   *
-   * La prima versione calcolava il centro dell'ingombro di TUTTO il soggetto e
-   * misurava lo scarto fra la direzione di vista e quel punto. Sulla battuta
-   * del meccanismo dava **86,5 gradi**: la camera non guarderebbe affatto la
-   * macchina. Ma la macchina occupa il 6-9% del quadro, quindi era impossibile.
-   *
-   * Misurato: il meccanismo e' **doppio** -- 29 mesh a sinistra, 30 a destra,
-   * 15 sulla mezzeria, da -4,18 a +4,16 metri. Un impianto per fianco. Il
-   * centro del suo ingombro cade sulla MEZZERIA, dove non c'e' niente da
-   * guardare, e la camera che inquadra un impianto risulta puntata "di fianco"
-   * a un punto immaginario fra i due.
-   *
-   * Quindi il soggetto si divide per fianco, e lo scarto si misura verso il
-   * lato PIU' VICINO -- quello che la camera sta effettivamente guardando. Il
-   * referto dice anche quale, perche' con la sezione aperta se ne vede uno solo
-   * e sapere quale conta per la traiettoria.
-   */
-  const lato = (m) => {
-    if (!m.geometry) return 'mezzeria'
-    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox()
-    m.updateWorldMatrix(true, false)
-    const q = m.matrixWorld.elements
-    const bb = m.geometry.boundingBox
-    let a = Infinity, b = -Infinity
-    for (const vx of [bb.min.x, bb.max.x]) for (const vy of [bb.min.y, bb.max.y]) for (const vz of [bb.min.z, bb.max.z]) {
-      const wx = q[0] * vx + q[4] * vy + q[8] * vz + q[12]
-      if (wx < a) a = wx; if (wx > b) b = wx
-    }
-    const cx = (a + b) / 2
-    return cx > 0.05 ? 'dritta' : (cx < -0.05 ? 'sinistra' : 'mezzeria')
-  }
-  const perLato = { dritta: [], sinistra: [], mezzeria: [] }
-  for (const m of mesh) perLato[lato(m)].push(m)
-
-  let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity
-  for (const m of mesh) {
-    const g = m.geometry
-    if (!g || !g.attributes || !g.attributes.position) continue
-    m.updateWorldMatrix(true, false)
-    const q = m.matrixWorld.elements
-    const pos = g.attributes.position
-    /* gli otto vertici del bounding box locale bastano: qui serve il CENTRO,
-       non la sagoma, e girare tutti i vertici di 75 mesh costa senza aggiungere */
-    if (!g.boundingBox) g.computeBoundingBox()
-    const b = g.boundingBox
-    for (const vx of [b.min.x, b.max.x]) for (const vy of [b.min.y, b.max.y]) for (const vz of [b.min.z, b.max.z]) {
-      const wx = q[0] * vx + q[4] * vy + q[8] * vz + q[12]
-      const wy = q[1] * vx + q[5] * vy + q[9] * vz + q[13]
-      const wz = q[2] * vx + q[6] * vy + q[10] * vz + q[14]
-      if (wx < mnx) mnx = wx; if (wx > mxx) mxx = wx
-      if (wy < mny) mny = wy; if (wy > mxy) mxy = wy
-      if (wz < mnz) mnz = wz; if (wz > mxz) mxz = wz
-    }
-  }
-  const cen = { x: (mnx + mxx) / 2, y: (mny + mxy) / 2, z: (mnz + mxz) / 2 }
-
-  /* il centro di ciascun fianco, e quello piu' vicino alla camera */
-  const centroDi = (lista) => {
-    if (!lista.length) return null
-    let a = Infinity, b = Infinity, c = Infinity, d = -Infinity, e2 = -Infinity, f = -Infinity
-    for (const m of lista) {
-      if (!m.geometry) continue
-      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox()
-      m.updateWorldMatrix(true, false)
-      const q = m.matrixWorld.elements
-      const bb = m.geometry.boundingBox
-      for (const vx of [bb.min.x, bb.max.x]) for (const vy of [bb.min.y, bb.max.y]) for (const vz of [bb.min.z, bb.max.z]) {
-        const wx = q[0] * vx + q[4] * vy + q[8] * vz + q[12]
-        const wy = q[1] * vx + q[5] * vy + q[9] * vz + q[13]
-        const wz = q[2] * vx + q[6] * vy + q[10] * vz + q[14]
-        if (wx < a) a = wx; if (wx > d) d = wx
-        if (wy < b) b = wy; if (wy > e2) e2 = wy
-        if (wz < c) c = wz; if (wz > f) f = wz
-      }
-    }
-    return { x: (a + d) / 2, y: (b + e2) / 2, z: (c + f) / 2 }
-  }
-  const lati = {}
-  for (const k of ['dritta', 'sinistra']) {
-    const q = centroDi(perLato[k])
-    if (q) lati[k] = { centro: q, dist: Math.hypot(q.x - c.position.x, q.y - c.position.y, q.z - c.position.z) }
-  }
-  let vicino = null
-  for (const k of Object.keys(lati)) if (!vicino || lati[k].dist < lati[vicino].dist) vicino = k
-  const bers = vicino ? lati[vicino].centro : cen
-  const dx = bers.x - c.position.x, dy = bers.y - c.position.y, dz = bers.z - c.position.z
+  const dx = b[0] - c.position.x, dy = b[1] - c.position.y, dz = b[2] - c.position.z
   const dist = Math.hypot(dx, dy, dz)
-  /* quanto la camera guarda ACCANTO al soggetto invece che addosso: l'angolo
-     fra la direzione di vista e la congiungente */
   const cos = dist > 0 ? (dir.x * dx + dir.y * dy + dir.z * dz) / dist : 1
   return {
     camera: [c.position.x, c.position.y, c.position.z],
     direzione: [dir.x, dir.y, dir.z],
-    centro: [cen.x, cen.y, cen.z],
-    bersaglio: [bers.x, bers.y, bers.z],
-    lato: vicino,
-    doppio: Object.keys(lati).length > 1,
-    quanti: { dritta: perLato.dritta.length, sinistra: perLato.sinistra.length, mezzeria: perLato.mezzeria.length },
     distanza: dist,
     scarto: Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI,
     fov: c.fov,
     p: n.p ?? null
   }
-}, def)
+}, bersaglio)
 
 const n3 = (a) => a.map(v => +v.toFixed(3))
 const mediana = (a) => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)] }
 
-console.log(`\n  BASELINE  ${GIRI} giri x ${QUANTI} campioni  ·  1 unita = ${M_PER_UNITA} m`)
+console.log(`\n  BASELINE  ${GIRI} giri x ${QUANTI} campioni  ·  1 unita = ${M_PER_UNITA} m  ·  bersaglio: ${LATO}`)
 
 for (const battuta of BATTUTE) {
   const def = SOGGETTI[battuta]
@@ -207,14 +127,20 @@ for (const battuta of BATTUTE) {
 
   const perCampione = Array.from({ length: QUANTI }, () => ({ pres: [], occ: [] }))
   let ultimaPosa = []
+  const guaiMisura = new Set()
+  let conteggio = null; let scatole = null
 
   for (let g = 0; g < GIRI; g++) {
     for (let k = 0; k < QUANTI; k++) {
       await vaiA(pg, arco.da + (arco.a - arco.da) * (k / (QUANTI - 1)))
       await attendiCameraFerma(pg)
-      const m = await pg.evaluate(misuraInPagina, { def, conColpevoli: false })
-      if (m.rotto) continue
-      const d = await dovEra(def)
+      const m = await pg.evaluate(misuraInPagina, { def, conColpevoli: false, soloLato: LATO })
+      if (m.rotto) { guaiMisura.add(m.rotto); continue }
+      if (g === 0 && k === 0) conteggio = m.conteggio, scatole = m.scatole
+      const cen = m.scatole && m.scatole[LATO] ? m.scatole[LATO].centro : null
+      if (!cen) { guaiMisura.add(`nessun ingombro per il fianco "${LATO}"`); continue }
+      const d = await dovEra(cen)
+      d.lato = LATO
       const pres = 100 * m.visibili / m.quadro
       const occ = m.nudi > 0 ? 100 * (1 - m.visibili / m.nudi) : null
       perCampione[k].pres.push(pres)
@@ -222,6 +148,13 @@ for (const battuta of BATTUTE) {
       if (g === GIRI - 1) ultimaPosa[k] = d
     }
   }
+
+  if (guaiMisura.size) {
+    console.log('     MISURA RIFIUTATA: ' + [...guaiMisura].join(' | '))
+    if (conteggio) console.log(`     mesh: ${conteggio.dritta} dritta, ${conteggio.sinistra} sinistra, ${conteggio.centrale} centrali, ${conteggio.ambigua} ambigue`)
+  }
+  const tutteQ = perCampione.flatMap(c => c.pres)
+  if (!tutteQ.length) { console.log('     nessuna misura utilizzabile in questa battuta'); continue }
 
   for (let k = 0; k < QUANTI; k++) {
     const c = perCampione[k]
@@ -243,17 +176,26 @@ for (const battuta of BATTUTE) {
     console.log(`          occlusione min ${Math.min(...occTutte).toFixed(1)}%, ` +
       `mediana ${mediana(occTutte).toFixed(1)}%, max ${Math.max(...occTutte).toFixed(1)}%`)
   }
-  const migliore = ultimaPosa.find(Boolean)
-  if (migliore) {
-    if (migliore.doppio) {
-      console.log(`          SOGGETTO DOPPIO: ${migliore.quanti.sinistra} mesh a sinistra, ` +
-        `${migliore.quanti.dritta} a dritta, ${migliore.quanti.mezzeria} sulla mezzeria.`)
-      console.log('          Lo scarto e misurato verso il fianco PIU VICINO, non verso il centro')
-      console.log('          dei due -- che cadrebbe sulla mezzeria, dove non c e niente da guardare.')
-    }
-    console.log(`          bersaglio (${migliore.lato || 'centro'}) a ${n3(migliore.bersaglio).join(', ')} unita ` +
-      `= ${migliore.bersaglio.map(v => (v * M_PER_UNITA).toFixed(2)).join(', ')} m`)
+  if (guaiMisura.size) {
+    console.log('     MISURA RIFIUTATA: ' + [...guaiMisura].join(' | '))
+    continue
   }
+  if (conteggio) {
+    console.log(`     mesh: ${conteggio.dritta} a dritta, ${conteggio.sinistra} a sinistra, ` +
+      `${conteggio.centrale} centrali, ${conteggio.ambigua} ambigue`)
+    for (const k of ['dritta', 'sinistra']) {
+      const b = scatole && scatole[k]
+      if (!b) { console.log(`     ${k}: assente`); continue }
+      const seg = k === LATO ? ' <- BERSAGLIO' : ' (controllo)'
+      console.log(`     ${k}: da ${b.min.map(v => v.toFixed(2)).join(' ')} a ` +
+        `${b.max.map(v => v.toFixed(2)).join(' ')} unita, centro ` +
+        `${b.centro.map(v => v.toFixed(2)).join(' ')}${seg}`)
+    }
+  }
+  /* Le due scatole le stampa gia' il blocco qui sopra, prendendole dalla
+     misura. Qui non si ricalcola niente: un secondo calcolo dello stesso
+     ingombro e' esattamente il modo in cui questo strumento si e' contraddetto
+     due volte in una riga. */
   console.log('\n     IL NUMERO DA PORTARSI DIETRO E IL MINIMO, non la mediana:')
   console.log(`     presenza ${Math.min(...tutte).toFixed(2)}%` +
     (occTutte.length ? `, occlusione ${Math.max(...occTutte).toFixed(1)}%` : ''))
