@@ -752,6 +752,29 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   // ruotati, cosi' il volume e' leggibile prima di qualunque interazione.
   let azimut = 0.34
   let azimutTarget = 0.34
+  /**
+   * ─── DUE NOMI DOVE PRIMA CE N'ERA UNO, e la separazione E' il lavoro
+   *
+   * `spaccato` faceva due mestieri: comandava la CAMERA (raggio, mira, quota) e
+   * comandava il TAGLIO, tutti e due sullo stesso orologio, `p`. Finche' era
+   * cosi', i due potevano scollarsi -- e si scollavano. Misurato in
+   * `_baseline-pose`: spostando la finestra dell'avvicinamento la camera
+   * arrivava vicino a una macchina ancora coperta dallo scafo, e l'occlusione
+   * al primo campione passava dal 36,4% al **70,8%**. La conclusione, scritta
+   * allora: «finche' il piano di sezione avanza su un orario globale invece
+   * che in rapporto alla camera, spostare le finestre non risolve, sposta».
+   *
+   * Adesso sono due grandezze diverse con due nomi diversi:
+   *
+   *   `corsaSezione`  quello che la REGIA comanda. Muove la camera.
+   *   `spaccato`      quanto lo scafo E' aperto. Si RICAVA da dove la camera
+   *                   e' arrivata, in unita' di scena -- non dall'orologio.
+   *
+   * Il verso della dipendenza e' il punto: la regia muove la camera, e il
+   * taglio insegue la camera. Non possono piu' scollarsi, perche' non hanno
+   * piu' due padroni.
+   */
+  let corsaSezione = 0
   let spaccato = 0
   let emersione = 0
   let avvicinamento = 0
@@ -883,10 +906,52 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     pianoVerticale.constant = MathUtils.lerp(X_INTERO, X_MEZZO, q)
   }
 
+  /**
+   * La regia scrive QUI, e questa funzione non tocca piu' il piano: scrive solo
+   * la corsa del racconto. Il piano lo muove `seguiLaCamera`, a ogni
+   * fotogramma, dopo che si sa dove la camera e' arrivata.
+   */
   function impostaSpaccato (p) {
     /* mentre si esplora il taglio ha un altro padrone: vedi `vaiACella` */
     if (esplorando) return
-    spaccato = MathUtils.clamp(p, 0, 1)
+    corsaSezione = MathUtils.clamp(p, 0, 1)
+  }
+
+  /**
+   * ─── IL TAGLIO SEGUE LA CAMERA, e il numero che lo comanda e' un RAGGIO
+   *
+   * Il raggio d'orbita e' la grandezza che la coreografia muove davvero, ed e'
+   * in unita' di scena: da `RAGGIO` (19,5 = 48,8 m, la nave intera) a
+   * `RAGGIO_SEZIONE` (7,2 = 18 m, dove il taglio si legge per tutta la
+   * lunghezza), e poi giu' fino a `raggioMeccanismo` col secondo
+   * avvicinamento. Lo spaccato e' quanto di quel cammino e' stato fatto.
+   *
+   * ─── PERCHE' IL RAGGIO E NON LA DISTANZA DAL MECCANISMO
+   *
+   * Misurato con `_taglio-camera.mjs`, e la distanza NON va bene: all'inizio
+   * la camera e' seduta nel salone, dentro la tuga, a 3,66 unita' dal
+   * meccanismo -- piu' vicina che a meta' racconto, dove sta in orbita a
+   * 20,37. Una legge sulla distanza aprirebbe lo scafo al primo fotogramma.
+   * Il raggio d'orbita non ha quel difetto: la fase del salone non e'
+   * un'orbita, e finche' `uscita` non l'ha portata fuori il raggio non
+   * comanda niente perche' `corsaSezione` e' zero.
+   *
+   * ─── E COSA CAMBIA DAVVERO
+   *
+   * A regia ferma questa legge riproduce l'altra: durante il primo
+   * avvicinamento `raggio = lerp(RAGGIO, RAGGIO_SEZIONE, corsaSezione)`, e
+   * invertirla ridà `corsaSezione`. IDENTICA, non simile.
+   *
+   * Cambia dove serve: quando il SECONDO avvicinamento tira la camera dentro,
+   * il raggio scende sotto `RAGGIO_SEZIONE` e lo spaccato satura a 1. Cioe'
+   * **la camera non puo' piu' arrivare addosso a una macchina ancora coperta**:
+   * e' la patologia della configurazione B, resa impossibile dalla forma della
+   * legge invece che evitata da una finestra tarata a mano.
+   */
+  function seguiLaCamera (raggioCamera) {
+    if (esplorando) return
+    spaccato = MathUtils.clamp(
+      (RAGGIO - raggioCamera) / (RAGGIO - RAGGIO_SEZIONE), 0, 1)
     pianoSezione.constant = MathUtils.lerp(Z_FUORI, Z_DENTRO, spaccato)
     spostaTappo(pianoSezione.constant)
     tappo.visible = spaccato > 0.002
@@ -971,6 +1036,25 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo
     // fotogramma. Il `t` locale resta per le onde, che sono roba di scena.
     avanza(dt, dichiarato ? undefined : marca)
+
+    /**
+     * ─── DOVE STA LA CAMERA, PRIMA DI TUTTO IL RESTO
+     *
+     * Due avvicinamenti in fila, e non uno solo piu' lungo: il primo serve a
+     * mostrare che il taglio corre lungo TUTTO lo scafo, e per quello ci vuole
+     * distanza; il secondo porta sul pezzo. Interpolare in una volta sola da
+     * 19,5 a 2,6 farebbe passare la fase del taglio troppo vicino per leggerla.
+     *
+     * Si calcola QUI, in cima al fotogramma, e non piu' giu' nel blocco della
+     * camera, perche' adesso ha due lettori: la camera lo usa per posarsi, e il
+     * taglio lo usa per sapere quanto aprirsi. Calcolarlo due volte vorrebbe
+     * dire tenerne due copie che prima o poi divergono -- e' lo stesso difetto
+     * che il classificatore duplicato di `_baseline-pose` aveva gia' pagato.
+     */
+    const raggio = MathUtils.lerp(
+      MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, corsaSezione),
+      raggioMeccanismo, avvicinamento)
+    seguiLaCamera(raggio)
 
     /**
      * ─── IL ROLLIO NON SI SPEGNE PIU' DEL TUTTO NELLA SEZIONE
@@ -1141,21 +1225,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     fuoribordo.impostaMare(sim.S.mare)
 
     azimut += (azimutTarget - azimut) * Math.min(1, dt * 5)
-    /**
-     * Due avvicinamenti in fila, e non uno solo piu' lungo: il primo serve a
-     * mostrare che il taglio corre lungo TUTTO lo scafo, e per quello ci vuole
-     * distanza; il secondo porta sul pezzo. Interpolare in una volta sola da
-     * 19,5 a 2,6 farebbe passare la fase del taglio troppo vicino per
-     * leggerla.
-     */
-    const raggio = MathUtils.lerp(
-      MathUtils.lerp(RAGGIO, RAGGIO_SEZIONE, spaccato),
-      raggioMeccanismo, avvicinamento)
-    const miraX = MathUtils.lerp(0, MIRA_MECCANISMO, spaccato)
+    /* `raggio` si calcola in cima al fotogramma: lo leggono in due, la camera
+       e il taglio, e una seconda copia divergerebbe. Vedi li' la ragione. */
+    const miraX = MathUtils.lerp(0, MIRA_MECCANISMO, corsaSezione)
     // La camera insegue la sezione anche IN LUNGHEZZA: da mezzanave al
     // meccanismo. La quota resta zero — e' quello che tiene la linea a meta'
     // schermo, e quindi la giunzione col fondo CSS a zero pixel.
-    const miraZ = MathUtils.lerp(0, Z_PINNE, spaccato)
+    const miraZ = MathUtils.lerp(0, Z_PINNE, corsaSezione)
 
     /**
      * ─── DA DENTRO IL SALONE ALLA NAVE INTERA, IN UN MOVIMENTO SOLO
@@ -1355,7 +1431,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * per provarlo -- `?quota=` e `?raggio=` -- restano qui accese sotto
      * `ispeziona`, coi valori di serie che riproducono l'inquadratura di oggi.
      */
-    camera.position.y = dentroY * (1 - spaccato) + quotaMeccanismo * avvicinamento
+    /* `corsaSezione` e non `spaccato`: la quota e' COREOGRAFIA, la comanda la
+       regia. Lo spaccato adesso e' una conseguenza della camera, e farci
+       dipendere la camera chiuderebbe l'anello su se stesso. A regia ferma il
+       valore e' lo stesso, ed e' il motivo per cui `collaudo-orizzonte` --
+       che fallisce apposta se questa riga torna a interpolare verso zero --
+       non si muove di un pixel. */
+    camera.position.y = dentroY * (1 - corsaSezione) + quotaMeccanismo * avvicinamento
     camera.position.z = MathUtils.lerp(tugaZ + dist, fuoriZ, uscita)
     camera.lookAt(
       MathUtils.lerp(scarto, miraX, uscita),
