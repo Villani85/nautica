@@ -306,6 +306,31 @@ export function avviaDimostrazione () {
     regia(p)
 
     /**
+     * --- LA CORSA DEL RACCONTO SI PUO' LEGGERE DA FUORI
+     *
+     * Aggiunto perche' un cancello si e' rotto, e per il motivo giusto.
+     *
+     * `collaudo-cinematica` campionava «al 15, 35 e 60 per cento», e quelle
+     * erano frazioni dell'ALTEZZA della sezione. Ha funzionato finche' la
+     * sezione era tutta racconto. Poi e' arrivata la coda -- 120svh in fondo
+     * che servono a tenere l'ultimo fotogramma a piena inquadratura e che
+     * racconto non sono -- e il 60% dell'altezza e' diventato il 91% della
+     * corsa: il cancello misurava il meccanismo dietro il filmato e diceva
+     * «il sito non segue il modello» su un sito che lo seguiva.
+     *
+     * E' la terza volta che questo repo paga la stessa lezione (`varco`,
+     * `manopola`, e adesso `cinematica`): **nessuna soglia in frazioni di
+     * pagina**. Ma finora la cura era stata locale, ogni cancello che si
+     * arrangiava col proprio rettangolo. La corsa del racconto e' UNA, la
+     * conosce solo questo punto, e tenerla per se' costringeva tutti a
+     * ricostruirla per approssimazione.
+     *
+     * Costa una scrittura per evento di scorrimento e solo con `?ispeziona=1`,
+     * dove `__nautica` esiste. In pagina non cambia niente.
+     */
+    if (window.__nautica) window.__nautica.p = p
+
+    /**
      * ─── IL CAPITOLO NON SE NE VA CON I PANNELLI ACCESI
      *
      * Oltre `p = 1` il palco si stacca e sale per un altro schermo. In quel
@@ -318,7 +343,26 @@ export function avviaDimostrazione () {
      * una soglia in pixel: e' quanto manca alla sezione per uscire, misurata
      * sul rect vero come tutto il resto qui.
      */
-    const oltre = corsa > 0 ? Math.max(0, -r.top - corsa) : 0
+    /**
+     * ─── MA `--uscita` MISURA LA SEZIONE INTERA, CODA COMPRESA
+     *
+     * REGRESSIONE INTRODOTTA DALLA CODA E PRESA DALLA SUITE, non da me.
+     * Sottraendo la coda a `corsa` avevo spostato anche questo: `oltre`
+     * diventava positivo 120svh troppo presto, e `--uscita` -- che dissolve
+     * i comandi, le letture e la didascalia -- cominciava a spegnerli mentre
+     * il palco era ancora tutto in vista.
+     *
+     * `collaudo-manopola` l'ha detto con le parole giuste: «i comandi non si
+     * raggiungono nel primo piano». Erano li', ma trasparenti.
+     *
+     * `--uscita` ha una definizione sua, ed e' scritta qui sopra: *quanto manca
+     * alla sezione per uscire*. Quella non e' cambiata con la coda -- la
+     * sezione esce quando esce. Solo `p`, la corsa del RACCONTO, finisce prima.
+     * Due grandezze diverse che per un commit avevano condiviso un
+     * denominatore.
+     */
+    const corsaPiena = r.height - window.innerHeight
+    const oltre = corsaPiena > 0 ? Math.max(0, -r.top - corsaPiena) : 0
     palco.style.setProperty('--uscita',
       Math.min(1, oltre / (window.innerHeight * 0.45)).toFixed(3))
 

@@ -147,10 +147,45 @@ let misurabili = 0        // punti dove la pinna si muove abbastanza da misurare
 let conGiro = 0           // punti dove l'ingresso ha fatto un giro intero
 
 for (const f of PUNTI) {
-  await pagina.evaluate(q => {
-    const d = document.querySelector('#dimostrazione')
-    scrollTo({ top: scrollY + d.getBoundingClientRect().top + d.offsetHeight * q, behavior: 'instant' })
+  /**
+   * --- SI CAMPIONA LA CORSA DEL RACCONTO, NON L'ALTEZZA DELLA SEZIONE
+   *
+   * Qui c'era `d.offsetHeight * q`: una frazione dei PIXEL della sezione. Ha
+   * funzionato finche' la sezione era tutta racconto, e ha smesso il giorno in
+   * cui in fondo e' comparsa una coda che racconto non e' -- 120svh per tenere
+   * l'ultimo fotogramma a piena inquadratura. Il 60% dell'altezza e' diventato
+   * il 91% della corsa, e questo cancello ha misurato il meccanismo DIETRO il
+   * filmato, concludendo «il sito non sta seguendo il modello». Il sito lo
+   * seguiva: era il metro a puntare altrove.
+   *
+   * `__nautica.p` e' la corsa del racconto, quella vera, scritta da `demo.js`
+   * a ogni scorrimento. Ci si arriva cercandola, non calcolandola: cosi'
+   * qualunque cosa si aggiunga o si tolga alla pagina, il 60% resta il 60% del
+   * RACCONTO.
+   */
+  const arrivato = await pagina.evaluate(async (q) => {
+    const H = document.documentElement.scrollHeight - innerHeight
+    const leggi = async (y) => {
+      scrollTo({ top: Math.round(y), behavior: 'instant' })
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+      return window.__nautica.p
+    }
+    /* la corsa e' monotona nello scorrimento: una bisezione basta e costa
+       una decina di fotogrammi invece di una scansione */
+    let lo = 0; let hi = H
+    for (let i = 0; i < 22; i++) {
+      const mid = (lo + hi) / 2
+      const p = await leggi(mid)
+      if (p === undefined) return null
+      if (p < q) lo = mid; else hi = mid
+    }
+    return await leggi((lo + hi) / 2)
   }, f)
+  if (arrivato === null) {
+    console.error('  ROTTO  `__nautica.p` non esiste: la corsa del racconto non e esposta,')
+    console.error('         e senza quella questo cancello puo solo indovinare dove guardare.')
+    process.exit(2)
+  }
   await pagina.waitForTimeout(4000)
 
   /**

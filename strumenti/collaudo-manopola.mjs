@@ -281,7 +281,30 @@ const vaiA = (f) => pagina.evaluate(async (f) => {
     battuta: palco.dataset.battuta,
     // "in quadro" per davvero: il palco e' alto quanto la finestra, quindi
     // sopra lo zero vuol dire che sta gia' uscendo dal bordo alto
-    inQuadro: b.top > -1 && b.bottom > window.innerHeight - 1
+    inQuadro: b.top > -1 && b.bottom > window.innerHeight - 1,
+    /**
+     * -- E SE IL FILMATO HA GIA' PRESO IL COMANDO, LI' NON SI TOCCA
+     *
+     * Lo dice questo cancello stesso, nel suo verdetto: «da questa battuta in
+     * giu il sito e un filmato: si guarda e non si tocca». E' vero, ed e'
+     * voluto: quando la traversata copre il quadro i comandi spariscono,
+     * perche' non ci sarebbe niente da comandare.
+     *
+     * Finche' la battuta del meccanismo finiva insieme alla sezione la
+     * distinzione non serviva: il centro dell'intervallo cadeva sempre prima
+     * del filmato. Poi e' arrivata la coda -- 120svh in cui il palco resta
+     * intero e il filmato tiene l'ultimo fotogramma (vedi `collaudo-finale`) --
+     * e la battuta del meccanismo si e' allungata di 836 px in fondo, dove il
+     * film copre tutto. Il centro dell'intervallo e' scivolato dentro il film,
+     * e il cancello ha bocciato dei comandi nascosti di proposito.
+     *
+     * Non e' una soglia che si allarga: e' l'INTERVALLO che era descritto male.
+     * Il primo piano in cui i comandi devono rispondere e' quello in cui il
+     * sito e' ancora interattivo, e la copertura della traversata lo dice --
+     * si legge dalla regia, non si deduce.
+     */
+    copre: (window.__nautica && window.__nautica.coperturaTraversata
+      ? (window.__nautica.coperturaTraversata() || 0) : 0)
   }
 }, f)
 
@@ -311,14 +334,14 @@ const finestra = await pagina.evaluate(() => {
 const dentro = []
 for (let f = finestra.da; f <= finestra.a + 1e-9; f += 0.01) {
   const r = await vaiA(f)
-  if (r.battuta === 'meccanismo' && r.inQuadro) dentro.push(f)
+  if (r.battuta === 'meccanismo' && r.inQuadro && r.copre < 0.02) dentro.push(f)
 }
 if (!dentro.length) {
   console.error('')
   console.error('  IL PRIMO PIANO DEL MECCANISMO NON ESISTE.')
   console.error(`  Nessuna posizione di scorrimento fra il ${(finestra.da * 100).toFixed(0)}% e il ` +
                 `${(finestra.a * 100).toFixed(0)}% -- cioe' in tutta la dimostrazione -- ha insieme`)
-  console.error('  la battuta "meccanismo" e il palco dentro la finestra.')
+  console.error('  la battuta "meccanismo", il palco dentro la finestra e il filmato ancora fermo.')
   console.error('')
   await finisci(2)
 }
