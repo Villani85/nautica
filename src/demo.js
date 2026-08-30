@@ -298,11 +298,42 @@ export function avviaDimostrazione () {
      * viene intercettato (D27). E' solo che l'ultima cosa da guardare ha
      * finalmente un pezzo di pagina tutto suo.
      */
+    /**
+     * ─── E L'ANTEFATTO: 100svh in cima, ed e' la coda allo specchio
+     *
+     * DIFETTO PRESO GUARDANDO UN PROVINO, segnalato dall'utente con cinque
+     * parole: «la prima immagine non e' un video». Aveva ragione, e la misura
+     * gli ha dato ragione due volte:
+     *
+     *   la prima schermata (0-720 px) e' `#apertura`, DOM e CSS
+     *   la tela sta a top=720 su una finestra da 720  ->  inVista=false
+     *   differenza fra fotogrammi consecutivi: 0,00-0,05 livelli su 3 secondi
+     *
+     * Cioe' la prima schermata intera del sito non conteneva la scena. Tutto
+     * quello che questo sito sa fare cominciava UNO SCHERMO piu' in basso, e
+     * chi giudica nei primi due secondi non vedeva WebGL.
+     *
+     * La cura non e' spostare il racconto: e' dare alla tela un tratto di
+     * pagina in cui e' gia' incollata e viva mentre il titolo le sta davanti.
+     * E' esattamente la coda, dall'altro capo — e come la coda, `corsa` la
+     * esclude, cosi' `p` resta 0 per tutta l'apertura e le battute cominciano
+     * quando il titolo se ne va.
+     *
+     * `corsa` NON cambia di un pixel: 640svh - 100 - 120 faceva 420svh, e
+     * 740svh - 100 - 120 - 100 fa ancora 420. Ogni finestra della regia resta
+     * dov'era. E' il motivo per cui questa modifica non tocca nessun cancello
+     * agganciato alla corsa.
+     */
     const CODA_SVH = 1.2
+    const ANTE_SVH = 1.0
     const coda = window.innerHeight * CODA_SVH
-    const corsa = r.height - window.innerHeight - coda
+    const ante = window.innerHeight * ANTE_SVH
+    const corsa = r.height - window.innerHeight - coda - ante
     if (corsa <= 0) return
-    const p = Math.min(1, Math.max(0, -r.top / corsa))
+    const p = Math.min(1, Math.max(0, (-r.top - ante) / corsa))
+    /* durante l'antefatto la tela si vede e il cruscotto no: dietro un titolo
+       i pannelli sarebbero rumore, non informazione */
+    palco.dataset.antefatto = (-r.top < ante) ? 'si' : 'no'
     regia(p)
 
     /**
@@ -342,7 +373,9 @@ export function avviaDimostrazione () {
        * qui. La comodita' non deve cambiare cio' che si misura.
        */
       window.__nautica.corsaRacconto = corsa
-      window.__nautica.cimaSezione = window.scrollY + r.top
+      /* la cima del RACCONTO, non della sezione: da quando c'e' l'antefatto le
+         due cose differiscono di uno schermo, e chi salta vuole la prima */
+      window.__nautica.cimaSezione = window.scrollY + r.top + ante
     }
 
     /**

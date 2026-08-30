@@ -457,10 +457,56 @@ p{max-width:60ch}
    Il salone resta davanti (z-index) durante la sovrapposizione, altrimenti un
    fratello successivo lo coprirebbe per la sola regola dell'ordine. */
 .atto--salone{position:relative;z-index:2}
-/* Con la scena unica il salone non e' piu' una sezione: la sovrapposizione di
-   uno schermo serviva a cucire due palchi, e senza il primo diventerebbe un
-   buco di uno schermo prima della dimostrazione. */
-html[data-unica="si"] .atto--demo{margin-top:0}
+/* ─── LA SOVRAPPOSIZIONE TORNA, E ADESSO SERVE A UN'ALTRA COSA
+
+   Qui c'era `margin-top:0`, con questa ragione: «con la scena unica il salone
+   non e' piu' una sezione, la sovrapposizione serviva a cucire due palchi, e
+   senza il primo diventerebbe un buco». Il ragionamento era giusto e il
+   risultato sbagliato, perche' non c'era nessun buco da evitare: al posto del
+   salone c'era `#apertura`, ed e' rimasta scoperta.
+
+   Misurato: la tela stava a top=720 su una finestra da 720, `inVista=false`,
+   e i primi tre secondi del sito avevano una differenza fra fotogrammi
+   consecutivi di 0,00-0,05 livelli. La prima schermata intera era una lastra.
+
+   Con il margine negativo il palco e' gia' incollato quando il titolo e'
+   ancora in vista: la scena vive DIETRO l'apertura invece di cominciare dopo.
+   La corsa del racconto non se ne accorge — `demo.js` toglie quello schermo
+   con `ANTE_SVH`, come gia' toglie la coda dall'altro capo. */
+html[data-unica="si"] .atto--demo{margin-top:-100svh}
+/* e allora l'apertura deve stare DAVANTI: la dimostrazione ha `z-index:1`, e
+   senza questo un fratello successivo la coprirebbe per la sola regola
+   dell'ordine — lo stesso motivo per cui il salone aveva `z-index:2` */
+.atto--taglio{z-index:2}
+/* Durante l'antefatto si vede la tela e NON il cruscotto: dietro un titolo i
+   pannelli, le letture e i comandi sarebbero rumore. Si riaccendono nello
+   stesso istante in cui il racconto comincia. */
+.palco[data-antefatto="si"] > :not(.scena){opacity:0;pointer-events:none}
+
+/* ─── E UN VELO CHIARO SOPRA LA LINEA, PERCHE' IL TITOLO SI LEGGA
+
+   Il titolo si regge su un contrasto che si ribalta alla linea: inchiostro
+   scuro sopra (il cielo e' chiaro), inchiostro chiaro sotto (l'acqua e'
+   scura). Reggeva su un gradiente. Su una scena vera no, e il numero dice
+   dove si rompe -- luminanza del fondo sotto la riga di sopra, per terzi:
+
+       sul gradiente     188,7  197,6  197,5
+       sulla scena       130,3  109,6   26,3   <- il salone e' scuro
+
+   Ventisei livelli sotto un inchiostro scuro non sono poco contrasto: sono
+   niente. Il terzo destro della riga spariva dentro la finestra del salone.
+
+   Il velo alza il fondo dove sta l'inchiostro scuro e si spegne salendo, cosi'
+   il cielo resta cielo. Sotto la linea non tocca niente: li' ci pensa gia'
+   `.scena::after`, e il testo e' chiaro. Vive solo nell'antefatto -- appena il
+   racconto comincia il titolo se n'e' andato e il velo con lui. */
+.palco[data-antefatto="si"] .scena::before{
+  content:'';position:absolute;left:0;right:0;top:0;height:50%;
+  pointer-events:none;
+  background:linear-gradient(to bottom,
+    rgba(240,238,232,0) 0%, rgba(240,238,232,.30) 34%,
+    rgba(240,238,232,.62) 72%, rgba(240,238,232,.72) 100%);
+}
 /* ─── LA CODA: 120svh in cui non succede piu' niente, ed e' il punto
 
    L'ultima immagine del sito sono le due persone: il filmato non si dissolve
@@ -484,7 +530,11 @@ html[data-unica="si"] .atto--demo{margin-top:0}
    quadro intero invece di una striscia. Misurato spegnendo e riaccendendo la coda, a 1280x720: da **160 px** di
    tratto protetto (0,22 schermate) a **1030** (1,43). Sei volte e mezza.
 */
-.atto--demo{background:none;min-height:auto;height:640svh;
+/* 740 = 100 di antefatto + 420 di racconto + 100 di finestra + 120 di coda.
+   Era 640: i 100 in piu' sono l'antefatto, e `demo.js` li toglie dalla corsa
+   esattamente come toglie la coda. La corsa resta 420svh, quindi ogni finestra
+   della regia resta dov'era. */
+.atto--demo{background:none;min-height:auto;height:740svh;
   margin-top:-100svh;position:relative;z-index:1}
 .palco{
   position:sticky;top:0;height:100svh;overflow:hidden;

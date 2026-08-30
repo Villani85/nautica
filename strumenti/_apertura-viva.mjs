@@ -51,23 +51,48 @@ await pg.waitForTimeout(300)
  * una tela sotto la piega e' una decisione; una tela ferma e' una scena che
  * non gira.
  */
-const tela = await pg.evaluate(() => {
-  const c = document.querySelector('canvas')
-  if (!c) return { c_e: false }
-  const r = c.getBoundingClientRect()
-  const st = getComputedStyle(c)
+const tele = await pg.evaluate(() => {
+  const dentro = (el) => {
+    for (let q = el; q; q = q.parentElement) if (q.id) return q.id
+    return '(senza id)'
+  }
   return {
-    c_e: true,
-    rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
-    inVista: r.bottom > 0 && r.top < innerHeight && r.width > 0 && r.height > 0,
-    opacita: st.opacity,
-    visibilita: st.visibility,
-    display: st.display,
+    quante: document.querySelectorAll('canvas').length,
+    lista: [...document.querySelectorAll('canvas')].map(c => {
+      const r = c.getBoundingClientRect()
+      return {
+        in: dentro(c),
+        rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
+        inVista: r.bottom > 0 && r.top < innerHeight && r.width > 0 && r.height > 0
+      }
+    }),
+    sezioni: [...document.querySelectorAll('main > section')].map(s => {
+      const r = s.getBoundingClientRect()
+      return { id: s.id, cima: Math.round(r.top + window.scrollY), alta: Math.round(r.height) }
+    }),
+    stili: [...document.querySelectorAll('main > section')].map(s => {
+      const st = getComputedStyle(s)
+      return { id: s.id, marginTop: st.marginTop, minHeight: st.minHeight, height: st.height, position: st.position }
+    }),
+    palco: (() => {
+      const p = document.querySelector('.palco')
+      if (!p) return null
+      const st = getComputedStyle(p)
+      const r = p.getBoundingClientRect()
+      return { position: st.position, top: st.top, height: st.height, rect: [Math.round(r.top), Math.round(r.height)] }
+    })(),
+    finestra: window.innerHeight,
     spaccato: document.querySelector('[data-spaccato]')?.dataset.spaccato ?? null,
     emersione: document.querySelector('[data-spaccato]')?.dataset.emersione ?? null
   }
 })
-console.log('\n  la tela: ' + JSON.stringify(tela))
+console.log('\n  TELE: ' + tele.quante)
+tele.lista.forEach(c => console.log(`    dentro #${c.in}  rect ${c.rect.join(' ')}  inVista=${c.inVista}`))
+console.log('  SEZIONI (finestra ' + tele.finestra + ' px):')
+tele.sezioni.forEach(s => console.log(`    #${s.id.padEnd(14)} cima ${String(s.cima).padStart(6)}  alta ${String(s.alta).padStart(6)} = ${(s.alta / tele.finestra).toFixed(2)} schermate`))
+console.log("  STILI: " + JSON.stringify(tele.stili))
+console.log("  PALCO: " + JSON.stringify(tele.palco))
+console.log(`  spaccato=${tele.spaccato}  emersione=${tele.emersione}`)
 
 const stato = () => pg.evaluate(() => ({
   scroll: window.scrollY,
@@ -103,5 +128,10 @@ console.log(fermi.length
   ? `   FERMI a fine prova: ${fermi.map(v => v.src).join(', ')}`
   : '   tutti i video hanno avanzato')
 console.log('')
+
+if (process.env.SCATTO) {
+  await pg.screenshot({ path: process.env.SCATTO })
+  console.log(`   scatto: ${process.env.SCATTO}`)
+}
 
 await b.close(); pv.kill()
