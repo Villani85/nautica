@@ -90,7 +90,20 @@ const BASE = `http://localhost:${PORTA}/nautica/`
  * quanto e' alta la sezione. Il giorno in cui si aggiunge o si toglie qualcosa
  * alla pagina, questo cancello continua a guardare le stesse tre cose.
  */
-const PUNTI = [0.186, 0.433, 0.743]   // posizioni della corsa del racconto
+const PUNTI = [0.186, 0.433, 0.600, 0.743]   // posizioni della corsa del racconto
+/**
+ * --- E LO 0,600 E' NUOVO, aggiunto dopo aver corretto il fine corsa
+ *
+ * Quel punto cade nella battuta «calma», dove il mare e' grosso e la pinna
+ * lavora al massimo. E' esattamente il posto in cui un fine corsa va
+ * guardato -- e finora non lo si guardava.
+ *
+ * Non c'era prima per una ragione precisa: con il controllo sbagliato (picco
+ * -picco confrontato con un limite a una falda) quel punto accusava il sito
+ * di sforare quando non sforava. Aggiungerlo allora avrebbe voluto dire far
+ * gridare al lupo il cancello. Adesso che il controllo guarda il picco, quel
+ * punto e' il piu' informativo dei quattro.
+ */
 const CAMPIONI_MINIMI = 20            // abbastanza da vedere un'escursione della pinna
 const CAMPIONI_MAX = 160              // tetto: oltre, il meccanismo non gira e va detto
 const PASSO_MS = 50
@@ -99,7 +112,7 @@ const RAPPORTO_TOLLERANZA = 0.02      // 2%: e' un rapporto esatto, non una stim
 const ORBITA_TOLLERANZA = 0.15        // 15%: l'escursione campionata non tocca sempre i due estremi
 const PINNA_MINIMA = 3.0              // gradi: sotto, il rapporto e' rumore diviso rumore
 const GIRO_INTERO = 380               // gradi d'ingresso: sotto, l'orbita non ha spazzato tutto
-const PINNA_MASSIMA = 25.5            // gradi, §1.5 con mezzo grado di margine numerico
+const PINNA_MASSIMA = 25.5            // gradi DAL CENTRO (A_MAX = 25) + mezzo grado numerico
 const ORBITA_VISIBILE = 0.03          // eccentricita' osservata / raggio del disco
 
 
@@ -291,11 +304,37 @@ for (const f of PUNTI) {
   }
   const G = 180 / Math.PI
   const dPinna = esc('pinna') * G
+  /**
+   * --- IL FINE CORSA E' UN PICCO, NON UN'ESCURSIONE
+   *
+   * DIFETTO DI QUESTO CANCELLO, e passava da sempre per un caso fortunato.
+   *
+   * `esc()` e' `max - min`: un'escursione PICCO-PICCO. `PINNA_MASSIMA` invece
+   * viene da `A_MAX` in `simulazione.js` -- «limite meccanico dell'attuatore»,
+   * 25 gradi -- che e' un limite a UNA FALDA, e il messaggio lo diceva pure:
+   * «oltre i +-25,5».
+   *
+   * Sono due grandezze diverse. Una pinna che satura come deve, a +-25, ha
+   * un'escursione picco-picco di CINQUANTA gradi: il cancello l'avrebbe
+   * chiamata violazione. Non se n'era mai accorto nessuno perche' nelle tre
+   * inquadrature storiche il mare e' calmo e l'escursione resta sotto i 25
+   * anche picco-picco -- il numero era sbagliato e cadeva dalla parte giusta.
+   *
+   * Si e' visto spostando un punto sulla battuta «calma» a mare 5: la pinna
+   * lavora +-21 gradi, dentro il fine corsa, e il cancello ha stampato «42,21
+   * oltre i +-25,5» accusando il sito di una cosa che il sito faceva bene.
+   *
+   * Adesso il fine corsa si controlla su cio' che e': il valore assoluto piu'
+   * grande che l'angolo raggiunge. L'escursione resta, ma solo per il
+   * RAPPORTO, dove picco-picco diviso picco-picco e' la grandezza giusta.
+   */
+  const picco = Math.max(...buoni.map(v => Math.abs(v.pinna))) * G
   const dIngresso = esc('ingresso') * G
   const dOrbita = Math.max(esc('orbitaY'), esc('orbitaZ'))
   const rapporto = dPinna > 0.01 ? dIngresso / dPinna : null
 
-  righe.push(`  ${(f * 100).toFixed(0).padStart(3)}%  pinna ${dPinna.toFixed(2).padStart(6)}°  ` +
+  righe.push(`  ${(f * 100).toFixed(0).padStart(3)}%  pinna ${dPinna.toFixed(2).padStart(6)}° p-p ` +
+             `(picco ${picco.toFixed(1)}°)  ` +
              `ingresso ${dIngresso.toFixed(0).padStart(4)}°  ` +
              `rapporto ${rapporto ? rapporto.toFixed(2) : '  —'}  ` +
              `orbita ${(dOrbita * 1000).toFixed(2)} mm`)
@@ -315,9 +354,11 @@ for (const f of PUNTI) {
    * pretende che almeno un punto la soddisfi. Se il meccanismo non gira MAI
    * abbastanza da poter essere misurato, quello si' che e' un guasto.
    */
-  if (dPinna > PINNA_MASSIMA) {
-    guasti.push(`al ${(f * 100).toFixed(0)}% la pinna arriva a ${dPinna.toFixed(2)}° di escursione, ` +
-                `oltre i ±${PINNA_MASSIMA}° di §1.5`)
+  if (picco > PINNA_MASSIMA) {
+    guasti.push(`al ${(f * 100).toFixed(0)}% la pinna raggiunge ${picco.toFixed(2)}° dal centro, ` +
+                `oltre il fine corsa di ±${PINNA_MASSIMA}° (A_MAX in simulazione.js). ` +
+                `L'escursione picco-picco era ${dPinna.toFixed(2)}°, che e un'altra grandezza ` +
+                'e non va confrontata con questo limite.')
   }
 
   if (dPinna >= PINNA_MINIMA) {
@@ -454,6 +495,16 @@ if (ao.conAO === 0) {
   guasti.push(`l occlusione non varia (da ${ao.minimo.toFixed(3)} a ${ao.massimo.toFixed(3)}): ` +
               "la mappa c e ma e un foglio bianco, cioe non e stata cotta o e andata persa")
 }
+/**
+ * --- I NUMERI SI STAMPANO ANCHE QUANDO E' VERDE
+ *
+ * `righe` veniva riempita a ogni punto e non stampata mai: le misure si
+ * vedevano solo se qualcosa falliva. Un cancello che tace i propri numeri
+ * costringe chi indaga a rimetterci le mani per sapere cosa ha visto, ed e'
+ * il motivo per cui la voce della pinna in `ciao2.md` e' rimasta aperta una
+ * notte: il numero c'era, non lo stampava nessuno.
+ */
+for (const r of righe) console.log(r)
 if (errori.length) console.log('  errori di pagina: ' + errori.slice(0, 3).join(' | '))
 
 await browser.close()
