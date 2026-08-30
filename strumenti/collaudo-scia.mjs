@@ -29,6 +29,24 @@ await avvisaSePortaAltrui(PORTA)
 const MINIMO_MURATA = 6
 const RAPPORTO_MINIMO = 3      // per cento di schiarimento minimo lungo la murata
 const TETTO_FUORI = 0.6 // per cento di scarto massimo lontano dalla nave
+/**
+ * ─── E DI QUANTO SCHIARISCE, che e' la domanda che mancava
+ *
+ * Misurato tre volte di seguito, e questa metrica e' STABILE: p90 = 20,6 /
+ * 19,9 / 19,8 livelli, scarto otto decimi. Prima della V e della coda faceva
+ * **0,9**. Il pavimento sta quindici volte sopra il vecchio valore e il 40%
+ * sotto il misurato: e' un fondo, non una taratura sul risultato.
+ *
+ * ─── COSA QUESTO CANCELLO NON PROMETTE
+ *
+ * NON dice che venti livelli bastano a leggere l'acqua spostata da una carena.
+ * Non ho nessuna misura che lo sostenga, e la mediana della fascia resta ZERO:
+ * la scia e' forte dove c'e' e tocca un decimo della finestra. Se le cinque
+ * persone di `?studio=1` diranno che la nave sembra ancora appoggiata su un
+ * piano, la cura non e' alzare questo numero -- e' allargare ancora la fascia,
+ * o avvicinare la camera, che e' l'altra meta' dello stesso difetto.
+ */
+const SCHIARIMENTO_MINIMO = 12
 
 const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true, stdio: 'ignore' })
 await new Promise(r => setTimeout(r, 4000))
@@ -175,13 +193,46 @@ const esito = await pg.evaluate(async (CAMPIONI) => {
     }
     return 100 * n / tot
   }
+  /**
+   * ─── QUANTO SCHIARISCE, NON SOLO SE CAMBIA
+   *
+   * DIFETTO DEL METRO, non del sito, e trovato perche' una revisione esterna
+   * ha scritto «nessuna scia» mentre questo cancello era VERDE. Aveva ragione
+   * lei: la scia c'era e valeva **1,8 livelli su 255**. Il cancello contava i
+   * pixel che cambiano -- 8,8% -- e un pixel che cambia di un livello conta
+   * quanto uno che cambia di ottanta.
+   *
+   * Un cancello verde su una cosa invisibile e' il difetto peggiore che questo
+   * repo conosca: non e' una soglia troppo bassa, e' una DOMANDA sbagliata.
+   * La cura non e' alzare il 6%: e' chiedere anche di quanto.
+   *
+   * E si guarda il NOVANTESIMO PERCENTILE, non la media. La fascia e' sottile
+   * e la finestra e' larga: la media di un rettangolo che contiene per lo piu'
+   * mare fermo dice quanto e' grande la fascia, non quanto e' chiara. Il
+   * percentile risponde alla domanda giusta -- dove la scia c'e', si vede?
+   */
+  const scarti = (a, b, x0, y0, x1, y1) => {
+    const v = []
+    const lum = (d, i) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * a.width + x) * 4
+        v.push(lum(b.data, i) - lum(a.data, i))
+      }
+    }
+    v.sort((p, q) => p - q)
+    const q = (f) => v[Math.min(v.length - 1, Math.floor(f * v.length))]
+    return { mediana: q(0.5), p90: q(0.90), p99: q(0.99), massimo: v[v.length - 1] }
+  }
   const fermo = { rapporto: 1, murata: media(fermoIm, ...murata), largo: media(fermoIm, ...largo) }
   const corsa = { rapporto: 1, murata: media(corsaIm, ...murata), largo: media(corsaIm, ...largo) }
   return {
     fermo,
     corsa,
     mossiMurata: mossi(fermoIm, corsaIm, ...murata),
-    mossiLargo: mossi(fermoIm, corsaIm, ...largo)
+    mossiLargo: mossi(fermoIm, corsaIm, ...largo),
+    scartiMurata: scarti(fermoIm, corsaIm, ...murata),
+    scartiLargo: scarti(fermoIm, corsaIm, ...largo)
   }
 }, CAMPIONI)
 
@@ -192,11 +243,20 @@ if (esito.rotto) { console.error('  ROTTO  ' + esito.rotto); process.exit(1) }
 console.log('la scia contro l andatura')
 console.log(`  PIXEL CHE CAMBIANO accendendo l andatura:  lungo la murata ${esito.mossiMurata.toFixed(1)}%   al largo ${esito.mossiLargo.toFixed(1)}%`)
 console.log(`  (luminanze, per contesto: murata ${esito.fermo.murata.toFixed(1)} -> ${esito.corsa.murata.toFixed(1)}, largo ${esito.fermo.largo.toFixed(1)} -> ${esito.corsa.largo.toFixed(1)})`)
+const s = esito.scartiMurata
+console.log(`  DI QUANTO SCHIARISCE lungo la murata (livelli su 255):  mediana ${s.mediana.toFixed(1)}   ` +
+  `p90 ${s.p90.toFixed(1)}   p99 ${s.p99.toFixed(1)}   max ${s.massimo.toFixed(1)}`)
+console.log(`  (al largo, per contesto: p90 ${esito.scartiLargo.p90.toFixed(1)})`)
 
 const guai = []
 if (esito.mossiMurata < MINIMO_MURATA) {
   guai.push(`accendendo l andatura cambia solo il ${esito.mossiMurata.toFixed(1)}% dei pixel lungo la murata ` +
             `(minimo ${MINIMO_MURATA}%): la scia non arriva all acqua.`)
+}
+if (esito.scartiMurata.p90 < SCHIARIMENTO_MINIMO) {
+  guai.push(`dove la scia c e schiarisce di ${esito.scartiMurata.p90.toFixed(1)} livelli su 255 ` +
+            `(minimo ${SCHIARIMENTO_MINIMO}): c e ma non si vede. ` +
+            `Un cancello verde su una cosa invisibile e gia costato una revisione.`)
 }
 if (esito.mossiMurata < esito.mossiLargo * RAPPORTO_MINIMO) {
   guai.push(`la murata cambia ${esito.mossiMurata.toFixed(1)}% e il largo ${esito.mossiLargo.toFixed(1)}%: ` +

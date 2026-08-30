@@ -341,14 +341,43 @@ const INNESTO_CAMPO = /* glsl */`
          PIANTA -- si guarda da quanto e' lontano il punto dal profilo dello
          scafo visto dall'alto, e l'altezza non c'entra. */
       vec3 q3 = (uNaveInv * vec4(vMondo, 1.0)).xyz / uNaveSemi;
+      float lung = q3.z;              /* -1 la prua, +1 lo specchio */
       float fuori = length(q3.xz) - 1.0;
-      float vicino = 1.0 - smoothstep(0.0, 0.42, max(fuori, 0.0));
+
+      /* --- E LA FASCIA NON E' UN COLLARE, SI APRE A V
+         Qui c'era una fascia larga 0,42 semiassi UGUALE da prua a poppa: un
+         anello di schiuma intorno allo scafo. Nessuna carena fa quello. Una
+         carena che avanza apre l'acqua alla prua e se la lascia dietro in una
+         V che si allarga -- stretta davanti, larga a poppavia. La forma
+         sbagliata era anche la ragione per cui non si vedeva: distribuita
+         tutt'intorno, l'aria non si accumulava da nessuna parte. */
+      float apertura = mix(0.24, 1.15, smoothstep(-1.0, 1.3, lung));
+      float collare = 1.0 - smoothstep(0.0, apertura, max(fuori, 0.0));
+      /* piu' forte davanti al baglio massimo, dove la carena spinge */
+      float prua = 1.0 - smoothstep(-0.95, 0.30, lung);
+      collare *= 0.50 + 0.85 * prua;
+
+      /* --- LA CODA, che prima non c'era affatto
+         Una nave che passa lascia l'acqua diversa da come l'ha trovata. Senza
+         questo termine lo scafo scivolava su un piano che si richiudeva
+         subito, ed e' il segnale di sintetico piu' forte dopo la linea netta
+         al galleggiamento. Si allarga e si spegne andando via. */
+      float oltre = max(0.0, lung - 0.92);
+      float largo = 0.40 + 0.80 * oltre;
+      float coda = (1.0 - smoothstep(0.0, largo, abs(q3.x)))
+                 * exp(-oltre * 0.75) * smoothstep(0.0, 0.14, oltre);
+
+      float forma = clamp(max(collare, coda), 0.0, 1.0);
       float grana = acqCella(acqP * 5.2 + vec2(mod(uTempo * 0.37, 512.0))).x;
       /* La grana rompe la fascia: una banda pulita legge come un contorno
          disegnato, non come acqua aerata. E' la stessa cella della schiuma
-         delle creste, piu' fitta e piu' veloce. */
-      float baffo = vicino * smoothstep(0.10, 0.70, grana) * uNaveVel * acqTaglio;
-      diffuseColor.rgb = mix(diffuseColor.rgb, uColSchiuma, baffo * 0.85);
+         delle creste, piu' fitta e piu' veloce.
+         La finestra era 0,10..0,70 e lasciava passare poco piu' di un terzo
+         della cella: la fascia esisteva per un cancello e non per un occhio.
+         Misurato prima: la murata passava da 127,1 a 128,9, cioe' UN VIRGOLA
+         OTTO livelli su 255. */
+      float baffo = forma * smoothstep(0.02, 0.52, grana) * uNaveVel * acqTaglio;
+      diffuseColor.rgb = mix(diffuseColor.rgb, uColSchiuma, clamp(baffo, 0.0, 1.0) * 0.92);
       /* il baffo entra nella schiuma totale: serve piu' sotto, dove l'opacita'
          della superficie viene rialzata dove c'e' aria */
       acqSchiuma = max(acqSchiuma, baffo);
