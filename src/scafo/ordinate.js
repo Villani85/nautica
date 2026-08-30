@@ -286,7 +286,28 @@ export function costruisciGuscio (anelli = 64) {
 
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
-  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
+  const attrUv = new BufferAttribute(new Float32Array(uv), 2)
+  g.setAttribute('uv', attrUv)
+  /**
+   * ─── E LO STESSO SET COME `uv1`, O LE MAPPE COTTE NON ESISTONO
+   *
+   * DIFETTO TROVATO MISURANDO, e vecchio quanto la mappa. Da three r152
+   * `aoMap` e `lightMap` leggono `uv1`, non `uv`. Questa geometria dichiarava
+   * solo `uv`, quindi il secondo canale non c'era e le due mappe non venivano
+   * campionate affatto.
+   *
+   * Non dava errore e non si vedeva: dava un sito che spediva
+   * `scafo-ao.webp` -- 12.786 byte a ogni visita -- senza che quei byte
+   * arrivassero a un pixel. La prova e' netta: portando `lightMapIntensity` a
+   * DIECI il fotogramma restava identico al bit, media 214,8 e scarto tipo
+   * 25,0 / 22,4 / 21,6 in tutte e due le corse. Una mappa che a intensita'
+   * dieci non cambia niente non e' debole: non c'e'.
+   *
+   * Le UV sono le stesse -- il bake nasce da questa parametrizzazione, non da
+   * uno srotolamento diverso -- quindi il secondo canale e' l'attributo
+   * stesso, senza copiare un byte di memoria.
+   */
+  g.setAttribute('uv1', attrUv)
   g.setIndex(idx)
   g.computeVertexNormals()
   return g
@@ -327,7 +348,28 @@ export function costruisciPonte (anelli = 72) {
   }
   const g = new BufferGeometry()
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
-  g.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
+  const attrUv = new BufferAttribute(new Float32Array(uv), 2)
+  g.setAttribute('uv', attrUv)
+  /**
+   * ─── E LO STESSO SET COME `uv1`, O LE MAPPE COTTE NON ESISTONO
+   *
+   * DIFETTO TROVATO MISURANDO, e vecchio quanto la mappa. Da three r152
+   * `aoMap` e `lightMap` leggono `uv1`, non `uv`. Questa geometria dichiarava
+   * solo `uv`, quindi il secondo canale non c'era e le due mappe non venivano
+   * campionate affatto.
+   *
+   * Non dava errore e non si vedeva: dava un sito che spediva
+   * `scafo-ao.webp` -- 12.786 byte a ogni visita -- senza che quei byte
+   * arrivassero a un pixel. La prova e' netta: portando `lightMapIntensity` a
+   * DIECI il fotogramma restava identico al bit, media 214,8 e scarto tipo
+   * 25,0 / 22,4 / 21,6 in tutte e due le corse. Una mappa che a intensita'
+   * dieci non cambia niente non e' debole: non c'e'.
+   *
+   * Le UV sono le stesse -- il bake nasce da questa parametrizzazione, non da
+   * uno srotolamento diverso -- quindi il secondo canale e' l'attributo
+   * stesso, senza copiare un byte di memoria.
+   */
+  g.setAttribute('uv1', attrUv)
   g.setIndex(idx)
   g.computeVertexNormals()
   return g

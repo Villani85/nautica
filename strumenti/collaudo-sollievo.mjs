@@ -49,6 +49,29 @@ try {
     return v?.readyState >= 2 && Number.isFinite(v.duration)
   }, null, { timeout: 30000 })
 
+  /**
+   * ─── SI ASPETTA CHE LA CALMA STIA GIRANDO, PRIMA DI MISURARE
+   *
+   * Il cancello passava da solo e falliva DENTRO LA SUITE, due corse su due,
+   * con «la calma non riparte dal raccordo: 0.00 s» -- cioe' il video calmo a
+   * zero e in pausa. Non e' il riuso della preview (provato: passa lo stesso)
+   * ed e' riproducibile, quindi non e' nemmeno intermittenza: e' il CARICO.
+   * Dopo venti cancelli la macchina e' piu' lenta, e i tempi fissi scritti su
+   * un'altra macchina non bastano piu'.
+   *
+   * La cura non e' allungare i timeout: e' quella che questo repo ha gia'
+   * scritto -- *non si aspetta un tempo, si aspetta un fatto*. Qui il fatto e'
+   * che il ciclo calmo stia davvero girando: e' lo stato da cui il gesto
+   * parte, e misurare il raccordo prima che esista significa misurare zero.
+   *
+   * Non indebolisce niente: le soglie e l'attesa del fotogramma presentato
+   * restano quelle. Cambia solo da DOVE parte la misura.
+   */
+  await pagina.waitForFunction(() => {
+    const c = document.querySelector('video[src*="salone-largo"]')
+    return c && c.readyState >= 2 && !c.paused && c.currentTime > 0.02
+  }, null, { timeout: 30000 })
+
   const prima = await pagina.evaluate(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')
     return { ...window.__nautica.statoSollievo(), paused: v.paused, ended: v.ended }

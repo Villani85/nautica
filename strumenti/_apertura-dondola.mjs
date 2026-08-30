@@ -48,7 +48,15 @@ const leggi = () => pg.evaluate(() => {
     t: +v.currentTime.toFixed(3),
     fermo: v.paused
   }))
-  return { rollio: +S.rollio.toFixed(3), mare: S.mare, stab: S.stab, video: vs }
+  const g = (r) => +(r * 180 / Math.PI).toFixed(3)
+  const n = window.__nautica
+  return {
+    rollio: +S.rollio.toFixed(3), mare: S.mare, stab: S.stab, video: vs,
+    naveZ: g(n.nave.rotation.z),
+    cameraZ: g(n.camera.rotation.z),
+    cameraY: g(n.camera.rotation.y),
+    residuo: +(g(n.nave.rotation.z) - g(n.camera.rotation.z)).toFixed(3)
+  }
 })
 
 async function serie(nome, prima) {
@@ -64,6 +72,7 @@ async function serie(nome, prima) {
   const vt = s0.video.map((v, i) => `${v.n} ${v.t}->${s1.video[i].t}`).join('  ')
   console.log(`\n  ── ${nome}`)
   console.log(`     rollio ${s0.rollio} -> ${s1.rollio}   mare ${s1.mare}  stab ${s1.stab}`)
+  console.log(`     naveZ ${s1.naveZ}deg  cameraZ ${s1.cameraZ}deg  cameraY ${s1.cameraY}deg  RESIDUO ${s1.residuo}deg`)
   console.log(`     video: ${vt}`)
 }
 
@@ -76,12 +85,48 @@ await serie('come-e', null)
  * acceso e' la condizione in cui la nave sta ferma, ed e' uno stato che il
  * sito ha davvero -- non un trucco da laboratorio.
  */
+/**
+ * ─── E LA CALMA SI ASPETTA, NON SI FA AVANZARE A PASSO DICHIARATO
+ *
+ * DIFETTO DEL METRO, mio, e trovato guardando i numeri accanto. Qui c'erano
+ * 400 passi di `passoDichiarato` per portare il rollio a zero in fretta.
+ * Funzionava per il rollio e rompeva tutto il resto: in quella serie il
+ * filmato del salone avanzava di **0,063 secondi** in cinque secondi di
+ * orologio, perche' il tempo simulato correva senza che i <video> lo
+ * seguissero.
+ *
+ * Cosi' non si confrontava «col rollio» contro «senza rollio»: si confrontava
+ * «col video» contro «senza video», e il crollo della stanza da 10,5 a 1,6
+ * -- che avevo attribuito all'inclinazione -- era il filmato fermo.
+ *
+ * La calma si aspetta sull'orologio vero, come la vedrebbe una persona.
+ */
 await serie('rollio-fermo', async () => {
   await pg.evaluate(() => {
     const S = window.__nautica.stato
     S.mare = 0
     S.stab = true
-    for (let i = 0; i < 400; i++) window.__nautica.passoDichiarato(1 / 60, 1)
+  })
+  await pg.waitForTimeout(9000)
+})
+
+/**
+ * TERZA SERIE: si blocca la ROTAZIONE DELLA NAVE, non il rollio.
+ *
+ * Se azzerando la rotazione della TEXTURE non cambia niente ma azzerando
+ * `nave.rotation.z` la stanza si ferma, allora quello che dondola non e' la
+ * fotografia dentro il piano: e' il piano stesso -- il salone sta dentro la
+ * tuga, la tuga ruota con la nave, e la camera resta livellata.
+ */
+await serie('nave-ferma', async () => {
+  await pg.evaluate(() => {
+    const S = window.__nautica.stato
+    S.mare = 4
+    S.stab = false
+    const n = window.__nautica.nave
+    Object.defineProperty(n.rotation, 'z', {
+      get: () => 0, set: () => {}, configurable: true
+    })
   })
 })
 
