@@ -461,7 +461,30 @@ p{max-width:60ch}
    uno schermo serviva a cucire due palchi, e senza il primo diventerebbe un
    buco di uno schermo prima della dimostrazione. */
 html[data-unica="si"] .atto--demo{margin-top:0}
-.atto--demo{background:none;min-height:auto;height:520svh;
+/* ─── LA CODA: 120svh in cui non succede piu' niente, ed e' il punto
+
+   L'ultima immagine del sito sono le due persone: il filmato non si dissolve
+   quando finisce, resta sul suo ultimo fotogramma (vedi `traversata.js`). Ma
+   quel fotogramma veniva TAGLIATO mentre lo teneva.
+
+   Misurato prima della cura, a 1280x720: il filmato finisce al 99% dello
+   scorrimento del documento, e il palco comincia a uscire dalla vista **al
+   91%**. All'istante del ritorno alle persone restavano **348 px su 720** --
+   meno di meta' quadro, col colophon a occupare il resto. Una revisione
+   esterna l'aveva detta cosi': «delle persone restano quasi solo le gambe».
+
+   La cura non e' rubare lo scorrimento (D27 lo vieta, e a ragione). E' dare
+   all'ultimo fotogramma un tratto in cui il palco e' ancora INTERO: la
+   sezione cresce di 120svh e la corsa che genera `p` li esclude, quindi `p`
+   arriva a 1 con 120svh di margine prima che il palco cominci a staccarsi.
+
+   Non compra secondi -- nessuna lunghezza di pagina compra secondi di
+   orologio, e chi scorre veloce supera qualunque coda. Compra la cosa che
+   mancava: che chi si FERMA li' -- e al climax ci si ferma -- guardi un
+   quadro intero invece di una striscia. Misurato spegnendo e riaccendendo la coda, a 1280x720: da **160 px** di
+   tratto protetto (0,22 schermate) a **1030** (1,43). Sei volte e mezza.
+*/
+.atto--demo{background:none;min-height:auto;height:640svh;
   margin-top:-100svh;position:relative;z-index:1}
 .palco{
   position:sticky;top:0;height:100svh;overflow:hidden;

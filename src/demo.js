@@ -277,7 +277,30 @@ export function avviaDimostrazione () {
    */
   function leggiScorrimento () {
     const r = sezione.getBoundingClientRect()
-    const corsa = r.height - window.innerHeight
+    /**
+     * ─── LA CORSA ESCLUDE LA CODA, e la coda e' l'ultima immagine del sito
+     *
+     * `p` arriva a 1 quando il fondo della sezione tocca il fondo della
+     * finestra -- che e' esattamente l'istante in cui il palco incollato
+     * comincia a farsi spingere fuori. Cioe': l'ultima battuta finiva nello
+     * stesso momento in cui il quadro cominciava a essere tagliato.
+     *
+     * Misurato a 1280x720: il filmato della traversata finisce al 99% dello
+     * scorrimento, il palco comincia a uscire al 91%, e al ritorno alle
+     * persone restavano 348 px su 720. La coppia -- che e' il soggetto di
+     * tutto il sito -- si vedeva a meta'.
+     *
+     * Togliendo la coda dalla corsa, `p` raggiunge 1 con 120svh ancora da
+     * scorrere: in quel tratto tutte le battute sono chiuse, il filmato tiene
+     * il suo ultimo fotogramma, e il palco e' ancora INTERO.
+     *
+     * Non e' scorrimento rubato: la pagina scorre come prima, nessun gesto
+     * viene intercettato (D27). E' solo che l'ultima cosa da guardare ha
+     * finalmente un pezzo di pagina tutto suo.
+     */
+    const CODA_SVH = 1.2
+    const coda = window.innerHeight * CODA_SVH
+    const corsa = r.height - window.innerHeight - coda
     if (corsa <= 0) return
     const p = Math.min(1, Math.max(0, -r.top / corsa))
     regia(p)
