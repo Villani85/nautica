@@ -148,9 +148,48 @@ async function misura (ridotto) {
   }
   await new Promise(r => setTimeout(r, 2500))
 
+  /**
+   * ─── SI ASPETTA CHE IL VIDEO SIA PARTITO, PRIMA DI MISURARLO
+   *
+   * DIFETTO TROVATO QUANDO L'ARTEFATTO DEL MODULO E' SPARITO. Questo cancello
+   * misurava l'avanzamento del video del salone da un istante scelto
+   * dall'orologio, e quell'istante puo' cadere dove il capitolo NON e' in
+   * campo -- e li' il video e' in pausa **apposta**: `salone3d.js` sospende i
+   * decodificatori quando la sezione esce di scena, che e' una cosa che una
+   * revisione aveva chiesto per la batteria di un telefono.
+   *
+   * Misurare zero su un video giustamente fermo, e chiamarlo difetto, e' un
+   * cancello che boccia una funzione. Finora non se ne accorgeva nessuno
+   * perche' il modulo trasformava quello zero in «+10,002 s» -- un numero
+   * impossibile in una finestra di un secondo e mezzo, che passava.
+   *
+   * Quindi prima si aspetta il FATTO OSSERVABILE (il video sta girando), poi
+   * si misura. Se non parte entro otto secondi non e' un'attesa breve: e' il
+   * difetto vero, e va detto come tale invece di essere confuso con un video
+   * fermo di proposito.
+   */
+  const partito = await pagina.waitForFunction(() => {
+    const v = document.querySelector('video[src*="salone-largo"]') ||
+              document.querySelector('video')
+    return !!v && !v.paused && v.readyState > 2
+  }, null, { timeout: 8000 }).then(() => true).catch(() => false)
+
   const r = await pagina.evaluate(([n, durata]) => new Promise((res) => {
     const t0 = performance.now()
-    const v = document.querySelector('video')
+    /**
+     * ─── IL VIDEO DEL SALONE SI SCEGLIE PER SORGENTE, NON PER POSIZIONE
+     *
+     * `querySelector('video')` prendeva il PRIMO del documento, e per mesi e'
+     * bastato perche' di video ce n'erano due. Aggiungendone un terzo -- la posa
+     * puntellata -- la posizione ha smesso di essere un'identita', ed e' la
+     * stessa trappola che questo repo ha gia' pagato due volte: `.palco` che
+     * prendeva quello del salone invece che quello della dimostrazione, e
+     * `#stab` che ne aveva due copie.
+     *
+     * Si nomina quello che si vuole misurare.
+     */
+    const v = document.querySelector('video[src*="salone-largo"]') ||
+              document.querySelector('video')
     const primoF = window.__nautica.fotogrammi
     const primoV = v ? v.currentTime : null
     /**
@@ -173,7 +212,42 @@ async function misura (ridotto) {
      */
     let i = 0, min = Infinity, max = -Infinity, somma = 0, quadri = 0
     let prec = null, maxPasso = 0
+    /**
+     * ─── L'AVANZAMENTO SI ACCUMULA, NON SI SOTTRAE
+     *
+     * IL DIFETTO PIU' CARO DI QUESTO FILE, e passava da mesi.
+     *
+     * La misura era `((fine - inizio) + durata) % durata`, cioe' due estremi e
+     * un modulo. Regge solo se la finestra osservata e' piu' CORTA della clip.
+     * Non lo era: questa finestra dura circa **dieci secondi**, e la clip del
+     * salone ne durava venti.
+     *
+     *     clip 20 s, finestra 10 s   ->  (10 + 20) % 20 = 10,002   PASSA
+     *     clip  5 s, finestra 10 s   ->  (10 +  5) %  5 =  0,00    BOCCIA
+     *
+     * Quel «+10.002 s in un secondo e mezzo» che il cancello stampava non era
+     * un avanzamento: era il modulo di una finestra piu' lunga della clip. Un
+     * numero impossibile, stampato per mesi accanto a un verde.
+     *
+     * Sostituendo il salone con un ciclo canonico da 5 s il modulo ha smesso di
+     * essere generoso e il cancello e' diventato rosso -- **non perche' il sito
+     * si sia rotto**, ma perche' ha smesso di mentire. Verificato in pagina: la
+     * stanza avanza di 2,015 s in 2 s e il mare di 2,035.
+     *
+     * Accumulando il delta a ogni fotogramma, il giro della clip si conta
+     * invece di cancellarsi, e la misura vale per qualunque durata.
+     */
+    let avanzato = 0
+    let vPrec = primoV
+
     const passo = () => {
+      if (v && vPrec !== null) {
+        const d = v.currentTime - vPrec
+        /* un salto negativo e' il giro della clip, non un video che torna
+           indietro: si aggiunge la durata una volta sola */
+        avanzato += d < -0.001 ? d + v.duration : Math.max(0, d)
+        vPrec = v.currentTime
+      }
       const x = window.__nautica.stato.rollio
       if (x < min) min = x
       if (x > max) max = x
@@ -197,7 +271,24 @@ async function misura (ridotto) {
          * numero negativo di secondi trascorsi non e' un difetto del sito, e'
          * un difetto del metro, e lo dichiara da solo essendo impossibile.
          */
-        video: v ? +(((v.currentTime - primoV) + v.duration) % v.duration).toFixed(3) : null,
+        /**
+         * ─── E IL MODULO NON DEVE POTER FABBRICARE UN AVANZAMENTO
+         *
+         * DIFETTO TROVATO SOSTITUENDO LA CLIP. Con la vecchia da 20 s questo
+         * cancello riportava **+10,002 s in una finestra di un secondo e
+         * mezzo**: impossibile, e passava. Il modulo trasformava una differenza
+         * negativa -- il video era stato riposizionato, o non era quello che
+         * credevo di guardare -- in un numero grande e rassicurante.
+         *
+         * Il modulo serve davvero, perche' la clip cicla; ma un avanzamento
+         * maggiore della finestra osservata non e' un avanzamento. Si taglia a
+         * quello che il tempo trascorso consente, cosi' l'artefatto non puo'
+         * piu' fingere un pass. E si dichiara la PAUSA: un video fermo deve
+         * dirlo, non farlo dedurre da uno zero.
+         */
+        video: v ? +avanzato.toFixed(3) : null,
+        videoInPausa: v ? v.paused : null,
+        videoSorgente: v ? (v.currentSrc || v.src || '').split('/').pop() : null,
         escursione: max - min,
         maxPasso,
         rms: Math.sqrt(Math.max(0, quadri / i - (somma / i) * (somma / i))),
@@ -210,17 +301,17 @@ async function misura (ridotto) {
   }), [FOTOGRAMMI, DURATA_MS])
   r.errori = errori
   await pagina.close()
-  return r
+  return { ...r, partito }
 }
 
 const con = await misura(true)
 const senza = await misura(false)
 
 console.log('  con "reduce":   ' +
-  `${con.disegnati} fotogrammi disegnati, video +${con.video}s, rollio RMS ${con.rms.toFixed(3)} (p-p ${con.escursione.toFixed(2)}, passo max ${con.maxPasso.toFixed(4)}) gradi` +
+  `${con.disegnati} fotogrammi disegnati, video ${con.videoSorgente} +${con.video}s${con.videoInPausa ? ' (IN PAUSA)' : ''}, rollio RMS ${con.rms.toFixed(3)} (p-p ${con.escursione.toFixed(2)}, passo max ${con.maxPasso.toFixed(4)}) gradi` +
   `  [ridotto=${con.ridotto}, mare ${con.mare}]`)
 console.log('  senza:          ' +
-  `${senza.disegnati} fotogrammi disegnati, video +${senza.video}s, rollio RMS ${senza.rms.toFixed(3)} (p-p ${senza.escursione.toFixed(2)}, passo max ${senza.maxPasso.toFixed(4)}) gradi` +
+  `${senza.disegnati} fotogrammi disegnati, video ${senza.videoSorgente} +${senza.video}s${senza.videoInPausa ? ' (IN PAUSA)' : ''}, rollio RMS ${senza.rms.toFixed(3)} (p-p ${senza.escursione.toFixed(2)}, passo max ${senza.maxPasso.toFixed(4)}) gradi` +
   `  [ridotto=${senza.ridotto}, mare ${senza.mare}]`)
 
 if (!con.ridotto) {
@@ -246,7 +337,11 @@ if (con.disegnati < Math.max(3, con.campioni / 3)) {
   guai.push(`con la preferenza attiva la scena ha disegnato ${con.disegnati} fotogrammi ` +
             `mentre se ne campionavano ${con.campioni}: e una fotografia, non un sito piu calmo`)
 }
-if (con.video !== null && con.video < 0.4) {
+if (!con.partito) {
+  guai.push('con la preferenza attiva il video del salone non e mai partito in otto secondi: ' +
+            'non e un video sospeso fuori campo, e un video che non riparte quando il capitolo ' +
+            'torna in scena')
+} else if (con.video !== null && con.video < 0.4) {
   guai.push(`con la preferenza attiva il video del salone e avanzato di ${con.video}s in un secondo e mezzo: ` +
             'sta fermo. Il video non era stato spento da nessuno -- si e fermato perche era ' +
             'attaccato al ciclo di disegno che qualcun altro spegneva')

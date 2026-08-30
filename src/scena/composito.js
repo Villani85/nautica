@@ -157,7 +157,12 @@ export function creaComposito (contenitore, base) {
    * 3D non reggesse su un telefono vero. Un paracadute che non si apre e' peggio
    * di nessun paracadute, perche' ci si conta sopra.
    */
-  const TESA = null
+  /* ACCESA anche qui: questo e' il ramo `?doppia=1`, il paracadute da aprire se
+     il salone 3D non reggesse su un telefono vero. Un paracadute che si apre
+     mostrando meno di quello che sostituisce non serve -- e la reazione della
+     coppia e' proprio la cosa che non si puo' perdere. La misura che autorizza
+     l'accensione sta in `salone3d.js`, sopra la costante gemella. */
+  const TESA = 'filmati/salone-teso.mp4'
 
   const filmato = (classe, sorgente) => {
     const v = nuovo(classe, 'video')

@@ -58,22 +58,54 @@ import {
 
 const CALMA = 'filmati/salone-largo.mp4'
 /**
- * LA POSA PUNTELLATA E' SPENTA, e va detto perche'.
+ * LA POSA PUNTELLATA E' ACCESA, e il numero che la accende e' lo stesso che
+ * l'aveva spenta.
  *
- * `salone-teso.mp4` viene da un'altra generazione: e' una ripresa NOTTURNA con
- * il finestrone nero e un'inquadratura diversa -- 72 livelli su 255 di
- * differenza media dalla clip calma. Dissolvendo su di essa a rollio alto il
- * sito mostrerebbe un altro salone, di notte, senza mare, proprio nel momento
- * in cui rivendica che sopra e sotto la linea sono la stessa traversata.
+ * ─── PERCHE' ERA SPENTA
  *
- * Uno strato che mostra un'altra stanza e' peggio di nessuno strato. Resta
- * spento finche' non esiste una posa puntellata girata DALLA STESSA ripresa: a
- * quel punto basta rimettere il nome qui.
+ * La vecchia `salone-teso.mp4` veniva da un'altra generazione: una ripresa
+ * NOTTURNA col finestrone nero e un'inquadratura diversa, **72 livelli su 255**
+ * di differenza media dalla clip calma. Dissolvendo su quella a rollio alto il
+ * sito avrebbe mostrato un altro salone, di notte, senza mare, proprio nel
+ * momento in cui rivendica che sopra e sotto la linea sono la stessa
+ * traversata. Uno strato che mostra un'altra stanza e' peggio di nessuno
+ * strato.
  *
- * E c'e' un guadagno collaterale che una revisione aveva chiesto: si torna a
- * due decodificatori invece di tre, che su un telefono e' batteria e calore.
+ * La regola scritta allora era: *«resta spento finche' non esiste una posa
+ * puntellata girata DALLA STESSA ripresa; a quel punto basta rimettere il nome
+ * qui»*. Quella posa adesso esiste.
+ *
+ * ─── E LA MISURA CHE LO PERMETTE, rifatta con lo stesso metro
+ *
+ *     vecchia posa tesa      72,0 livelli su 255 di differenza media
+ *     nuova posa tesa        10,6
+ *       meta' sinistra (finestrone e mare)   14,9
+ *       meta' destra   (stanza e persone)     6,3
+ *
+ * Sette volte meno, e la parte che conta e' la ripartizione: la stanza e le
+ * persone differiscono di **6,3 livelli** -- stessa luce, stessi mobili, stessi
+ * volti, cambia la posa -- mentre i 14,9 di sinistra sono il MARE, che fra due
+ * clip indipendenti si muove per forza. E quel mare a schermo non ci arriva:
+ * `finestrone.png` lo ritaglia via e dietro il vetro resta `salone-mare.mp4`,
+ * cioe' il mare vivo della stessa scena.
+ *
+ * ─── L'INQUADRATURA E' LA STESSA, e anche questo e' misurato
+ *
+ * Il montante del finestrone si sposta di **1 pixel** fra la clip calma vecchia
+ * e la nuova, l'orizzonte di **3**. `riferimenti/salone/posa.json` dichiara un
+ * errore medio di riproiezione di 1,175 px su un tetto di 4: la calibrazione,
+ * il vano e la maschera restano validi senza rifarli.
+ *
+ * ─── IL COSTO, che una revisione aveva chiesto di non dimenticare
+ *
+ * Si torna a TRE decodificatori invece di due, e su un telefono sono batteria e
+ * calore. E' il prezzo dichiarato della conseguenza umana: senza questo strato
+ * il finale dice «siamo tornati» invece di «hai risolto qualcosa per loro».
+ * Se la misura su un telefono vero dicesse che non si regge, il posto dove
+ * intervenire e' sospendere il ciclo calmo mentre il raccordo e' opaco -- non
+ * spegnere di nuovo la posa.
  */
-const TESA = null
+const TESA = 'filmati/salone-teso.mp4'
 /**
  * IL MARE HA UNA CLIP SUA, ed e' la correzione che serviva.
  *
@@ -502,13 +534,53 @@ export function creaSalone3D (base, tuga) {
    */
   let sincro = 0
 
+  /**
+   * ─── LA POSA TESA NON DECODIFICA MENTRE NESSUNO LA GUARDA
+   *
+   * REGRESSIONE PRESA DA `collaudo-ridotto` accendendo la posa tesa: con
+   * `prefers-reduced-motion` il video del salone e' avanzato di **0,031 s in un
+   * secondo e mezzo**, cioe' stava fermo, dove prima ne avanzava uno intero.
+   *
+   * La causa non e' la preferenza: e' il RIALLINEAMENTO. L'intervallo cercava
+   * la deriva fra clip calma e clip tesa e, trovandola, riscriveva
+   * `vTesa.currentTime`. Ma la tesa e' invisibile quasi sempre (opacita' zero),
+   * quindi non ha nessuna ragione di girare -- e riposizionarla in continuazione
+   * mentre il resto decodifica significa chiedere alla pipeline media tre
+   * flussi 720p piu' una serie di `seek`. A movimento ridotto, dove il ciclo di
+   * disegno gia' non gira, questo bastava a fermare tutto.
+   *
+   * La cura e' la stessa cosa che una revisione aveva gia' chiesto per la
+   * batteria di un telefono: **non si decodifica uno strato che nessuno vede**.
+   * La tesa parte in pausa, entra in gioco quando la posa la chiama, e si
+   * riallinea SOLO mentre e' in scena -- che e' anche l'unico momento in cui un
+   * disallineamento si potrebbe vedere.
+   *
+   * Guadagno collaterale: fuori dal raccordo i decodificatori tornano due, come
+   * erano prima che questa posa esistesse.
+   */
+  let tesaInMoto = false
+
+  function tesaSegue (q) {
+    if (!vTesa) return
+    const serve = q > 0.002
+    if (serve === tesaInMoto) return
+    tesaInMoto = serve
+    if (serve) {
+      /* si riparte allineati: entrare con qualche fotogramma di scarto e' il
+         modo in cui due riprese della stessa stanza si tradiscono */
+      try { vTesa.currentTime = vCalma.currentTime % (vTesa.duration || 1) } catch {}
+      vTesa.play().catch(() => {})
+    } else {
+      vTesa.pause()
+    }
+  }
+
   function riproduci () {
     vCalma.play().catch(() => {})
-    vTesa?.play().catch(() => {})
     vMare.play().catch(() => {})
     if (!sincro) {
       sincro = setInterval(() => {
-        if (vTesa && vCalma.readyState > 1 &&
+        if (vTesa && tesaInMoto && vCalma.readyState > 1 &&
             Math.abs(vCalma.currentTime - vTesa.currentTime % (vTesa.duration || 1)) > RIALLINEA) {
           try { vTesa.currentTime = vCalma.currentTime % (vTesa.duration || 1) } catch {}
         }
@@ -532,6 +604,9 @@ export function creaSalone3D (base, tuga) {
     vCalma.pause()
     vTesa?.pause()
     vMare.pause()
+    /* e si dimentica che era in moto: al risveglio deve essere `tesaSegue` a
+       ridecidere dalla posa, non un booleano rimasto acceso da prima */
+    tesaInMoto = false
     if (sincro) { clearInterval(sincro); sincro = 0 }
   }
 
@@ -572,6 +647,7 @@ export function creaSalone3D (base, tuga) {
     const vuole = calmoDa > CONVINCE ? 0 : (a > ACCENDE ? 1 : q)
     q += (vuole - q) * Math.min(1, dt * VELOCITA)
     if (tesa) tesa.material.opacity = q
+    tesaSegue(q)
 
     /**
      * IL MARE NON RUOTA PIU'. A ruotare e' la stanza, che e' quello che si
