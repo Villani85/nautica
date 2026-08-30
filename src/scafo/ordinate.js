@@ -72,7 +72,7 @@ export function sezioneA (t) {
 export const tDaZ = z => (z - PRUA_Z) / LUNG
 export const zDaT = t => PRUA_Z + t * LUNG
 
-const GIRO = 15   // campioni per mezza sezione: 8 sul ginocchio, 7 sulla murata
+const GIRO = 16   // 8 sul ginocchio + lo spigolo sdoppiato + 7 sulla murata
 
 /**
  * Il contorno chiuso di una sezione, come lista di punti [x, y].
@@ -97,6 +97,35 @@ export function contornoA (t) {
       w * s.chiglia + m * cy + v * s.spigoloY
     ])
   }
+  /**
+   * ─── LO SPIGOLO DI CARENA VA SDOPPIATO, O NON ESISTE
+   *
+   * Il commento qui sotto dice «smoothstep: parte dallo spigolo senza
+   * spigolo», e dichiara un raccordo continuo. La matematica fa l'opposto:
+   * `smoothstep'(0) = 0`, quindi la murata lascia lo spigolo VERTICALE mentre
+   * il ginocchio ci arriva inclinato. Lo smoothstep non toglie lo spigolo, lo
+   * CREA. Misurato sulle nove ordinate, angolo fra le due tangenti:
+   *
+   *     t=0,00   9,0°      t=0,44  40,4°      t=0,86  52,3°
+   *     t=0,16  26,3°      t=0,58  44,8°      t=1,00  57,0°
+   *     t=0,30  34,0°      t=0,72  48,8°      medio   36,7°
+   *
+   * Uno spigolo vero, fino a 57 gradi a poppa. E `computeVertexNormals()` lo
+   * mediava via, perche' il punto era UNO SOLO e condiviso fra le due
+   * superfici: la normale usciva a meta' strada e lo scafo si leggeva come un
+   * gradiente lungo e continuo -- la lettura da «estrusione liscia».
+   *
+   * Su un motoryacht quello spigolo e' la linea piu' leggibile a distanza: e'
+   * quella che prende una lama di luce da prua a poppa e dice all'occhio dove
+   * sta la carena.
+   *
+   * Il punto si emette DUE VOLTE, alla stessa posizione. Il quad fra i due e'
+   * degenere e viene saltato in `costruisciGuscio`; ognuno dei due riceve
+   * cosi' le facce di una superficie sola, e la normale non si media piu'.
+   * Costa due vertici per anello e zero byte di trasferimento -- la geometria
+   * nasce nel browser.
+   */
+  dritta.push([s.spigoloX, s.spigoloY])
   // Murata: dallo spigolo al trincarino.
   // DIFETTO CORRETTO — la prima stesura aggiungeva una "pancia"
   // sin(u*PI)*0.045 alla murata. Effetto: il punto piu' largo dello scafo
@@ -116,7 +145,7 @@ export function contornoA (t) {
   const punti = [[0, s.chiglia]]
   for (const p of dritta) punti.push(p)
   for (let i = dritta.length - 1; i >= 0; i--) punti.push([-dritta[i][0], dritta[i][1]])
-  return punti   // 1 + GIRO + GIRO = 31 punti, chiuso implicitamente sulla chiglia
+  return punti   // 1 + GIRO + GIRO = 33 punti, chiuso implicitamente sulla chiglia
 }
 
 const PER_ANELLO = 1 + GIRO * 2
@@ -267,12 +296,24 @@ export function costruisciGuscio (anelli = 64) {
     for (let i = 0; i < c.length; i++) uv.push(a / anelli, 0.02 + (i / c.length) * 0.44)
   }
 
+  /* dove il contorno emette due volte lo stesso punto: si calcola una volta
+     sola, sull'anello di mezzanave, perche' la topologia non cambia con `t` */
+  const rif = contornoA(0.5)
+  const coincidenti = rif.map((p, i) => {
+    const q = rif[(i + 1) % rif.length]
+    return Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9
+  })
+
   const idx = []
   for (let a = 0; a < anelli; a++) {
     const base = a * PER_ANELLO
     const succ = (a + 1) * PER_ANELLO
     for (let i = 0; i < PER_ANELLO; i++) {
       const j = (i + 1) % PER_ANELLO
+      /* il quad fra i due punti coincidenti dello spigolo e' degenere: si
+         salta, cosi' le due superfici non si passano normali attraverso una
+         faccia di area nulla */
+      if (coincidenti[i]) continue
       // AVVOLGIMENTO: le normali devono puntare FUORI.
       // La prima stesura le faceva puntare dentro — tutte e 544 quelle di
       // murata. Con un materiale a doppia faccia non si vedeva: three rovescia
