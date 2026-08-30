@@ -572,6 +572,139 @@ all'avvicinamento della camera.
 
 ---
 
+## 1decies. Le mappe cotte non erano mai state campionate
+
+**Il difetto era doppio, impilato, e il secondo si vede solo riparando il primo.**
+
+**Primo: mancava `uv1`.** Da three r152 `aoMap` e `lightMap` leggono il secondo
+set di UV. `costruisciGuscio` e `costruisciPonte` dichiaravano solo `uv`. Il
+canale non c'era, e il sito spediva `scafo-ao.webp` - **12.786 byte a ogni
+visita** - senza che quei byte arrivassero a un pixel.
+
+La prova non ammette interpretazioni: collegando una mappa e portando
+l'intensita' a **dieci**, il fotogramma restava identico al bit - media 214,8 e
+scarto tipo 25,0 / 22,4 / 21,6 in tutte e due le corse. *Una mappa che a
+intensita' dieci non cambia niente non e' debole: non c'e'.* Con `uv1` la stessa
+misura si muove: +0,4 / +0,3 / +0,1.
+
+**Secondo: l'atlante e' cotto per meta'.** Misurato per banda:
+
+```
+scafo-ao.webp     guscio  media 253,3   99,1% sopra 250    BIANCA
+                  margine   0,0
+                  ponte   media  45,9   dev 72,0
+```
+
+AO = 1,0 sul guscio significa "niente lo occlude", ovunque. **Non e' un bake
+fallito: e' un bake corretto di una scena sbagliata.** Nella cottura non c'e' il
+mare, quindi una murata sospesa sul nulla non ha niente che la occluda. Il
+ponte funziona perche' la sovrastruttura, li', c'e' come occludente.
+
+Per questo `npm run collaudo` resta SUITE:0 dopo la cura: riattaccare il canale
+non cambia il guscio, dove la mappa e' bianca. Cambia il **ponte**, e infatti
+una revisione esterna l'ha visto subito nel provino - la fascia scura sotto
+l'aggetto della sovrastruttura, il rientro dei nastri di finestre.
+
+### E l'irradianza cotta, che NON ho spedito
+
+Il divario col render e' a **bassa** frequenza - 9,4 livelli a sfocatura 8 e 24
+- e l'occlusione e' un termine di contatto, ad alta frequenza: agisce
+all'estremo opposto dell'asse rispetto al buco da chiudere. Quindi ho cotto
+l'irradianza diffusa indiretta (`cuoci-luce-scafo.py`, 11.264 byte).
+
+Esce con la stessa banda vuota (guscio media 0,3, il 98,2% sotto 5) e per la
+stessa ragione. Ho aggiunto il mare come rimbalzante e **non e' cambiato
+niente**, media 0,046 prima e dopo: gli avevo dato l'albedo del colore di terra
+dell'emisfero, cioe' il **3% di riflettanza**. Quello che l'acqua rimanda a una
+murata e' soprattutto speculare, e un passo diffuso non lo cattura.
+
+**Non spedisco una mappa che non fa niente.** Restano la cottura e
+`_luce-cotta-ab.mjs`, che accende e spegne la mappa dalla stessa posa.
+
+> **Per chi riprende:** il guscio va ricotto con una scena che abbia sotto
+> qualcosa di vero, e **le referenze di confronto vanno rigenerate DOPO, non
+> prima** - sono state cotte mentre il canale era morto, quindi codificano lo
+> stato rotto.
+
+---
+
+## 1undecies. Lo spigolo di carena esisteva e veniva mediato via
+
+Il commento in `ordinate.js` diceva *"smoothstep: parte dallo spigolo senza
+spigolo"*. La matematica fa l'opposto: `smoothstep'(0) = 0`, quindi la murata
+lascia lo spigolo **verticale** mentre il ginocchio ci arriva inclinato. Lo
+smoothstep non toglieva lo spigolo: **lo creava.**
+
+```
+t=0,00   9,0    t=0,44  40,4    t=0,86  52,3
+t=0,16  26,3    t=0,58  44,8    t=1,00  57,0
+t=0,30  34,0    t=0,72  48,8    medio   36,7   (gradi)
+```
+
+Uno spigolo vero fino a 57 gradi a poppa, e `computeVertexNormals()` lo mediava
+via perche' il punto era **uno solo**, condiviso fra le due superfici. La
+normale usciva a meta' strada e lo scafo si leggeva come un gradiente lungo e
+continuo - la lettura da "estrusione liscia" che due revisioni hanno segnalato.
+
+La cura: il punto si emette **due volte** alla stessa posizione, il quad fra i
+due e' degenere e viene saltato. Due vertici per anello, **zero byte**: la
+geometria nasce nel browser.
+
+Verificato in scena con `_spigolo-vivo.mjs`, non dedotto:
+
+```
+                prua    mezzanave   poppa   medio
+dalle ordinate   9,0      40,4      57,0    36,7
+in scena         9,2      43,2      58,8    40,7
+```
+
+*(E il primo tentativo ha sbagliato mesh: cercava "quella con piu' coppie
+coincidenti" e ha agganciato un GLB da 56.598 vertici con 16.164 coppie. **Un
+rilevatore trova sempre qualcosa se non gli si dice dove NON guardare.**)*
+
+---
+
+## 1duodecies. Il dondolio dell'apertura, e perche' non e' nel ramo
+
+**Rilievo dell'utente:** *"all'inizio c'e' una foto che dondola, non e' un
+video"*. Vero, e la causa non era quella che avevo detto per prima.
+
+```
+                 stanza   finestra
+come era          10,50     4,73
+senza rollio       0,92     4,81
+nave bloccata      1,65    10,80
+```
+
+Non era la texture dentro il piano: era il piano stesso. Il salone e' figlio
+della nave, `nave.rotation.z` ruota attorno all'**asse dello scafo**, e il
+salone sta un metro e mezzo piu' in alto - quindi rollando non si limita a
+inclinarsi, **trasla su un arco**. La camera non e' nel sistema della nave, e
+restava livellata.
+
+**La cura funziona ed e' misurata**: camera che rolla con la nave, posa e mira
+espresse in coordinate nave, ricaduta cubica su `uscita`. Stanza da **10,50 a
+4,10** - al livello della finestra invece del doppio.
+
+**Ma non e' nel ramo.** `collaudo-continuita` misura `Math.abs(quat[0])` **e
+`Math.abs(quat[2])`** sotto il nome BECCHEGGIO: vieta anche il **rollio** della
+camera, non solo l'inclinazione in su e giu'. La correzione richiede esattamente
+quel rollio.
+
+Non ho forzato un cancello per far passare il mio lavoro. **La decisione e' del
+committente**, e sono due strade oneste: separare i due assi nel cancello
+(pitch a 1e-4 sempre, rollio ammesso solo dove `dentroQuanto > 0`, cioe' dove
+la giunzione col fondo CSS non e' visibile), oppure lasciare il dondolio.
+
+*(Una nota di metodo: in mezzo a questa indagine ho misurato per due volte su
+una macchina satura - **1054 processi node e 87 porte di collaudo** ancora in
+ascolto, perche' su Windows `preview.kill()` non uccide l'albero dei figli. La
+suite dava rossi diversi a ogni corsa e accusava il sito. Pulita la macchina,
+tornava verde. Chi corre molte suite di fila deve guardare `netstat` prima di
+credere a un rosso.)*
+
+---
+
 ## 2. Quello che NON torna — leggere prima di fidarsi dei cancelli
 
 ### 2.1 `collaudo-ridotto` passava su un numero impossibile — CHIUSO
@@ -722,7 +855,7 @@ dimenticanza, e si cambia con due righe di CSS.
 Non spingo su main di mia iniziativa. Stato del ramo:
 
 ```
-ramo      worktree-atto-due-leggibile   (spinto, 1a1aa58..31c882a)
+ramo      worktree-atto-due-leggibile   (spinto, 1a1aa58..14daf87)
 
 1a1aa58  le clip della coppia, e collaudo-ridotto smette di mentire
 0740574  chi() guarda quello che viene disegnato
@@ -744,6 +877,14 @@ f0c3d1c  il guscio del salone, in registro a -3 px
 a844776  il taglio segue la camera, non piu l'orologio
 05b5139  la prima schermata conteneva tutto tranne il sito
 31c882a  la scia era verde e invisibile
+36a6e52  ciao2.md entra nel repo
+03189aa  il sollievo restituisce le stesse persone (patch da Drive)
+3311cad  il cancello del sollievo cercava un file che non esiste
+512b4ca  due attrezzi per il gesto nuovo
+c1202e0  all'apertura si muove il rollio, non il filmato: misurato
+cffafd9  le mappe cotte non erano mai state campionate: mancava uv1
+c869590  un provino lento per lo scafo
+14daf87  lo spigolo di carena esisteva e veniva mediato via
 
 suite     SUITE:0 -- zero cancelli rossi, zero avvisi
 filmati   3,65 MB su un tetto di 4,2 (545.803 byte per il sollievo)
