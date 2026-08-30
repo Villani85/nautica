@@ -78,18 +78,39 @@ try {
 
   const finale = await pagina.evaluate(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')
-    const calma = document.querySelector('video[src*="/filmati/salone.mp4"]')
+    /**
+     * ─── IL SELETTORE PUNTAVA A UN FILE CHE NON ESISTE
+     *
+     * Qui c'era `video[src*="/filmati/salone.mp4"]`. Nel repo non c'e' nessun
+     * `salone.mp4`: la clip calma e' `salone-largo.mp4` (`CALMA` in
+     * `salone3d.js`), e `/filmati/salone-largo.mp4` non contiene quella
+     * sottostringa. Il selettore non poteva agganciare NIENTE.
+     *
+     * E il difetto non si presentava come errore. `calma` restava `null`,
+     * `?? -1` lo trasformava in un numero, e il cancello stampava «la calma
+     * riparte a -1.00 s» -- una misura dall'aria plausibile su un video che
+     * non aveva mai trovato. E' la stessa forma di guasto che questo repo ha
+     * gia' pagato con `coperturaTraversata`: *un accessore assente non da'
+     * errore, da' `undefined`, e `?? 0` lo trasforma in un numero che sembra
+     * una misura*.
+     *
+     * Adesso il nome si prende dalla stessa costante che lo dichiara, e se non
+     * trova il video il cancello lo DICE invece di misurare un sentinella.
+     */
+    const calma = document.querySelector('video[src*="salone-largo"]')
     return {
       ...window.__nautica.statoSollievo(),
       paused: v.paused,
       ended: v.ended,
-      calmaTempo: calma?.currentTime ?? -1,
-      calmaFerma: calma?.paused ?? true
+      calmaTrovata: !!calma,
+      calmaTempo: calma ? calma.currentTime : null,
+      calmaFerma: calma ? calma.paused : null
     }
   })
+  if (!finale.calmaTrovata) guai.push('il video della calma non e in pagina: non misuro il raccordo')
   if (!finale.ended || !finale.paused) guai.push('il decoder non si ferma alla fine')
   if (finale.tempo < 4.8) guai.push(`si ferma troppo presto: ${finale.tempo.toFixed(2)} s`)
-  if (finale.calmaFerma || finale.calmaTempo > 0.5) {
+  if (finale.calmaTrovata && (finale.calmaFerma || finale.calmaTempo > 0.5)) {
     guai.push(`la calma non riparte dal raccordo: ${finale.calmaTempo.toFixed(2)} s`)
   }
 
@@ -106,7 +127,7 @@ try {
   console.log(`  prima    fermo ${prima.paused ? 'si' : 'NO'} · loop ${prima.loop}`)
   console.log(`  gesto    ${partito ? 'parte' : 'NON PARTE'} dopo tensione + quiete`)
   console.log(`  finale   ${finale.tempo.toFixed(2)} s · fermo ${finale.paused ? 'si' : 'NO'} · consegnato ${finale.opacita.toFixed(2)}`)
-  console.log(`  calma    riparte a ${finale.calmaTempo.toFixed(2)} s · in moto ${finale.calmaFerma ? 'NO' : 'si'}`)
+  console.log(`  calma    riparte a ${finale.calmaTrovata ? finale.calmaTempo.toFixed(2) : '--'} s · in moto ${finale.calmaFerma ? 'NO' : 'si'}`)
   console.log(`  ritorno  opacita ${ritornaMare.opacita.toFixed(2)} · riarmato ${ritornaMare.armato ? 'si' : 'NO'}`)
 } finally {
   await browser.close()
