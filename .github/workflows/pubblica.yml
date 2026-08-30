@@ -79,6 +79,9 @@ jobs:
       - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs }
       - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
       - { name: 'Cancello · loop filmati', run: node strumenti/collaudo-loop.mjs }
+      - name: 'Cancello · il sollievo e una conseguenza'
+        run: node strumenti/collaudo-sollievo.mjs
+        env: { CHROMIUM: '1' }
       - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
       - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
       # ─── LA DIVERGENZA FRA LE DUE LISTE, ADESSO DICHIARATA

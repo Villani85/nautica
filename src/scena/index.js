@@ -1560,6 +1560,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        */
       coperturaTraversata: () => traversata.copertura,
       traversataFinita: () => traversata.finita,
+      statoSollievo: () => salone?.statoSollievo ?? null,
+      provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
        * AVANZA IL MECCANISMO A PASSO DICHIARATO, senza disegnare.
        *

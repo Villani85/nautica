@@ -107,6 +107,15 @@ const CALMA = 'filmati/salone-largo.mp4'
  */
 const TESA = 'filmati/salone-teso.mp4'
 /**
+ * IL TERZO GESTO NON E' UN ALTRO STATO IN CICLO.
+ *
+ * Calma e tensione descrivono condizioni che possono durare; il sollievo e'
+ * invece una conseguenza con un prima e un dopo. Parte una volta sola quando
+ * la posa e' stata davvero tesa e il rollio resta calmo abbastanza a lungo da
+ * convincere gia' l'isteresi qui sotto. Non gira mai in loop.
+ */
+const SOLLIEVO = 'filmati/salone-sollievo.mp4'
+/**
  * IL MARE HA UNA CLIP SUA, ed e' la correzione che serviva.
  *
  * Dietro il vetro c era la CLIP DELLA STANZA ingrandita 1,55 volte -- divano,
@@ -202,6 +211,8 @@ export function creaSalone3D (base, tuga) {
 
   const vCalma = video(base + CALMA)
   const vTesa = TESA ? video(base + TESA) : null
+  const vSollievo = SOLLIEVO ? video(base + SOLLIEVO) : null
+  if (vSollievo) vSollievo.loop = false
   const vMare = video(base + MARE)
   const maschera = new TextureLoader().load(base + MASCHERA)
 
@@ -430,7 +441,14 @@ export function creaSalone3D (base, tuga) {
   const tesaTex = vTesa ? tex(vTesa) : null
   const mascheraTesa = vTesa ? maschera.clone() : null
   if (mascheraTesa) mascheraTesa.needsUpdate = true
-  const RUOTANO = [stanzaTex, mascheraRuota, tesaTex, mascheraTesa].filter(Boolean)
+  const sollievoTex = vSollievo ? tex(vSollievo) : null
+  const mascheraSollievo = vSollievo ? maschera.clone() : null
+  if (mascheraSollievo) mascheraSollievo.needsUpdate = true
+  const RUOTANO = [
+    stanzaTex, mascheraRuota,
+    tesaTex, mascheraTesa,
+    sollievoTex, mascheraSollievo
+  ].filter(Boolean)
   for (const t of RUOTANO) t.center.set(0.5, 0.5)
 
   const stanza = new Mesh(geo, new MeshBasicMaterial({
@@ -519,6 +537,18 @@ export function creaSalone3D (base, tuga) {
     : null
   if (tesa) { tesa.position.z = 0.008; gruppo.add(tesa) }
 
+  /** 4 · IL SOLLIEVO, sopra entrambe le pose e per una corsa soltanto. */
+  const sollievo = vSollievo
+    ? new Mesh(geo, new MeshBasicMaterial({
+      map: sollievoTex,
+      alphaMap: mascheraSollievo,
+      transparent: true,
+      opacity: 0,
+      toneMapped: false
+    }))
+    : null
+  if (sollievo) { sollievo.position.z = 0.012; gruppo.add(sollievo) }
+
   gruppo.position.set(0, tuga.quota, tuga.z)
   // guarda verso poppa: e' da li' che la camera arriva e da li' se ne va
   gruppo.rotation.y = 0
@@ -526,6 +556,121 @@ export function creaSalone3D (base, tuga) {
   let q = 0            // quanto e' puntellata la posa
   let calmoDa = 0
   let ultimo = 0
+  let sollievoArmato = false
+  let sollievoPreparato = false
+  let sollievoInMoto = false
+  let sollievoInConsegna = false
+  let sollievoConcluso = false
+  let sollievoDaRiavvolgere = false
+  let opacitaSollievo = 0
+  let versioneConsegna = 0
+
+  const ARMA_SOLLIEVO = 0.6
+  const DISSOLVENZA_ENTRA = 0.28
+
+  function rampa (x, a, b) {
+    return MathUtils.clamp((x - a) / Math.max(0.001, b - a), 0, 1)
+  }
+
+  /**
+   * Decodifica il primo fotogramma mentre le persone sono ancora tese. Non si
+   * tiene un quarto video in riproduzione: un seek muto basta a scaldare il
+   * decoder prima che il gesto debba comparire.
+   */
+  function preparaSollievo () {
+    if (!vSollievo || sollievoPreparato || vSollievo.readyState < 1) return
+    try { vSollievo.currentTime = 0.001 } catch {}
+    sollievoPreparato = true
+  }
+
+  function avviaSollievo () {
+    if (!vSollievo || sollievoInMoto || sollievoInConsegna ||
+        sollievoDaRiavvolgere || !sollievoArmato) return
+    versioneConsegna++
+    sollievoArmato = false
+    sollievoInMoto = true
+    sollievoInConsegna = false
+    sollievoConcluso = false
+    opacitaSollievo = 0
+    try { vSollievo.currentTime = 0 } catch {}
+    vSollievo.play().catch(() => {
+      sollievoInMoto = false
+      opacitaSollievo = 0
+    })
+  }
+
+  function interrompiSollievo ({ riarma = false, sfuma = false } = {}) {
+    if (!vSollievo) return
+    versioneConsegna++
+    vSollievo.pause()
+    sollievoInMoto = false
+    sollievoInConsegna = false
+    sollievoConcluso = false
+    sollievoPreparato = false
+    if (riarma) sollievoArmato = true
+    /* La consegna mette in pausa il ciclo calmo per cercarne il primo frame.
+       Se il mare torna difficile durante quel brevissimo seek, il fondo deve
+       ripartire: la posa tesa gli si dissolve sopra, non lo sostituisce. */
+    if (riarma) vCalma.play().catch(() => {})
+    if (sfuma) {
+      /* Il fotogramma non si riavvolge mentre e' ancora visibile: altrimenti
+         le persone tornerebbero alla posa iniziale in un solo frame. */
+      sollievoDaRiavvolgere = true
+      return
+    }
+    sollievoDaRiavvolgere = false
+    opacitaSollievo = 0
+    try { vSollievo.currentTime = 0 } catch {}
+    if (sollievo) sollievo.material.opacity = 0
+  }
+
+  function consegnaAllaCalma () {
+    if (!vSollievo) return
+    /**
+     * L'ULTIMO FOTOGRAMMA E IL PRIMO DELLA CALMA.
+     *
+     * La clip definitiva e' stata generata fra i due fotogrammi canonici: il
+     * frame 0 coincide con la posa tesa e il frame 119 coincide con il frame 0
+     * di `salone-largo`. Non serve piu' conservare una fotografia finale ne'
+     * dissolvere fra due corpi diversi. Si tiene visibile l'ultimo frame del
+     * sollievo soltanto mentre il decoder calmo cerca il proprio frame 0; dopo
+     * il `seeked` si nasconde lo strato e il ciclo riparte dalla stessa posa.
+     */
+    sollievoInMoto = false
+    sollievoInConsegna = true
+    sollievoConcluso = false
+    opacitaSollievo = 1
+    if (sollievo) sollievo.material.opacity = 1
+
+    const questa = ++versioneConsegna
+    let chiusa = false
+    const chiudi = () => {
+      if (chiusa || questa !== versioneConsegna || !sollievoInConsegna) return
+      chiusa = true
+      sollievoInConsegna = false
+      sollievoConcluso = true
+      opacitaSollievo = 0
+      if (sollievo) sollievo.material.opacity = 0
+      vCalma.play().catch(() => {})
+    }
+    const framePronto = () => {
+      if ('requestVideoFrameCallback' in vCalma) vCalma.requestVideoFrameCallback(chiudi)
+      else requestAnimationFrame(chiudi)
+    }
+
+    vCalma.pause()
+    vCalma.addEventListener('seeked', framePronto, { once: true })
+    try {
+      /* Anche se il tempo e' gia' vicino a zero si assegna zero: il browser
+         deve presentare QUEL frame prima che lo strato superiore sparisca. */
+      vCalma.currentTime = 0
+      if (Math.abs(vCalma.currentTime) < 0.001 && vCalma.readyState >= 2) framePronto()
+    } catch {
+      chiudi()
+    }
+  }
+
+  vSollievo?.addEventListener('ended', consegnaAllaCalma)
 
   /**
    * Il riallineamento non e' solo all'avvio: due decodifiche indipendenti
@@ -604,6 +749,7 @@ export function creaSalone3D (base, tuga) {
     vCalma.pause()
     vTesa?.pause()
     vMare.pause()
+    interrompiSollievo()
     /* e si dimentica che era in moto: al risveglio deve essere `tesaSegue` a
        ridecidere dalla posa, non un booleano rimasto acceso da prima */
     tesaInMoto = false
@@ -613,13 +759,15 @@ export function creaSalone3D (base, tuga) {
   /** Rilascia tutto: texture, video, sorgenti. Per chi smonta la scena. */
   function smonta () {
     ferma()
-    for (const m of [mare, stanza, tesa].filter(Boolean)) {
+    for (const m of [mare, stanza, tesa, sollievo].filter(Boolean)) {
       m.material.map?.dispose()
       m.material.alphaMap?.dispose()
       m.material.dispose()
       m.geometry.dispose()
     }
-    for (const v of [vCalma, vTesa, vMare].filter(Boolean)) { v.removeAttribute('src'); v.load(); v.remove() }
+    for (const v of [vCalma, vTesa, vSollievo, vMare].filter(Boolean)) {
+      v.removeAttribute('src'); v.load(); v.remove()
+    }
   }
 
   /**
@@ -642,11 +790,39 @@ export function creaSalone3D (base, tuga) {
 
   function aggiorna (gradi, dt) {
     const a = Math.abs(gradi)
-    if (a > ACCENDE) calmoDa = 0
+    if (a > ACCENDE) {
+      calmoDa = 0
+      if (sollievoInMoto || sollievoInConsegna || sollievoConcluso) {
+        interrompiSollievo({ riarma: true, sfuma: true })
+      }
+    }
     else if (a < CALMO) calmoDa += dt
     const vuole = calmoDa > CONVINCE ? 0 : (a > ACCENDE ? 1 : q)
     q += (vuole - q) * Math.min(1, dt * VELOCITA)
-    if (tesa) tesa.material.opacity = q
+
+    if (q >= ARMA_SOLLIEVO) {
+      sollievoArmato = true
+      preparaSollievo()
+    }
+    if (vuole === 0 && sollievoArmato && !sollievoInMoto && !sollievoInConsegna) avviaSollievo()
+
+    if (sollievoInMoto && vSollievo) {
+      const t = vSollievo.currentTime
+      opacitaSollievo = rampa(t, 0, DISSOLVENZA_ENTRA)
+    } else if (sollievoInConsegna) {
+      opacitaSollievo = 1
+    } else if (sollievoConcluso) {
+      opacitaSollievo = 0
+    } else if (sollievoDaRiavvolgere) {
+      opacitaSollievo = Math.max(0, opacitaSollievo - dt / DISSOLVENZA_ENTRA)
+      if (opacitaSollievo === 0) {
+        sollievoDaRiavvolgere = false
+        try { vSollievo.currentTime = 0 } catch {}
+      }
+    } else opacitaSollievo = 0
+
+    if (tesa) tesa.material.opacity = q * (1 - opacitaSollievo)
+    if (sollievo) sollievo.material.opacity = opacitaSollievo
     tesaSegue(q)
 
     /**
@@ -671,7 +847,8 @@ export function creaSalone3D (base, tuga) {
     mare.material.opacity = o
     stanza.material.opacity = o
     mare.material.transparent = o < 0.999
-    if (tesa) tesa.material.opacity = q * o
+    if (tesa) tesa.material.opacity = q * (1 - opacitaSollievo) * o
+    if (sollievo) sollievo.material.opacity = opacitaSollievo * o
   }
 
   return {
@@ -679,6 +856,20 @@ export function creaSalone3D (base, tuga) {
     /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
     largo: larg,
     alto: alt,
+    get statoSollievo () {
+      return {
+        armato: sollievoArmato,
+        preparato: sollievoPreparato,
+        inMoto: sollievoInMoto,
+        inConsegna: sollievoInConsegna,
+        concluso: sollievoConcluso,
+        daRiavvolgere: sollievoDaRiavvolgere,
+        tempo: vSollievo?.currentTime || 0,
+        durata: vSollievo?.duration || 0,
+        opacita: opacitaSollievo,
+        loop: vSollievo?.loop ?? null
+      }
+    },
     get rollio () { return ultimo }
   }
 }
