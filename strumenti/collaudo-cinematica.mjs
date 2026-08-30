@@ -65,7 +65,32 @@ const PORTA = Number(process.env.PORTA_COLLAUDO) || 5180
    la misura del `dist` di un altro processo: si dice, non si tace */
 await avvisaSePortaAltrui(PORTA)
 const BASE = `http://localhost:${PORTA}/nautica/`
-const PUNTI = [0.15, 0.35, 0.60]      // frazioni del capitolo
+/**
+ * --- I TRE PUNTI SONO POSIZIONI DEL RACCONTO, E SONO QUELLE DI SEMPRE
+ *
+ * Qui c'era `[0.15, 0.35, 0.60]` col commento «frazioni del capitolo». Non lo
+ * erano: erano frazioni dell'ALTEZZA IN PIXEL di `#dimostrazione`, e il palco
+ * incollato ne mangia i primi cento svh. Con la sezione a 520svh e una corsa di
+ * 420, quelle tre frazioni cadevano in realta' a
+ *
+ *     0,15 x 520/420 = 0,186        0,35 -> 0,433        0,60 -> 0,743
+ *
+ * della corsa del racconto. E' li' che questo cancello ha sempre guardato, ed
+ * e' contro quelle tre inquadrature che le sue tolleranze sono state tarate.
+ *
+ * Scriverle come 0,15 / 0,35 / 0,60 della corsa vera sarebbe stato piu' bello e
+ * SBAGLIATO: cambia le tre inquadrature. Provato, e si vede subito -- a p=0,60
+ * si finisce nella battuta «calma», dove la pinna arriva a 42,21 gradi contro i
+ * +-25,5 dichiarati. Che sia un difetto del sito o una lettura fuori posto e'
+ * una domanda aperta e scritta in `ciao2.md`; non e' una cosa da decidere di
+ * straforo mentre se ne sistema un'altra.
+ *
+ * Quindi: le tre posizioni restano quelle di sempre, ma adesso sono dichiarate
+ * come cio' che sono -- posizioni del RACCONTO -- e non dipendono piu' da
+ * quanto e' alta la sezione. Il giorno in cui si aggiunge o si toglie qualcosa
+ * alla pagina, questo cancello continua a guardare le stesse tre cose.
+ */
+const PUNTI = [0.186, 0.433, 0.743]   // posizioni della corsa del racconto
 const CAMPIONI_MINIMI = 20            // abbastanza da vedere un'escursione della pinna
 const CAMPIONI_MAX = 160              // tetto: oltre, il meccanismo non gira e va detto
 const PASSO_MS = 50
