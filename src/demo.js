@@ -328,7 +328,22 @@ export function avviaDimostrazione () {
      * Costa una scrittura per evento di scorrimento e solo con `?ispeziona=1`,
      * dove `__nautica` esiste. In pagina non cambia niente.
      */
-    if (window.__nautica) window.__nautica.p = p
+    if (window.__nautica) {
+      window.__nautica.p = p
+      /**
+       * E anche la CORSA, in pixel. Con la sola posizione un cancello puo'
+       * solo cercare il punto per bisezione -- e cercare vuol dire SALTARE
+       * per tutta la pagina, venti volte, trascinandosi dietro la fisica.
+       * Costava a `collaudo-cinematica` una lettura intermittente: il
+       * meccanismo veniva misurato mentre smaltiva venti transitori.
+       *
+       * Con la corsa il punto si calcola e ci si va con UN salto, che e'
+       * esattamente quello che il cancello faceva prima di essere agganciato
+       * qui. La comodita' non deve cambiare cio' che si misura.
+       */
+      window.__nautica.corsaRacconto = corsa
+      window.__nautica.cimaSezione = window.scrollY + r.top
+    }
 
     /**
      * ─── IL CAPITOLO NON SE NE VA CON I PANNELLI ACCESI

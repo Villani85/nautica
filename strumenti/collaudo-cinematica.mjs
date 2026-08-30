@@ -189,25 +189,24 @@ for (const f of PUNTI) {
    * RACCONTO.
    */
   const arrivato = await pagina.evaluate(async (q) => {
-    const H = document.documentElement.scrollHeight - innerHeight
-    const leggi = async (y) => {
-      scrollTo({ top: Math.round(y), behavior: 'instant' })
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-      return window.__nautica.p
-    }
-    /* la corsa e' monotona nello scorrimento: una bisezione basta e costa
-       una decina di fotogrammi invece di una scansione */
-    let lo = 0; let hi = H
-    for (let i = 0; i < 22; i++) {
-      const mid = (lo + hi) / 2
-      const p = await leggi(mid)
-      if (p === undefined) return null
-      if (p < q) lo = mid; else hi = mid
-    }
-    return await leggi((lo + hi) / 2)
+    const n = window.__nautica
+    if (!n || n.corsaRacconto === undefined) return null
+    /**
+     * UN SALTO SOLO, come faceva prima.
+     *
+     * `p = -top / corsa`, quindi il punto in cui la corsa vale `q` sta a
+     * `cima + q * corsa`. Cercarlo per bisezione funzionava ma costava venti
+     * salti per tutta la pagina, e il meccanismo finiva misurato mentre
+     * smaltiva venti transitori: il cancello e' diventato intermittente, il
+     * che e' peggio di uno rosso.
+     */
+    const y = Math.round(n.cimaSezione + q * n.corsaRacconto)
+    scrollTo({ top: y, behavior: 'instant' })
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    return n.p
   }, f)
   if (arrivato === null) {
-    console.error('  ROTTO  `__nautica.p` non esiste: la corsa del racconto non e esposta,')
+    console.error('  ROTTO  `__nautica.corsaRacconto` non esiste: la corsa del racconto non e esposta,')
     console.error('         e senza quella questo cancello puo solo indovinare dove guardare.')
     process.exit(2)
   }
