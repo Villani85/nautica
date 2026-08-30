@@ -5,7 +5,7 @@ import {
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z, PRUA_Z } from '../scafo/ordinate.js'
-import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua } from './acqua.js'
+import { nebbiaAcqua, ACQUA_SIGMA, ACQUA_COLORE, costruisciAcqua, METRI_PER_UNITA } from './acqua.js'
 import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
@@ -1437,6 +1437,28 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    */
   if (location.search.includes('ispeziona')) {
     const raggio = new Raycaster()
+
+    /**
+     * ─── IL RAGGIO SI TARA, ALTRIMENTI COLPISCE TUTTO
+     *
+     * `Raycaster.params.Line.threshold` vale **1 di default**, e in questa
+     * scena un'unita' e' 2,5 metri: ogni raggio "colpiva" qualunque
+     * `LineSegments` passasse entro DUE METRI E MEZZO dal suo percorso. In
+     * una scena che di linee ne ha a decine -- gli spigoli disegnati, le
+     * guide, i profili -- il risultato era che al centro del quadro `chi()`
+     * riportava otto linee tutte a distanza 0 e la nave non compariva mai.
+     *
+     * Non e' che lo strumento fosse impreciso: **dava un numero sbagliato
+     * senza dare errore**, che e' la forma di guasto che questo repo si
+     * ripete addosso. Ha funzionato una volta sola, nella caccia alla grana
+     * della pinna, e solo perche' quel punto non aveva linee vicine.
+     *
+     * Cinque centimetri e' la tolleranza di una linea disegnata: sotto, il
+     * raggio deve praticamente passarci sopra.
+     */
+    const TOLLERANZA_LINEA_M = 0.05
+    raggio.params.Line.threshold = TOLLERANZA_LINEA_M / METRI_PER_UNITA
+    raggio.params.Points.threshold = TOLLERANZA_LINEA_M / METRI_PER_UNITA
     window.__nautica = {
       scena, camera, render, nave,
       /**
@@ -1560,13 +1582,82 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * texel* pesca quel pixel. Con le UV la si va a guardare nell'atlante e
        * si smette di indovinare.
        */
-      chi (u, v) {
+      chi (u, v, opzioni) {
+        /**
+         * ─── E NON SI STROZZA A DIECI RIGHE PRIMA DI ARRIVARE ALLA NAVE
+         *
+         * Il taglio `.slice(0, 10)` si applicava PRIMA di qualunque filtro,
+         * quindi bastava uno sciame di linee vicine per esaurire il referto
+         * senza che una sola superficie ci arrivasse. Adesso si filtra e poi
+         * si taglia, e le linee sono fuori di serie: la domanda «cosa c'e'
+         * sotto questo pixel» riguarda le SUPERFICI, e chi vuole le linee le
+         * chiede (`{ conLinee: true }`).
+         */
+        const { quante = 12, conLinee = false, ancheInvisibili = false } = opzioni || {}
+
+        /**
+         * ─── E SOPRATTUTTO: SI SCARTA CIO' CHE NON VIENE DISEGNATO
+         *
+         * DIFETTO PIU' GRAVE DELLA SOGLIA DELLE LINEE, e trovato solo dopo
+         * averla corretta. **`Raycaster` non salta gli oggetti invisibili.**
+         * Colpisce qualunque geometria stia sul percorso, anche se
+         * `visible` e' falso, anche se il materiale ha `opacity: 0`.
+         *
+         * In questa scena c'e' un caso che lo rende letale: il piano della
+         * traversata e' appeso alla CAMERA, copre esattamente tutto il campo,
+         * e per quasi tutta la corsa e' `visible = false` con `opacity: 0`.
+         * Un raggio dal centro dello schermo lo trova sempre, a distanza
+         * ZERO, davanti a ogni altra cosa.
+         *
+         * Quindi un cancello di occlusione costruito su `chi()` avrebbe detto
+         * **«il meccanismo e' coperto al 100%»** in ogni battuta -- e sarebbe
+         * stato falso, perche' quel piano non viene disegnato. Un numero
+         * sbagliato, senza errore, con l'aria di una misura: la stessa forma
+         * di guasto del modulo in `collaudo-ridotto`.
+         *
+         * «Disegnato» qui vuol dire tre cose insieme: nessun antenato
+         * invisibile fino alla scena, materiale visibile, e opacita' non
+         * nulla quando e' trasparente. Chi vuole vedere anche il resto lo
+         * chiede (`{ ancheInvisibili: true }`) -- ed e' cosi' che si controlla
+         * se un pezzo c'e' ma e' spento, che e' una domanda diversa da
+         * «cosa vedo».
+         */
+        const disegnato = (o) => {
+          for (let p = o; p && p !== scena; p = p.parent) if (p.visible === false) return false
+          const m = o.material
+          if (!m) return true
+          const mm = Array.isArray(m) ? m : [m]
+          return mm.some((x) => x.visible !== false && !(x.transparent && x.opacity === 0))
+        }
+
         raggio.setFromCamera({ x: u * 2 - 1, y: -(v * 2 - 1) }, camera)
-        return raggio.intersectObjects(scena.children, true).slice(0, 10).map((i) => {
+        let colpiti = raggio.intersectObjects(scena.children, true)
+        if (!conLinee) colpiti = colpiti.filter((i) => !/^(Line|Points)/.test(i.object.type))
+        if (!ancheInvisibili) colpiti = colpiti.filter((i) => disegnato(i.object))
+        return colpiti.slice(0, quante).map((i) => {
           const m = i.object.material
           return {
             nome: i.object.nome || i.object.name || '(senza nome)',
             tipo: i.object.type,
+            /**
+             * LA CATENA, perche' in questa scena i nomi quasi non ci sono.
+             * `(senza nome)` ripetuto dodici volte non e' un referto. Il
+             * percorso fino alla scena dice almeno DI CHI e' figlio il pezzo,
+             * e con `radice` si puo' filtrare per sottoalbero -- che e' quello
+             * che serve a un cancello di inquadratura.
+             */
+            catena: (() => {
+              const c = []
+              for (let p = i.object; p && p !== scena; p = p.parent) c.unshift(p.nome || p.name || p.type)
+              return c.join(' > ')
+            })(),
+            disegnato: disegnato(i.object),
+            opacita: (() => {
+              const m = i.object.material
+              if (!m) return '?'
+              const x = Array.isArray(m) ? m[0] : m
+              return x.opacity !== undefined ? +x.opacity.toFixed(2) : '?'
+            })(),
             materiale: m ? (m.name || '(senza nome)') : '?',
             mappe: m ? ['map', 'aoMap', 'normalMap', 'roughnessMap', 'metalnessMap']
               .filter((k) => m[k]).join('+') || '(nessuna)' : '?',
@@ -1576,6 +1667,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
             colore: m && m.color ? '#' + m.color.getHexString() : '?',
             lato: m ? m.side : '?',
             distanza: +i.distance.toFixed(2),
+            metri: +(i.distance * METRI_PER_UNITA).toFixed(2),
             punto: [i.point.x, i.point.y, i.point.z].map((x) => +x.toFixed(2))
           }
         })
