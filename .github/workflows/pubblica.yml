@@ -78,6 +78,7 @@ jobs:
       - { name: 'Cancello · mare',         run: node strumenti/collaudo-mare.mjs }
       - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs }
       - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
+      - { name: 'Cancello · loop filmati', run: node strumenti/collaudo-loop.mjs }
       - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
       - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
       # ─── LA DIVERGENZA FRA LE DUE LISTE, ADESSO DICHIARATA
