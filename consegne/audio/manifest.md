@@ -173,3 +173,43 @@ uscite/audio/
   salone-roomtone-loop_v2.mp3   salone-roomtone-loop_v2.wav
   manifest.md
 ```
+
+---
+
+## D2 — Passo 1: due candidati resi ciclabili (incrocio in dissolvenza)
+
+Aggiunta del 2026-08-31 (agente D2, passo 1 soltanto). Nessuno dei quattro MP3 sopra e' seamless
+(confermato anche da misura indipendente su questi stessi MP3, non solo sui WAV master: si veda
+`riferimenti/prove/D2-audio.md` — in particolare `salone-roomtone-loop_v1` salta **27,240%** del
+picco locale sul canale destro, il valore piu' alto delle otto misure fine→inizio). Scelti come
+migliori (misurati, non per assunzione): `scafo-onde-loop_v1` e `salone-roomtone-loop_v2`
+(motivazione e tabella completa nel referto). Prodotto un incrocio in dissolvenza di 15 ms fra la
+coda e la testa di ciascun file (stesso principio del commit "La clip candidata non e' loop-ready"):
+il file risultante e' piu' corto dell'originale di 15 ms e il salto fine→inizio crolla a meno del
+2,3% del picco su tutti i canali.
+
+### scafo-onde-loop_v1-ciclabile.mp3
+
+| Campo | Valore |
+|---|---|
+| Prodotto da | `consegne/audio/scafo-onde-loop_v1.mp3`, incrocio ffmpeg 15 ms (afade qsin + amix + concat), vedi comando esatto nel referto |
+| Durata (ffprobe) | 19.984989 s (20.000 s − 15 ms) |
+| Dimensione | 222.905 byte |
+| SHA-256 | `15f5cc7a9697b5ec9dc73f2ebe58e231faee6c2ad81956dad691a7f0c468315c` |
+| Salto fine→inizio dopo l'incrocio | L=0,307% R=0,304% del picco (prima: L=6,397% R=2,388%) |
+| RMS testa/centro/coda (10 ms) | vedi referto — gli estremi restano piu' quieti del centro, difetto pre-esistente nella sorgente, non introdotto dall'incrocio |
+
+### salone-roomtone-loop_v2-ciclabile.mp3
+
+| Campo | Valore |
+|---|---|
+| Prodotto da | `consegne/audio/salone-roomtone-loop_v2.mp3`, incrocio ffmpeg 15 ms (afade qsin + amix + concat), vedi comando esatto nel referto |
+| Durata (ffprobe) | 19.984989 s (20.000 s − 15 ms) |
+| Dimensione | 402.974 byte |
+| SHA-256 | `234b4ef793b7769921d9f03bb6aef2bc0ed9c9e61111884a41d2d2ffbe6dff91` |
+| Salto fine→inizio dopo l'incrocio | L=1,576% R=2,232% del picco (prima: L=9,438% R=19,778%) |
+| RMS testa/centro/coda (10 ms) | regge, vedi referto — nessun calo, anzi gli estremi sono leggermente piu' energici del centro |
+
+Dettaglio completo (script python di misura, comando ffmpeg esatto, tabella prima/dopo per tutti
+e quattro i candidati, verifica RMS) in `riferimenti/prove/D2-audio.md`. Il caricamento nel sito
+NON fa parte di questo passo.

@@ -1050,10 +1050,44 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * delle geometrie figlie, gia' calcolati, quindi non costa un giro sui
    * vertici. E segue il pezzo quando la pinna si inclina, che e' il punto.
    */
+  /**
+   * ─── E SI CALCOLA UNA VOLTA SOLA, non a ogni fotogramma
+   *
+   * DIFETTO PRESO DALLA CI, che si e' piantata dove non si piantava mai: il
+   * cancello della manopola passa in locale in due minuti e in
+   * integrazione e' rimasto fermo dieci sullo stesso passo. Non era rotto:
+   * era diventato troppo lento.
+   *
+   * `Box3.setFromObject` ATTRAVERSA TUTTO IL SOTTOALBERO. Chiamarlo per due
+   * impianti piu' quattro nodi vuol dire sei traversate per fotogramma, su un
+   * rig che ha decine di maglie. In locale con una scheda vera non si vede; su
+   * un rasterizzatore software raddoppia il tempo di fotogramma, e la CI gira
+   * su quello. Ma il costo lo pagava anche ogni visitatore, quindi non e' un
+   * problema di collaudo: e' un difetto del sito che il collaudo ha rivelato.
+   *
+   * L'ingombro di un pezzo NEL PROPRIO SISTEMA non cambia mai -- la pinna
+   * ruota, ma ruota il suo sistema, non la sua forma. Quindi si misura una
+   * volta, si converte in coordinate locali del nodo, e da li' in poi ogni
+   * fotogramma costa una moltiplicazione di matrice invece di una traversata.
+   */
+  const _centriLocali = new Map()
+
   function centroDi (nodo) {
-    _box.setFromObject(nodo)
-    if (_box.isEmpty()) { nodo.getWorldPosition(_mondo); return _mondo }
-    return _box.getCenter(_mondo)
+    let locale = _centriLocali.get(nodo)
+    if (locale === undefined) {
+      _box.setFromObject(nodo)
+      if (_box.isEmpty()) {
+        /* niente geometria sotto: si ripiega sull'origine del nodo, e si
+           registra `null` per non riprovare la traversata a ogni fotogramma */
+        _centriLocali.set(nodo, null)
+        locale = null
+      } else {
+        locale = nodo.worldToLocal(_box.getCenter(new Vector3()))
+        _centriLocali.set(nodo, locale)
+      }
+    }
+    if (locale === null) { nodo.getWorldPosition(_mondo); return _mondo }
+    return _mondo.copy(locale).applyMatrix4(nodo.matrixWorld)
   }
 
   /**
