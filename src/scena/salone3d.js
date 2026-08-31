@@ -689,8 +689,32 @@ export function creaSalone3D (base, tuga) {
 
     const questa = ++versioneConsegna
     let chiusa = false
+    let attese = 0
     const chiudi = () => {
       if (chiusa || questa !== versioneConsegna || !sollievoInConsegna) return
+      /**
+       * ─── NON SI CONSEGNA SU UNA POSIZIONE VECCHIA
+       *
+       * La rete `requestAnimationFrame` messa qui accanto puo' scattare PRIMA
+       * che il seek a zero abbia fatto effetto: il ciclo calmo riparte da dove
+       * stava, e il raccordo salta. Misurato in CI: **la calma riparte a
+       * 0,96 s** invece che da zero, cioe' quasi un secondo di stanza saltato
+       * nel momento in cui il sito promette che non c'e' nessun salto.
+       *
+       * E' una regressione che ho introdotto io curando il caso opposto -- la
+       * consegna che non si chiudeva mai. Le due cure convivono: si aspetta il
+       * fotogramma giusto, ma non all'infinito.
+       *
+       * Sessanta fotogrammi sono il tetto, non un'attesa: se il seek non arriva
+       * nemmeno in sessanta, meglio un raccordo impreciso di uno schermo
+       * coperto per sempre. E il numero finisce comunque in
+       * `calmaAllaConsegna`, quindi chi misura lo vede invece di subirlo.
+       */
+      if (vCalma.readyState >= 2 && Math.abs(vCalma.currentTime) > 0.5 && attese < 60) {
+        attese++
+        requestAnimationFrame(chiudi)
+        return
+      }
       chiusa = true
       sollievoInConsegna = false
       sollievoConcluso = true
