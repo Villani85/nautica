@@ -538,8 +538,10 @@ export function creaSalone3D (base, tuga) {
       /* `?dz=` sposta il bersaglio lungo l'asse di vista. Serve a CERCARE la
          distanza col registro in pixel invece di indovinarla: la rotazione e'
          gia' risolta per misura, resta la scala apparente. */
-      posizione: new Vector3(-0.01, 0, 1.3089 +
-        Number(new URLSearchParams(location.search).get('dz') || 0)),
+      posizione: new Vector3(
+        -0.01 + Number(new URLSearchParams(location.search).get('dx') || 0),
+        0 + Number(new URLSearchParams(location.search).get('dy') || 0),
+        1.3089 + Number(new URLSearchParams(location.search).get('dz') || 0)),
       quaternione: new Quaternion()
     })
     gruppo.add(g)

@@ -105,7 +105,8 @@ async function pixel (conGuscio) {
   const pg = await browser.newPage()
   await pg.setViewportSize({ width: LARG, height: ALT })
   const conv = process.env.CONV || '0'
-  await pg.goto(BASE + '?ispeziona=1&fermo=6' + (conGuscio ? `&guscio=1&conv=${conv}&dz=${process.env.DZ || 0}` : ''), { waitUntil: 'load' })
+  await pg.goto(BASE + '?ispeziona=1&fermo=6' + (conGuscio ? `&guscio=1&conv=${conv}&dz=${process.env.DZ || 0}&dx=${process.env.DX || 0}` +
+      `&dy=${process.env.DY || 0}&ds=${process.env.DS || 1}` : ''), { waitUntil: 'load' })
   await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 45000 })
   /* si aspetta che il video della stanza stia girando: confrontare due
      fotogrammi di cui uno e' ancora nero misurerebbe il caricamento */
@@ -147,7 +148,7 @@ async function pixel (conGuscio) {
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
   })
   await pg.waitForTimeout(400)
-  const via = `${FUORI}/${conGuscio ? 'guscio' + (process.env.CONV || '0') + 'dz' + (process.env.DZ || '0') : 'lastra'}-p${String(Math.round(P * 1000)).padStart(4, '0')}.png`
+  const via = `${FUORI}/${conGuscio ? 'guscio' + [process.env.CONV||0,process.env.DZ||0,process.env.DX||0,process.env.DY||0,process.env.DS||1].join('_') : 'lastra'}-p${String(Math.round(P * 1000)).padStart(4, '0')}.png`
   await pg.screenshot({ path: via })
   /**
    * ─── SI LEGGE LA SCHERMATA, NON LA TELA

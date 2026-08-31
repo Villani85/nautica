@@ -173,7 +173,10 @@ export function creaGuscio (base, texturaStanza, bersaglio) {
       gruppo.position.copy(bersaglio.posizione).sub(
         sPos.clone().multiplyScalar(scala).applyQuaternion(gruppo.quaternion)
       )
-      gruppo.scale.setScalar(scala)
+      /* `?ds=` moltiplica la scala: e' l'ultima incognita del piazzamento, e
+         come le altre si CERCA col registro in pixel invece di sceglierla */
+      const ds = Number(new URLSearchParams(location.search).get('ds') || 1)
+      gruppo.scale.setScalar(scala * ds)
 
       /* la camera sorgente ha fatto il suo lavoro: non deve restare nella scena
          come oggetto, o `collaudo-continuita` conterebbe una camera in piu' */
