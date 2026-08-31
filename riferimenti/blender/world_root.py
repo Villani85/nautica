@@ -271,6 +271,41 @@ def z_unita_scena_da_x_m_mondo(x_m_mondo):
     return PONTE_SITO_ORIGINE_Z_UNITA - x_m_mondo / (1.0 / UNITA_SCENA_PER_METRO)
 
 
+def traslazione(nome, convenzione):
+    """
+    La traslazione di un pezzo, NELLA CONVENZIONE CHIESTA.
+
+    ─── LA DECIMA OCCORRENZA, E IL CONTRATTO AVEVA GIA LA CURA
+
+    Le traslazioni qui sono espresse negli assi glTF (x, y in alto, z), perche
+    derivano dalla posizione del nodo camera letta dal GLB. Blender importa in
+    Z-up: x_b = x_g, y_b = -z_g, z_b = y_g.
+
+    L assemblatore ha applicato (+2.932, -0.607, -0.844) negli assi di Blender
+    invece che in quelli glTF, e il salone e finito addosso al corridoio:
+    compenetrazione misurata 2,93 x 3,47 x 1,09 m -- che NON e un errore di
+    geometria, e lo stesso vettore letto in due sistemi.
+
+    Il contratto aveva gia questa cura per il quaternione e non per le
+    traslazioni. Adesso ce l ha per entrambi, e le chiavi portano il suffisso:
+    `traslazione_m_gltf`, non `traslazione_m`.
+    """
+    c = COLLOCAZIONI[nome]
+    v = c.get("traslazione_m_gltf")
+    if v is None:
+        m = c["cucitura_mondo_m_gltf"]
+        v = (m[0] - c["cucitura_locale_x_m"], m[1], m[2])
+    if convenzione == "gltf":
+        return v
+    if convenzione == "blender":
+        return (v[0], -v[2], v[1])
+    raise ValueError(
+        "convenzione «%s» non riconosciuta: 'gltf' (x, y in alto, z) oppure "
+        "'blender' (x, y, z in alto). Nessun predefinito: sarebbe giusto per "
+        "meta dei chiamanti e sbagliato in silenzio per l altra meta."
+        % (convenzione,))
+
+
 def origine_quaternione(convenzione):
     """
     Il quaternione dell origine, NELLA CONVENZIONE CHIESTA.
@@ -364,7 +399,7 @@ def dal_frame_guscio(p):
 
 COLLOCAZIONI = {
     "SALOON_SHELL": {
-        "traslazione_m": (-ORIGINE_POSIZIONE_GLB[0],
+        "traslazione_m_gltf": (-ORIGINE_POSIZIONE_GLB[0],
                           -ORIGINE_POSIZIONE_GLB[1],
                           -ORIGINE_POSIZIONE_GLB[2]),
         "stato": "MISURATO",
@@ -374,7 +409,7 @@ COLLOCAZIONI = {
     "STAIR_CORRIDOR": {
         # apertura lato salone in locale (5,480 | 2,10) -> estremita' aperta del
         # guscio (-0,800 | -1,170). Vedi la nota "il guscio e aperto da una parte".
-        "traslazione_m": (-6.280, -3.270, 0.0),
+        "traslazione_m_gltf": (-6.280, -3.270, 0.0),
         "stato": "DERIVATO",
         "formula": ("X: -0,800 - 5,480 = -6,280.  Y: -1,170 - 2,10 = -3,270. "
                     "Il primo giro la faceva mappare sul VANO, che e' il "
@@ -383,7 +418,7 @@ COLLOCAZIONI = {
     },
     "MECHANISM_BAY": {
         # il PUNTO su cui deve cadere ER_paratia_poppa, non una traslazione.
-        "cucitura_mondo_m": (-6.280, -3.270, 0.0),
+        "cucitura_mondo_m_gltf": (-6.280, -3.270, 0.0),
         # e la feature che ci deve cadere sopra, nel sistema locale del pezzo.
         "cucitura_locale_x_m": 8.622575,
         # da cui: X_MB0 = -6,280 - 8,622575 = -14,902575
@@ -565,6 +600,42 @@ CUCITURE = {
 # ─────────────────────────────────────────────────────────────────────────────
 # 5 · GLI STRUMENTI CHE I QUATTRO MODULI IMPORTANO
 # ─────────────────────────────────────────────────────────────────────────────
+
+SOTTO_ASSEMBLATORE = False
+"""
+CHI PULISCE LA SCENA, e perche' e' una clausola del contratto.
+
+Ogni pezzo, eseguito DA SOLO, deve partire da una scena vuota: e' quello che
+rende ripetibile il suo provino. Ma l'assemblatore li esegue IN FILA nella
+stessa sessione, e li' la pulizia del secondo cancella il primo.
+
+DIFETTO PRESO DALL'ASSEMBLATORE AL PRIMO GIRO: i tre pezzi giravano puliti uno
+per uno, l'assemblaggio dichiarava «OK» per tutti e tre, e due collezioni su tre
+restavano VUOTE. `corridor.py:222` chiama `pulisci()` a livello di modulo, ed e'
+l'ultimo a girare: aveva cancellato gli altri due.
+
+Nessuno dei tre file era sbagliato. Sbagliata era l'assenza di una regola su chi
+possiede la scena, e le regole di questo tipo stanno nel contratto -- non in una
+convenzione che ognuno ricorda a modo suo.
+
+L'assemblatore la alza prima di eseguire i pezzi. Chi gira da solo la trova
+falsa e pulisce, come ha sempre fatto.
+"""
+
+
+def pulisci_se_solo(pulizia):
+    """
+    Esegue `pulizia` solo se il pezzo sta girando da solo.
+
+    Si passa la funzione invece di chiamarla dietro un `if`, cosi' la clausola
+    e' scritta una volta qui e non tre volte nei pezzi -- dove la quarta si
+    dimentica.
+    """
+    if not SOTTO_ASSEMBLATORE:
+        pulizia()
+        return True
+    return False
+
 
 def collezione(nome, padre=None):
     """

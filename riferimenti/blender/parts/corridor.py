@@ -130,7 +130,7 @@ L2 = LARGHEZZA_CORRIDOIO / 2.0
 # `world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']`, presa da li'
 # e non ricopiata — due copie dello stesso numero sono due numeri che un
 # giorno divergono (world_root.py, sezione 2).
-TX_MONDO, TY_MONDO, TZ_MONDO = world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']
+TX_MONDO, TY_MONDO, TZ_MONDO = world_root.traslazione('STAIR_CORRIDOR', 'gltf')
 
 APERTURA_LOCALE_TECNICO = {
     'lato': 'locale_tecnico',
@@ -219,7 +219,7 @@ def scatola(nome, x0, x1, y0, y1, z0, z1, mat, collezione):
     return ob
 
 
-pulisci()
+world_root.pulisci_se_solo(pulisci)
 
 # ─── le due collezioni chieste dal contratto, dal frame comune world_root ──
 WORLD_ROOT = world_root.radice()

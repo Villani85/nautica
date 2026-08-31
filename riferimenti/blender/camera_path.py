@@ -283,7 +283,7 @@ def look_at_quat(forward, up_hint=(0.0, 1.0, 0.0)):
 #    P0 (meccanismo) e' DERIVATO dalla collocazione MECHANISM_BAY: il pezzo
 #    si estende in X mondo da X_MB0=-14.902575 (la sua origine locale) fino
 #    alla porta verso il corridoio a X=-6.280 (world_root.COLLOCAZIONI
-#    ['MECHANISM_BAY']['cucitura_mondo_m']). Si prende il punto medio di
+#    ['MECHANISM_BAY']['cucitura_mondo_m_gltf']). Si prende il punto medio di
 #    quell'intervallo; Y e Z riusano la cucitura della porta (-3.270, 0.0),
 #    l'unico riferimento di sezione misurato per questo pezzo — non esiste
 #    in world_root una misura indipendente dell'interno del locale tecnico,
@@ -302,7 +302,7 @@ P2_Y = sum(_INGRESSO['altezza_libera_m']) / 2.0
 P2_Z = sum(_INGRESSO['larghezza_libera_m']) / 2.0
 P2 = np.array([P2_X, P2_Y, P2_Z])
 
-_TX_COR, _TY_COR, _TZ_COR = world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']
+_TX_COR, _TY_COR, _TZ_COR = world_root.traslazione('STAIR_CORRIDOR', 'gltf')
 _LUNGHEZZA_CORRIDOIO_LOCALE = world_root.LUNGHEZZA_CORRIDOIO_M   # 5.480, DERIVATO in world_root
 _RISALITA_CORRIDOIO_LOCALE = world_root.RISALITA_CORRIDOIO_M     # 2.10, DERIVATO in world_root
 _X1_LOCALE = _LUNGHEZZA_CORRIDOIO_LOCALE / 2.0
@@ -311,9 +311,9 @@ P1 = np.array([_X1_LOCALE + _TX_COR, _Y1_LOCALE + _TY_COR, 0.0 + _TZ_COR])
 
 _MB = world_root.COLLOCAZIONI['MECHANISM_BAY']
 X_MB0 = _MB['traslazione_x_derivata_m']            # -14.902575
-X_PORTA_MB = _MB['cucitura_mondo_m'][0]            # -6.280
-_Y_PORTA_MB = _MB['cucitura_mondo_m'][1]           # -3.270
-_Z_PORTA_MB = _MB['cucitura_mondo_m'][2]           # 0.0
+X_PORTA_MB = _MB['cucitura_mondo_m_gltf'][0]            # -6.280
+_Y_PORTA_MB = _MB['cucitura_mondo_m_gltf'][1]           # -3.270
+_Z_PORTA_MB = _MB['cucitura_mondo_m_gltf'][2]           # 0.0
 P0 = np.array([(X_MB0 + X_PORTA_MB) / 2.0, _Y_PORTA_MB, _Z_PORTA_MB])
 
 P4 = np.array(world_root.dal_frame_guscio(POS_SALONE))

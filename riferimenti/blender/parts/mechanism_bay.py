@@ -89,7 +89,22 @@ import world_root
 
 # la collocazione di questo pezzo nel frame comune (C2). NON un valore
 # ricopiato a mano: si legge da world_root.COLLOCAZIONI, l'unica fonte.
-MB_AGGANCIO = world_root.COLLOCAZIONI['MECHANISM_BAY']['aggancio_m']
+# ─── LA CHIAVE E' CAMBIATA, E IL PEZZO NON SE N'ERA ACCORTO
+#
+# Era `aggancio_m`. Il contratto l'ha rinominata in `cucitura_mondo_m` quando si
+# e' scoperto che «traslazione» e «punto su cui deve cadere una feature» sono
+# cose DIVERSE -- e confonderle era costato 8,7 m di scarto. Il rinominamento e'
+# stato fatto senza aggiornare questo file, e l'assemblatore l'ha trovato con un
+# KeyError: e' il modo giusto di scoprirlo, ma andava scoperto prima.
+#
+# E la conversione da PUNTO a TRASLAZIONE si fa qui, perche' solo questo pezzo
+# sa dove sta la propria porta nel proprio sistema:
+#     traslazione = cucitura_mondo - cucitura_locale
+# La chiave ha preso il suffisso del sistema (`_gltf`) quando si e' scoperto che
+# lo stesso vettore letto in Blender invece che in glTF spostava il salone di
+# tre metri. L'accessorio fa la conversione E la sottrazione della cucitura
+# locale, cosi' questo file non ripete nessuna delle due.
+MB_AGGANCIO = world_root.traslazione('MECHANISM_BAY', 'gltf')
 
 # --- costanti dichiarate, vedi intestazione per la provenienza di ognuna ---
 
@@ -371,7 +386,7 @@ def verifica_cuciture_contratto():
 
 
 if __name__ == '__main__':
-    pulisci()
+    world_root.pulisci_se_solo(pulisci)
     col_mb, col_er, pezzi, info = costruisci_locale_tecnico()
 
     # radice locale per l'export di prova — un master futuro linkera' le due

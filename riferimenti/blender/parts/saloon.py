@@ -137,18 +137,78 @@ OCCLUDERS = world_root.collezione('OCCLUDERS', WORLD_ROOT)
 # in basso, che stampa questo stesso valore). Se un giorno qualcuno aggiunge
 # un offset diverso da zero in world_root.py, questo script NON lo applica
 # ancora: e' un controllo di coerenza, non un'implementazione dell'offset.
-_TRASLAZIONE_SALOON = world_root.COLLOCAZIONI['SALOON_SHELL']['traslazione_m']
-assert _TRASLAZIONE_SALOON == (0.0, 0.0, 0.0), (
-    'world_root.py dichiara per SALOON_SHELL una traslazione %r ma questo '
-    'script importa il guscio a trasformazione identita\' (nessun offset). '
-    'Il vano e\' il riferimento del progetto: se questo numero cambia, '
-    'saloon.py va aggiornato di conseguenza, non ignorato.'
-    % (_TRASLAZIONE_SALOON,))
+_TRASLAZIONE_SALOON = world_root.traslazione('SALOON_SHELL', 'gltf')
+
+# ─── L'ORIGINE E' CAMBIATA, E QUESTO FILE ASSERIVA LA VECCHIA
+#
+# Qui c'era `assert _TRASLAZIONE_SALOON == (0,0,0)`, giusto finche' l'origine
+# del mondo era il bordo del vano. Il secondo riancoraggio l'ha spostata sul
+# nodo CAMERA_SORGENTE_SALONE, e la traslazione del guscio e' diventata
+# l'opposto della posizione di quel nodo: (+2.932, -0.607, -0.844). L'assert e'
+# rimasto indietro e l'assemblatore l'ha trovato -- che e' il suo mestiere, ma
+# andava trovato quando il contratto e' cambiato.
+#
+# L'assert resta, e resta utile: ora verifica che la traslazione dichiarata sia
+# COERENTE CON L'ORIGINE, invece di fissare un valore. Se domani l'origine si
+# sposta una terza volta, questo controllo lo segue da solo.
+_ATTESA = tuple(-c for c in world_root.ORIGINE_POSIZIONE_GLB)
+assert all(abs(a - b) < 1e-6 for a, b in zip(_TRASLAZIONE_SALOON, _ATTESA)), (
+    "world_root.py dichiara per SALOON_SHELL la traslazione %r, ma con "
+    "origine su %r dovrebbe essere %r. Il guscio si sposta dell opposto "
+    "della posizione del nodo camera, cosi quel nodo cade sull origine."
+    % (_TRASLAZIONE_SALOON, world_root.ORIGINE_POSIZIONE_GLB, _ATTESA))
 
 # ─── import del guscio gia' misurato, cosi' com'e' ──────────────────────
 prima = set(bpy.data.objects.keys())
 bpy.ops.import_scene.gltf(filepath=GLB_GUSCIO)
 importati = [o for o in bpy.data.objects if o.name not in prima]
+
+# ─── E SI RIPORTA IN Y-UP, o i due pezzi vivono in due mondi
+#
+# DIFETTO PRESO DALL'ASSEMBLATORE, e non e' una traslazione sbagliata: e' un
+# ASSE. Misurato sui bounding box della scena assemblata:
+#
+#   STAIR_CORRIDOR   Z largo 1,09 m   ->  Z e' la LARGHEZZA: costruisce in Y-up
+#   SALOON_SHELL     Z alto 2,51 m    ->  Z e' l'ALTEZZA: e' in Z-up
+#
+# Il corridoio e gli altri pezzi costruiti da questi script autorano in Y-up,
+# che e' la convenzione del contratto e quella dei GLB del progetto (`export_yup
+# = False` in guscio-esporta.py, con il commento che racconta il prezzo gia'
+# pagato una volta). Ma `import_scene.gltf` CONVERTE in Z-up entrando, perche'
+# e' la convenzione di Blender, e non c'e' modo di chiedergli di non farlo.
+#
+# Risultato: due pezzi nella stessa scena con due «alto» diversi. La
+# compenetrazione misurata fra salone e corridoio era 2,93 x 3,47 x 1,09 m --
+# che non e' geometria sbagliata, e' lo stesso spazio letto in due sistemi.
+#
+# Si riporta indietro di -90 gradi su X: l'inversa esatta di cio' che
+# l'importatore ha appena fatto.
+import math as _math
+from mathutils import Matrix as _Matrix
+
+_INDIETRO = _Matrix.Rotation(_math.radians(-90.0), 4, 'X')
+
+# ─── E POI SI APPLICA LA TRASLAZIONE, che prima si limitava a verificare
+#
+# Questo script dichiarava: «se world_root.py dichiara un offset diverso da
+# zero, questo script NON lo applica ancora: e' un controllo di coerenza, non
+# un'implementazione». Era vero e sufficiente finche' l'offset ERA zero --
+# l'origine stava sul vano, e il guscio ci si trovava sopra per costruzione.
+#
+# Dal riancoraggio al nodo camera l'offset non e' piu' zero: il guscio deve
+# spostarsi di (+2,932 · -0,607 · -0,844), cioe' dell'opposto della posizione
+# del nodo, cosi' quel nodo cade sull'origine. Senza, il salone resta dov'era
+# nel proprio GLB e il corridoio gli finisce dentro: compenetrazione misurata
+# 2,93 m in X, che e' ESATTAMENTE la componente X della traslazione mancante.
+#
+# Il vettore e' negli assi glTF, e dopo la rotazione qui sopra gli oggetti sono
+# in Y-up, cioe' negli stessi assi: si somma diretto. Se un giorno la rotazione
+# sparisce, va chiesto `world_root.traslazione('SALOON_SHELL', 'blender')` --
+# ed e' per questo che quell'accessorio esiste.
+_TR = _Matrix.Translation(_TRASLAZIONE_SALOON)
+for _o in importati:
+    if _o.parent is None:
+        _o.matrix_world = _TR @ _INDIETRO @ _o.matrix_world
 
 pezzi_mesh = []
 camera_sorgente = None
