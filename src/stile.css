@@ -530,7 +530,10 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
    quadro intero invece di una striscia. Misurato spegnendo e riaccendendo la coda, a 1280x720: da **160 px** di
    tratto protetto (0,22 schermate) a **1030** (1,43). Sei volte e mezza.
 */
-/* 740 = 100 di antefatto + 420 di racconto + 100 di finestra + 120 di coda.
+/* 740 = 50 di antefatto + 470 di racconto + 100 di finestra + 120 di coda.
+   L'antefatto e' sceso da 100 a 50 (`ANTE_SVH` in demo.js) e i 50 sono andati
+   al racconto: la sezione resta alta uguale, cambia solo dove comincia a
+   muoversi. Vedi il commento su ANTE_SVH per la misura che l'ha imposto.
    Era 640: i 100 in piu' sono l'antefatto, e `demo.js` li toglie dalla corsa
    esattamente come toglie la coda. La corsa resta 420svh, quindi ogni finestra
    della regia resta dov'era. */
@@ -1760,4 +1763,113 @@ html[data-traversata="si"] .nudge{
   margin-top:var(--u3);max-width:52ch;
   font-size:11px;line-height:1.6;color:var(--tenue);
   text-wrap:pretty;
+}
+
+/*
+ * ─── I RICHIAMI TECNICI
+ *
+ * *«questo e' il pezzo forte, ci devono essere delle linee con angoli retti che
+ * indicano dei sistemi speciali... deve essere qualcosa di eclatante, che
+ * spiega, altrimenti sembra essere passato in secondo piano»*.
+ *
+ * Vivono SOLO nella battuta del meccanismo, che era la piu' costosa del sito e
+ * l'unica senza una parola sopra. Fuori di li' sparirebbero addosso a un altro
+ * soggetto, e un rilievo tecnico che indica la cosa sbagliata e' peggio del
+ * silenzio.
+ */
+.richiami{
+  position:absolute;inset:0;z-index:7;pointer-events:none;
+  opacity:0;transition:opacity .6s ease;
+}
+.palco[data-battuta="meccanismo"] .richiami{opacity:1}
+/* durante la traversata comanda il filmato: niente sopra */
+.palco[data-traversata="si"] .richiami{opacity:0}
+
+.richiami__linee{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.richiami__linea{
+  fill:none;stroke:var(--recupero);stroke-width:1;
+  opacity:0;transition:opacity .35s;
+  /* la linea si DISEGNA verso l'etichetta invece di comparire: e' il gesto di
+     un rilievo, e costa una proprieta' animata sola */
+  stroke-dasharray:1200;stroke-dashoffset:1200;
+}
+/* .55 e non .75: la linea e' una guida, non un soggetto. Alzandola competeva
+   con la cifra, che e' la cosa da leggere. */
+.richiami__linea[data-acceso="si"]{opacity:.55;stroke-dashoffset:0;transition:opacity .35s,stroke-dashoffset 1.1s ease-out}
+.richiami__punto{fill:var(--recupero);opacity:0;transition:opacity .35s}
+.richiami__punto[data-acceso="si"]{opacity:.9}
+
+/*
+ * ─── LA LASTRA SOTTO L'ETICHETTA, E PERCHE' NON E' DECORAZIONE
+ *
+ * DIFETTO VISTO NEL PRIMO PIANO: sopra il cielo il fondo va quasi al bianco, e
+ * una cifra ciano su bianco non si legge -- «29:1» spariva mentre lo stesso
+ * richiamo, dieci pixel piu' in basso sull'acqua scura, era perfetto. Il colore
+ * era giusto per meta' schermata.
+ *
+ * Un rilievo tecnico deve reggere su QUALUNQUE fondo, perche' la nave si gira
+ * col dito e il fondo cambia sotto le etichette senza chiedere permesso. La
+ * lastra e' la stessa lingua del cruscotto -- che infatti si legge sempre -- e
+ * il bordo di un pixel dalla parte dell'aggancio dice da che lato arriva la
+ * linea, che e' come si disegna un rilievo su carta.
+ */
+.richiami__voce{
+  position:absolute;max-width:min(29ch,26vw);
+  transform:translateY(-50%);
+  opacity:0;transition:opacity .45s ease .15s;
+  font-family:var(--t-dato);
+  padding:.55rem .8rem;
+  /*
+   * Fondo PIENO, niente `backdrop-filter`. Col filtro le quattro etichette
+   * sparivano del tutto -- non attenuate: assenti -- perche' la sfocatura di
+   * sfondo su un elemento sopra una tela WebGL non e' garantita da nessuna
+   * parte e quando cede non lascia un avviso, lascia il vuoto. Un effetto che
+   * puo' cancellare il contenuto non vale la resa che aggiunge.
+   */
+  background:rgba(9,28,30,.62);
+}
+.richiami__voce--sinistra{border-left:1px solid rgba(79,224,196,.5)}
+.richiami__voce--destra{border-right:1px solid rgba(79,224,196,.5)}
+.richiami__voce[data-acceso="si"]{opacity:1}
+.richiami__voce--destra{text-align:right}
+.richiami__voce b{
+  display:block;font-size:clamp(1.5rem,2.6vw,2.4rem);line-height:1;
+  font-variation-settings:var(--v-dato);
+  color:var(--recupero);letter-spacing:.01em;
+}
+.richiami__voce span{
+  display:block;margin-top:.45rem;
+  font-size:.72rem;line-height:1.45;letter-spacing:.06em;
+  /* sulla lastra scura serve un chiaro fisso: `--inchiostro-tenue` e' pensato
+     per il fondo chiaro e qui sparirebbe */
+  color:rgba(222,232,233,.82);
+}
+
+/*
+ * Su telefono restano le CIFRE e sparisce la spiegazione: quattro paragrafi su
+ * 390 px coprirebbero il pezzo di cui parlano. Il numero da solo regge -- e'
+ * quello che si ricorda -- e chi vuole la frase apre il sito su uno schermo.
+ */
+@media (max-width:760px){
+  .richiami__voce{max-width:42vw}
+  .richiami__voce span{display:none}
+  .richiami__voce b{font-size:clamp(1.05rem,4.4vw,1.5rem)}
+}
+
+/*
+ * MENTRE PARLANO I RICHIAMI, IL RESTO TACE.
+ *
+ * *«sembra tutto confuso»*: sei strati di testo sulla stessa schermata --
+ * titolo, paragrafo, didascalia viva, cruscotto, invito a scorrere, nota del
+ * gesto -- piu' i quattro richiami. Nessuno sbagliato da solo, tutti sbagliati
+ * insieme. Un rilievo tecnico regge perche' e' l'unica cosa scritta sopra
+ * l'oggetto: se divide la schermata con un titolo non e' un rilievo, e' rumore.
+ *
+ * L'attributo lo scrive `richiami.js` quando il meccanismo e' abbastanza grande
+ * in quadro, quindi il silenzio dura esattamente quanto il primo piano.
+ */
+.palco[data-richiami="si"] .battuta,
+.palco[data-richiami="si"] .nota,
+.palco[data-richiami="si"] .invito{
+  opacity:0;pointer-events:none;
 }

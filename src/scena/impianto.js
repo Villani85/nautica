@@ -522,6 +522,17 @@ export function creaImpianto (base, ambiente = null, opzioni = {}) {
       return { q: corsa.q, u: corsa.u, v: corsa.v, comando: corsa.comando, inMoto: corsa.inMoto }
     },
     get pronto () { return pronto },
+    /**
+     * I nodi del GLB, per chi deve AGGANCIARSI a un pezzo invece di indovinarne
+     * la posizione. Serve ai richiami tecnici: la nave si puo' girare col dito,
+     * quindi una didascalia ancorata a una coordinata fissa finirebbe sul pezzo
+     * sbagliato al primo trascinamento. Ancorata al nodo, lo segue.
+     *
+     * Sola lettura per contratto: chi legge non deve spostarli. E i nomi sono
+     * gia' un'API dichiarata -- vedi `RICHIESTI` in cima -- quindi qui non si
+     * apre niente di nuovo, si rende raggiungibile cio' che era gia' garantito.
+     */
+    get nodi () { return nodi },
     // Esposti perche' `collaudo-cinematica.mjs` confronti il moto osservato
     // con cio' che il GLB dichiara, invece di riscrivere qui i numeri: due
     // copie dello stesso valore sono due valori che un giorno divergono.

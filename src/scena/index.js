@@ -1,6 +1,6 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
+  Box3, Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFSoftShadowMap
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
@@ -1021,6 +1021,80 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * con `marca` indefinita fa sempre un passo, senza la guardia del doppio
    * conteggio che serve solo quando due capitoli disegnano insieme.
    */
+  /**
+   * Chi vuole ricevere le ancore proiettate a ogni fotogramma. Uno solo: i
+   * richiami tecnici. `fn.nomi` dichiara a quali nodi del GLB agganciarsi.
+   */
+  let osservaRichiami = null
+
+  /** Riusati a ogni fotogramma: allocare due Vector3 per richiamo per frame
+      e' spazzatura che il raccoglitore paga nel climax. */
+  const _mondo = new Vector3()
+  const _box = new Box3()
+
+  /**
+   * ─── SI PUNTA AL CENTRO DEL PEZZO, NON ALL'ORIGINE DEL NODO
+   *
+   * DIFETTO PRESO CON UNA MISURA, dopo averlo visto e non capito. I quattro
+   * richiami disegnavano i loro puntini uno sopra l'altro: sembrava che ne
+   * esistesse uno solo. Il numero l'ha spiegato -- l'apertura massima fra due
+   * ancore era lo **0,3% della larghezza dello schermo**, cioe' quattro punti
+   * dentro quattro pixel.
+   *
+   * La causa e' che `STATIC_MOTOR`, `RIG_CYCLO_A`, `RIG_OUTPUT` e `RIG_FIN` non
+   * sono quattro oggetti sparsi: sono un RIG ANNIDATO, e i nodi di un rig
+   * condividono quasi lo stesso perno. L'origine del nodo dice dove il pezzo
+   * RUOTA, non dove il pezzo STA. Per un rilievo tecnico serve la seconda.
+   *
+   * Il centro dell'ingombro ce l'ha: `Box3.setFromObject` unisce i riquadri
+   * delle geometrie figlie, gia' calcolati, quindi non costa un giro sui
+   * vertici. E segue il pezzo quando la pinna si inclina, che e' il punto.
+   */
+  function centroDi (nodo) {
+    _box.setFromObject(nodo)
+    if (_box.isEmpty()) { nodo.getWorldPosition(_mondo); return _mondo }
+    return _box.getCenter(_mondo)
+  }
+
+  /**
+   * Proietta i nodi richiesti in pixel di tela.
+   *
+   * ─── I DUE IMPIANTI, E PERCHE' NON SE NE SCEGLIE UNO A CASO
+   *
+   * Ce ne sono due, uno per lato. Se i richiami si agganciassero sempre al
+   * primo, girando la nave finirebbero sul pezzo dietro lo scafo: linee che
+   * indicano un punto dove non c'e' niente. Si sceglie quello il cui nodo di
+   * riferimento cade piu' vicino al centro del quadro — cioe' quello che chi
+   * guarda sta effettivamente guardando.
+   */
+  function proiettaAncore (nomi, larg, alt) {
+    let scelto = null
+    let migliore = Infinity
+    for (const i of impianti) {
+      const n = i.nodi?.RIG_FIN
+      if (!n) continue
+      centroDi(n)
+      const dietro = _mondo.clone().applyMatrix4(camera.matrixWorldInverse).z >= 0
+      if (dietro) continue
+      const v = _mondo.clone().project(camera)
+      const d = Math.hypot(v.x, v.y)
+      if (d < migliore) { migliore = d; scelto = i }
+    }
+    if (!scelto) return nomi.map(() => null)
+
+    return nomi.map((nome) => {
+      const n = scelto.nodi?.[nome]
+      if (!n) return null
+      centroDi(n)
+      /* `project` di un punto DIETRO la camera torna comunque una coordinata
+         sullo schermo, ed e' sbagliata senza dare nessun errore: si guarda la
+         z nello spazio camera prima di crederci. */
+      const davanti = _mondo.clone().applyMatrix4(camera.matrixWorldInverse).z < 0
+      const v = _mondo.project(camera)
+      return { x: (v.x * 0.5 + 0.5) * larg, y: (-v.y * 0.5 + 0.5) * alt, davanti }
+    })
+  }
+
   function disegna (sim, marca, opz) {
     ultimoStato = sim.S
     ultimaSim = sim
@@ -1512,6 +1586,26 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     contenitore.dataset.emersione = emersione.toFixed(3)
 
     if (!(opz && opz.senzaDisegno)) render.render(scena, camera)
+
+    /**
+     * ─── I RICHIAMI TECNICI SI AGGANCIANO QUI, E DOPO IL RENDER
+     *
+     * Dopo, non prima: le matrici di mondo le aggiorna `render.render`, e
+     * chiedere a un nodo dove si trova PRIMA vuol dire leggere la posa del
+     * fotogramma scorso. Di un fotogramma non se ne accorgerebbe nessuno finche'
+     * la nave sta ferma; appena la si gira col dito, le linee restano indietro
+     * rispetto al pezzo che indicano — che e' l'unico difetto che un rilievo
+     * tecnico non puo' permettersi.
+     *
+     * Ogni fotogramma, e non solo allo scorrimento, per la stessa ragione: la
+     * nave si gira col dito e la regia non gira a fotogrammi. E' la lezione gia'
+     * pagata dalla consegna del finale, poche righe piu' su.
+     */
+    if (osservaRichiami) {
+      const larg = render.domElement.clientWidth
+      const alt = render.domElement.clientHeight
+      osservaRichiami(proiettaAncore(osservaRichiami.nomi, larg, alt), larg, alt)
+    }
   }
 
   /**
@@ -1805,6 +1899,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * misurare cio' che c'e' SOTTO, dichiarandolo nella URL.
      */
     impostaTraversata: (q) => traversata.mostra(SENZA_FILMATO ? 0 : q),
+    /**
+     * Aggancia i richiami tecnici. `fn.nomi` sono i nodi del GLB a cui puntano;
+     * `fn` riceve a ogni fotogramma le loro posizioni in pixel di tela.
+     */
+    collegaRichiami: (fn) => { osservaRichiami = fn },
     /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
     traversataFinita: () => traversata.finita,
     /** Quanto il finale e' passato al loop vivo: 0 fotogramma fermo, 1 stanza viva. */

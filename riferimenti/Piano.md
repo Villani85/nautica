@@ -356,3 +356,51 @@ leggerlo. Se il pacchetto entra nel repo, quel file cede all'originale.
    committente. Il collaudo con pointer click vero è mio e lo faccio comunque.
 4. **`attrito.js`**: toglierlo è una decisione di regia. L'attrito è stato messo
    per una ragione dichiarata nel file.
+
+---
+
+# Onda 3 — le segnalazioni del committente del 31 agosto (sessione dal vivo)
+
+Nove voci arrivate una dietro l'altra guardando il sito pubblicato. Sono
+elencate **tutte**, comprese quelle che non ho ancora toccato, con lo stato
+vero e la misura che le regge o le smentisce.
+
+| # | segnalazione (parole del committente) | stato | misura |
+|---|---|---|---|
+| 1 | «io vedo un fotogramma fermo che oscilla, dovrebbe essere un video con persone che oscillano?» | **diagnosticato, in attesa di decisione** | i video SUONANO (largo +4,14 s in 3 s). Ma il movimento umano della clip tesa e' **0,076** contro **0,424** del sollievo e **0,457** del candidato 02. L'occhio legge una fotografia inclinata perche' quasi lo e'. |
+| 2 | «alla fine dovrebbe essere un video in loop dopo la traversata dove sono tranquille le persone» | **CHIUSO** | il filmato restava congelato a 8,04 s coprendo tutto, col loop calmo che suonava sotto invisibile. Ora la lastra si consegna al loop. Movimento del finale: **0,000 → 0,983 livelli**. |
+| 3 | «il filmato parte sulla linea dell'orizzonte, riesci ad agganciare il 3D alla stessa altezza e allinearlo mentre scorro» | **da fare** | non ancora misurato. |
+| 4 | «nella clip iniziale il movimento del mare non e' coerente con il movimento della barca» | **diagnosticato, da curare** | la geometria e' gia' giusta (ruota la stanza, non l'orizzonte). Il difetto e' che la clip del mare ha l'orizzonte **fermo: 2 px su 90** di escursione, e **non reagisce affatto** allo `SEA STATE`. La barca rolla 9,2° RMS dentro una finestra che mostra una tavola. |
+| 5 | «il suono e' fastidiosissimo continuo, non e' coerente con nessun movimento» | **diagnosticato, da curare** | cinque voci, cinque scalari: `mare` segue lo stato del mare, `scia` la velocita', `motore` e `gyro` i giri, `scafo` il rollio **RMS** — che e' gia' una media, con costante di tempo 0,5 s. A comandi fermi sono tutte costanti. **Nessun termine nella fase del rollio**: per costruzione non puo' essere coerente con un movimento che oscilla. |
+| 6 | «i pulsanti in grigio se disattivati con un'indicazione, accesi verde» | **CHIUSO** | lo spento era scritto in `--acqua-tenue`, la stessa famiglia del verde acceso. Ora grigio neutro + «Activate»; verificato sui colori calcolati. |
+| 7 | «oltre scroll ci devono essere delle frecce con scritto muovi a destra / muovi a sinistra» | **CHIUSO** | fatto. E ha scoperto un difetto piu' grosso: la nota e l'invito **si sovrapponevano** (10 px a 1280x800, **totale** su telefono). Nuovo cancello `collaudo-ingombri.mjs`, 4 formati puliti. |
+| 8 | «linee con angoli retti che indicano sistemi speciali, 3-4 scritte eclatanti» | **in corso** | «3 volte meglio» era un'ipotesi: **e' esatta**. Misurato a mare 5, picco di rollio **8,4° spenti → 2,8° accesi**. E la riduzione viva e' **91%**. I richiami leggono le cifre dal GLB e dalla lettura viva, non da stringhe. |
+| 9 | «guarda la barra laterale da qui a qui, lo scroll non fa niente» | **in misura** | `collaudo-corsa-viva.mjs` campiona 60 punti della corsa e stampa quanto cambia la tela a ogni passo. Trova **tutte** le zone morte, non solo quella segnalata. |
+
+## Cosa aspetta una decisione, e non la prendo io
+
+1. **La clip di apertura.** Il candidato 02 misura 0,457 di movimento umano contro
+   0,076 della clip in linea, e passa il cancello di stabilita' della camera
+   (carrellata 0,33% su 0,5; deriva 1,2 px su 6; rotazione 0,12° su 0,3). A crf 30
+   pesa 637 KB e resta dentro il tetto dei filmati. **Manca solo il tuo giudizio
+   sulla credibilita' della posa.**
+2. **La parola dei pulsanti.** Ho scritto «Activate» e non «Attiva il sistema»:
+   il resto dell'interfaccia e' in inglese, e a 390px «ACTIVATE SYSTEM» va a capo.
+   Si cambia in una riga.
+3. **I testi dei quattro richiami.** Le cifre sono misurate, le frasi che le
+   accompagnano sono mie. Il GLB dichiara `modelClaim: "illustrative"`: se hai i
+   dati veri del costruttore, sostituiscono i miei senza toccare il codice.
+
+## Blender: dove sono davvero
+
+- **Fatto:** `inventario.py`, e quattro pezzi separati — `parts/mechanism_bay.py`,
+  `parts/corridor.py`, `parts/saloon.py`, `camera_path.py`.
+- **Il problema:** i quattro pezzi **non si toccano**. Non esiste ancora il
+  `WORLD_ROOT` comune che allinea le cuciture dichiarate (paratia X=8,6226-8,7226,
+  porta 0,70x1,90, normale +X; aperture X=0,000 e X=5,480, alzata 2,10 m; vano
+  X=-2,1746..0, Y=0..1,1449). Finche' non esiste, non c'e' una traversata
+  world-space: c'e' un filmato e quattro modelli scollegati.
+- **Il guscio del salone** e' costruito e piazzato in un minimo locale misurato
+  (scarto 26,7, residuo strutturale) ma **non e' certificato**: resta dietro
+  `?guscio=1`, spento.
+- **Il prossimo passo vero e' B1**, lo script padrone `scena-continua.py`.

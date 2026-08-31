@@ -6,6 +6,7 @@ import { segnalaStato } from './ui/nudge.js'
 import { segnalaStato as segnalaEsperimento } from './ui/esperimento.js'
 import { segnalaStato as segnalaSuono } from './ui/suono.js'
 import { creaRegia } from './regia.js'
+import { creaRichiami, RICHIAMI } from './ui/richiami.js'
 import { attritoDiApertura } from './ui/attrito.js'
 import { STAZIONI, QUOTE } from './ui/atto-due.js'
 
@@ -127,6 +128,18 @@ export function avviaDimostrazione () {
      dell'ordine di costruzione, e costa una riga. */
   let comandi = null
   const vivo = $('#battuta-vivo')
+
+  /**
+   * I richiami tecnici del meccanismo. Ricevono le ancore proiettate a ogni
+   * fotogramma dalla scena, perche' la nave si gira col dito: vedi
+   * `proiettaAncore` in `scena/index.js`.
+   */
+  const richiami = creaRichiami($('#richiami'))
+  if (richiami && scena.collegaRichiami) {
+    const alFotogramma = (punti, larg, alt) => richiami.aggiorna(punti, larg, alt)
+    alFotogramma.nomi = RICHIAMI.map(r => r.nodo)
+    scena.collegaRichiami(alFotogramma)
+  }
 
   const regia = creaRegia({
     scena, sim, palco,
@@ -340,7 +353,27 @@ export function avviaDimostrazione () {
      * agganciato alla corsa.
      */
     const CODA_SVH = 1.2
-    const ANTE_SVH = 1.0
+    /**
+     * ─── MEZZO SCHERMO DI ANTEFATTO, NON UNO INTERO
+     *
+     * DIFETTO SEGNALATO DAL COMMITTENTE con la barra laterale in mano: *"guarda
+     * la barra laterale da qui a qui, lo scroll non fa niente"*. Misurato: su
+     * 5520 px di pagina, **il 35% non muove il racconto** -- dal 3% al 14% `p`
+     * resta 0,0000, dal 78% al 100% resta 1,0000.
+     *
+     * La coda quel diritto ce l'ha: e' dove il filmato finisce e torna la
+     * coppia viva, che e' il finale chiesto. La testa no: era uno schermo
+     * intero in cui si girava la rotella e la nave stava ferma.
+     *
+     * Mezzo schermo lascia al titolo il suo tempo -- si legge dal primo pixel,
+     * non serve scorrere per vederlo -- e restituisce al racconto i 400 px che
+     * gli venivano tolti. La sezione resta alta uguale: quello che la testa
+     * lascia, la corsa se lo prende.
+     *
+     * IL NUMERO E' TUO. Quanto debba durare un titolo prima che la nave si
+     * muova e' messa in scena, non misura: se 0,5 e' poco, si cambia qui.
+     */
+    const ANTE_SVH = 0.5
     const coda = window.innerHeight * CODA_SVH
     const ante = window.innerHeight * ANTE_SVH
     const corsa = r.height - window.innerHeight - coda - ante
