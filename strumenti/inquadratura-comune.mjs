@@ -347,8 +347,37 @@ export const trovaArco = (pg, battuta) => pg.evaluate(async (b) => {
   return da === null ? null : { da, a }
 }, battuta)
 
-export const vaiA = (pg, f) => pg.evaluate((ff) =>
-  scrollTo(0, Math.round((document.documentElement.scrollHeight - innerHeight) * ff)), f)
+/**
+ * ─── `f` E' UNA FRAZIONE DEL RACCONTO, NON DELLA PAGINA
+ *
+ * DIFETTO PRESO DALLA CI, e la causa e' una regola di questo repo violata
+ * dentro un cancello. Questa funzione faceva
+ *
+ *     scrollTo(0, (scrollHeight - innerHeight) * f)
+ *
+ * cioe' misurava in FRAZIONI DI PAGINA. Finche' la pagina non cambia lunghezza
+ * funziona; il giorno in cui l'antefatto e' passato da 1,0 a 0,5 schermi, ogni
+ * campione si e' spostato rispetto al racconto e il cancello ha misurato le
+ * battute nei punti sbagliati. Il meccanismo e' passato da 7,93% a 5,68% di
+ * quadro e la superficie dell'acqua e' comparsa a coprirlo per il 19%.
+ *
+ * Il sito non era peggiorato: era il METRO ad aver cambiato scala sotto la
+ * misura -- e per giunta il metro accusava il sito.
+ *
+ * `demo.js` pubblica apposta `cimaSezione` e `corsaRacconto`, e il commento
+ * accanto spiega che esistono per non far cercare a nessuno il punto per
+ * bisezione. Erano li' da prima di oggi.
+ */
+export const vaiA = (pg, f) => pg.evaluate((ff) => {
+  const n = window.__nautica
+  if (n && typeof n.cimaSezione === 'number' && n.corsaRacconto > 0) {
+    scrollTo(0, Math.round(n.cimaSezione + n.corsaRacconto * ff))
+    return
+  }
+  /* senza la maniglia si ripiega sulla pagina, ma e' un ripiego dichiarato:
+     senza `?ispeziona=1` questo cancello non misura quello che crede */
+  scrollTo(0, Math.round((document.documentElement.scrollHeight - innerHeight) * ff))
+}, f)
 
 /**
  * ─── SI ASPETTA CHE LA CAMERA SIA ARRIVATA, NON UN SECONDO E DUE DECIMI
