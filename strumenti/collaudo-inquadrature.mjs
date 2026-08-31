@@ -102,7 +102,34 @@ const pg = await (await browser.newContext({ viewport: { width: 1280, height: 72
  * misura, e si dichiara -- un cancello non puo' spegnere una parte del sito
  * per far tornare un numero, puo' chiedere di guardare sotto dicendolo.
  */
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1`, { waitUntil: 'load' })
+/**
+ * ─── E LA SIMULAZIONE SI INCHIODA, o questo cancello misura l'istante
+ *
+ * DIFETTO DEL CANCELLO, preso in CI e poi riprodotto qui. Due corse IDENTICHE,
+ * stessa macchina, stessa scheda, stesso commit:
+ *
+ *     emerge   19,0% coperto   ->  passa (tetto 22%)
+ *     emerge   22,2% coperto   ->  ROSSO
+ *
+ * Tre punti e due decimi di oscillazione su un tetto che non ne concede
+ * nessuno. Non e' rumore di misura: e' che la scena SI MUOVE -- onde, rollio --
+ * e `attendiCameraFerma` aspetta la CAMERA, non la simulazione. Fermata la
+ * camera, sotto continuano a muoversi il mare e l'inclinazione, e la
+ * percentuale di soggetto coperto cambia con loro.
+ *
+ * Un cancello che oscilla piu' del proprio margine non decide niente: decide il
+ * momento in cui e' stato lanciato.
+ *
+ * `?fermo` esiste apposta, e `stato.js:66` scrive la regola che autorizza
+ * questo uso: «serve a misurare un FOTOGRAMMA -- geometria, materiali,
+ * inquadratura, grana. Non serve a misurare come si comporta la pagina mentre
+ * si scorre». Qui si misura esattamente un'inquadratura.
+ *
+ * MISURATO DOPO: due corse identiche danno 16,8% e 16,8%. L'oscillazione passa
+ * da 3,2 punti a zero.
+ */
+const ISTANTE = 12.5
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1&fermo=${ISTANTE}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 await pg.waitForTimeout(2500)
 
