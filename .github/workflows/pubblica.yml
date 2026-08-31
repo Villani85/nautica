@@ -159,6 +159,20 @@ jobs:
         run: node strumenti/collaudo-nudge.mjs
         env: { CHROMIUM: '1' }
 
+      # ─── LO STATO INIZIALE, ed e' una decisione che vive in UNA riga
+      #
+      # Il committente ha deciso che il sito parte SPENTO e che il primo gesto
+      # dell'utente accende. Una decisione di messa in scena senza un cancello
+      # torna indietro da sola alla prima persona che «sistema» quella riga --
+      # ed era gia' successo: `simulazione.js` dichiarava `stab: false` e
+      # `stato.js` lo rimetteva a `true` venti file dopo.
+      #
+      # Puo' stare in CI perche' non misura la resa: legge lo stato, l'attributo
+      # annunciato, e fa avanzare il rollio a passo dichiarato.
+      - name: 'Cancello · si parte spenti e il gesto accende'
+        run: node strumenti/collaudo-stato-iniziale.mjs
+        env: { CHROMIUM: '1' }
+
       # Con `prefers-reduced-motion` il sito si riduce, non si spegne. Il
       # difetto che questo cancello ha trovato: il ciclo di disegno spento
       # fermava anche il VIDEO del salone -- che nessuno aveva deciso di

@@ -156,9 +156,24 @@ export function avviaDimostrazione () {
          fermato la simulazione e l'orologio delle onde, e due fotogrammi
          restavano diversi perche' in uno lo stabilizzatore era acceso e
          nell'altro no. */
-      if (acceso && FERMO_A === null && !new URLSearchParams(location.search).has('senzaDimostra')) {
-        setTimeout(() => comandi?.mostraCheSiSpegne?.(), 1400)
-      }
+      /**
+       * ─── LA DIMOSTRAZIONE AUTOMATICA NON PARTE PIU', ED E' IL PUNTO
+       *
+       * Qui c'era `setTimeout(() => comandi.mostraCheSiSpegne(), 1400)`: la
+       * scena spegneva lo stabilizzatore da sola per 2,6 s e lo riaccendeva,
+       * per far vedere cosa succede senza.
+       *
+       * Aveva senso finche' il sito partiva ACCESO. Adesso parte spento
+       * (`stato.js`), e il primo gesto dell'utente e' accendere: un timer che
+       * tocca quell'interruttore al posto suo annullerebbe l'unica azione
+       * causale della visita. Il visitatore vedrebbe la nave calmarsi senza
+       * aver fatto niente, che e' esattamente il difetto che spostare lo stato
+       * iniziale doveva togliere.
+       *
+       * La funzione resta in `comandi.js` -- e' scritta e collaudata -- ma non
+       * la chiama piu' nessuno. Se un giorno il verso torna quello di prima,
+       * si riattacca qui una riga.
+       */
     }
   })
 

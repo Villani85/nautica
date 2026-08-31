@@ -14,6 +14,35 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { apriBrowser } from './browser.mjs'
+
+/**
+ * ─── SI VA A UN `p` DEL RACCONTO, NON A UNA FRAZIONE DI PAGINA
+ *
+ * Qui c'era `scrollTo(0, (scrollHeight - innerHeight) * q)`. E' la misura che
+ * questo repo ha gia' vietato tre volte -- `varco`, `manopola`, `cinematica` --
+ * e che io ho reintrodotto scrivendo due strumenti nuovi: una frazione di
+ * PAGINA cambia quando cambiano antefatto, coda o contatto, mentre la corsa del
+ * RACCONTO e' un'altra cosa e la conosce solo `demo.js`.
+ *
+ * La conosce e la pubblica: `p`, `corsaRacconto` e `cimaSezione` stanno su
+ * `__nautica` da quando un cancello si e' rotto per questo esatto motivo. Io
+ * le ho cercate in `index.js` invece che in `demo.js` e ho concluso che non
+ * esistessero.
+ *
+ * E dopo lo spostamento si ASPETTA che `p` sia arrivato: assegnare lo
+ * scorrimento non e' averlo.
+ */
+async function vaiA (pg, p) {
+  await pg.evaluate((pp) => {
+    const n = window.__nautica
+    scrollTo(0, n.cimaSezione + pp * n.corsaRacconto)
+  }, p)
+  return pg.waitForFunction(
+    (pp) => Math.abs((window.__nautica.p ?? -1) - pp) < 0.003,
+    p, { timeout: 8000 }
+  ).then(() => true).catch(() => false)
+}
+
 const P = 5381, BASE = `http://localhost:${P}/nautica/`
 async function serviteci () {
   try { const r = await fetch(BASE, { redirect: 'manual' }); if (r.status < 500) return null } catch {}
@@ -31,7 +60,7 @@ for (const [nome, extra] of [['lastra', ''], ['guscio', '&guscio=1']]) {
   await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 45000 })
   await pg.waitForTimeout(2500)
   for (const q of [0.10, 0.20, 0.235]) {
-    await pg.evaluate((qq) => { const h = document.documentElement.scrollHeight - innerHeight; scrollTo(0, h * qq) }, q)
+    await vaiA(pg, q)
     await pg.waitForTimeout(1200)
     await pg.screenshot({ path: `uscite/guscio/${nome}-${String(Math.round(q*1000)).padStart(4,'0')}.png` })
   }

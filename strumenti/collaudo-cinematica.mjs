@@ -178,6 +178,26 @@ pagina.on('pageerror', e => errori.push(String(e)))
 await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
 await pagina.waitForTimeout(1000)
 
+/**
+ * ─── SI ACCENDE LO STABILIZZATORE, perche' e' il soggetto di questo cancello
+ *
+ * Da quando il sito parte SPENTO -- decisione del committente, vedi
+ * `stato.js` -- la pinna alla partenza sta ferma, e qui usciva:
+ *
+ *   in nessuno dei 4 punti la pinna supera 3 gradi di escursione
+ *
+ * Il rosso era corretto e la conclusione sbagliata: il meccanismo non e'
+ * rotto, e' DISINSERITO. Questo cancello misura «la manovella comanda i
+ * dischi», cioe' un rapporto di trasmissione: presuppone che il sistema stia
+ * lavorando, esattamente come si misura il rapporto di un cambio con il motore
+ * acceso.
+ *
+ * Non e' un aggiramento del nuovo stato iniziale -- quello ha il suo cancello,
+ * `collaudo-stato-iniziale`, che verifica che si parta spenti. Qui si accende
+ * DOPO, come fa il visitatore, e si aspetta che la pinna si muova davvero
+ * invece di dare per scontato che un clic basti.
+ */
+
 const guasti = []
 const righe = []
 let dichiarati = null
@@ -223,6 +243,26 @@ for (const f of PUNTI) {
     console.error('         e senza quella questo cancello puo solo indovinare dove guardare.')
     process.exit(2)
   }
+  /**
+   * SI INSERISCE IL SISTEMA QUI, non al caricamento.
+   *
+   * Da quando il sito parte SPENTO (`stato.js`, decisione del committente) la
+   * pinna sta ferma, e questo cancello usciva con «in nessuno dei 4 punti la
+   * pinna supera 3 gradi». Il rosso era giusto, la conclusione no: il
+   * meccanismo non e' rotto, e' DISINSERITO.
+   *
+   * Questo cancello misura un RAPPORTO DI TRASMISSIONE -- quanti gradi fa
+   * l'ingresso per ogni grado dell'uscita -- e un rapporto si misura col
+   * sistema in moto, come si misura quello di un cambio col motore acceso. Che
+   * si debba PARTIRE spenti lo verifica `collaudo-stato-iniziale`, che e' il
+   * suo mestiere.
+   *
+   * E si inserisce DOPO lo spostamento, non al caricamento: prima di entrare
+   * nel capitolo la scena della dimostrazione non e' montata, `passoDichiarato`
+   * non ha niente da far avanzare e la pinna resta a zero comunque. Misurato:
+   * inserendo all'avvio, «acceso lo stabilizzatore la pinna non si muove».
+   */
+  await pagina.evaluate(() => { window.__nautica.stato.stab = true })
   await pagina.waitForTimeout(4000)
 
   /**

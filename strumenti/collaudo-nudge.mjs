@@ -121,6 +121,26 @@ if (!battuta) {
 }
 console.log(`\n  battuta raggiunta: ${battuta}`)
 
+/**
+ * ─── SI INSERISCE LO STABILIZZATORE, perche' senza non c'e' contraddizione
+ *
+ * Da quando il sito parte SPENTO (`stato.js`, decisione del committente)
+ * questo cancello usciva con due rossi: la battuta delle pinne non compariva e
+ * la bolla del giroscopio nemmeno, dopo ottanta secondi simulati.
+ *
+ * Il rosso era corretto e il sito no. Il suggerimento del giroscopio dichiara
+ * `S.stab` fra le proprie condizioni, e per una ragione: racconta la
+ * contraddizione «le pinne sono ACCESE e hanno perso acqua». A pinne spente
+ * quella contraddizione non esiste, e un suggerimento che la nominasse
+ * mentirebbe.
+ *
+ * Nella visita vera lo stabilizzatore lo accende l'utente come primo gesto, e
+ * quando arriva al meccanismo e' acceso da un pezzo. Il cancello fa lo stesso,
+ * invece di misurare uno stato che nel percorso non esiste.
+ */
+await pg.evaluate(() => { window.__nautica.stato.stab = true })
+await pg.waitForTimeout(300)
+
 const leggi = () => pg.evaluate(() => {
   const b = document.querySelector('.nudge')
   /* `__nautica.stato` E' GIA' `sim.S` (`index.js:927`), non un involucro che

@@ -89,7 +89,19 @@ const NUDGE = [
   {
     id: 'stab',
     bersaglio: '#stab-salone, #stab',
-    testo: 'See what happens without it',
+    /**
+     * ERA «See what happens without it», e adesso dice il contrario.
+     *
+     * Il sito parte SPENTO (`stato.js`): il primo gesto e' accendere, quindi
+     * un invito a spegnere parlerebbe di un interruttore gia' spento.
+     *
+     * La forma pero' resta quella che una revisione aveva promosso: **promette
+     * una scoperta invece di dare un ordine**. «Turn it on» dice cosa fare,
+     * «See what it does» dice cosa ci guadagni — ed e' la stessa ragione per
+     * cui il nudge della propulsione, dove la conseguenza NON e' visibile sul
+     * momento, usa invece un verbo esplicito.
+     */
+    testo: 'See what it does',
     eventi: ['click'],
     /* dove ha senso: dove l'interruttore e' in scena e la conseguenza si vede */
     battute: ['salotto', 'emerge', 'mare', 'invito', 'calma']

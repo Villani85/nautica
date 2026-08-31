@@ -80,7 +80,36 @@ try {
   if (!prima.paused || prima.tempo > 0.05) guai.push('decodifica prima che esista una causa')
   if (Math.abs(prima.durata - 5) > 0.08) guai.push(`durata ${prima.durata.toFixed(3)} s, attesi 5,00`)
 
-  /* Prima il mare obbliga davvero a puntellarsi; poi resta calmo oltre la
+  /**
+   * ─── SI ACCENDE LO STABILIZZATORE, PERCHE' E' QUELLO CHE FA L'UTENTE
+   *
+   * Il salone riceve SOLO il rollio (`salone.aggiorna(sim.S.rollio, dt)`): il
+   * sollievo nasce da «la stanza ha smesso di sbattere», da qualunque causa.
+   * Questo cancello pero' pompa valori SINTETICI nella stessa funzione che il
+   * ciclo di disegno alimenta col rollio VERO, e i due si alternano.
+   *
+   * Finche' il sito partiva stabilizzato il rollio vero era piccolo e non dava
+   * fastidio. Da quando parte SPENTO -- decisione del committente -- e' 16,2
+   * gradi picco-picco: il sollievo parte e il rollio vero lo reinterrompe
+   * subito. Misurato: «si ferma troppo presto: 0,17 s» su un montaggio che
+   * funziona. Difetto latente di QUESTO cancello, non del sito; l'inversione
+   * dello stato l'ha solo portato a galla.
+   *
+   * La cura non e' zittire il canale vero: e' percorrere la sequenza vera. Su
+   * una nave che sbatte il sollievo NON puo' partire, e non deve -- l'utente
+   * accende, il rollio scende, e solo allora la stanza si distende. Si aspetta
+   * quindi che il rollio sia davvero sceso, invece di dare per scontato che
+   * un clic basti.
+   */
+  await pagina.click('#stab-salone').catch(() => pagina.click('#stab').catch(() => {}))
+  const calmata = await pagina.waitForFunction(() => {
+    const n = window.__nautica
+    if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 30)
+    return Math.abs(n.stato.rollio) < 1.2
+  }, null, { timeout: 20000 }).then(() => true).catch(() => false)
+  if (!calmata) guai.push('accendendo lo stabilizzatore il rollio non scende: il sollievo non avrebbe una causa')
+
+  /* Poi il mare obbliga davvero a puntellarsi; poi resta calmo oltre la
      stessa soglia temporale usata dal sito. Il passo e' dichiarato: il test
      non dipende dai fotogrammi al secondo della macchina. */
   await pagina.evaluate(() => {

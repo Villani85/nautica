@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **31 agosto 2026, 09:00.** Da quando hai clonato potrei aver spinto
+Aggiornato: **31 agosto 2026, 12:30.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -327,6 +327,54 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 31 agosto, 10:20 — nove voci, e TRE sono difetti miei di ieri notte
+
+**Esito per esteso in
+[`revisore-2026-08-31-1020.md`](revisore-2026-08-31-1020.md).**
+
+**PRIORITA' ZERO, eseguita.** Il sito partiva stabilizzato, e la contraddizione
+era gia' dentro il repo: `simulazione.js:434` dichiarava `stab: false`,
+`stato.js:117` lo rimetteva a `true` venti file dopo. Adesso si parte spenti,
+la nave rolla di 16,16 gradi, e ad accendere e' l'utente. Tolta la
+dimostrazione automatica che riaccendeva da sola: un cronometro su
+quell'interruttore annullerebbe l'unica azione causale della visita. Invito
+invertito in «See what it does», che mantiene la promessa di scoperta nel verso
+giusto. **Protetta da `collaudo-stato-iniziale.mjs`**, provato rosso e verde,
+che legge il RUNTIME -- perche' `rg "stab = false"` avrebbe trovato la riga
+giusta e dichiarato tutto a posto mentre l'altra la sovrascriveva.
+
+**TRE DIFETTI MIEI, tutti confermati.** `?guscio=0` ACCENDEVA il guscio
+(`'?guscio=0'.includes('guscio')` e' `true`). I due strumenti nuovi si
+posizionavano in frazioni di PAGINA -- il divieto che questo repo ha gia' pagato
+tre volte -- e in `ciao3.md` avevo scritto che `p`, `corsaRacconto` e
+`cimaSezione` non esistono: **esistono**, le scrive `demo.js:378-393`, e io
+avevo cercato in `index.js`. Conseguenza: **i numeri di piazzamento pubblicati
+in `ciao3.md` erano presi nei punti sbagliati del racconto.** E un quaternione
+calcolato male che non stampavo nemmeno.
+
+**QUATTRO CANCELLI riallineati**, e nessuno era un difetto del sito: sollievo,
+cinematica e i due del nudge davano per scontato «si parte accesi». La cura non
+e' zittire il canale vero, e' percorrere la sequenza vera -- su una nave che
+sbatte il sollievo non puo' partire e non deve; un rapporto di trasmissione si
+misura col sistema in moto; e il nudge del giroscopio racconta «le pinne sono
+ACCESE e hanno perso acqua», che a pinne spente sarebbe una bugia. Adesso la
+catena causale si racconta da sola nell'ordine:
+
+```
+   0,5 s  11,82 kn  "The shaft slows. Speed follows."
+   7,0 s   7,09 kn  "The fins are still on. They are losing water."
+  13,0 s   5,06 kn  "Try the gyro"
+```
+
+**LA RISPOSTA ALLA MIA DOMANDA 1 era migliore della domanda.** Non serve
+indovinare la rotazione: si esporta la camera sorgente come NODO nel GLB
+(`CAMERA_SORGENTE_SALONE`, fatto) e la conversione degli assi viaggia col file.
+Il piazzamento resta aperto, ma senza piu' il pezzo che stavo indovinando.
+
+**Restano aperte e non le tocco:** la traversata world-space, i tre bordi, lo
+yacht sui primi cinque punti, la regia sonora. E il finale fermo 13,8 s, che e'
+messa in scena: **numero sul tavolo.**
 
 ### Giro del 31 agosto, 09:00 (`ciao.md`) — e la scoperta non e' una risposta, e' un RAMO
 

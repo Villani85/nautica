@@ -214,6 +214,32 @@ for ob in pezzi:
 #
 #  Quindi: un materiale c'e', e non porta niente. Chi legge il file vede un
 #  grigio dichiarato invece di un buco; chi lo monta ci mette il video.
+#  LA CAMERA SORGENTE ESCE NEL GLB, ed e' la risposta a una domanda che avevo
+#  posto male.
+#
+#  In `ciao3.md` avevo chiesto come confrontare guscio e lastra senza dover
+#  indovinare la rotazione. La risposta e' che non si deve indovinare niente:
+#  si esporta la camera come NODO, e la conversione degli assi viaggia dentro
+#  il file insieme alla geometria.
+#
+#  Cosi' `src/scena/guscio.js` non ricostruisce piu' a mano la matrice di
+#  `posa.json`, la sua trasposta e il mezzo giro attorno a X -- tre passaggi in
+#  cui avevo gia' sbagliato, con il guscio che finiva sopra la tuga. Legge un
+#  nodo e compone due trasformazioni.
+#
+#  E' la stessa regola che questo repo applica ai numeri: chi ha la misura la
+#  PUBBLICA, invece di lasciare che chi la usa la ricostruisca per
+#  approssimazione.
+cam_dati = bpy.data.cameras.new('CAMERA_SORGENTE_SALONE')
+cam_dati.sensor_fit = 'HORIZONTAL'
+cam_dati.sensor_width = 36.0
+cam_dati.lens = focale_px * 36.0 / larg_px
+cam_ob = bpy.data.objects.new('CAMERA_SORGENTE_SALONE', cam_dati)
+bpy.context.collection.objects.link(cam_ob)
+cam_ob.matrix_world = ORIENT
+cam_ob.location = BASE
+pezzi_e_camera = list(pezzi) + [cam_ob]
+
 piano = bpy.data.materials.new('GUSCIO')
 piano.use_nodes = True
 for ob in pezzi:
@@ -222,7 +248,7 @@ for ob in pezzi:
 
 glb = os.path.join(USCITE, 'guscio-salone.glb')
 bpy.ops.object.select_all(action='DESELECT')
-for ob in pezzi:
+for ob in pezzi_e_camera:
     ob.select_set(True)
 #  `export_yup=False` NON e' un dettaglio: e' la differenza fra un guscio nel
 #  posto giusto e una scatola blu che sbuca dalla tuga.
@@ -249,6 +275,7 @@ bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB',
                           export_materials='EXPORT',
                           export_normals=True,
                           export_texcoords=True,
+                          export_cameras=True,
                           export_yup=False)
 
 print('')

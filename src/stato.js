@@ -102,19 +102,43 @@ export const sim = creaSimulazione({
 })
 
 /**
- * LA CONDIZIONE DI PARTENZA DELLA VISITA — mare quattro, sistema ACCESO.
+ * LA CONDIZIONE DI PARTENZA DELLA VISITA — mare quattro, sistema SPENTO.
  *
- * Il sito si apre sul salone, e si apre **calmo**: due persone comode, i
- * bicchieri dritti, e fuori dal finestrino il mare che corre. Se si partisse
- * col sistema spento non ci sarebbe niente da spegnere, e la prima cosa che si
- * vede sarebbe una stanza che sbatte — cioe' il problema invece della sua
- * soluzione. Si entra da dove si sta bene, e solo dopo si scopre a spese di chi.
+ * ─── ERA ACCESO, E LA RAGIONE SCRITTA QUI ERA QUESTA
  *
- * E mare quattro perche' e' quello che la didascalia dichiara: se lo stato
- * fosse zero, spegnere non produrrebbe niente e l'invito sarebbe una bugia.
+ * *«Si entra da dove si sta bene, e solo dopo si scopre a spese di chi. Se si
+ * partisse col sistema spento non ci sarebbe niente da spegnere, e la prima
+ * cosa che si vede sarebbe una stanza che sbatte — cioe' il problema invece
+ * della sua soluzione.»*
+ *
+ * Non era un'argomentazione debole, ed e' giusto lasciarla scritta. Ma
+ * conteneva un errore di merito: **presuppone che il visitatore sappia gia' di
+ * stare bene**. Chi arriva su una nave calma non vede un problema risolto, vede
+ * una nave. Il beneficio non si legge, perche' manca il termine di paragone.
+ *
+ * ─── PERCHE' ADESSO E' SPENTO
+ *
+ * Decisione del committente, ribadita da una revisione esterna come priorita'
+ * zero: **il primo gesto dell'utente deve ACCENDERE, non spegnere.**
+ *
+ * L'ordine diventa: si arriva su una stanza che sbatte, con due persone che si
+ * puntellano (`salone-teso.mp4`, collegato in `salone3d.js:109`); l'invito dice
+ * di accendere; si accende; rollio e picco calano; il sollievo e' un raccordo
+ * girato (`salone-sollievo.mp4`) e non un'inferenza; e da li' si resta nella
+ * calma (`salone-largo.mp4`).
+ *
+ * Cosi' il beneficio non e' una didascalia: e' una cosa che il visitatore ha
+ * PROVOCATO, e la differenza fra prima e dopo se la porta addosso.
+ *
+ * E mare quattro resta, perche' e' quello che la didascalia dichiara: se lo
+ * stato fosse zero, accendere non produrrebbe niente e l'invito sarebbe una
+ * bugia. Vale nello stesso modo nei due versi.
+ *
+ * Protetto da `strumenti/collaudo-stato-iniziale.mjs`, che lo verifica sul
+ * runtime e non con una ricerca di testo nel sorgente.
  */
 sim.S.mare = 4
-sim.S.stab = true
+sim.S.stab = false
 
 /**
  * --- E LA TRAVERSATA E' GIA' COMINCIATA

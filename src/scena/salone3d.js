@@ -514,7 +514,23 @@ export function creaSalone3D (base, tuga) {
    * documento, spenta, perche' il confronto fra le due si fa a interruttore e
    * non a `git checkout`.
    */
-  if (typeof location !== 'undefined' && location.search.includes('guscio')) {
+  /**
+   * ─── `includes('guscio')` ACCENDEVA ANCHE `?guscio=0`
+   *
+   * Difetto mio, trovato da una revisione e riprodotto in una riga:
+   * `'?guscio=0'.includes('guscio')` e' `true`. Bastava anche un parametro
+   * qualsiasi che contenesse quella parola. Un interruttore che si accende
+   * quando gli si chiede di spegnersi non e' un interruttore.
+   *
+   * `URLSearchParams` e valori dichiarati, come `?doppia` in `regia.js`: si
+   * accetta la presenza nuda (`?guscio`) o un si' esplicito, e nient'altro.
+   */
+  const vuoleGuscio = () => {
+    if (typeof location === 'undefined') return false
+    const v = new URLSearchParams(location.search).get('guscio')
+    return v !== null && (v === '' || v === '1' || v === 'si' || v === 'true')
+  }
+  if (vuoleGuscio()) {
     const g = creaGuscio(base, stanzaTex, gruppo.position.clone())
     gruppo.add(g)
     stanza.visible = false
