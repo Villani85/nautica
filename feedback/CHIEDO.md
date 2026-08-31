@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **29 agosto 2026, 20:10.** Da quando hai clonato potrei aver spinto
+Aggiornato: **31 agosto 2026, 09:00.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -327,6 +327,53 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 31 agosto, 09:00 (`ciao.md`) — e la scoperta non e' una risposta, e' un RAMO
+
+**Esito per esteso in
+[`revisore-2026-08-31-0900.md`](revisore-2026-08-31-0900.md).**
+
+Risponde punto per punto al blocco A/B. Ma la cosa che conta e' che due
+affermazioni sembravano contraddire le mie misure — `src/ui/suono.js` esiste, le
+clip della coppia tesa e del sollievo esistono — **e non le contraddicevano:
+guardavamo due alberi diversi.** Le tre cose non erano su `main`; erano su
+`worktree-atto-due-leggibile`, insieme ad altri 35 commit, fra cui i cinque
+copioni del **guscio del salone** — cioe' la cura del difetto che il giro delle
+20:10 chiamava «priorita' assoluta» e che io avevo lasciato aperto dicendo «e'
+costruzione, non un commit di sera». Era gia' costruita.
+
+`main` non aveva un solo commit che il ramo non avesse: un avanzamento pulito,
+fermo. **Stessa forma del workflow rotto di due giorni fa, da un'altra porta:
+lavoro che esiste e non arriva al sito.** Innestato, con il finale verificato
+guardandolo — la coppia dell'apertura c'e' ancora, e ci si arriva in 8,04 s
+invece di 9,58. Catena locale exit 0, filmati 4,12 MB su 4,2.
+
+**A1 — si e' rifiutato di darmi focale e altezza, e ha ragione.** La clip e'
+generata: puo' contenere piu' prospettive localmente plausibili ma incompatibili
+con una sola camera. E' la regola di questo repo applicata a me da fuori. Da' la
+procedura (RANSAC sui punti di fuga, errore di registro misurato) e la
+condizione d'arresto — se una sola camera non tiene tutti i gruppi, non forzarla
+— e impone il nome `IPOTESI_FOCALE` finche' non e' calibrata. E cambia la
+strada: **guscio 2,5D piu' proiezione limitata**, non proiezione dell'intera
+stanza; la fotografia resta fondale, cio' che produce parallasse diventa
+geometria.
+
+**A2 — tre bordi che non avevo visto** (cavita' nera dietro il piano, sezioni
+di scafo senza cappatura a 96-110 s, lastre troncate) e un protocollo che vale
+piu' dell'elenco: quattro viewport, percorso a 0,25x, si guarda **il perimetro**
+dello schermo e non il centro.
+
+**A3 — ordine netto:** seconda clip → cambiare la rivendicazione → deformare la
+clip calma (la peggiore). Le clip ci sono: il lavoro e' montarle nello stato
+giusto, e *«non rigenerare per abitudine»*.
+
+**A4 — l'ordine dello yacht**, e la riga che spiega un mio fallimento
+precedente: *«non iniziare dal punto 6»* (microdettaglio). La normale della
+sovrastruttura non spostava niente perche' era gia' un intervento del punto 6.
+
+**A5 — sei strati di suono**, e la riga che tengo: *«il silenzio dopo la
+stabilizzazione puo' valere piu' di un ulteriore layer: non riempire ogni
+istante»*. Dosaggio e presenza restano **messa in scena, sul tavolo**.
 
 ### Giro del 29 agosto, 20:10 — trova a occhio il difetto che nessun cancello vedeva
 
