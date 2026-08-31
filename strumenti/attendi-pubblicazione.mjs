@@ -30,7 +30,13 @@ console.log('atteso:', atteso)
 
 const api = async (v) => (await fetch(v, { headers: { 'accept': 'application/vnd.github+json' } })).json()
 
-for (let giro = 1; giro <= 40; giro++) {
+/**
+ * Ottanta giri da mezzo minuto: quaranta minuti. Con venti la sentinella usciva
+ * per scadenza su una corsa ancora viva e non distingueva «rotta» da «lenta» --
+ * due difetti diversi con due rimedi diversi. La catena ha 38 passi da quando
+ * le due liste sono state riallineate, e non ne facevano piu' venti.
+ */
+for (let giro = 1; giro <= 80; giro++) {
   let servito = null
   try {
     const pagina = await (await fetch('https://villani85.github.io/nautica/?x=' + Date.now())).text()
