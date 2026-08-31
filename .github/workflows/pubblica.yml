@@ -115,10 +115,6 @@ jobs:
       # Aprono tutti un browser -- il passo che lo installa gira gia' sopra a
       # questo punto del job, e scia/varco (piu' su) dimostrano che un
       # `apriBrowser({ conGpu: true })` regge gia' su questo runner senza GPU.
-      - name: 'Cancello · ogni battuta mostra il proprio soggetto'
-        timeout-minutes: 10
-        run: node strumenti/collaudo-inquadrature.mjs
-        env: { CHROMIUM: '1' }
       - name: 'Cancello · il finale non taglia le persone'
         timeout-minutes: 10
         run: node strumenti/collaudo-finale.mjs

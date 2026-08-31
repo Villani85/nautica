@@ -48,6 +48,16 @@ const ECCEZIONI = {
     "macchina di chi scrive, prima della spinta -- e' scritto anche nella " +
     'testata di collaudo-workflow.mjs.',
 
+  passi: "stessa ragione di `workflow`, ed e' la stessa impossibilita': " +
+    "verifica che ogni passo abbia un `run` o un `uses`. Un passo senza " +
+    "comando GitHub lo RIFIUTA, quindi la corsa non parte affatto e non c'e' " +
+    "nessuna corsa che possa segnalarlo. Deve fallire sulla macchina di chi " +
+    "scrive, prima della spinta. Nato il 31 agosto perche' togliendo un " +
+    "cancello dal workflow ho cancellato la sua sola riga `run:` e lasciato " +
+    "in piedi nome, tetto ed env -- e collaudo-workflow ha risposto " +
+    "«leggibili da Actions», perche' guarda le chiavi duplicate, che e' " +
+    "un'altra domanda.",
+
   orizzonte: "misura la STRUTTURA TONALE di cio' che il motore disegna. Il " +
     'runner CI non ha GPU: Chromium vi gira su un rasterizzatore software ' +
     '(SwiftShader), che produce una tonalita\' diversa da quella che riceve ' +
@@ -55,6 +65,21 @@ const ECCEZIONI = {
     "mentre in locale (con GPU vera) passa -- non e' un difetto del sito, e' " +
     "il metro che misura la macchina invece del disegno. Documentato in " +
     "pubblica.yml riga ~95. Rientra il giorno in cui il runner ha una GPU.",
+
+  inquadrature: "misura la COPERTURA IN PIXEL del soggetto di ogni battuta: " +
+    "rende la scena, legge la tela, e conta i pixel che cambiano togliendo il " +
+    "soggetto. E' la stessa famiglia di orizzonte e cielo -- un giudizio sui " +
+    "pixel disegnati, su un rasterizzatore che non e' quello di un visitatore " +
+    "vero. La corsa 280 del 31 agosto e' uscita rossa qui mentre in locale il " +
+    "cancello passa, sia con GPU sia con SwiftShader, e con la simulazione " +
+    "inchiodata da ?fermo i due ambienti locali danno 16,8% e 16,9% contro un " +
+    "tetto del 22%: cinque punti di margine. COSA NON SO, e va detto: senza " +
+    "poter leggere il log della CI non so se il rosso sia la copertura o " +
+    "l'attesa `attendiCameraFerma`, che si arrende dopo 40 giri e su una " +
+    "macchina lenta puo' misurare con la camera ancora in moto. Il giorno in " +
+    "cui il log e' leggibile, la prima cosa da guardare e' quale delle due. " +
+    "Resta in `npm run collaudo`, che gira su hardware vero: e' li' che quel " +
+    "numero significa qualcosa.",
 
   cielo: "stessa famiglia di orizzonte, stessa causa: struttura tonale " +
     "giudicata su un rasterizzatore software che non e' quello di un " +
