@@ -32,6 +32,19 @@
  *
  * ─── COME SI LEGGE
  *
+ * ─── SI MISURA A SCENA INCHIODATA (`?fermo`)
+ *
+ * Senza, la stessa identica configurazione dava 45,8 · 16,8 · 23,3 in tre
+ * corse: il mare si muove, la nave rolla, le clip suonano, e due caricamenti
+ * diversi non mostrano mai la stessa cosa. Un metro che oscilla piu' della cosa
+ * misurata non serve a cercare, e cercare e' il suo unico scopo.
+ *
+ * `?fermo=6` inchioda la simulazione a un istante dichiarato -- lo stesso
+ * meccanismo che i cancelli della resa usano da sempre per confrontare due
+ * fotogrammi. Il valore non conta: conta che sia lo stesso nelle due catture.
+ *
+ * ─── COME SI LEGGE
+ *
  * `scarto medio` in livelli su 255, sui soli pixel dove ALMENO UNA delle due
  * immagini ha qualcosa (fuori dal salone sono entrambe la stessa nave, e
  * includerle diluirebbe l'errore fino a farlo sparire).
@@ -91,7 +104,8 @@ const browser = await apriBrowser({ conGpu: true })
 async function pixel (conGuscio) {
   const pg = await browser.newPage()
   await pg.setViewportSize({ width: LARG, height: ALT })
-  await pg.goto(BASE + '?ispeziona=1' + (conGuscio ? '&guscio=1' : ''), { waitUntil: 'load' })
+  const conv = process.env.CONV || '0'
+  await pg.goto(BASE + '?ispeziona=1&fermo=6' + (conGuscio ? `&guscio=1&conv=${conv}&dz=${process.env.DZ || 0}` : ''), { waitUntil: 'load' })
   await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 45000 })
   /* si aspetta che il video della stanza stia girando: confrontare due
      fotogrammi di cui uno e' ancora nero misurerebbe il caricamento */
@@ -101,7 +115,39 @@ async function pixel (conGuscio) {
   }, null, { timeout: 30000 }).catch(() => {})
   await vaiA(pg, P)
   await pg.waitForTimeout(1500)
-  const via = `${FUORI}/${conGuscio ? 'guscio' : 'lastra'}-p${String(Math.round(P * 1000)).padStart(4, '0')}.png`
+  /**
+   * ─── SI INCHIODA IL FILMATO, o si misura il film invece del piazzamento
+   *
+   * Le due schermate vengono da due caricamenti diversi, e la clip del salone
+   * SUONA: catturano due istanti diversi della stessa stanza. Misurato, e mi
+   * stava ingannando: la stessa identica configurazione dava 20,1 e poi 31,5,
+   * e una ricerca sulla distanza usciva non monotona -- meno a -0,2, di piu' a
+   * 0, meno a +0,2. Stavo per leggere quel disordine come un minimo.
+   *
+   * Non e' un difetto del sito: e' il metro che oscilla piu' della cosa
+   * misurata. Un metro cosi' non serve a cercare, e cercare era il suo unico
+   * scopo.
+   *
+   * Si mette ogni video sullo stesso fotogramma e in pausa. Il valore non
+   * conta, conta che sia LO STESSO nelle due catture.
+   */
+  await pg.evaluate(async () => {
+    const vs = [...document.querySelectorAll('video')]
+    for (const v of vs) {
+      try {
+        v.pause()
+        if (v.readyState >= 1 && Number.isFinite(v.duration)) {
+          v.currentTime = Math.min(1.0, v.duration * 0.2)
+        }
+      } catch {}
+    }
+    await new Promise(r => setTimeout(r, 600))
+    /* un fotogramma di disegno dopo il seek, o la texture porta ancora il
+       fotogramma di prima */
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  })
+  await pg.waitForTimeout(400)
+  const via = `${FUORI}/${conGuscio ? 'guscio' + (process.env.CONV || '0') + 'dz' + (process.env.DZ || '0') : 'lastra'}-p${String(Math.round(P * 1000)).padStart(4, '0')}.png`
   await pg.screenshot({ path: via })
   /**
    * ─── SI LEGGE LA SCHERMATA, NON LA TELA

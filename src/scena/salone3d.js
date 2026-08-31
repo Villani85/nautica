@@ -535,7 +535,11 @@ export function creaSalone3D (base, tuga) {
        SISTEMA DEL GRUPPO. Misurato con `strumenti/posa-sito.mjs`, non supposto:
        in asse, 1,31 unita' davanti alla lastra, rotazione identita'. */
     const g = creaGuscio(base, stanzaTex, {
-      posizione: new Vector3(-0.01, 0, 1.3089),
+      /* `?dz=` sposta il bersaglio lungo l'asse di vista. Serve a CERCARE la
+         distanza col registro in pixel invece di indovinarla: la rotazione e'
+         gia' risolta per misura, resta la scala apparente. */
+      posizione: new Vector3(-0.01, 0, 1.3089 +
+        Number(new URLSearchParams(location.search).get('dz') || 0)),
       quaternione: new Quaternion()
     })
     gruppo.add(g)

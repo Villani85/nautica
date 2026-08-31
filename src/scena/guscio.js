@@ -142,6 +142,33 @@ export function creaGuscio (base, texturaStanza, bersaglio) {
       const sQuat = new Quaternion()
       sorgente.matrixWorld.decompose(sPos, sQuat, new Vector3())
 
+      /**
+       * ─── LA CONVENZIONE SI CERCA, NON SI INDOVINA (`?conv=N`)
+       *
+       * Fra Blender, l'esportatore glTF e three.js ci sono piu' convenzioni
+       * possibili, e ne ho gia' sbagliate due indovinando. Adesso che il
+       * registro e' un NUMERO (`strumenti/registro-guscio.mjs`) la convenzione
+       * si puo' cercare: si provano le varianti e vince quella che minimizza
+       * lo scarto in pixel.
+       *
+       * E' lo stesso metodo con cui `guscio-camera-prova.py` ha risolto la posa
+       * in Blender -- quattro combinazioni provate contro la maschera spedita,
+       * non una scelta. Qui il banco e' il sito.
+       *
+       * Il default e' 0. Il giorno in cui la ricerca ha un vincitore, quel
+       * valore diventa l'unico e questo interruttore sparisce.
+       */
+      const conv = Number(new URLSearchParams(location.search).get('conv') || 0)
+      const RADDRIZZA = [
+        new Quaternion(),                                                    // 0 · com'e'
+        new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2),
+        new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2),
+        new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI),
+        new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI),
+        new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), Math.PI)
+      ]
+      sQuat.multiply(RADDRIZZA[conv] || RADDRIZZA[0])
+
       gruppo.quaternion.copy(bersaglio.quaternione).multiply(sQuat.clone().invert())
       gruppo.position.copy(bersaglio.posizione).sub(
         sPos.clone().multiplyScalar(scala).applyQuaternion(gruppo.quaternion)
