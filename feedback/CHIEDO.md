@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **31 agosto 2026, 12:30.** Da quando hai clonato potrei aver spinto
+Aggiornato: **31 agosto 2026, 13:45.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -327,6 +327,62 @@ sotto al giro dopo.
 ---
 
 ## 5 · Risposte ai giri precedenti
+
+### Giro del 31 agosto, 13:21 — «lo stato e' chiuso, la percezione no»
+
+**Esito per esteso in
+[`revisore-2026-08-31-1321.md`](revisore-2026-08-31-1321.md).**
+
+Il verdetto d'apertura separa due cose che stavo confondendo: *«la correzione
+dello stato iniziale e' chiusa; la correzione percettiva ed emotiva non lo e'»*.
+
+**VOCE 1 — confermata nella sostanza, NON riprodotta nel numero.** Dice che
+nella clip tesa le persone si muovono MENO che nella calma (0,035 contro
+0,037). Rimisurato in proprio a 640x360 con la maschera del finestrone: **il
+verso e' opposto**, la tesa si muove il 17% in PIU' (0,076 contro 0,065). Ma la
+conclusione regge con un numero piu' forte del suo: la tesa ha **5,6 volte meno
+movimento umano del sollievo** (0,076 contro 0,424). La posa «tesa» e'
+praticamente immobile quanto la calma, e la differenza fra le due sta nel
+rumore. Quale posa girare e' **messa in scena**; il metro per giudicare la
+prossima generazione resta: la stanza deve avvicinarsi a 0,4, non a 0,07.
+
+**VOCE 2 — confermata riga per riga.** `attrito.js:36` `ATTRITO_MS = 550`,
+`:61` `preventDefault()`, `:64-66` `passive:false` su wheel e touchmove. Il
+sito **annulla davvero il gesto** per mezzo secondo, e il commento del file
+dichiara che senza `passive:false` il browser lo ignorerebbe. Toglierlo e'
+messa in scena. **Sul tavolo, con la riga.**
+
+**VOCE 3 — confermata.** `demo.js:342-343`: 100svh di antefatto + 120 di coda
+su 640 scrollabili = **34,4% che non racconta**. Il commento CSS chiama la coda
+«120svh in cui non succede piu' niente»: la descrizione e' del repo.
+
+**VOCE 4 — confermata.** Tre orologi diversi: l'attrito, `leggiScorrimento` che
+chiama `regia(p)` sull'evento, e `salone-atto.js:151-153` che legge
+`getBoundingClientRect` a ogni evento. L'architettura `pTarget`/`pVisual` in un
+solo RAF e' quella giusta ed e' costruzione.
+
+**VOCE 5 — confermata, e da' il criterio che mancava:** *«un piano appeso alla
+camera che copre il 100% del quadro e' un nuovo film anche se vive dentro lo
+stesso renderer»*, quindi **verificare che in nessun frame un piano
+camera-space copra l'intero canvas**. E' un cancello scrivibile: oggi
+`collaudo-continuita` la copertura la misura ma non la fa fallire.
+
+**VOCE 6 — confermata, ed e' un difetto mio di stamattina.** Ho eseguito la
+decisione dello stato iniziale e **non ho messo in scena il gesto che la rende
+sensata**: nel provino a 19-21 s il salone e' gia' un rettangolo nello scafo con
+lo stabilizzatore ancora spento, e il visitatore non ha mai prodotto il
+sollievo davanti alle persone. Che il collaudo debba mandare un **pointer click
+vero** (con `elementFromPoint`, occlusione, contrasto) e' mio e va fatto; dove
+mettere il comando e come chiamarlo e' messa in scena.
+
+**Le quattro risposte.** Il metro del guscio va fatto sull'INTERSEZIONE di
+`posa.json` e `finestrone.png`, erosa di 3-4 px — e certifica solo registro e
+UV dentro la zona visibile, **non la profondita'**: *«la vista sorgente da sola
+non puo' rivelare una profondita' falsa, perche' per costruzione la fotografia
+combacia anche su una geometria sbagliata»*. Guscio **corto** che consegna a una
+causa materiale, non lungo con texture stirata. Prima il guscio, timebox una
+sessione, e **non inseguire il residuo 26,7**, che ha un pavimento strutturale.
+Finale e contatto: tutte e due le cure, il contatto eredita il ritardo.
 
 ### Giro del 31 agosto, 10:20 — nove voci, e TRE sono difetti miei di ieri notte
 
