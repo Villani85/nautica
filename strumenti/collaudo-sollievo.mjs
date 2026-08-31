@@ -44,10 +44,27 @@ try {
   pagina.on('pageerror', e => errori.push(String(e)))
   await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
   await pagina.waitForFunction(() => window.__nautica?.statoSollievo?.(), null, { timeout: 60000 })
+  /**
+   * ─── `>= 3`, NON `>= 2`, e la differenza e' tutta qui
+   *
+   * DIFETTO PRESO IN CI E POI RIPRODOTTO IN LOCALE. `readyState 2` e'
+   * HAVE_CURRENT_DATA: c'e' il fotogramma corrente e NON abbastanza dati per
+   * proseguire. `3` e' HAVE_FUTURE_DATA: il video puo' andare avanti.
+   *
+   * Questo cancello misura una CONSEGNA FRA DUE VIDEO -- il sollievo che
+   * finisce e la calma che riparte. Con `2` la misura comincia mentre il
+   * decodificatore e' ancora in affanno, e su un runner senza decodifica
+   * hardware la calma torna a `readyState 1` a meta' prova. La diagnosi
+   * stampava «910 fotogrammi presentati, readyState 1», e i tre ROTTO che
+   * seguivano erano veri e riguardavano il decodificatore, non il sito.
+   *
+   * E' la stessa lezione di stasera, applicata al posto giusto: non basta che
+   * ci sia un'attesa, deve aspettare LA RISORSA DA CUI IL CANCELLO DIPENDE.
+   */
   await pagina.waitForFunction(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')
-    return v?.readyState >= 2 && Number.isFinite(v.duration)
-  }, null, { timeout: 30000 })
+    return v?.readyState >= 3 && Number.isFinite(v.duration)
+  }, null, { timeout: 60000 })
 
   /**
    * ─── SI ASPETTA CHE LA CALMA STIA GIRANDO, PRIMA DI MISURARE
@@ -69,8 +86,8 @@ try {
    */
   await pagina.waitForFunction(() => {
     const c = document.querySelector('video[src*="salone-largo"]')
-    return c && c.readyState >= 2 && !c.paused && c.currentTime > 0.02
-  }, null, { timeout: 30000 })
+    return c && c.readyState >= 3 && !c.paused && c.currentTime > 0.02
+  }, null, { timeout: 60000 })
 
   const prima = await pagina.evaluate(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')
