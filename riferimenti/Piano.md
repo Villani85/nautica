@@ -350,16 +350,49 @@ leggerlo. Se il pacchetto entra nel repo, quel file cede all'originale.
 
 | ondata | aperta | chiusa | esito |
 |---|---|---|---|
-| 1 | 15:05 | — | in corso |
+| 1 | 15:05 | **15:13** | 8 agenti, 8 referti, commit `708e0bf`: 14 file, +10.217 righe. **CHIUSA.** |
+| 2 | **mai aperta** | — | B1, B2, B3 non sono mai stati lanciati: vedi sotto |
+
+> **La riga dell'ondata 1 e' rimasta aperta per un'ora e quaranta con incarichi
+> da venti minuti**, mentre il §3-bis elencava cinque attivita' come chiuse.
+> Rilievo della revisione, ed era la contraddizione giusta da segnalare: o
+> l'ondata e' chiusa e la riga va compilata, o e' aperta e il §3-bis e'
+> ottimista. Era la prima.
+>
+> **E l'ondata 2 non e' mai partita.** Va detto invece di lasciarlo dedurre: da
+> fuori sembrava che girasse senza checkpoint. Dalle 15:30 il committente ha
+> aperto una sessione di segnalazioni dal vivo — nove voci sul sito pubblicato —
+> e quelle hanno la precedenza su qualunque piano, perche' sono le uniche che
+> descrivono cio' che un visitatore vede oggi. Gli esiti stanno nell'**Onda 3**.
+>
+> **B1 non si scrive per primo**, ed e' l'altra correzione della revisione.
+> Verificato riga per riga: `saloon.py:124` e `corridor.py:180` creano davvero
+> `WORLD_ROOT`; `mechanism_bay.py` lo nomina solo nei commenti (`:202`, `:342`)
+> e `camera_path.py` una volta sola (`:264`), per dire che il nodo comune «non
+> e' ancora eseguito» — infatti P0, P1 e P3 sono etichettati `ASSUNTO`. E le
+> due radici che esistono sono create ciascuna nella propria scena: stesso
+> nome, nessuna origine comune. Scrivere l'assemblatore adesso vorrebbe dire
+> farne il luogo dove quattro sistemi di riferimento incompatibili collidono.
+>
+> Ordine giusto: **B0** `riferimenti/blender/world_root.py` (origine, assi,
+> unita', collezioni) importato da tutti e quattro · **B0b** `mechanism_bay` e
+> `corridor` collocati dentro quella radice · **B0c** la curva di
+> `camera_path.py` riderivata sui numeri veri, cosi' le z `ASSUNTO` diventano
+> misurate · **B1** l'assemblatore, per ultimo.
+>
+> **Condizione di uscita dell'ondata 2:** `npm run onda2` verde.
 
 ---
 
 ## 5 · DOMANDE APERTE
 
-1. **`WORLDSPACE-CONTRATTO.md` non è nel repo.** Sta nel pacchetto Drive del
-   §14. Va scaricato e messo sotto controllo di versione prima della Fase B,
-   altrimenti gli agenti costruiscono contro un contratto che non possono
-   leggere.
+1. ~~**`WORLDSPACE-CONTRATTO.md` non è nel repo.**~~ — **RITIRATA.** Si è
+   risposta da sola tre commit fa: `708e0bf` l'ha aggiunta, e
+   `riferimenti/WORLDSPACE-CONTRATTO.md` pesa 4.843 byte. La domanda è rimasta
+   in piedi a dichiarare una mancanza che il repo smentiva — la stessa classe
+   di difetto di D7 («il sito è muto», falso), e per la stessa ragione: nessuno
+   ritira una domanda quando arriva la risposta. **Le domande aperte si
+   rileggono a ogni giro, non solo si aggiungono.**
 2. **La clip tesa candidato 02 passa i numeri** (0,457 di movimento contro
    0,076, carrellata 0,33%). Resta il giudizio di credibilità — il primo
    candidato è stato respinto perché la donna si alzava. **Serve un sì.**
