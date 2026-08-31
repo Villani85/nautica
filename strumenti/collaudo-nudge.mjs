@@ -139,6 +139,35 @@ console.log(`\n  battuta raggiunta: ${battuta}`)
  * invece di misurare uno stato che nel percorso non esiste.
  */
 await pg.evaluate(() => { window.__nautica.stato.stab = true })
+
+/**
+ * ─── E SI ASPETTA CHE LA NAVE SI SIA CALMATA DAVVERO
+ *
+ * Le due battute maturano su grandezze diverse: le pinne sulla VELOCITA', il
+ * giroscopio sul ROLLIO RMS sopra `IPOTESI_ROLLIO_AVVERTITO_RMS` (1,8).
+ *
+ * Accendendo lo stabilizzatore e spegnendo la propulsione nello stesso istante,
+ * l'RMS porta ancora i valori della partenza scomposta -- il sito parte spento
+ * e la nave rolla di sedici gradi -- quindi il giroscopio scatta SUBITO e
+ * scavalca le pinne. Misurato: «Try the gyro» a 2,0 s e 11,01 kn, con la
+ * battuta delle pinne mai detta.
+ *
+ * Non e' un difetto del sito: e' il cancello che comprime in un istante due
+ * momenti che nella visita distano minuti. L'utente accende, GUARDA la nave
+ * calmarsi -- e' il raccordo del sollievo -- e solo dopo scende al meccanismo.
+ *
+ * Si aspetta quindi che l'RMS sia sceso sotto la soglia del giroscopio, cosi'
+ * la fila delle battute riparte da zero come per chi visita davvero.
+ */
+const calmata = await pg.waitForFunction(() => {
+  const n = window.__nautica
+  if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 60)
+  return (n.stato.rollioRms ?? 99) < 1.5
+}, null, { timeout: 30000 }).then(() => true).catch(() => false)
+if (!calmata) {
+  console.log('\n  ROTTO  acceso lo stabilizzatore il rollio non si calma: le battute non hanno un ordine\n')
+  await browser.close(); preview?.kill(); process.exit(1)
+}
 await pg.waitForTimeout(300)
 
 const leggi = () => pg.evaluate(() => {
@@ -267,6 +296,10 @@ for (let i = 0; i < GIRI_MAX; i++) {
   simulati += PASSO_S
   await pg.waitForTimeout(300)
   ultimo = await leggi()
+  if (process.env.DIAGNOSI) {
+    console.log(`    [${simulati.toFixed(1)}s] v ${ultimo.velocita} · prop ${ultimo.propulsione} ` +
+                `· stab ${ultimo.stab} · gyro ${ultimo.gyro} · bolla ${ultimo.bolla ?? '-'}`)
+  }
   const b = ultimo.bolla
   if (b && b !== ultima) {
     fila.push({ t: simulati, testo: b, v: ultimo.velocita, rms: ultimo.rms, dove: ultimo.battuta })
