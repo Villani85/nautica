@@ -147,7 +147,7 @@ pagina.on('console', m => {
  * dimostrare che questo cancello la boccia. Un cancello che nessuno ha visto
  * fallire non e' un cancello.
  */
-await pagina.goto(BASE + '?ispeziona=1' + (UNICA ? '' : '&doppia=1'), { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1' + (UNICA ? '' : '&doppia=1'), { waitUntil: 'load', timeout: 45000 })
 await pagina.waitForTimeout(1500)
 // il motore e' a import differito: si aspetta che la scena esista davvero
 await pagina.evaluate(() => {

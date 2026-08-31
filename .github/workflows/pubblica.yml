@@ -16,10 +16,30 @@ concurrency:
 
 jobs:
   compila:
+    # ─── UN PASSO PIANTATO DEVE ARRENDERSI, e senza questo non puo'
+    #
+    # Il 31 agosto la corsa 279 e' rimasta ferma quaranta minuti sullo stesso
+    # passo senza fallire. Non era lenta e non era rotta: SENZA `timeout-minutes`
+    # il limite e' quello di GitHub, sei ore. Una corsa che non si arrende non
+    # produce un log del passo colpevole, quindi ogni diagnosi costa un'attesa --
+    # e stasera ne e' costate tre.
+    #
+    # Venti non e' generoso: la catena ne impiega circa novanta in totale, ma un
+    # SINGOLO cancello che ne prende venti e' piantato per definizione, visto che
+    # il piu' lento in locale ne costa uno.
+    # Il tetto del JOB copre la catena intera, che ne impiega circa novanta. Il
+    # tetto per PASSO, dieci minuti su ogni cancello, e' quello che conta: il
+    # cancello piu' lento in locale ne costa uno, quindi dieci minuti significa
+    # piantato, non lento. Senza il tetto per passo, un solo cancello bloccato
+    # consumerebbe comunque tutti i novanta e il log direbbe "scaduto" senza
+    # dire quale -- che e' esattamente il buco di stasera.
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 15
       - uses: actions/setup-node@v4
+        timeout-minutes: 15
         with:
           node-version: 22
           cache: npm
@@ -46,9 +66,11 @@ jobs:
       # mancante. E' costato tre esecuzioni rosse, perche' la catena diceva
       # solo «lo step e' fallito».
       - name: ffmpeg per il cancello dei filmati
+        timeout-minutes: 15
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
       - name: Un browser per i collaudi
+        timeout-minutes: 15
         run: npx playwright install --with-deps chromium
 
       # I CANCELLI GIRANO PRIMA DI PUBBLICARE, o non sono cancelli.
@@ -69,21 +91,22 @@ jobs:
       #
       # `CHROMIUM=1` vale per tutti: in CI non c'e' nessun Chrome di sistema, e
       # dirlo e' meglio che lasciarlo scoprire per tentativi.
-      - { name: 'Cancello · rollio',       run: node strumenti/collaudo-rollio.mjs }
+      - { name: 'Cancello · rollio',       run: node strumenti/collaudo-rollio.mjs, timeout-minutes: 10 }
       # La catena causale dell'atto due: mancava qui mentre esisteva in
       # `npm run collaudo`. Le due liste erano divergenti in ENTRAMBI i versi --
       # scia e varco solo qui, catena solo li' -- e nessuna delle due lo diceva.
-      - { name: 'Cancello · catena causale', run: node strumenti/collaudo-catena.mjs }
-      - { name: 'Cancello · scafo',        run: node strumenti/collaudo-scafo.mjs }
-      - { name: 'Cancello · mare',         run: node strumenti/collaudo-mare.mjs }
-      - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs }
-      - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs }
-      - { name: 'Cancello · loop filmati', run: node strumenti/collaudo-loop.mjs }
+      - { name: 'Cancello · catena causale', run: node strumenti/collaudo-catena.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · scafo',        run: node strumenti/collaudo-scafo.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · mare',         run: node strumenti/collaudo-mare.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · loop filmati', run: node strumenti/collaudo-loop.mjs, timeout-minutes: 10 }
       - name: 'Cancello · il sollievo e una conseguenza'
+        timeout-minutes: 10
         run: node strumenti/collaudo-sollievo.mjs
         env: { CHROMIUM: '1' }
-      - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
-      - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
+      - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs, timeout-minutes: 10 }
+      - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs, timeout-minutes: 10 }
 
       # ─── D1: I CANCELLI CHE MANCAVANO, TROVATI DA `collaudo-cancelli.mjs`
       #
@@ -93,18 +116,23 @@ jobs:
       # questo punto del job, e scia/varco (piu' su) dimostrano che un
       # `apriBrowser({ conGpu: true })` regge gia' su questo runner senza GPU.
       - name: 'Cancello · ogni battuta mostra il proprio soggetto'
+        timeout-minutes: 10
         run: node strumenti/collaudo-inquadrature.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · il finale non taglia le persone'
+        timeout-minutes: 10
         run: node strumenti/collaudo-finale.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · il finale respira'
+        timeout-minutes: 10
         run: node strumenti/collaudo-finale-vivo.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · due scritte non si sovrappongono'
+        timeout-minutes: 10
         run: node strumenti/collaudo-ingombri.mjs
         env: { CHROMIUM: '1' }
       - name: 'Cancello · lo scroll fa sempre qualcosa'
+        timeout-minutes: 10
         run: node strumenti/collaudo-corsa-viva.mjs
         env: { CHROMIUM: '1' }
       # La fluidita' si autoriconosce su un rasterizzatore software (cerca
@@ -113,12 +141,13 @@ jobs:
       # puo' entrare in CI anche senza GPU vera, a differenza di orizzonte e
       # cielo qui sotto.
       - name: 'Cancello · fluidita dello scorrimento'
+        timeout-minutes: 10
         run: node strumenti/collaudo-fluidita.mjs
         env: { CHROMIUM: '1' }
       # Non apre un browser: legge riferimenti/ e feedback/ e cerca righe che
       # negano l'esistenza di qualcosa che il disco smentisce. Nessuna ragione
       # per restare fuori dalla CI -- puo' girare ovunque giri Node.
-      - { name: 'Cancello · i documenti non dichiarano mancanze smentite', run: node strumenti/collaudo-piano.mjs }
+      - { name: 'Cancello · i documenti non dichiarano mancanze smentite', run: node strumenti/collaudo-piano.mjs, timeout-minutes: 10 }
       # ─── LA DIVERGENZA FRA LE DUE LISTE, ADESSO DICHIARATA
       #
       # Per un giorno intero `npm run collaudo` e questo workflow non hanno
@@ -142,8 +171,9 @@ jobs:
       # Restano quindi LOCALI, dichiarati qui: sono cancelli sulla RESA, e la
       # resa di un rasterizzatore software non e' quella che riceve un
       # visitatore. Il giorno in cui questo runner avesse una GPU, rientrano.
-      - { name: 'Cancello · validatore glTF', run: node strumenti/collaudo-gltf.mjs }
+      - { name: 'Cancello · validatore glTF', run: node strumenti/collaudo-gltf.mjs, timeout-minutes: 10 }
       - name: 'Cancello · continuita della scena'
+        timeout-minutes: 10
         run: node strumenti/collaudo-continuita.mjs
         env: { CHROMIUM: '1' }
       # ─── LA CINEMATICA E' LOCALE, e la ragione l'ho LETTA nel log
@@ -176,6 +206,7 @@ jobs:
       # regola di stile che spegneva i comandi proprio dove il sito ha piu'
       # da dimostrare. Nessun altro cancello poteva vederlo.
       - name: 'Cancello · la manopola comanda il meccanismo'
+        timeout-minutes: 10
         run: node strumenti/collaudo-manopola.mjs
         env: { CHROMIUM: '1' }
 
@@ -191,6 +222,7 @@ jobs:
       # e non sono cieche -- il giro dei nudge gira su un intervallo da 250 ms,
       # quindi si aspetta il meccanismo che accende la bolla, non "un po'".
       - name: 'Cancello · il suggerimento del giroscopio arriva'
+        timeout-minutes: 10
         run: node strumenti/collaudo-nudge.mjs
         env: { CHROMIUM: '1' }
 
@@ -205,6 +237,7 @@ jobs:
       # Puo' stare in CI perche' non misura la resa: legge lo stato, l'attributo
       # annunciato, e fa avanzare il rollio a passo dichiarato.
       - name: 'Cancello · si parte spenti e il gesto accende'
+        timeout-minutes: 10
         run: node strumenti/collaudo-stato-iniziale.mjs
         env: { CHROMIUM: '1' }
 
@@ -213,6 +246,7 @@ jobs:
       # fermava anche il VIDEO del salone -- che nessuno aveva deciso di
       # fermare, ma era attaccato a qualcosa che qualcun altro spegneva.
       - name: 'Cancello · il movimento ridotto e una versione ridotta'
+        timeout-minutes: 10
         run: node strumenti/collaudo-ridotto.mjs
         env: { CHROMIUM: '1' }
 
@@ -221,10 +255,12 @@ jobs:
       # nessun altro guarda: che la scia risponda all'andatura, e che il varco
       # nel pelo si apra col taglio e si richiuda con lui.
       - name: 'Cancello · la scia risponde all andatura'
+        timeout-minutes: 10
         run: node strumenti/collaudo-scia.mjs
         env: { CHROMIUM: '1' }
 
       - name: 'Cancello · il varco nel pelo si apre col taglio'
+        timeout-minutes: 10
         run: node strumenti/collaudo-varco.mjs
         env: { CHROMIUM: '1' }
 
@@ -233,6 +269,7 @@ jobs:
       # collaudo lo stampa in testa e in coda, e fallisce solo su cio' che sa
       # giudicare.
       - name: 'Cancello · il sito su schermi da telefono'
+        timeout-minutes: 10
         run: node strumenti/collaudo-telefono.mjs
         env: { CHROMIUM: '1' }
 
@@ -259,6 +296,7 @@ jobs:
       # ha bisogno di indovinare quali righe contano fallisce proprio quando
       # serve. Si versano le ultime venticinque e basta.
       - name: Collaudo dell'impaginato
+        timeout-minutes: 10
         run: |
           set -o pipefail
           if ! npm run collaudo:impaginato 2>&1 | tee /tmp/imp.txt; then
@@ -281,6 +319,7 @@ jobs:
 
   pubblica:
     needs: compila
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     environment:
       name: github-pages

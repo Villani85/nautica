@@ -58,7 +58,7 @@ const preview = await serviteci()
 const browser = await apriBrowser({ conGpu: !process.env.CHROMIUM })
 const pg = await browser.newPage()
 await pg.setViewportSize({ width: 1440, height: 900 })
-await pg.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+await pg.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica && !!window.__nautica.stato, null, { timeout: 60000 })
 
 const leggi = () => pg.evaluate(() => {

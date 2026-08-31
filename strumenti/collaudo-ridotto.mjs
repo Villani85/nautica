@@ -134,7 +134,7 @@ async function misura (ridotto) {
     if (f !== pagina.mainFrame()) return
     if (caricata) errori.push('la pagina ha navigato durante la misura: ' + f.url())
   })
-  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
   await pagina.waitForFunction(() => window.__nautica && window.__nautica.scena, null, { timeout: 60000 })
   caricata = true
 

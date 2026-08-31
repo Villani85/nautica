@@ -315,7 +315,7 @@ async function finche (prova, tetto = 30000, passo = 250) {
   }
 }
 
-await pagina.goto(BASE + '?ispeziona=1&ombre=0&senzaAcqua=1', { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1&ombre=0&senzaAcqua=1', { waitUntil: 'load', timeout: 45000 })
 
 if (!await finche(() => !!window.__nautica)) {
   console.error('COLLAUDO CORSA FALLITO')

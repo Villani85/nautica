@@ -36,7 +36,7 @@ let rossi = 0
 
 for (const [W, H] of FORMATI) {
   await pg.setViewportSize({ width: W, height: H })
-  await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load' })
+  await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
   await pg.waitForFunction(() => window.__nautica?.corsaRacconto > 0, null, { timeout: 30000 })
   await pg.evaluate((p) => scrollTo(0, window.__nautica.cimaSezione + window.__nautica.corsaRacconto * p), P)
   /* non si aspetta un tempo: si aspetta che la corsa sia arrivata dove si e' chiesto */

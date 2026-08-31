@@ -52,7 +52,7 @@ const TETTO_CODA = 0.25
 const b = await apriBrowser({ conGpu: true })
 const pg = await b.newPage()
 await pg.setViewportSize({ width: 1280, height: 800 })
-await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load' })
+await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => window.__nautica && typeof window.__nautica.p === 'number', null, { timeout: 30000 })
 
 const H = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight)

@@ -57,7 +57,7 @@ for (let i = 0; i < 60; i++) {
 
 const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 await pg.waitForTimeout(2500)
 

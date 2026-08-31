@@ -129,7 +129,28 @@ const pg = await (await browser.newContext({ viewport: { width: 1280, height: 72
  * da 3,2 punti a zero.
  */
 const ISTANTE = 12.5
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1&fermo=${ISTANTE}`, { waitUntil: 'load' })
+/**
+ * ─── `domcontentloaded`, NON `load`, e non e' una micro-ottimizzazione
+ *
+ * DIFETTO CHE HA TENUTO FERMA LA CI QUARANTA MINUTI. `waitUntil: 'load'`
+ * aspetta TUTTE le risorse della pagina, video compresi. In locale, con la
+ * decodifica hardware, arrivano subito; su un runner senza GPU e senza
+ * decodifica hardware un mp4 puo' tenere l'evento `load` sospeso a tempo
+ * indefinito -- e il passo non fallisce, resta appeso, perche' un `goto` senza
+ * tetto non si arrende.
+ *
+ * Cinquanta secondi qui, quaranta minuti la', e nessun messaggio: la firma
+ * esatta di un'attesa senza tetto.
+ *
+ * Si aspetta invece il FATTO che serve davvero -- che la maniglia di ispezione
+ * esista -- che e' cio' che questo cancello usa. E' lo stesso schema di
+ * `collaudo-finale-vivo.mjs:66`, che infatti in CI non si e' mai piantato.
+ */
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1&fermo=${ISTANTE}`,
+  { waitUntil: 'domcontentloaded', timeout: 30000 })
+pg.setDefaultTimeout(20000)
+await pg.waitForFunction(() => !!document.querySelector('canvas'), null, { timeout: 30000 })
+await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 await pg.waitForTimeout(2500)
 

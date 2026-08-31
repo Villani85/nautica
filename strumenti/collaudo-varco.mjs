@@ -46,7 +46,7 @@ const pg = await (await browser.newContext({ viewport: { width: 1280, height: 72
  * puo' accendere o spegnere il filmato per far tornare un numero; puo' chiedere
  * di guardare sotto, dichiarandolo.
  */
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1${process.env.EXTRA || ''}`, { waitUntil: 'load' })
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1${process.env.EXTRA || ''}`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 /**
  * ─── LA POSIZIONE SI RICAVA DALLA SEZIONE, non e' una frazione del documento

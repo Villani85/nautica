@@ -150,7 +150,7 @@ const finisci = async (codice) => {
  * `coperturaTraversata`, `cimaSezione`, `corsaRacconto` e `p` — arrivano ad
  * esistere (vedi `src/scena/index.js:1520` e `src/demo.js:377`).
  */
-await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 // il motore e' a import differito: si scrolla vicino alla dimostrazione per
 // farlo caricare, esattamente come fa `collaudo-continuita`
 await pagina.evaluate(() => {

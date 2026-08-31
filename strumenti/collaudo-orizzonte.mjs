@@ -73,7 +73,7 @@ const preview = spawn('npx', ['vite', 'preview', '--port', PORTA], { shell: true
 const browser = await apriBrowser({ conGpu: true })
 const pg = await browser.newPage()
 await pg.setViewportSize({ width: 1400, height: 900 })
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
 await pg.evaluate((q) => {
   const h = document.documentElement.scrollHeight - window.innerHeight

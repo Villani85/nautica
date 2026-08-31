@@ -42,7 +42,7 @@ try {
   const pagina = await browser.newPage({ viewport: { width: 1280, height: 800 } })
   const errori = []
   pagina.on('pageerror', e => errori.push(String(e)))
-  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
   await pagina.waitForFunction(() => window.__nautica?.statoSollievo?.(), null, { timeout: 60000 })
   await pagina.waitForFunction(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')

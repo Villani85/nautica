@@ -116,7 +116,7 @@ const scarto = (v) => {
 const esiti = {}
 for (const v of VISTE) {
   await pg.setViewportSize({ width: v.w, height: v.h })
-  await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load' })
+  await pg.goto(`http://localhost:${PORTA}/?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
   await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
   await pg.evaluate(() => window.scrollTo(0, 0))
   /* solo gli strati CSS del cielo: i pseudo-elementi di body non sono figli */

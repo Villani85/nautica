@@ -175,7 +175,7 @@ const pagina = await browser.newPage({
 const errori = []
 pagina.on('pageerror', e => errori.push(String(e)))
 
-await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 await pagina.waitForTimeout(1000)
 
 /**

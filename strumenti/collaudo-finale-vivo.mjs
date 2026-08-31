@@ -60,7 +60,7 @@ const SOGLIA = 0.10
 const b = await apriBrowser({ conGpu: process.env.SENZA_GPU ? false : true })
 const pg = await b.newPage()
 await pg.setViewportSize({ width: 1280, height: 800 })
-await pg.goto(URL, { waitUntil: 'load' })
+await pg.goto(URL, { waitUntil: 'load', timeout: 45000 })
 
 /** Non si aspetta un tempo, si aspetta un fatto: la scena c'e'. */
 await pg.waitForFunction(() => !!document.querySelector('canvas'), null, { timeout: 30000 })

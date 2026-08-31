@@ -263,7 +263,7 @@ const finisci = async (codice) => {
  * pestavano i piedi. Qui la dimostrazione si spegne, e cosi' il cancello
  * misura la mano invece del sito.
  */
-await pagina.goto(BASE + '?ispeziona=1&senzaDimostra=1', { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1&senzaDimostra=1', { waitUntil: 'load', timeout: 45000 })
 await pagina.waitForFunction(() => window.__nautica && window.__nautica.scena, null, { timeout: 60000 })
 await pagina.waitForFunction(
   () => !!window.__nautica.scena.getObjectByName('RIG_INPUT'),

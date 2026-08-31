@@ -95,7 +95,7 @@ if (preview === null) {
 const browser = await apriBrowser({ conGpu: !process.env.CHROMIUM })
 const pg = await browser.newPage()
 await pg.setViewportSize({ width: 1440, height: 900 })
-await pg.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+await pg.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 60000 })
 
 /** porta la pagina alla battuta del meccanismo, dove il nudge dichiara di vivere */

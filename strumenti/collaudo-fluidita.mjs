@@ -145,7 +145,7 @@ const finisci = async (codice) => {
   process.exit(codice)
 }
 
-await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load' })
+await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
 await pagina.waitForFunction(
   () => !!(window.__nautica && window.__nautica.scena && window.__nautica.camera),
   null, { timeout: 60000 }
