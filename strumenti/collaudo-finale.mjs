@@ -76,22 +76,69 @@ const r = await pg.evaluate(async () => {
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
   }
 
-  let intero = null
-  for (let y = Math.round(H * 0.6); y <= H; y += 10) {
-    await fermati(y)
+  /**
+   * ─── SI CERCA PER BISEZIONE, e non e' un'ottimizzazione
+   *
+   * DIFETTO CHE HO INTRODOTTO IO STANOTTE, e poi ho passato tre corse a
+   * cercarlo altrove. Le due scansioni erano LINEARI a passi di 10 px da 0,6H a
+   * H: su una pagina da 5500 px sono 220 iterazioni ciascuna, ognuna con uno
+   * scroll e due fotogrammi di attesa.
+   *
+   * In locale sono trenta secondi. Sul runner, dove il motore gira a circa un
+   * fotogramma al secondo su rasterizzatore software, quelle 440 attese
+   * diventano una decina di minuti -- e stanotte ho messo `timeout-minutes: 10`
+   * su ogni passo. Il cancello non falliva: veniva UCCISO, e il referto diceva
+   * «fallito» senza distinguere le due cose.
+   *
+   * Le due grandezze cercate sono MONOTONE nella corsa -- il palco resta intero
+   * finche' non smette, la copertura sale e non torna indietro -- e una
+   * grandezza monotona si cerca per bisezione: 12 passi invece di 220,
+   * diciotto volte meno lavoro, e la stessa precisione al pixel.
+   *
+   * La cura giusta non era alzare il tetto: era smettere di sprecare il tempo.
+   */
+  const GIRI = 12
+
+  /** L'ultimo y in [a,b] per cui `dentro(y)` e' vero, cercato per bisezione. */
+  const ultimoVero = async (a, b, dentro) => {
+    await fermati(a)
+    if (!(await dentro())) return null
+    let lo = a, hi = b
+    for (let i = 0; i < GIRI && hi - lo > 1; i++) {
+      const m = Math.round((lo + hi) / 2)
+      await fermati(m)
+      if (await dentro()) lo = m; else hi = m
+    }
+    return lo
+  }
+
+  /** Il primo y in [a,b] per cui `dentro(y)` e' vero. */
+  const primoVero = async (a, b, dentro) => {
+    await fermati(b)
+    if (!(await dentro())) return null
+    let lo = a, hi = b
+    for (let i = 0; i < GIRI && hi - lo > 1; i++) {
+      const m = Math.round((lo + hi) / 2)
+      await fermati(m)
+      if (await dentro()) hi = m; else lo = m
+    }
+    return hi
+  }
+
+  const da = Math.round(H * 0.6)
+  const palcoIntero = () => {
     const b = palco.getBoundingClientRect()
     const vis = Math.max(0, Math.min(b.bottom, innerHeight) - Math.max(b.top, 0))
-    if (vis >= innerHeight - 1) intero = y; else break
+    return vis >= innerHeight - 1
   }
+  const intero = await ultimoVero(da, H, palcoIntero)
 
   /* la copertura si legge dalla REGIA, non dal `<video>`: un video che non e'
      ancora partito non dice niente sulla geometria della pagina */
-  let inizio = null
-  for (let y = Math.round(H * 0.6); y <= H; y += 10) {
-    await fermati(y)
-    if ((window.__nautica.coperturaTraversata() ?? 0) > 0.99) { inizio = y; break }
-  }
-  return { H, intero, inizio, vh: innerHeight }
+  const coperto = () => (window.__nautica.coperturaTraversata() ?? 0) > 0.99
+  const inizio = await primoVero(da, H, coperto)
+
+  return { H, intero, inizio, vh: innerHeight, giri: GIRI }
 })
 
 await browser.close(); preview.kill()
