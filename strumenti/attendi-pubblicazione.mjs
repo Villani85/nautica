@@ -10,6 +10,19 @@
  * era rossa da due corse e nessuno guardava.
  */
 import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
+
+/**
+ * ─── SI GUARDA SOLO LA CORSA DI QUESTO COMMIT
+ *
+ * DIFETTO DELLO STRUMENTO, non del sito. La prima versione leggeva l'ULTIMA
+ * corsa qualunque essa fosse, e appena spinto la corsa nuova non e' ancora
+ * comparsa: leggeva quella PRECEDENTE, la trovava rossa, e annunciava «corsa
+ * rossa, il sito resta indietro» su un esito gia' superato. Ha chiuso un
+ * guardiano al primo giro dando un verdetto su un commit che non era piu' il
+ * mio.
+ */
+const TESTA = execSync('git rev-parse HEAD').toString().trim()
 
 const atteso = readFileSync('dist/index.html', 'utf8').match(/assets\/index-[\w-]+\.js/)?.[0]
 if (!atteso) { console.log('non trovo il bundle nella build locale'); process.exit(1) }
@@ -24,8 +37,10 @@ for (let giro = 1; giro <= 40; giro++) {
     servito = pagina.match(/assets\/index-[\w-]+\.js/)?.[0]
   } catch { /* rete: si riprova */ }
 
-  const r = (await api('https://api.github.com/repos/Villani85/nautica/actions/runs?per_page=1'))?.workflow_runs?.[0]
-  const stato = r ? `${r.run_number} ${r.head_sha.slice(0, 7)} ${r.status}/${r.conclusion}` : 'api muta'
+  const corse = (await api('https://api.github.com/repos/Villani85/nautica/actions/runs?per_page=8'))?.workflow_runs || []
+  const r = corse.find((c) => c.head_sha === TESTA) || null
+  const stato = r ? `${r.run_number} ${r.head_sha.slice(0, 7)} ${r.status}/${r.conclusion}`
+    : (corse.length ? 'la corsa di questo commit non e ancora comparsa' : 'api muta')
   console.log(`  giro ${String(giro).padStart(2)}  servito ${servito || '?'}  ·  corsa ${stato}`)
 
   if (servito === atteso) { console.log('\nPUBBLICATO: il sito serve il commit corrente.'); process.exit(0) }
