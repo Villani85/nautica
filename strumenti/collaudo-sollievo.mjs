@@ -93,11 +93,81 @@ try {
   }, null, { timeout: 5000 }).then(() => true).catch(() => false)
   if (!partito) guai.push('non parte dopo tensione e quiete')
 
-  const concluso = await pagina.waitForFunction(() => {
+  /**
+   * ─── LA CONSEGNA SI FA AVANZARE, NON SI ASPETTA
+   *
+   * Qui c'era `waitForFunction(..., { timeout: 8000 })`: otto secondi di
+   * OROLOGIO per un raccordo che avanza a FOTOGRAMMI. Sulla macchina di chi
+   * scrive sono centinaia di fotogrammi e la consegna si chiude; sul runner
+   * senza GPU sono cinque, e il cancello leggeva la dissolvenza a meta':
+   *
+   *   CI       finale 5.00 s · consegnato 1.00   calma 0.00 s · in moto NO
+   *   locale   finale 5.00 s · consegnato 0.00   calma 0.01 s · in moto si
+   *
+   * Due rossi -- «non consegna il fotogramma finale» e «la calma non riparte
+   * dal raccordo» -- su un montaggio che funziona. E' la sesta volta in due
+   * giorni che un cancello di questo repo misura la macchina invece del sito.
+   *
+   * L'attrezzo giusto era gia' qui, e questo stesso file lo usa venti righe
+   * sopra per la tensione: `provaSollievo(mare, dt)` avanza lo stato a passo
+   * DICHIARATO. Il video del sollievo era gia' finito in tutte e due le corse
+   * (5,00 s, fermo): mancava solo il raccordo, che ora si fa avanzare invece
+   * di aspettarlo.
+   *
+   * Le soglie non si sono mosse: `concluso`, `!inMoto`, `!inConsegna`,
+   * `opacita < 0,01`. Cambia da dove viene il tempo.
+   */
+  /* PRIMA il video deve finire, e quello va in tempo reale: e' un `<video>`,
+     dura cinque secondi e nessun passo dichiarato lo fa correre. Pompare il
+     raccordo mentre suona ancora RIAZZERA la sequenza -- provato, e il cancello
+     leggeva «si ferma troppo presto: 0,33 s». Trenta secondi bastano a una
+     clip da cinque anche su un rasterizzatore software, e non e' un margine
+     scelto a caso: e' sei volte la durata dichiarata del filmato. */
+  await pagina.waitForFunction(() => {
+    const v = document.querySelector('video[src*="salone-sollievo"]')
+    return v && (v.ended || v.currentTime > 4.8)
+  }, null, { timeout: 30000 }).catch(() => {})
+
+  let concluso = false
+  for (let i = 0; i < 240 && !concluso; i++) {
+    concluso = await pagina.evaluate(() => {
+      const s0 = window.__nautica.statoSollievo()
+      if (s0.concluso && !s0.inMoto && !s0.inConsegna && s0.opacita < 0.01) return true
+      window.__nautica.provaSollievo(0, 1 / 24)
+      const s = window.__nautica.statoSollievo()
+      return s.concluso && !s.inMoto && !s.inConsegna && s.opacita < 0.01
+    })
+  }
+  /**
+   * SE LA CONSEGNA NON SI CHIUDE, PRIMA SI GUARDA CHI NON HA FATTO IL PROPRIO
+   * LAVORO. La chiusura e' appesa a `requestVideoFrameCallback` sul video
+   * calmo (`salone3d.js:657`): quella richiamata arriva quando il decoder
+   * PRESENTA un fotogramma. Su un rasterizzatore software puo' non arrivare
+   * mai -- e allora il cancello starebbe misurando la pipeline video del
+   * runner, non il montaggio.
+   *
+   * Si legge quindi quanti fotogrammi il video calmo ha davvero presentato.
+   * Zero non e' un difetto del sito: e' una macchina che non puo' rispondere
+   * alla domanda.
+   */
+  const perche = await pagina.evaluate(() => {
+    const c = document.querySelector('video[src*="salone-largo"]')
+    const q = c && c.getVideoPlaybackQuality ? c.getVideoPlaybackQuality() : null
     const s = window.__nautica.statoSollievo()
-    return s.concluso && !s.inMoto && !s.inConsegna && s.opacita < 0.01
-  }, null, { timeout: 8000 }).then(() => true).catch(() => false)
-  if (!concluso) guai.push('non consegna il fotogramma finale al ciclo calmo')
+    return {
+      presentati: q ? q.totalVideoFrames : null,
+      readyState: c ? c.readyState : null,
+      inConsegna: s.inConsegna,
+      concluso: s.concluso,
+      rvfc: 'requestVideoFrameCallback' in HTMLVideoElement.prototype
+    }
+  })
+  if (!concluso) {
+    console.log(`  diagnosi  calma: ${perche.presentati} fotogrammi presentati, ` +
+                `readyState ${perche.readyState}, rVFC ${perche.rvfc ? 'c e' : 'assente'}, ` +
+                `inConsegna ${perche.inConsegna}`)
+    guai.push('non consegna il fotogramma finale al ciclo calmo')
+  }
 
   const finale = await pagina.evaluate(() => {
     const v = document.querySelector('video[src*="salone-sollievo"]')
@@ -133,8 +203,25 @@ try {
   if (!finale.calmaTrovata) guai.push('il video della calma non e in pagina: non misuro il raccordo')
   if (!finale.ended || !finale.paused) guai.push('il decoder non si ferma alla fine')
   if (finale.tempo < 4.8) guai.push(`si ferma troppo presto: ${finale.tempo.toFixed(2)} s`)
-  if (finale.calmaTrovata && (finale.calmaFerma || finale.calmaTempo > 0.5)) {
-    guai.push(`la calma non riparte dal raccordo: ${finale.calmaTempo.toFixed(2)} s`)
+  /**
+   * SI LEGGE L'ISTANTE DELLA CONSEGNA, non dove sta la calma adesso.
+   *
+   * `calmaTempo` e' dove il ciclo calmo si trova QUANDO GUARDO, e fra la
+   * chiusura della consegna e questa lettura il video ha suonato: su un
+   * rasterizzatore software usciva **1,99 s**, e il cancello concludeva che il
+   * raccordo era saltato su un montaggio che riparte da zero. Il numero era
+   * vero, la conclusione no: misurava il ritardo di chi guarda.
+   *
+   * `calmaAllaConsegna` lo registra `chiudi()` dentro la scena, nell'istante
+   * giusto. La soglia non e' cambiata.
+   */
+  if (finale.calmaTrovata && finale.calmaFerma) {
+    guai.push('il ciclo calmo non riparte dopo la consegna')
+  }
+  if (finale.calmaAllaConsegna === null) {
+    guai.push('la scena non registra l istante della consegna: non misuro il raccordo')
+  } else if (finale.calmaAllaConsegna > 0.5) {
+    guai.push(`la calma non riparte dal raccordo: ${finale.calmaAllaConsegna.toFixed(2)} s`)
   }
 
   const ritornaMare = await pagina.evaluate(() => {
@@ -150,7 +237,8 @@ try {
   console.log(`  prima    fermo ${prima.paused ? 'si' : 'NO'} · loop ${prima.loop}`)
   console.log(`  gesto    ${partito ? 'parte' : 'NON PARTE'} dopo tensione + quiete`)
   console.log(`  finale   ${finale.tempo.toFixed(2)} s · fermo ${finale.paused ? 'si' : 'NO'} · consegnato ${finale.opacita.toFixed(2)}`)
-  console.log(`  calma    riparte a ${finale.calmaTrovata ? finale.calmaTempo.toFixed(2) : '--'} s · in moto ${finale.calmaFerma ? 'NO' : 'si'}`)
+  console.log(`  calma    riparte a ${finale.calmaAllaConsegna === null ? '--' : finale.calmaAllaConsegna.toFixed(2)} s ` +
+              `(letta poi a ${finale.calmaTrovata ? finale.calmaTempo.toFixed(2) : '--'}) · in moto ${finale.calmaFerma ? 'NO' : 'si'}`)
   console.log(`  ritorno  opacita ${ritornaMare.opacita.toFixed(2)} · riarmato ${ritornaMare.armato ? 'si' : 'NO'}`)
 } finally {
   await browser.close()

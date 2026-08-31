@@ -563,6 +563,8 @@ export function creaSalone3D (base, tuga) {
   let sollievoConcluso = false
   let sollievoDaRiavvolgere = false
   let opacitaSollievo = 0
+  /* l'istante del ciclo calmo quando la consegna si e' chiusa: vedi `chiudi` */
+  let calmaAllaConsegna = null
   let versioneConsegna = 0
 
   const ARMA_SOLLIEVO = 0.6
@@ -592,6 +594,7 @@ export function creaSalone3D (base, tuga) {
     sollievoInConsegna = false
     sollievoConcluso = false
     opacitaSollievo = 0
+    calmaAllaConsegna = null
     try { vSollievo.currentTime = 0 } catch {}
     vSollievo.play().catch(() => {
       sollievoInMoto = false
@@ -651,11 +654,44 @@ export function creaSalone3D (base, tuga) {
       sollievoConcluso = true
       opacitaSollievo = 0
       if (sollievo) sollievo.material.opacity = 0
+      /**
+       * DOVE STA LA CALMA ADESSO, non dove stara' fra due secondi.
+       *
+       * «Il ciclo calmo riparte dal raccordo» e' un'affermazione sull'ISTANTE
+       * della consegna. Chi la verifica da fuori legge per forza piu' tardi, e
+       * nel frattempo il video ha suonato: su un rasterizzatore software un
+       * cancello leggeva **1,99 s** e concludeva che il raccordo era saltato,
+       * su un montaggio che invece riparte da zero. Il numero era vero e la
+       * conclusione sbagliata, perche' misurava il ritardo di chi guarda.
+       */
+      calmaAllaConsegna = vCalma.currentTime
       vCalma.play().catch(() => {})
     }
+    /**
+     * ─── DUE STRADE VERSO LA STESSA CHIUSURA, e `chiudi` e' idempotente
+     *
+     * `requestVideoFrameCallback` scatta quando il video PRESENTA un
+     * fotogramma. Tre righe sopra il ciclo calmo e' stato messo in PAUSA: se
+     * il decoder non presenta piu' niente -- e su un rasterizzatore software
+     * capita -- quella richiamata non arriva MAI, la consegna resta aperta e
+     * lo schermo resta coperto dal fermo immagine del sollievo. Non per un
+     * istante: per sempre.
+     *
+     * Misurato: in CI tre volte su tre, in locale con la GPU mai. E la
+     * diagnosi ha escluso la spiegazione comoda -- il video calmo aveva
+     * presentato **207 fotogrammi**, `readyState 4`, la richiamata esisteva.
+     * Non era la pipeline video del runner: era una richiamata chiesta a un
+     * video fermo.
+     *
+     * Si tengono tutte e due. La richiamata del video resta la strada buona,
+     * perche' e' l'unica che garantisce che il fotogramma sia davvero A
+     * SCHERMO; il fotogramma di animazione e' la rete, e costa una riga.
+     * `chiudi` si protegge da solo con `chiusa`, quindi chi arriva secondo non
+     * fa niente.
+     */
     const framePronto = () => {
       if ('requestVideoFrameCallback' in vCalma) vCalma.requestVideoFrameCallback(chiudi)
-      else requestAnimationFrame(chiudi)
+      requestAnimationFrame(chiudi)
     }
 
     vCalma.pause()
@@ -664,7 +700,34 @@ export function creaSalone3D (base, tuga) {
       /* Anche se il tempo e' gia' vicino a zero si assegna zero: il browser
          deve presentare QUEL frame prima che lo strato superiore sparisca. */
       vCalma.currentTime = 0
-      if (Math.abs(vCalma.currentTime) < 0.001 && vCalma.readyState >= 2) framePronto()
+      /**
+       * ─── SE IL FOTOGRAMMA C'E' GIA', SI CHIUDE. NON SE NE CHIEDE UN ALTRO.
+       *
+       * Qui c'era `framePronto()`, che registra
+       * `requestVideoFrameCallback`. Ma quella richiamata scatta quando il
+       * video PRESENTA un fotogramma nuovo, e tre righe sopra il video calmo
+       * e' stato messo in PAUSA: se era gia' sullo zero, di fotogrammi nuovi
+       * non ne presenta piu' nessuno. La richiamata non arriva mai, la
+       * consegna resta aperta e **lo schermo resta coperto dal fermo immagine
+       * del sollievo**.
+       *
+       * Si vedeva solo a volte, perche' dipende da dove si trova il ciclo
+       * calmo quando il sollievo finisce: se stava a meta', l'assegnazione a
+       * zero e' un salto vero, presenta un fotogramma e la richiamata scatta.
+       * Se stava gia' li', no. In CI e' capitato tre volte su tre, in locale
+       * con la GPU mai.
+       *
+       * Isolato con una diagnosi invece che con un'ipotesi: il video calmo
+       * aveva presentato **207 fotogrammi**, `readyState 4`, la richiamata
+       * esisteva -- quindi non era la pipeline video del runner, come stavo per
+       * concludere.
+       *
+       * `readyState >= 2` significa che il fotogramma a quella posizione E'
+       * gia' disponibile: chiedere di aspettarne un altro non protegge da
+       * niente. L'intento del codice -- non scoprire lo strato prima che sotto
+       * ci sia l'immagine giusta -- resta soddisfatto.
+       */
+      if (Math.abs(vCalma.currentTime) < 0.001 && vCalma.readyState >= 2) chiudi()
     } catch {
       chiudi()
     }
@@ -862,6 +925,7 @@ export function creaSalone3D (base, tuga) {
         preparato: sollievoPreparato,
         inMoto: sollievoInMoto,
         inConsegna: sollievoInConsegna,
+        calmaAllaConsegna,
         concluso: sollievoConcluso,
         daRiavvolgere: sollievoDaRiavvolgere,
         tempo: vSollievo?.currentTime || 0,
