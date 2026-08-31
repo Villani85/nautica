@@ -38,6 +38,7 @@ import math
 import struct
 import json
 import os
+import sys
 
 try:
     import numpy as np
@@ -49,6 +50,12 @@ try:
     HAVE_BPY = True
 except ImportError:
     HAVE_BPY = False
+
+# B5 — il frame comune ora esiste: si importa, non si ricopiano i numeri.
+_QUI = os.path.dirname(os.path.abspath(__file__))
+if _QUI not in sys.path:
+    sys.path.insert(0, _QUI)
+import world_root  # noqa: E402 — deve stare dopo l'aggiunta al sys.path
 
 
 # ---------------------------------------------------------------------------
@@ -236,47 +243,96 @@ def look_at_quat(forward, up_hint=(0.0, 1.0, 0.0)):
 
 
 # ---------------------------------------------------------------------------
-# 2. Punti di controllo del percorso, in metri.
+# 2. Punti di controllo del percorso, in metri, nel FRAME DEL MONDO di
+#    world_root.py (§2): origine = CAMERA_SORGENTE_SALONE, assi = quelli del
+#    GLB del guscio (nessuna rotazione del mondo). world = locale_pezzo +
+#    world_root.COLLOCAZIONI[pezzo]['traslazione_m'] (o il punto di cucitura
+#    dichiarato). Ogni numero qui sotto viene da world_root — nessuno e'
+#    ricopiato a mano.
 #
-#    Sistema di riferimento: quello del guscio del salone, letto dal nodo
-#    CAMERA_SORGENTE_SALONE (posa.json / guscio-salone.glb): X lungo la
-#    murata sinistra verso il fondo della stanza, Y in alto, Z fuori dalla
-#    parete verso l'interno, origine sullo spigolo basso-destro del vano
-#    (incrocio fra montante e battuta).
+#    CORREZIONE su indicazione del committente: il giro precedente di questo
+#    script ancorava P0/P1/P2 al centro del VANO ('vano_salone'), che e' il
+#    FINESTRONE (2,17 x 1,15 m, mezzeria a 57 cm da terra: un'apertura da
+#    finestra, non da porta) e non l'apertura che la camera attraversa.
+#    L'apertura vera, misurata, e' 'ingresso_salone' (4,57 x 2,35 m):
+#    e' li' che P2 deve cadere, non sul finestrone.
 #
-#    P2 (attraversamento del vano) e' MISURATO: e' il centro del rettangolo
-#    del vano dichiarato in posa.json -> guscio_m.vano
-#      x: -2.1746 .. 0.0   y: 0.0 .. 1.1449   z = murata_sinistra_z_m = 0.0
-#    cioe' il varco reale fra corridoio/locale tecnico e salone, imposto dal
-#    contratto (WORLDSPACE-CONTRATTO §3.3: "far attraversare alla camera
-#    porte, montanti e piani di taglio reali").
+#    P4 (arrivo) e' ESATTO: CAMERA_SORGENTE_SALONE, e nel frame del mondo
+#    coincide per costruzione con l'origine (0,0,0) — e' la collocazione
+#    SALOON_SHELL di world_root a garantirlo (il guscio si sposta
+#    dell'opposto della posizione del nodo camera).
 #
-#    P4 (arrivo) e' ESATTO: e' CAMERA_SORGENTE_SALONE, letto dal GLB sopra.
+#    P2 (attraversamento) e' MISURATO: centro di world_root.CUCITURE
+#    ['ingresso_salone'] (x_m, altezza_libera_m, larghezza_libera_m).
 #
-#    P0, P1, P3 sono ASSUNTI da A6 in mancanza del tratto intermedio, che
-#    altri agenti stanno costruendo in questo momento (MECHANISM_BAY,
-#    ENGINE_ROOM, STAIR_CORRIDOR non ancora integrati in un frame comune).
-#    Sono allineati in x/y al centro del vano cosi' la traversata "punta"
-#    verso il varco reale e non verso un punto arbitrario; z e' una stima
-#    di profondita' plausibile (meccanismo -> sala macchine -> corridoio),
-#    NON una misura. Se il frame che gli altri agenti useranno per
-#    MECHANISM_BAY/STAIR_CORRIDOR risultera' diverso da questo (quello del
-#    guscio-salone), serve un nodo di aggancio comune (un WORLD_ROOT
-#    condiviso, previsto dal contratto §1 ma non ancora eseguito) per
-#    ricomporre i tratti: questo script NON puo' saperlo da solo.
+#    P1 (corridoio) e' DERIVATO dalla collocazione STAIR_CORRIDOR: il
+#    corridoio (con la sua scala, parts/corridor.py) si estende in X locale
+#    da 0 (base scala, verso il locale tecnico) a LUNGHEZZA_TOTALE=5.480
+#    (pianerottolo verso il salone, la cucitura 'aperture_alte'), con
+#    pavimento che sale da y_locale=0 a y_locale=RISALITA_TOTALE=2.10 (la
+#    quota 'alzata_m' della cucitura). Si prende il punto medio del
+#    percorso (x_locale=2.740) con la quota di pavimento interpolata
+#    linearmente sulla salita (y_locale=1.05); si traduce in mondo con la
+#    traslazione STAIR_CORRIDOR = (-6.280, -3.270, 0.0). L'interpolazione
+#    lineare e' un'APPROSSIMAZIONE dichiarata (la scala reale ha pianerottoli
+#    piani alle due estremita' prima/dopo i gradini, quindi il profilo vero
+#    non e' una retta) — non e' una misura di quel singolo punto, ma non e'
+#    nemmeno una profondita' indovinata: e' vincolata dai due estremi reali
+#    del pezzo.
+#
+#    P0 (meccanismo) e' DERIVATO dalla collocazione MECHANISM_BAY: il pezzo
+#    si estende in X mondo da X_MB0=-14.902575 (la sua origine locale) fino
+#    alla porta verso il corridoio a X=-6.280 (world_root.COLLOCAZIONI
+#    ['MECHANISM_BAY']['cucitura_mondo_m']). Si prende il punto medio di
+#    quell'intervallo; Y e Z riusano la cucitura della porta (-3.270, 0.0),
+#    l'unico riferimento di sezione misurato per questo pezzo — non esiste
+#    in world_root una misura indipendente dell'interno del locale tecnico,
+#    quindi Y/Z di P0 non sono una misura DI QUEL PUNTO ma dell'apertura piu'
+#    vicina: e' la parte che resta da misurare se si vuole di piu'.
+#
+#    P3 (dentro il salone, transizione breve dopo la porta) resta l'unico
+#    punto senza un ancoraggio in world_root: nessun rilievo dell'interno del
+#    salone fra la porta e la posa della camera esiste oggi. E' interpolato
+#    a meta' strada fra P2 e P4. RESTA ASSUNTO, dichiarato come tale.
 # ---------------------------------------------------------------------------
 
-VANO_X = (-2.1746 + 0.0) / 2.0     # -1.0873, misurato
-VANO_Y = (0.0 + 1.1449) / 2.0      # 0.57245, misurato
-VANO_Z = 0.0                        # murata_sinistra_z_m, misurato
+_INGRESSO = world_root.CUCITURE['ingresso_salone']
+P2_X = _INGRESSO['x_m']
+P2_Y = sum(_INGRESSO['altezza_libera_m']) / 2.0
+P2_Z = sum(_INGRESSO['larghezza_libera_m']) / 2.0
+P2 = np.array([P2_X, P2_Y, P2_Z])
+
+_TX_COR, _TY_COR, _TZ_COR = world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']
+_LUNGHEZZA_CORRIDOIO_LOCALE = world_root.LUNGHEZZA_CORRIDOIO_M   # 5.480, DERIVATO in world_root
+_RISALITA_CORRIDOIO_LOCALE = world_root.RISALITA_CORRIDOIO_M     # 2.10, DERIVATO in world_root
+_X1_LOCALE = _LUNGHEZZA_CORRIDOIO_LOCALE / 2.0
+_Y1_LOCALE = _RISALITA_CORRIDOIO_LOCALE * (_X1_LOCALE / _LUNGHEZZA_CORRIDOIO_LOCALE)
+P1 = np.array([_X1_LOCALE + _TX_COR, _Y1_LOCALE + _TY_COR, 0.0 + _TZ_COR])
+
+_MB = world_root.COLLOCAZIONI['MECHANISM_BAY']
+X_MB0 = _MB['traslazione_x_derivata_m']            # -14.902575
+X_PORTA_MB = _MB['cucitura_mondo_m'][0]            # -6.280
+_Y_PORTA_MB = _MB['cucitura_mondo_m'][1]           # -3.270
+_Z_PORTA_MB = _MB['cucitura_mondo_m'][2]           # 0.0
+P0 = np.array([(X_MB0 + X_PORTA_MB) / 2.0, _Y_PORTA_MB, _Z_PORTA_MB])
+
+P4 = np.array(world_root.dal_frame_guscio(POS_SALONE))
+# POS_SALONE e' letto RAW dal GLB (frame del guscio, non ancora tradotto).
+# world_root.dal_frame_guscio sottrae ORIGINE_POSIZIONE_GLB, che e' la stessa
+# posizione: il risultato e' (0,0,0) per costruzione. Bug pescato eseguendo:
+# senza questa riga P4 restava nel frame sbagliato e il "scarto zero" sotto
+# sarebbe stato un confronto fra due frame diversi che tornava zero per caso
+# (perche' fissato uguale a se stesso), non un vero controllo del frame.
+
+P3 = (P2 + P4) / 2.0  # ASSUNTO: nessun waypoint interno al salone e' misurato
 
 CONTROL_POINTS = [
-    # (posizione_m, etichetta, misurato?)
-    (np.array([VANO_X, 0.30, -9.00]), "P0 meccanismo (ASSUNTO: profondita' non nota)", False),
-    (np.array([VANO_X, 0.42, -3.00]), "P1 corridoio (ASSUNTO)", False),
-    (np.array([VANO_X, VANO_Y, VANO_Z]), "P2 attraversamento vano (MISURATO, posa.json)", True),
-    (np.array([-2.10, 0.60, 0.45]), "P3 dentro il salone (ASSUNTO, transizione breve)", False),
-    (np.array(POS_SALONE), "P4 CAMERA_SORGENTE_SALONE (ESATTO, dal GLB)", True),
+    # (posizione_m, etichetta, stato)
+    (P0, "P0 meccanismo (DERIVATO: punto medio MECHANISM_BAY, Y/Z dalla porta)", "DERIVATO"),
+    (P1, "P1 corridoio (DERIVATO: punto medio STAIR_CORRIDOR, pavimento interpolato)", "DERIVATO"),
+    (P2, "P2 ingresso_salone (MISURATO: centro dell'apertura reale, non il finestrone)", "MISURATO"),
+    (P3, "P3 dentro il salone (ASSUNTO: nessun rilievo fra porta e posa camera)", "ASSUNTO"),
+    (P4, "P4 CAMERA_SORGENTE_SALONE (ESATTO: origine del mondo per costruzione)", "ESATTO"),
 ]
 
 POSITIONS = [p for p, _, _ in CONTROL_POINTS]
@@ -476,10 +532,11 @@ print("\n-- Nodo di arrivo, letto da public/modelli/guscio-salone.glb --")
 print(f"  CAMERA_SORGENTE_SALONE  pos = {fmt_pos(np.array(POS_SALONE))}")
 print(f"  CAMERA_SORGENTE_SALONE  quat(x,y,z,w) = {tuple(round(v, 6) for v in QUAT_SALONE)}")
 
-print("\n-- Punti di controllo (metri, frame del guscio-salone) --")
-for p, label, misurato in CONTROL_POINTS:
-    tag = "MISURATO" if misurato else "ASSUNTO"
-    print(f"  [{tag:8s}] {label:55s} {fmt_pos(p)}")
+print("\n-- Punti di controllo (metri, FRAME DEL MONDO — world_root.py) --")
+for p, label, stato in CONTROL_POINTS:
+    print(f"  [{stato:8s}] {label:70s} {fmt_pos(p)}")
+n_assunti = sum(1 for _, _, s in CONTROL_POINTS if s == "ASSUNTO")
+print(f"\n  punti ASSUNTI: {n_assunti} su {len(CONTROL_POINTS)}")
 
 print("\n-- Misure --")
 print(f"  lunghezza d'arco totale:        {ARC_LENGTH_TOTALE_M:.4f} m")
@@ -502,13 +559,31 @@ print(f"  velocita' angolare massima:     {ang_vel[i_wmax]:.6f} rad/m "
 print(f"    a s = {s_wmax:.4f} m ({100*s_wmax/ARC_LENGTH_TOTALE_M:.1f}% del percorso), "
       f"posizione {fmt_pos(pos_grid[i_wmax])}")
 
-print("\n-- Verifica arrivo esatto --")
+print("\n-- Verifica arrivo esatto (VUOTA PER COSTRUZIONE, vedi nota) --")
 p_end = pos_at_arclength(1.0)
 q_end = quat_at_arclength(1.0)
-err_pos = np.linalg.norm(p_end - np.array(POS_SALONE))
+err_pos = np.linalg.norm(p_end - P4)  # P4 e' gia' nel frame del mondo (vedi sopra)
 err_quat = 1.0 - abs(q_dot(q_normalize(q_end), q_normalize(np.array(QUAT_SALONE))))
-print(f"  posizione a s01=1.0: {fmt_pos(p_end)}  (scarto {err_pos:.6f} m)")
+print(f"  posizione a s01=1.0: {fmt_pos(p_end)}  (scarto {err_pos:.6f} m, atteso su P4 = {fmt_pos(P4)})")
 print(f"  quaternione a s01=1.0: scarto 1-|dot| = {err_quat:.3e}")
+print("  NOTA: nel frame del mondo P4 = CAMERA_SORGENTE_SALONE = origine per")
+print("  costruzione (collocazione SALOON_SHELL), e ORIENTATIONS[-1] e' fissato")
+print("  a QUAT_SALONE nel codice sopra. Questo controllo confronta l'arrivo")
+print("  con se stesso: e' un cancello che non puo' mai fallire. Non misura")
+print("  niente — resta qui solo per continuita' col report precedente.")
+
+print("\n-- Verifica a monte: il punto di partenza cade nel locale tecnico? --")
+margine_a = P0[0] - X_MB0       # distanza dalla parete di fondo del locale
+margine_b = X_PORTA_MB - P0[0]  # distanza dalla porta verso il corridoio
+dentro = (X_MB0 <= P0[0] <= X_PORTA_MB)
+print(f"  MECHANISM_BAY (mondo): X in [{X_MB0:.4f}, {X_PORTA_MB:.4f}] m")
+print(f"  P0.x = {P0[0]:.4f} m  ->  {'DENTRO' if dentro else 'FUORI'} l'intervallo costruito")
+print(f"    margine dalla parete di fondo (X_MB0): {margine_a:.4f} m")
+print(f"    margine dalla porta verso il corridoio: {margine_b:.4f} m")
+if not dentro:
+    print("  ATTENZIONE: P0 cade FUORI dal locale tecnico come collocato da "
+          "world_root — la curva parte da un punto che l'assemblatore non ha "
+          "ancora costruito o gia' oltre la porta.")
 
 print("\n-- Continuita' C1: dove sono i picchi rispetto ai nodi --")
 knot_s = []
