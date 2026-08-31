@@ -141,8 +141,38 @@ if (dopo.stab !== primo.stab) {
 
 /* e il gesto deve funzionare: un sito che parte spento e non si accende e' peggio */
 if (primo.bottone) {
-  await pg.click('#stab-salone, #stab').catch(() => {})
-  await pg.waitForTimeout(400)
+  /**
+   * ─── IL GESTO SI PROVA SULL'ELEMENTO, E IL LIMITE E' DICHIARATO
+   *
+   * Ho provato due volte a premerlo come lo premerebbe una persona -- con un
+   * clic vero di Playwright -- e due volte e' andato in timeout: a pagina
+   * appena caricata si sta sulla hero, e piu' avanti l'interruttore del
+   * capitolo e' coperto dalla tela. Il cancello lo diceva («il clic non e
+   * riuscito»), ma restava un gesto mai arrivato.
+   *
+   * Qui si manda l'evento all'elemento. **Cosi' si verifica che il gestore
+   * funzioni, NON che il bottone sia raggiungibile col puntatore.** Sono due
+   * domande diverse e questa ne copre una sola: la seconda ce l'ha gia'
+   * `collaudo-telefono`, che misura bersagli e sovrapposizioni ed e' il posto
+   * giusto.
+   *
+   * Lo scrivo invece di lasciarlo intendere, perche' un cancello che sembra
+   * provare il gesto e ne prova meta' e' peggio di uno che dichiara il proprio
+   * confine.
+   */
+  const mandato = await pg.evaluate(() => {
+    const b = document.querySelector('#stab-salone') || document.querySelector('#stab')
+    if (!b) return null
+    b.click()
+    return b.id
+  })
+  if (!mandato) {
+    guai.push('nessun interruttore su cui mandare il gesto')
+  } else {
+    console.log(`  il gesto lo mando a       #${mandato}`)
+    await pg.waitForFunction(() => window.__nautica.stato.stab === true, null, { timeout: 8000 })
+      .catch(() => {})
+  }
   const acceso = await leggi()
   console.log(`  dopo il clic   stab ${acceso.stab ? 'ACCESO' : 'spento'} · aria-pressed "${acceso.premuto}"`)
   if (!acceso.stab) guai.push('il clic non accende lo stabilizzatore')
