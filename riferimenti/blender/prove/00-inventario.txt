@@ -1,0 +1,1163 @@
+BlenderMCP: cannot start server in background mode (blender -b) - commands would never execute
+BlenderMCP: run Blender with a GUI, or use a virtual display: xvfb-run -a blender
+BlenderMCP addon registered
+------------------------------------------------------------------------------
+BLENDER — VERSIONE ESATTA
+------------------------------------------------------------------------------
+version_string: 5.2.0 LTS
+version tuple: (5, 2, 0)
+build_hash: fbe6228777e7
+build_date/build_time: 2026-07-14 01:35:40
+build_branch: blender-v5.2-release
+
+------------------------------------------------------------------------------
+GLB: scafo.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\scafo.glb
+------------------------------------------------------------------------------
+ERRORE: file non trovato su disco.
+
+------------------------------------------------------------------------------
+GLB: sovrastruttura.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\sovrastruttura.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 122080
+14:59:28 | INFO: Data are loaded, start creating Blender stuff
+14:59:28 | INFO: Blender create Mesh node 0
+14:59:28 | INFO: Blender create Mesh node 1
+14:59:28 | INFO: glTF import finished in 0.29s
+  oggetto: COPERTA   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: COPERTA_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.100455]
+      [0.0, 0.002442, 0.0, 20.0]
+      [0.0, 0.0, 0.002442, 2.165]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 4492   facce: 3056
+    bbox mondo min (x,y,z): (-4.100455, -20.0, 2.165)
+    bbox mondo max (x,y,z): (4.100729, 20.0, 4.5504)
+    dimensioni bbox mondo (dx,dy,dz): (8.201184, 40.0, 2.3854)
+    obj.dimensions (Blender): (8.201184, 40.0, 2.3854)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.100455]
+      [0.0, 0.002442, 0.0, 20.0]
+      [0.0, 0.0, 0.002442, 2.165]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 8536   facce: 5454
+    bbox mondo min (x,y,z): (-3.023729, -6.74968, 4.621204)
+    bbox mondo max (x,y,z): (3.024004, 4.000488, 10.954598)
+    dimensioni bbox mondo (dx,dy,dz): (6.047732, 10.750168, 6.333394)
+    obj.dimensions (Blender): (6.047732, 10.750168, 6.333395)
+  oggetto: SOVRASTRUTTURA   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: SOVRASTRUTTURA_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: SOVRASTRUTTURA_NAVE   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+
+  TOTALE FILE sovrastruttura.glb :
+    oggetti importati: 7
+    vertici totali: 13028   facce totali: 8510
+    bbox mondo AGGREGATA min: (-4.100455, -20.0, 2.165)
+    bbox mondo AGGREGATA max: (4.100729, 20.0, 10.954598)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (8.201184, 40.0, 8.789598)
+
+------------------------------------------------------------------------------
+GLB: impianto.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\impianto.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 210796
+14:59:28 | INFO: Data are loaded, start creating Blender stuff
+14:59:28 | INFO: Blender create Mesh node 0
+14:59:28 | INFO: Blender create Mesh node 1
+14:59:28 | INFO: Blender create Mesh node 2
+14:59:28 | INFO: Blender create Mesh node 3
+14:59:28 | INFO: Blender create Mesh node 4
+14:59:28 | INFO: Blender create Mesh node 5
+14:59:28 | INFO: Blender create Mesh node 6
+14:59:28 | INFO: Blender create Mesh node 7
+14:59:28 | INFO: Blender create Mesh node 8
+14:59:28 | INFO: Blender create Mesh node 9
+14:59:28 | INFO: Blender create Mesh node 10
+14:59:28 | INFO: Blender create Mesh node 11
+14:59:28 | INFO: Blender create Mesh node 12
+14:59:29 | INFO: Blender create Mesh node 13
+14:59:29 | INFO: glTF import finished in 0.38s
+  oggetto: HOUSING_FIXED   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: HOUSING_FIXED_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.44]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: HOUSING_REMOVABLE   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: HOUSING_REMOVABLE_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.44]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: HOUSING_SECTION   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: HOUSING_SECTION_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.44]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: IMPIANTO   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.44]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3504   facce: 2896
+    bbox mondo min (x,y,z): (-0.709975, -0.317006, -0.46403)
+    bbox mondo max (x,y,z): (0.010052, 0.317005, 0.335982)
+    dimensioni bbox mondo (dx,dy,dz): (0.720027, 0.634011, 0.800012)
+    obj.dimensions (Blender): (0.720027, 0.634011, 0.800012)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.44]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 896   facce: 756
+    bbox mondo min (x,y,z): (-0.62999, -0.020076, -0.318342)
+    bbox mondo max (x,y,z): (-0.250059, 0.334145, 0.318367)
+    dimensioni bbox mondo (dx,dy,dz): (0.37993, 0.354221, 0.636709)
+    obj.dimensions (Blender): (0.37993, 0.354221, 0.636709)
+  oggetto: Mesh_10   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.0]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 552   facce: 420
+    bbox mondo min (x,y,z): (-1.0, -0.364457, -0.614002)
+    bbox mondo max (x,y,z): (0.005054, 0.364457, -0.428957)
+    dimensioni bbox mondo (dx,dy,dz): (1.005054, 0.728914, 0.185045)
+    obj.dimensions (Blender): (1.005054, 0.728914, 0.185045)
+  oggetto: Mesh_11   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.0]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 24   facce: 12
+    bbox mondo min (x,y,z): (-0.011927, -1.3, -0.8)
+    bbox mondo max (x,y,z): (-2.4e-05, 1.3, 1.400073)
+    dimensioni bbox mondo (dx,dy,dz): (0.011903, 2.6, 2.200073)
+    obj.dimensions (Blender): (0.011903, 2.6, 2.200073)
+  oggetto: Mesh_12   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.855]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.64]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2592   facce: 2496
+    bbox mondo min (x,y,z): (-1.047529, -0.113075, -0.098829)
+    bbox mondo max (x,y,z): (-0.691721, 0.370488, 0.527405)
+    dimensioni bbox mondo (dx,dy,dz): (0.355808, 0.483562, 0.626235)
+    obj.dimensions (Blender): (0.355808, 0.483562, 0.626235)
+  oggetto: Mesh_13   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -0.972]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1200   facce: 1008
+    bbox mondo min (x,y,z): (0.00544, -0.104981, -0.105048)
+    bbox mondo max (x,y,z): (0.121927, 0.104981, 0.119038)
+    dimensioni bbox mondo (dx,dy,dz): (0.116487, 0.209962, 0.224086)
+    obj.dimensions (Blender): (0.116487, 0.209962, 0.224086)
+  oggetto: Mesh_2   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.44]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 528   facce: 512
+    bbox mondo min (x,y,z): (-0.442564, -0.306055, -0.305964)
+    bbox mondo max (x,y,z): (-0.437485, 0.306055, 0.305988)
+    dimensioni bbox mondo (dx,dy,dz): (0.005078, 0.61211, 0.611951)
+    obj.dimensions (Blender): (0.005078, 0.61211, 0.611951)
+  oggetto: Mesh_3   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.0]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1786   facce: 1322
+    bbox mondo min (x,y,z): (-0.482952, -0.143863, -0.144723)
+    bbox mondo max (x,y,z): (-0.456925, 0.144973, 0.144748)
+    dimensioni bbox mondo (dx,dy,dz): (0.026027, 0.288836, 0.289471)
+    obj.dimensions (Blender): (0.026027, 0.288836, 0.289471)
+  oggetto: Mesh_4   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.0]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1782   facce: 1318
+    bbox mondo min (x,y,z): (-0.442959, -0.144974, -0.144723)
+    bbox mondo max (x,y,z): (-0.416932, 0.143862, 0.144748)
+    dimensioni bbox mondo (dx,dy,dz): (0.026027, 0.288836, 0.289471)
+    obj.dimensions (Blender): (0.026027, 0.288836, 0.289471)
+  oggetto: Mesh_5   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -0.85]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 476   facce: 312
+    bbox mondo min (x,y,z): (0.119981, -0.872142, -0.207728)
+    bbox mondo max (x,y,z): (1.500046, 1.079882, 0.207593)
+    dimensioni bbox mondo (dx,dy,dz): (1.380065, 1.952023, 0.415321)
+    obj.dimensions (Blender): (1.380065, 1.952023, 0.415321)
+  oggetto: Mesh_6   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.58]
+      [0.0, 0.000159, 0.0, 1.312]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 240   facce: 216
+    bbox mondo min (x,y,z): (-0.603988, -0.066954, -0.055057)
+    bbox mondo max (x,y,z): (-0.275953, 0.06699, 0.054923)
+    dimensioni bbox mondo (dx,dy,dz): (0.328035, 0.133944, 0.10998)
+    obj.dimensions (Blender): (0.328035, 0.133944, 0.10998)
+  oggetto: Mesh_7   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.68]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 202   facce: 184
+    bbox mondo min (x,y,z): (-0.829997, -0.04404, -0.043948)
+    bbox mondo max (x,y,z): (-0.530052, 0.044039, 0.043972)
+    dimensioni bbox mondo (dx,dy,dz): (0.299945, 0.088079, 0.08792)
+    obj.dimensions (Blender): (0.299945, 0.088079, 0.08792)
+  oggetto: Mesh_8   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.335]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 822   facce: 716
+    bbox mondo min (x,y,z): (-0.52499, -0.097998, -0.098065)
+    bbox mondo max (x,y,z): (-0.192987, 0.097998, 0.097931)
+    dimensioni bbox mondo (dx,dy,dz): (0.332003, 0.195996, 0.195996)
+    obj.dimensions (Blender): (0.332003, 0.195996, 0.195996)
+  oggetto: Mesh_9   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000159, 0.0, 0.0, -1.1]
+      [0.0, 0.000159, 0.0, 1.3]
+      [0.0, 0.0, 0.000159, -0.8]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 304   facce: 280
+    bbox mondo min (x,y,z): (-0.329982, -0.055942, -0.056009)
+    bbox mondo max (x,y,z): (0.129933, 0.055942, 0.056034)
+    dimensioni bbox mondo (dx,dy,dz): (0.459916, 0.111884, 0.112043)
+    obj.dimensions (Blender): (0.459916, 0.111884, 0.112043)
+  oggetto: RIG_CYCLO_A   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_CYCLO_A_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_CYCLO_B   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_CYCLO_B_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_ECCENTRIC   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_ECCENTRIC_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.58]
+      [0.0, 1.0, 0.0, 0.012]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_FIN   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_FIN_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.15]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_INPUT   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_INPUT_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.68]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_OUTPUT   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_OUTPUT_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.335]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_SHAFT   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: RIG_SHAFT_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.1]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_FOUNDATION   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_FOUNDATION_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_HULL_PLATE   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_HULL_PLATE_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_MOTOR   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_MOTOR_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.855]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.16]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_SEAL   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: STATIC_SEAL_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.028]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+
+  TOTALE FILE impianto.glb :
+    oggetti importati: 43
+    vertici totali: 14908   facce totali: 12448
+    bbox mondo AGGREGATA min: (-1.047529, -1.3, -0.8)
+    bbox mondo AGGREGATA max: (1.500046, 1.3, 1.400073)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (2.547575, 2.6, 2.200073)
+
+------------------------------------------------------------------------------
+GLB: interni.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\interni.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 477284
+14:59:29 | INFO: Data are loaded, start creating Blender stuff
+14:59:29 | INFO: Blender create Mesh node 0
+14:59:29 | INFO: Blender create Mesh node 1
+14:59:29 | INFO: Blender create Mesh node 2
+14:59:29 | INFO: Blender create Mesh node 3
+14:59:29 | INFO: Blender create Mesh node 4
+14:59:29 | INFO: Blender create Mesh node 5
+14:59:29 | INFO: Blender create Mesh node 6
+14:59:29 | INFO: Blender create Mesh node 7
+14:59:30 | INFO: Blender create Mesh node 8
+14:59:30 | INFO: Blender create Mesh node 9
+14:59:30 | INFO: Blender create Mesh node 10
+14:59:30 | INFO: Blender create Mesh node 11
+14:59:30 | INFO: Blender create Mesh node 12
+14:59:30 | INFO: glTF import finished in 1.23s
+  oggetto: int_correnti   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_ordinate   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_pagliolato_allestimento   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_pagliolato_macchine   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_pagliolato_sentina   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_paratia_avanti_centro   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_paratia_centro_poppa   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_paratia_prua_avanti   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_passerelle_cavi   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_plafoniere   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_scale   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_supporti   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: int_tubazioni   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: INTERNI   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3890   facce: 2112
+    bbox mondo min (x,y,z): (-4.116415, -20.000372, -2.118045)
+    bbox mondo max (x,y,z): (-0.021877, 20.000116, 1.712802)
+    dimensioni bbox mondo (dx,dy,dz): (4.094538, 40.000488, 3.830847)
+    obj.dimensions (Blender): (4.094538, 40.000488, 3.830847)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 56598   facce: 28380
+    bbox mondo min (x,y,z): (-4.145714, -18.706331, -2.349996)
+    bbox mondo max (x,y,z): (9.7e-05, 19.106497, 3.338898)
+    dimensioni bbox mondo (dx,dy,dz): (4.145812, 37.812828, 5.688893)
+    obj.dimensions (Blender): (4.145812, 37.812828, 5.688893)
+  oggetto: Mesh_10   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1440   facce: 800
+    bbox mondo min (x,y,z): (-3.181288, -13.918383, -2.100954)
+    bbox mondo max (x,y,z): (-0.505311, 6.119705, 1.35633)
+    dimensioni bbox mondo (dx,dy,dz): (2.675977, 20.038088, 3.457284)
+    obj.dimensions (Blender): (2.675977, 20.038088, 3.457284)
+  oggetto: Mesh_11   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 9216   facce: 4352
+    bbox mondo min (x,y,z): (-2.170472, -19.372885, -1.014449)
+    bbox mondo max (x,y,z): (-0.72017, -0.394444, -0.855746)
+    dimensioni bbox mondo (dx,dy,dz): (1.450301, 18.978441, 0.158703)
+    obj.dimensions (Blender): (1.450302, 18.978441, 0.158703)
+  oggetto: Mesh_12   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 4608   facce: 2688
+    bbox mondo min (x,y,z): (-2.900506, -18.884569, -2.020382)
+    bbox mondo max (x,y,z): (-0.790977, 0.269667, 0.089148)
+    dimensioni bbox mondo (dx,dy,dz): (2.109529, 19.154236, 2.109529)
+    obj.dimensions (Blender): (2.109529, 19.154234, 2.109529)
+  oggetto: Mesh_2   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1796   facce: 1176
+    bbox mondo min (x,y,z): (-4.004102, -20.000372, 0.990093)
+    bbox mondo max (x,y,z): (0.007422, 18.000458, 1.021833)
+    dimensioni bbox mondo (dx,dy,dz): (4.011524, 38.00083, 0.031741)
+    obj.dimensions (Blender): (4.011524, 38.000832, 0.031741)
+  oggetto: Mesh_3   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2987   facce: 1732
+    bbox mondo min (x,y,z): (-3.335108, -20.000372, -1.043748)
+    bbox mondo max (x,y,z): (0.007422, 18.000458, -1.014449)
+    dimensioni bbox mondo (dx,dy,dz): (3.34253, 38.00083, 0.029299)
+    obj.dimensions (Blender): (3.34253, 38.000832, 0.029299)
+  oggetto: Mesh_4   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 808   facce: 620
+    bbox mondo min (x,y,z): (-1.916547, -20.000372, -2.115603)
+    bbox mondo max (x,y,z): (9.7e-05, 17.00185, -1.236633)
+    dimensioni bbox mondo (dx,dy,dz): (1.916644, 37.002222, 0.878971)
+    obj.dimensions (Blender): (1.916644, 37.00222, 0.878971)
+  oggetto: Mesh_5   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 4112   facce: 2308
+    bbox mondo min (x,y,z): (-3.855166, -0.013556, -2.306047)
+    bbox mondo max (x,y,z): (9.7e-05, 0.010859, 2.440394)
+    dimensioni bbox mondo (dx,dy,dz): (3.855263, 0.024414, 4.746441)
+    obj.dimensions (Blender): (3.855263, 0.024416, 4.746441)
+  oggetto: Mesh_6   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3837   facce: 2181
+    bbox mondo min (x,y,z): (-4.128623, -10.011847, -1.995966)
+    bbox mondo max (x,y,z): (9.7e-05, -9.987431, 2.267042)
+    dimensioni bbox mondo (dx,dy,dz): (4.12872, 0.024416, 4.263007)
+    obj.dimensions (Blender): (4.12872, 0.024416, 4.263008)
+  oggetto: Mesh_7   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3982   facce: 2236
+    bbox mondo min (x,y,z): (-2.661231, 9.987176, -2.27919)
+    bbox mondo max (x,y,z): (9.7e-05, 10.011592, 2.806632)
+    dimensioni bbox mondo (dx,dy,dz): (2.661328, 0.024416, 5.085822)
+    obj.dimensions (Blender): (2.661328, 0.024416, 5.085822)
+  oggetto: Mesh_8   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3744   facce: 1976
+    bbox mondo min (x,y,z): (-3.828308, -20.000372, -1.234191)
+    bbox mondo max (x,y,z): (-2.443929, 0.267225, 0.880221)
+    dimensioni bbox mondo (dx,dy,dz): (1.384379, 20.267597, 2.114413)
+    obj.dimensions (Blender): (1.384379, 20.267597, 2.114413)
+  oggetto: Mesh_9   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.002442, 0.0, 0.0, -4.145714]
+      [0.0, 0.002442, 0.0, 20.000116]
+      [0.0, 0.0, 0.002442, -2.349996]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2784   facce: 1276
+    bbox mondo min (x,y,z): (-1.025369, -17.929907, -1.178035)
+    bbox mondo max (x,y,z): (-0.524844, 17.380295, 3.160662)
+    dimensioni bbox mondo (dx,dy,dz): (0.500525, 35.310202, 4.338696)
+    obj.dimensions (Blender): (0.500525, 35.310204, 4.338696)
+
+  TOTALE FILE interni.glb :
+    oggetti importati: 27
+    vertici totali: 99802   facce totali: 51837
+    bbox mondo AGGREGATA min: (-4.145714, -20.000372, -2.349996)
+    bbox mondo AGGREGATA max: (0.007422, 20.000116, 3.338898)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (4.153136, 40.000488, 5.688893)
+
+------------------------------------------------------------------------------
+GLB: propulsione.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\propulsione.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 222416
+14:59:30 | INFO: Data are loaded, start creating Blender stuff
+14:59:30 | INFO: Blender create Mesh node 0
+14:59:30 | INFO: Blender create Mesh node 1
+14:59:30 | INFO: Blender create Mesh node 2
+14:59:30 | INFO: Blender create Mesh node 3
+14:59:30 | INFO: Blender create Mesh node 4
+14:59:30 | INFO: Blender create Mesh node 5
+14:59:30 | INFO: Blender create Mesh node 6
+14:59:30 | INFO: glTF import finished in 0.39s
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 4.525]
+      [0.0, 0.0, 0.0006, -0.85]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1512   facce: 1308
+    bbox mondo min (x,y,z): (-0.169855, -3.450216, -0.16984)
+    bbox mondo max (x,y,z): (0.169924, 1.00714, 0.169939)
+    dimensioni bbox mondo (dx,dy,dz): (0.33978, 4.457356, 0.33978)
+    obj.dimensions (Blender): (0.33978, 4.457356, 0.33978)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 5.075]
+      [0.0, 0.0, 0.0006, -0.85]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2158   facce: 2188
+    bbox mondo min (x,y,z): (-0.289919, -1.350197, -0.289904)
+    bbox mondo max (x,y,z): (0.348819, 0.44115, 0.290003)
+    dimensioni bbox mondo (dx,dy,dz): (0.638738, 1.791347, 0.579907)
+    obj.dimensions (Blender): (0.638738, 1.791347, 0.579907)
+  oggetto: Mesh_2   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 5.75]
+      [0.0, 0.0, 0.0006, -0.85]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1278   facce: 1416
+    bbox mondo min (x,y,z): (-0.800189, -4.085, -0.800174)
+    bbox mondo max (x,y,z): (0.800257, -3.380227, 0.800272)
+    dimensioni bbox mondo (dx,dy,dz): (1.600446, 0.704773, 1.600446)
+    obj.dimensions (Blender): (1.600446, 0.704773, 1.600446)
+  oggetto: Mesh_3   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 8.35]
+      [0.0, 0.0, 0.0006, -0.63]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2728   facce: 2272
+    bbox mondo min (x,y,z): (-0.327739, 1.744708, -0.266808)
+    bbox mondo max (x,y,z): (0.515707, 3.455012, 0.73212)
+    dimensioni bbox mondo (dx,dy,dz): (0.843446, 1.710304, 0.998928)
+    obj.dimensions (Blender): (0.843446, 1.710304, 0.998928)
+  oggetto: Mesh_4   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 7.17]
+      [0.0, 0.0, 0.0006, -0.77]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1872   facce: 1392
+    bbox mondo min (x,y,z): (-0.527044, 0.989733, -0.25973)
+    bbox mondo max (x,y,z): (0.330809, 1.839782, 0.574711)
+    dimensioni bbox mondo (dx,dy,dz): (0.857854, 0.850049, 0.834441)
+    obj.dimensions (Blender): (0.857854, 0.850049, 0.834441)
+  oggetto: Mesh_5   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 5.737]
+      [0.0, 0.0, 0.0006, -0.75]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 192   facce: 176
+    bbox mondo min (x,y,z): (-1.2, -0.026047, -0.75)
+    bbox mondo max (x,y,z): (1.200069, -0.000233, 0.950099)
+    dimensioni bbox mondo (dx,dy,dz): (2.400069, 0.025814, 1.700099)
+    obj.dimensions (Blender): (2.400069, 0.025814, 1.700099)
+  oggetto: Mesh_6   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.0006, 0.0, 0.0, -1.2]
+      [0.0, 0.0006, 0.0, 3.35]
+      [0.0, 0.0, 0.0006, -0.85]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2992   facce: 2352
+    bbox mondo min (x,y,z): (-0.420188, -2.549919, -0.441784)
+    bbox mondo max (x,y,z): (0.420256, 3.35, 0.659198)
+    dimensioni bbox mondo (dx,dy,dz): (0.840444, 5.899919, 1.100982)
+    obj.dimensions (Blender): (0.840444, 5.899919, 1.100982)
+  oggetto: prop_albero   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_albero_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, -1.225]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_astuccio   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_astuccio_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, -0.675]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_elica   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, -3.66]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_elica_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_motore   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_motore_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 2.6]
+      [0.0, 0.0, 1.0, 0.22]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_riduttore   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_riduttore_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 1.42]
+      [0.0, 0.0, 1.0, 0.08]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_scafo   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_scafo_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, -0.013]
+      [0.0, 0.0, 1.0, 0.1]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_supporti   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: prop_supporti_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, -2.4]
+      [0.0, 0.0, 1.0, 0.0]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: PROPULSIONE   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+
+  TOTALE FILE propulsione.glb :
+    oggetti importati: 22
+    vertici totali: 12732   facce totali: 11104
+    bbox mondo AGGREGATA min: (-1.2, -4.085, -0.800174)
+    bbox mondo AGGREGATA max: (1.200069, 3.455012, 0.950099)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (2.400069, 7.540012, 1.750272)
+
+------------------------------------------------------------------------------
+GLB: giroscopio.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\giroscopio.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 158972
+14:59:30 | INFO: Data are loaded, start creating Blender stuff
+14:59:30 | INFO: Blender create Mesh node 0
+14:59:30 | INFO: Blender create Mesh node 1
+14:59:30 | INFO: Blender create Mesh node 2
+14:59:31 | INFO: Blender create Mesh node 3
+14:59:31 | INFO: Blender create Mesh node 4
+14:59:31 | INFO: glTF import finished in 0.26s
+  oggetto: GIROSCOPIO   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_basamento   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_basamento_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.565]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.325]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_calotta   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_calotta_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_cardano   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_cardano_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, -0.625]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_rotore   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_rotore_MESH   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_sfera   tipo: EMPTY
+    matrice_mondo (riga per riga):
+      [1.0, 0.0, 0.0, 0.0]
+      [0.0, 1.0, 0.0, 0.0]
+      [0.0, 0.0, 1.0, 0.66]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: gyro_sfera_MESH   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000116, 0.0, 0.0, -1.13]
+      [0.0, 0.000116, 0.0, 0.992388]
+      [0.0, 0.0, 0.000116, -0.125]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 2092   facce: 1732
+    bbox mondo min (x,y,z): (-0.670349, -0.590402, -0.073023)
+    bbox mondo max (x,y,z): (0.670349, 0.992388, 0.65)
+    dimensioni bbox mondo (dx,dy,dz): (1.340698, 1.582791, 0.723023)
+    obj.dimensions (Blender): (1.340698, 1.582791, 0.723023)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000116, 0.0, 0.0, -0.565]
+      [0.0, 0.000116, 0.0, 0.992388]
+      [0.0, 0.0, 0.000116, -0.45]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1932   facce: 2784
+    bbox mondo min (x,y,z): (-0.565, -0.565054, 0.66)
+    bbox mondo max (x,y,z): (0.565, 0.564946, 1.22)
+    dimensioni bbox mondo (dx,dy,dz): (1.13, 1.13, 0.56)
+    obj.dimensions (Blender): (1.13, 1.13, 0.56)
+  oggetto: Mesh_2   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000116, 0.0, 0.0, -1.19]
+      [0.0, 0.000116, 0.0, 0.992388]
+      [0.0, 0.0, 0.000116, 0.21]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1200   facce: 936
+    bbox mondo min (x,y,z): (-0.715, -0.115054, 0.413954)
+    bbox mondo max (x,y,z): (0.715, 0.564946, 0.775)
+    dimensioni bbox mondo (dx,dy,dz): (1.43, 0.68, 0.361047)
+    obj.dimensions (Blender): (1.43, 0.68, 0.361046)
+  oggetto: Mesh_3   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000116, 0.0, 0.0, -0.565]
+      [0.0, 0.000116, 0.0, 0.992388]
+      [0.0, 0.0, 0.000116, 0.21]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1510   facce: 1332
+    bbox mondo min (x,y,z): (-0.43, -0.430054, 0.21)
+    bbox mondo max (x,y,z): (0.43, 0.429946, 1.11)
+    dimensioni bbox mondo (dx,dy,dz): (0.86, 0.86, 0.9)
+    obj.dimensions (Blender): (0.86, 0.86, 0.9)
+  oggetto: Mesh_4   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000116, 0.0, 0.0, -0.565]
+      [0.0, 0.000116, 0.0, 0.992388]
+      [0.0, 0.0, 0.000116, -0.45]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 3070   facce: 3636
+    bbox mondo min (x,y,z): (-0.565, -0.826914, -0.127442)
+    bbox mondo max (x,y,z): (0.565, 0.564946, 0.695)
+    dimensioni bbox mondo (dx,dy,dz): (1.13, 1.39186, 0.822442)
+    obj.dimensions (Blender): (1.13, 1.39186, 0.822442)
+
+  TOTALE FILE giroscopio.glb :
+    oggetti importati: 16
+    vertici totali: 9804   facce totali: 10420
+    bbox mondo AGGREGATA min: (-0.715, -0.826914, -0.127442)
+    bbox mondo AGGREGATA max: (0.715, 0.992388, 1.22)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (1.43, 1.819302, 1.347442)
+
+------------------------------------------------------------------------------
+GLB: guscio-salone.glb -> C:\Users\Giuseppe\Webingegno\nautica\public\modelli\guscio-salone.glb
+------------------------------------------------------------------------------
+dimensione file (byte): 125516
+14:59:31 | INFO: Data are loaded, start creating Blender stuff
+14:59:31 | INFO: Blender create Mesh node 0
+14:59:31 | INFO: Blender create Mesh node 1
+14:59:31 | INFO: Blender create Mesh node 2
+14:59:31 | INFO: Blender create Mesh node 3
+14:59:31 | INFO: Blender create Mesh node 4
+14:59:31 | INFO: Blender create Mesh node 5
+14:59:31 | INFO: Blender create Mesh node 6
+14:59:31 | INFO: Blender create Mesh node 7
+14:59:31 | INFO: glTF import finished in 0.50s
+  oggetto: CAMERA_SORGENTE_SALONE   tipo: CAMERA
+    matrice_mondo (riga per riga):
+      [0.325471, 0.045003, -0.944481, -2.9322]
+      [-0.945539, 0.020818, -0.324843, -0.8436]
+      [0.005043, 0.99877, 0.049328, 0.6072]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: davanti   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: fondo   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: Mesh_0   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1734   facce: 3072
+    bbox mondo min (x,y,z): (-3.7322, -0.000273, -0.562818)
+    bbox mondo max (x,y,z): (-2.174659, 0.12, 1.787325)
+    dimensioni bbox mondo (dx,dy,dz): (1.557541, 0.120273, 2.350143)
+    obj.dimensions (Blender): (1.557541, 0.120273, 2.350143)
+  oggetto: Mesh_1   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1734   facce: 3072
+    bbox mondo min (x,y,z): (5.999727, -4.574874, -0.562818)
+    bbox mondo max (x,y,z): (6.12, -0.000273, 1.787325)
+    dimensioni bbox mondo (dx,dy,dz): (0.120273, 4.574601, 2.350143)
+    obj.dimensions (Blender): (0.120273, 4.574601, 2.350143)
+  oggetto: Mesh_2   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 6534   facce: 12288
+    bbox mondo min (x,y,z): (-0.000115, -0.000273, -0.562818)
+    bbox mondo max (x,y,z): (5.999727, 0.12, 1.787325)
+    dimensioni bbox mondo (dx,dy,dz): (5.999842, 0.120273, 2.350143)
+    obj.dimensions (Blender): (5.999841, 0.120273, 2.350143)
+  oggetto: Mesh_3   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 6534   facce: 12288
+    bbox mondo min (x,y,z): (-3.7322, -4.694547, -0.562818)
+    bbox mondo max (x,y,z): (5.999727, -4.574874, 1.787325)
+    dimensioni bbox mondo (dx,dy,dz): (9.731927, 0.119672, 2.350143)
+    obj.dimensions (Blender): (9.731927, 0.119672, 2.350143)
+  oggetto: Mesh_4   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 6534   facce: 12288
+    bbox mondo min (x,y,z): (-3.7322, -4.574874, -0.6428)
+    bbox mondo max (x,y,z): (5.999727, -0.000273, -0.562818)
+    dimensioni bbox mondo (dx,dy,dz): (9.731927, 4.574601, 0.079982)
+    obj.dimensions (Blender): (9.731927, 4.574601, 0.079982)
+  oggetto: Mesh_5   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 6534   facce: 12288
+    bbox mondo min (x,y,z): (-3.7322, -4.574874, 1.787325)
+    bbox mondo max (x,y,z): (5.999727, -0.000273, 1.867307)
+    dimensioni bbox mondo (dx,dy,dz): (9.731927, 4.574601, 0.079982)
+    obj.dimensions (Blender): (9.731927, 4.574601, 0.079982)
+  oggetto: Mesh_6   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1734   facce: 3072
+    bbox mondo min (x,y,z): (-2.174659, -0.000273, 1.145065)
+    bbox mondo max (x,y,z): (-0.000115, 0.12, 1.787325)
+    dimensioni bbox mondo (dx,dy,dz): (2.174544, 0.120273, 0.64226)
+    obj.dimensions (Blender): (2.174544, 0.120273, 0.64226)
+  oggetto: Mesh_7   tipo: MESH
+    matrice_mondo (riga per riga):
+      [0.000601, 0.0, 0.0, -3.7322]
+      [0.0, 0.000601, 0.0, 0.12]
+      [0.0, 0.0, 0.000601, -0.6428]
+      [0.0, 0.0, 0.0, 1.0]
+    vertici: 1734   facce: 3072
+    bbox mondo min (x,y,z): (-2.174659, -0.000273, -0.562818)
+    bbox mondo max (x,y,z): (-0.000115, 0.12, 6.2e-05)
+    dimensioni bbox mondo (dx,dy,dz): (2.174544, 0.120273, 0.56288)
+    obj.dimensions (Blender): (2.174544, 0.120273, 0.56288)
+  oggetto: montante   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: opposta   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: pavimento   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: soffitto   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: sopra_vano   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+  oggetto: sotto_vano   tipo: EMPTY
+    matrice_mondo: identita
+    vertici: 0   facce: 0
+    (nessuna geometria propria: empty/vuoto, bbox non applicabile)
+
+  TOTALE FILE guscio-salone.glb :
+    oggetti importati: 17
+    vertici totali: 33072   facce totali: 61440
+    bbox mondo AGGREGATA min: (-3.7322, -4.694547, -0.6428)
+    bbox mondo AGGREGATA max: (6.12, 0.12, 1.867307)
+    dimensioni bbox AGGREGATA (dx,dy,dz): (9.8522, 4.814547, 2.510107)
+
+------------------------------------------------------------------------------
+VERIFICA SCALA — 1 unita di scena = 2,5 m dichiarato (0,4 unita/metro)
+------------------------------------------------------------------------------
+guscio-salone.glb — dz (asse Z Blender = Y "in alto" di posa.json dopo la rotazione Y-up->Z-up) per oggetto:
+    Mesh_0 dz = 2.350143
+    Mesh_1 dz = 2.350143
+    Mesh_2 dz = 2.350143
+    Mesh_3 dz = 2.350143
+    Mesh_4 dz = 0.079982
+    Mesh_5 dz = 0.079982
+    Mesh_6 dz = 0.64226
+    Mesh_7 dz = 0.56288
+guscio-salone.glb — MASSIMA dz fra i pannelli (altezza piena aria, grezza come importata): 2.350143 unita Blender
+altezza aria dichiarata in riferimenti/salone/posa.json: 2.35 m
+differenza (glb_grezzo - dichiarato_m): 0.000143   ( 0.006 % )
+
+INTERPRETAZIONE: se il GLB e autorato in METRI (come dichiarano
+src/scena/guscio.js e src/scena/macchine.js), l altezza grezza qui
+sopra deve combaciare con 2,35 m SENZA applicare alcun fattore 0,4 o 2,5.
+ESITO: TORNA. Il GLB grezzo e gia in metri (errore 0.006 %).
+
+scafo.glb: non presente/non importato in public/modelli — nessun GLB dello scafo da verificare qui.
+(lo scafo in questo progetto e procedurale in src/scafo/ordinate.js, non un GLB esportato)
+
+------------------------------------------------------------------------------
+RIEPILOGO CONTEGGI PER FILE (vertici / facce, oggetti importati)
+------------------------------------------------------------------------------
+scafo.glb : FALLITO (vedi errore sopra)
+sovrastruttura.glb : oggetti= 2  vertici= 13028  facce= 8510
+impianto.glb : oggetti= 14  vertici= 14908  facce= 12448
+interni.glb : oggetti= 13  vertici= 99802  facce= 51837
+propulsione.glb : oggetti= 7  vertici= 12732  facce= 11104
+giroscopio.glb : oggetti= 5  vertici= 9804  facce= 10420
+guscio-salone.glb : oggetti= 8  vertici= 33072  facce= 61440
+------------------------------------------------------------------------------
+FINE INVENTARIO
+------------------------------------------------------------------------------
+BlenderMCP server stopped
+BlenderMCP addon unregistered
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:35:40)
+
+Blender quit
