@@ -228,3 +228,71 @@ qualitativa da un fotogramma, non una segmentazione misurata pixel per pixel.
   quel giudizio.
 
 Fine: `2026-08-31T17:09:30+02:00` circa (entro il limite di 15 minuti).
+
+---
+
+# RIAPERTURA — 31 agosto, sera. Questo referto NON chiude D2.
+
+**Chi lo riapre:** la revisione del committente, con una misura per regioni
+separate che questo referto non aveva fatto.
+
+## Il difetto del metro, ed e' il punto
+
+La ROI usata qui contiene le due persone insieme a boiserie, lampada, vetrina,
+tavolino e tappeto — il referto lo dichiarava, ma lo trattava come un limite
+minore. Non lo e': significa che questo numero **non distingue un busto che
+compensa il rollio da un riflesso che cambia**.
+
+Misurato di nuovo sul file oggi in produzione
+(`sha256 a90587ce145eb208`, 501.000 byte, 70 fotogrammi, 2,9167 s), con regioni
+separate, dai due lati:
+
+| regione | committente | qui |
+|---|---:|---:|
+| mare (dalla finestra) | 2,7739 | 2,6796 |
+| uomo | 0,4342 | 1,0143 |
+| donna | 0,5994 | 1,3656 |
+| coppia + stanza | 0,4995 | 0,7241 |
+
+Il mare concorda (2,77 contro 2,68). Le due regioni umane no: i valori misurati
+qui sono il doppio, **perche' i ritagli sono diversi**, e nessuno dei due e'
+stato scelto su una segmentazione — sono due rettangoli tirati a occhio su uno
+screenshot.
+
+**La conclusione non e' quale dei due abbia ragione: e' che il rapporto mare/
+persone va da 2,6 a 6,4 volte a seconda di dove si tira il rettangolo.** Un
+metro il cui verdetto dipende da dove lo punti puo' essere un controllo tecnico
+— «questa clip si muove piu' della precedente», che resta vero — ma non puo'
+approvare una posa.
+
+## Cosa resta vero di questo referto
+
+Il confronto FRA CLIP, a ROI costante, regge: 0,0713 la precedente contro 0,7241
+quella in produzione, dieci volte. E' un fatto, ed e' il motivo per cui la clip
+nuova e' stata montata. Non e' il fatto che serve.
+
+## Stato corretto di D2
+
+> **BLOCCANTE — clip presente e ciclabile, reazione umana non ancora leggibile
+> nella composizione reale.**
+
+## I criteri che lo chiuderanno, e non sono numerici
+
+1. entro il primo mezzo secondo si legge **un gesto inequivocabile** di
+   compensazione: una presa, un piede che si pianta, un busto che controbilancia;
+2. stesse persone, abiti, luce, mobili, focale e montanti di calma e sollievo;
+3. nessun movimento di camera, zoom o deriva — **questo il metro lo verifica
+   gia'**, ed e' verde;
+4. ciclo naturale di **4-5 secondi** senza ritorno evidente della posa. Il file
+   in produzione dura 2,9167 s: **non lo soddisfa**, ed e' stato accorciato da
+   me per far stare i filmati sotto il tetto di 4,2 MB;
+5. nella composizione reale del sito, senza spiegazione, osservatori estranei
+   devono descrivere «si tengono, compensano il movimento», non «la foto si
+   inclina»;
+6. il metro tecnico separa persone e sfondo, e **resta subordinato** al test
+   percettivo.
+
+Il file attuale non soddisfa 1, 4 e 5. Il 4 e' in conflitto diretto con il
+budget dei filmati: 4-5 secondi a questa qualita' sfondano il tetto, quindi o
+sale il tetto (che e' una decisione dichiarata in `peso.mjs`) o cala la
+risoluzione, o la clip va rigenerata piu' efficiente.
