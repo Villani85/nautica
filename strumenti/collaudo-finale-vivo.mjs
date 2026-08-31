@@ -57,7 +57,7 @@ const PASSO_MS = 170
  */
 const SOGLIA = 0.10
 
-const b = await apriBrowser({ conGpu: true })
+const b = await apriBrowser({ conGpu: process.env.SENZA_GPU ? false : true })
 const pg = await b.newPage()
 await pg.setViewportSize({ width: 1280, height: 800 })
 await pg.goto(URL, { waitUntil: 'load' })
@@ -96,12 +96,48 @@ const RIT = { x: 320, y: 300, width: 640, height: 380 }
  * Playwright passa dal compositore e contiene i pixel veri.
  */
 mkdirSync(FUORI, { recursive: true })
+/**
+ * ─── FRA UNA SCHERMATA E L'ALTRA SI ASPETTA IL VIDEO, NON L'OROLOGIO
+ *
+ * DIFETTO DEL CANCELLO STESSO, preso dalla CI. Con un passo a orologio fisso
+ * questo strumento misurava anche la velocita' della macchina: su una macchina
+ * lenta due schermate consecutive pescano lo STESSO fotogramma del video, la
+ * differenza va a zero, e il cancello accusa il sito di non respirare mentre
+ * respira benissimo.
+ *
+ * Misurato: con la GPU vera il movimento medio era 0,983; sullo stesso sito
+ * col rasterizzatore software 0,385, cioe' due volte e mezzo meno. Nessuna
+ * delle due dice qualcosa del sito -- dicono quanto e' carica la macchina. Sul
+ * runner, piu' lento ancora, il numero e' finito sotto la soglia e la corsa e'
+ * uscita rossa.
+ *
+ * La cura e' la regola che questo repo applica ovunque tranne, fino a ora, qui:
+ * non si aspetta un tempo, si aspetta un FATTO. Fra due schermate si aspetta
+ * che il video della calma abbia avanzato di almeno tre fotogrammi suoi. Cosi'
+ * ogni coppia confrontata contiene movimento vero, su qualunque macchina.
+ */
+const AVANZO_VIDEO_S = 0.125
+
 const vie = []
+let saltate = 0
 for (let i = 0; i < CAMPIONI; i++) {
   const via = FUORI + '/finale-' + String(i).padStart(2, '0') + '.png'
   await pg.screenshot({ path: via, clip: RIT })
   vie.push(via)
-  await pg.waitForTimeout(PASSO_MS)
+  if (i === CAMPIONI - 1) break
+  const prima = await pg.evaluate(() => {
+    const v = [...document.querySelectorAll('video')].find((x) => /salone-largo/.test(x.currentSrc || x.src))
+    return v ? v.currentTime : null
+  })
+  if (prima === null) { saltate++; await pg.waitForTimeout(PASSO_MS); continue }
+  try {
+    await pg.waitForFunction(([t, d]) => {
+      const v = [...document.querySelectorAll('video')].find((x) => /salone-largo/.test(x.currentSrc || x.src))
+      if (!v) return true
+      /* il ciclo puo' riavvolgersi: anche il salto all'indietro e' avanzamento */
+      return v.currentTime < t || v.currentTime - t >= d
+    }, [prima, AVANZO_VIDEO_S], { timeout: 6000 })
+  } catch { saltate++ }
 }
 await b.close()
 
@@ -132,10 +168,17 @@ const consegnaFine = consegna === null ? 'assente (build senza consegna)' : Stri
 console.log('COLLAUDO FINALE VIVO —', URL)
 console.log('  filmato finito:      ', finita ? 'si' : 'NO (non e\' arrivato in fondo)')
 console.log('  consegna alla calma: ', consegnaFine)
+console.log('  attese scadute:      ', saltate, saltate ? '(il video della calma non avanzava)' : '')
 console.log('  movimento medio:      ' + medio.toFixed(3) + ' livelli   (soglia ' + SOGLIA.toFixed(2) + ')')
 console.log('  picco:                ' + picco.toFixed(3))
 
 if (!finita) { console.log('\nROSSO — il filmato non finisce: il finale non e\' stato raggiunto.'); process.exit(1) }
+if (saltate > CAMPIONI / 2) {
+  console.log("")
+  console.log("NON MISURABILE — il video della calma non ha avanzato fra le schermate.")
+  console.log("        Non e un verdetto sul sito: e l assenza delle condizioni per darne uno.")
+  process.exit(1)
+}
 if (medio < SOGLIA) {
   console.log('\nROSSO — il finale e\' una fotografia: ' + medio.toFixed(3) + ' livelli di movimento.')
   console.log('        Le persone tranquille devono essere un loop vivo, non l\'ultimo fotogramma del filmato.')
