@@ -169,6 +169,84 @@ esatto P4, e va tenuto dove chiunque lo trova.
 RISALITA_CORRIDOIO_M = 2.10
 LUNGHEZZA_CORRIDOIO_M = 5.480
 
+def origine_quaternione(convenzione):
+    """
+    Il quaternione dell origine, NELLA CONVENZIONE CHIESTA.
+
+    ─── VENTI RIGHE CHE CHIUDONO UN ERRORE CHE NON DA MESSAGGI
+
+    `ORIGINE_QUATERNIONE_GLTF` e nell ordine glTF, (x, y, z, w).
+    `mathutils.Quaternion()` di Blender vuole (w, x, y, z). Passare la tupla
+    cosi com e:
+
+        letta come glTF      w = +0,8138   ->  rotazione   71,1 gradi
+        letta come Blender   w = -0,0215   ->  rotazione  182,5 gradi
+
+    e la NORMA E 1,000000 in tutti e due i casi. Nessun errore, nessun avviso:
+    il pezzo esce ruotato di centoundici gradi e sembra un problema di
+    modellazione. Si perdono due giri a cercarlo nella geometria.
+
+    Il nome del campo lo dice gia -- ma lo dice a chi sa gia che esiste una
+    differenza, cioe a chi non ne ha bisogno. Questa funzione lo dice a tutti,
+    e rifiuta chi non dichiara in che convenzione lo vuole.
+    """
+    x, y, z, w = ORIGINE_QUATERNIONE_GLTF
+    if convenzione == "gltf":
+        return (x, y, z, w)
+    if convenzione == "blender":
+        return (w, x, y, z)
+    raise ValueError(
+        "convenzione «%s» non riconosciuta: usa 'gltf' (x,y,z,w) oppure "
+        "'blender' (w,x,y,z). Non c e un valore predefinito, e non deve "
+        "esserci: il predefinito sarebbe giusto per meta dei chiamanti e "
+        "sbagliato in silenzio per l altra meta." % (convenzione,))
+
+
+def verifica_nomi(tabella, nome_tabella):
+    """
+    Rifiuta i valori che non dichiarano la propria unita e il proprio frame.
+
+    ─── LA CURA, E NON E L ATTENZIONE
+
+    Il 31 agosto la stessa specie di errore e passata CINQUE volte in un
+    pomeriggio, e nessuna era un errore di calcolo:
+
+      1  assi glTF Y-up letti come Blender Z-up      412% di scarto
+      2  frame locale del pezzo letto come mondo     8,7 m di scarto
+      3  MiB letti come MB                           verde falso su budget sfondato
+      4  un numero cercato come stringa, non come somma  «senza fonte» per un valore giusto
+      5  il vano misurato preso per una porta        la curva passa dalla finestra
+
+    Sono tutte GRANDEZZE GIUSTE LETTE IN UN SISTEMA CHE NON ERA IL LORO. Nessuna
+    da messaggio: danno un numero plausibile, ed e per questo che passano.
+    L attenzione c e stata, ed e costata cinque volte lo stesso.
+
+    Quindi il nome porta il sistema, e chi non lo porta viene RIFIUTATO -- non
+    accettato con un avviso. Un avviso lo si legge la prima volta.
+    """
+    SENZA_SUFFISSO = ("stato", "fonte", "nota", "formula", "decide", "scarto",
+                      "valori", "stato_precedente", "normale")
+    guai = []
+    for chiave, voce in tabella.items():
+        if not isinstance(voce, dict):
+            continue
+        for k in voce:
+            if k in SENZA_SUFFISSO:
+                continue
+            ok = ("_m", "_MB", "_gltf", "_blender", "_locale", "_mondo", "_deg")
+            if k.endswith(ok) or "_m_" in k:
+                continue
+            guai.append("%s.%s.%s" % (nome_tabella, chiave, k))
+    if guai:
+        raise ValueError(
+            "questi valori non dichiarano unita e frame nel proprio nome: %s. "
+            "  `x_m` non `x`; `peso_MB` non `peso`; `_gltf`/`_blender` su ogni "
+            "terna e ogni quaternione; `_locale`/`_mondo` su ogni coordinata, "
+            "anche quando e ovvio -- gli 8,622575 erano ovvi anche loro."
+            % ", ".join(guai))
+    return True
+
+
 def dal_frame_guscio(p):
     """
     Porta un punto dal frame del GLB del guscio al frame del mondo.
@@ -498,6 +576,13 @@ def riepilogo():
     aperte = [n for n, c in CUCITURE.items() if c['stato'] in ('CONFLITTO', 'SENZA FONTE')]
     print('\n  %d cuciture su %d non sono utilizzabili: %s'
           % (len(aperte), len(CUCITURE), ', '.join(aperte)))
+
+
+# Le due tabelle si verificano AL CARICAMENTO, non su richiesta: un controllo
+# che bisogna ricordarsi di chiamare e' un controllo che un giorno nessuno
+# chiama. Chi importa questo contratto lo importa gia' verificato.
+verifica_nomi(CUCITURE, 'CUCITURE')
+verifica_nomi(COLLOCAZIONI, 'COLLOCAZIONI')
 
 
 if __name__ == '__main__':
