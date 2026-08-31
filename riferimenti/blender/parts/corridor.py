@@ -80,9 +80,14 @@ import bpy
 import bmesh
 import math
 import os
+import sys
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 BLENDER_DIR = os.path.abspath(os.path.join(QUI, '..'))
+if BLENDER_DIR not in sys.path:
+    sys.path.insert(0, BLENDER_DIR)
+import world_root  # il frame comune: origine, assi, collezioni, cuciture
+
 USCITE = os.path.join(BLENDER_DIR, 'uscite')
 os.makedirs(USCITE, exist_ok=True)
 
@@ -119,6 +124,14 @@ L2 = LARGHEZZA_CORRIDOIO / 2.0
 #
 # Ognuna e' il rettangolo LIBERO (non il muro: qui non c'e' muro di testata)
 # alla rispettiva estremita' del corridoio, nel sistema di assi locale sopra.
+#
+# Accanto alle quote LOCALI, ciascuna apertura porta anche le proprie
+# coordinate ASSOLUTE nel mondo: si applica la traslazione dichiarata in
+# `world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']`, presa da li'
+# e non ricopiata — due copie dello stesso numero sono due numeri che un
+# giorno divergono (world_root.py, sezione 2).
+TX_MONDO, TY_MONDO, TZ_MONDO = world_root.COLLOCAZIONI['STAIR_CORRIDOR']['traslazione_m']
+
 APERTURA_LOCALE_TECNICO = {
     'lato': 'locale_tecnico',
     'x': 0.0,
@@ -127,7 +140,17 @@ APERTURA_LOCALE_TECNICO = {
     'z0': -L2,
     'z1': L2,
     'normale_corridoio': '+X',  # il corridoio si sviluppa verso +X da qui
-    'nota': 'valore di partenza ragionato, NON misurato — vedi ciao.md §15',
+    'x_mondo': round(0.0 + TX_MONDO, 4),
+    'y_pavimento_mondo': round(0.0 + TY_MONDO, 4),
+    'y_soffitto_mondo': round(ALTEZZA_LIBERA + TY_MONDO, 4),
+    'z0_mondo': round(-L2 + TZ_MONDO, 4),
+    'z1_mondo': round(L2 + TZ_MONDO, 4),
+    'nota': ('stato CONFLITTO — cucitura "porta_locale_tecnico" in '
+             'world_root.CUCITURE: qui larghezza x altezza = 0.85 x 2.00 m, '
+             'mechanism_bay.py dichiara 0.70 x 1.90 m. La porta risulta 15 cm '
+             'piu\' stretta e 10 cm piu\' bassa dell\'apertura che il '
+             'corridoio si aspetta. NON risolto qui: decide il committente '
+             '(vedi world_root.CUCITURE["porta_locale_tecnico"]["decide"]).'),
 }
 APERTURA_SALONE = {
     'lato': 'salone',
@@ -137,8 +160,30 @@ APERTURA_SALONE = {
     'z0': -L2,
     'z1': L2,
     'normale_corridoio': '-X',  # il corridoio si sviluppa verso -X da qui
-    'nota': 'valore di partenza ragionato, NON misurato — vedi ciao.md §15',
+    'x_mondo': round(LUNGHEZZA_TOTALE + TX_MONDO, 4),
+    'y_pavimento_mondo': round(RISALITA_TOTALE + TY_MONDO, 4),
+    'y_soffitto_mondo': round(RISALITA_TOTALE + ALTEZZA_LIBERA + TY_MONDO, 4),
+    'z0_mondo': round(-L2 + TZ_MONDO, 4),
+    'z1_mondo': round(L2 + TZ_MONDO, 4),
+    'nota': ('stato DERIVATO — cucitura "aperture_alte" in '
+             'world_root.CUCITURE: la posizione x = LUNGHEZZA_TOTALE = 5.480 m '
+             'deriva da 4.48 + 1.00 (corridor.py riga 113); la traslazione al '
+             'mondo la riporta esattamente sull\'origine (x_mondo = 0.0).'),
 }
+
+
+def verifica_cuciture_mondo():
+    """
+    Dichiara le proprie quote alla cucitura 'porta_locale_tecnico' di
+    world_root.py. NON e' chiamata all'esecuzione standalone dello script
+    (sotto, protetta da NAUTICA_VERIFICA_CUCITURE): la cucitura e' oggi in
+    CONFLITTO, quindi `world_root.verifica_cucitura` alza `SystemExit` --
+    corretto quando lo richiama l'assemblatore che mette insieme i pezzi, non
+    quando si esegue questo file da solo per generare il proprio GLB.
+    """
+    return world_root.verifica_cucitura(
+        'porta_locale_tecnico', 'corridor.py',
+        larghezza_m=LARGHEZZA_CORRIDOIO, altezza_m=ALTEZZA_LIBERA)
 
 
 def pulisci():
@@ -176,11 +221,9 @@ def scatola(nome, x0, x1, y0, y1, z0, z1, mat, collezione):
 
 pulisci()
 
-# ─── le due collezioni chieste dal contratto ───────────────────────────────
-WORLD_ROOT = bpy.data.collections.new('WORLD_ROOT')
-bpy.context.scene.collection.children.link(WORLD_ROOT)
-STAIR_CORRIDOR = bpy.data.collections.new('STAIR_CORRIDOR')
-WORLD_ROOT.children.link(STAIR_CORRIDOR)
+# ─── le due collezioni chieste dal contratto, dal frame comune world_root ──
+WORLD_ROOT = world_root.radice()
+STAIR_CORRIDOR = world_root.collezione('STAIR_CORRIDOR', WORLD_ROOT)
 
 MAT_PAVIMENTO = materiale('CORRIDOIO_pavimento', (0.30, 0.30, 0.32), 0.70)
 MAT_PARETE = materiale('CORRIDOIO_parete', (0.62, 0.60, 0.56), 0.75)
@@ -281,10 +324,23 @@ print(f'  bbox mondo dimensioni ({bb_max[0]-bb_min[0]:.4f}, {bb_max[1]-bb_min[1]
 print('')
 print('  APERTURA lato locale tecnico (X=0, verso -X esce dal corridoio):')
 a = APERTURA_LOCALE_TECNICO
-print(f'    x={a["x"]:.3f}  y {a["y_pavimento"]:.3f}..{a["y_soffitto"]:.3f}  z {a["z0"]:.3f}..{a["z1"]:.3f}')
+print(f'    locale   x={a["x"]:.3f}  y {a["y_pavimento"]:.3f}..{a["y_soffitto"]:.3f}  z {a["z0"]:.3f}..{a["z1"]:.3f}')
+print(f'    mondo    x={a["x_mondo"]:.3f}  y {a["y_pavimento_mondo"]:.3f}..{a["y_soffitto_mondo"]:.3f}  z {a["z0_mondo"]:.3f}..{a["z1_mondo"]:.3f}')
+print(f'    {a["nota"]}')
 print('  APERTURA lato salone (X={:.3f}, verso +X esce dal corridoio):'.format(LUNGHEZZA_TOTALE))
 a = APERTURA_SALONE
-print(f'    x={a["x"]:.3f}  y {a["y_pavimento"]:.3f}..{a["y_soffitto"]:.3f}  z {a["z0"]:.3f}..{a["z1"]:.3f}')
+print(f'    locale   x={a["x"]:.3f}  y {a["y_pavimento"]:.3f}..{a["y_soffitto"]:.3f}  z {a["z0"]:.3f}..{a["z1"]:.3f}')
+print(f'    mondo    x={a["x_mondo"]:.3f}  y {a["y_pavimento_mondo"]:.3f}..{a["y_soffitto_mondo"]:.3f}  z {a["z0_mondo"]:.3f}..{a["z1_mondo"]:.3f}')
+print(f'    {a["nota"]}')
 print('')
 print(f'  GLB                   {glb}   {peso} byte')
 print('')
+
+# ─── verifica della cucitura verso il locale tecnico, protetta da un flag ──
+#
+# NON gira in questa esecuzione standalone: la cucitura e' in CONFLITTO e
+# world_root.verifica_cucitura alza SystemExit di proposito (registra il
+# conflitto, non lo risolve). Chi assembla i pezzi la chiama esplicitamente,
+# oppure si puo' provare qui con NAUTICA_VERIFICA_CUCITURE=1.
+if os.environ.get('NAUTICA_VERIFICA_CUCITURE'):
+    verifica_cuciture_mondo()

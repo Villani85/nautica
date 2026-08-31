@@ -79,11 +79,20 @@ import bpy
 import bmesh
 import json
 import os
+import sys
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 RADICE = os.path.abspath(os.path.join(QUI, '..', '..', '..'))
 POSA = os.path.join(RADICE, 'riferimenti', 'salone', 'posa.json')
 GLB_GUSCIO = os.path.join(RADICE, 'public', 'modelli', 'guscio-salone.glb')
+
+# ─── il frame comune (contratto): il salone e' il RIFERIMENTO, non un pezzo
+#     collocato in esso, ma la radice/collezioni condivise sono UNA sola per
+#     tutta la scena -- vanno prese da world_root.py, non ricreate qui.
+CARTELLA_BLENDER = os.path.dirname(QUI)  # riferimenti/blender, dove sta world_root.py
+if CARTELLA_BLENDER not in sys.path:
+    sys.path.insert(0, CARTELLA_BLENDER)
+import world_root
 
 with open(POSA, encoding='utf-8') as f:
     posa = json.load(f)
@@ -113,17 +122,28 @@ PORTA_LARGHEZZA = 1.0  # NON misurata: scelta di modellazione, come il verso
 bpy.ops.wm.read_homefile(use_empty=True)
 
 # ─── le collezioni del contratto world-space ────────────────────────────
-def collezione(nome, genitore=None):
-    col = bpy.data.collections.get(nome)
-    if col is None:
-        col = bpy.data.collections.new(nome)
-        (genitore or bpy.context.scene.collection).children.link(col)
-    return col
+# Radice condivisa: NON se ne crea una locale. world_root.radice() crea (o
+# ritrova) WORLD_ROOT e tutte le sue figlie dichiarate in COLLEZIONI, cosi'
+# esiste una sola radice per l'intera scena anche quando gli altri moduli
+# (corridor.py, mechanism_bay.py) girano nella stessa sessione di Blender.
+WORLD_ROOT = world_root.radice()
+SALOON_SHELL = world_root.collezione('SALOON_SHELL', WORLD_ROOT)
+OCCLUDERS = world_root.collezione('OCCLUDERS', WORLD_ROOT)
 
-
-WORLD_ROOT = collezione('WORLD_ROOT')
-SALOON_SHELL = collezione('SALOON_SHELL', WORLD_ROOT)
-OCCLUDERS = collezione('OCCLUDERS', WORLD_ROOT)
+# ─── verifica della traslazione dichiarata per il salone ────────────────
+# COLLOCAZIONI['SALOON_SHELL']['traslazione_m'] e' (0,0,0), stato MISURATO:
+# il salone e' il riferimento, quindi il guscio va importato a trasformazione
+# identita' -- nessun offset applicato qui sotto (vedi anche il referto piu'
+# in basso, che stampa questo stesso valore). Se un giorno qualcuno aggiunge
+# un offset diverso da zero in world_root.py, questo script NON lo applica
+# ancora: e' un controllo di coerenza, non un'implementazione dell'offset.
+_TRASLAZIONE_SALOON = world_root.COLLOCAZIONI['SALOON_SHELL']['traslazione_m']
+assert _TRASLAZIONE_SALOON == (0.0, 0.0, 0.0), (
+    'world_root.py dichiara per SALOON_SHELL una traslazione %r ma questo '
+    'script importa il guscio a trasformazione identita\' (nessun offset). '
+    'Il vano e\' il riferimento del progetto: se questo numero cambia, '
+    'saloon.py va aggiornato di conseguenza, non ignorato.'
+    % (_TRASLAZIONE_SALOON,))
 
 # ─── import del guscio gia' misurato, cosi' com'e' ──────────────────────
 prima = set(bpy.data.objects.keys())
@@ -300,6 +320,74 @@ migliore = min(pezzi_mesh, key=lambda ob: abs((bbox_mondo([ob])[1][2] - bbox_mon
 mn2, mx2 = bbox_mondo([migliore])
 print(f'  altezza aria verificata su un pezzo a tutta altezza ({migliore.name}):'
       f' {round(mx2[2]-mn2[2],4)} m   (dichiarata in posa.json: {G["altezza_aria_m"]} m)')
+
+print('')
+print('  VERIFICA DEL VANO NEL FRAME COMUNE (misurata sui pezzi importati ORA,')
+print('  non ricopiata dalle costanti)')
+print('  ' + '-' * 74)
+# world_root.py ancora l'origine del mondo proprio al bordo di questo vano, e
+# COLLOCAZIONI['SALOON_SHELL']['traslazione_m'] e' (0,0,0): quindi, se il
+# frame comune rispetta il vano, le coordinate ASSOLUTE misurate qui devono
+# combaciare (entro il rumore di mesh/float gia' presente in
+# prove/00-inventario.txt) con quelle dichiarate in posa.json. I due
+# pannelli che delimitano il vano si trovano per MISURA (il loro bordo Z
+# tocca il pavimento o il soffitto), non per nome: i nomi nel GLB sono
+# generici (Mesh_0..Mesh_7).
+# i due pannelli del vano hanno una larghezza X pari a quella del vano
+# (gli altri pannelli del guscio sono pareti a tutta larghezza/altezza, con
+# un'estensione X ben diversa): si trovano per QUESTO, non per il fatto di
+# toccare pavimento o soffitto (che tocca anche una parete a tutta altezza).
+SOGLIA_MATCH = 0.05  # m — solo per scegliere i due pannelli, non un risultato
+larghezza_vano_attesa = abs(VANO_X1 - VANO_X0)
+candidati_vano = [
+    ob for ob in pezzi_mesh
+    if abs((bbox_mondo([ob])[1][0] - bbox_mondo([ob])[0][0]) - larghezza_vano_attesa) < SOGLIA_MATCH
+]
+candidati_vano.sort(key=lambda ob: bbox_mondo([ob])[0][2])  # per Z (Blender) crescente
+sotto_vano = candidati_vano[0] if candidati_vano else None
+sopra_vano = candidati_vano[-1] if len(candidati_vano) > 1 else None
+
+print(f'    pannelli candidati (larghezza X ~= larghezza vano, soglia {SOGLIA_MATCH} m): '
+      + ', '.join(ob.name for ob in candidati_vano))
+if sopra_vano is not None and sotto_vano is not None and sopra_vano is not sotto_vano:
+    mnA, mxA = bbox_mondo([sopra_vano])
+    mnB, mxB = bbox_mondo([sotto_vano])
+    x_da_mis = min(mnA[0], mnB[0])
+    x_a_mis = max(mxA[0], mxB[0])
+    y_da_mis = mxB[2]   # top del pannello sotto il vano = soglia bassa del vano
+    y_a_mis = mnA[2]    # base del pannello sopra il vano = soglia alta del vano
+    print(f'    pannello sopra il vano: {sopra_vano.name}   pannello sotto il vano: {sotto_vano.name}')
+    print(f'    x_da MISURATO = {x_da_mis:.6f} m   (dichiarato {VANO_X0} m,'
+          f' scarto {abs(x_da_mis - VANO_X0)*1000:.3f} mm)')
+    print(f'    x_a  MISURATO = {x_a_mis:.6f} m   (dichiarato {VANO_X1} m,'
+          f' scarto {abs(x_a_mis - VANO_X1)*1000:.3f} mm)')
+    print(f'    y_da MISURATO = {y_da_mis:.6f} m   (dichiarato {VANO_Y0} m,'
+          f' scarto {abs(y_da_mis - VANO_Y0)*1000:.3f} mm)')
+    print(f'    y_a  MISURATO = {y_a_mis:.6f} m   (dichiarato {VANO_Y1} m,'
+          f' scarto {abs(y_a_mis - VANO_Y1)*1000:.3f} mm)')
+    print(f'    traslazione SALOON_SHELL in world_root.COLLOCAZIONI: {_TRASLAZIONE_SALOON}')
+else:
+    print('    ATTENZIONE: non ho trovato con certezza i due pannelli sopra/sotto il vano'
+          f' (soglia {SOGLIA_MATCH} m) -- vedere i bbox stampati sopra a mano.')
+
+print('')
+print('  VERIFICA DI SCALA (world_root.UNITA_SCENA_PER_METRO)')
+print('  ' + '-' * 74)
+massima_dz = max(bbox_mondo([ob])[1][2] - bbox_mondo([ob])[0][2] for ob in pezzi_mesh)
+print(f'    pannello piu\' alto importato ORA: dz = {massima_dz:.6f} m'
+      f' (il GLB e\' gia\' metrico: nessun fattore applicato all\'import)')
+print(f'    altezza aria dichiarata in posa.json: {G["altezza_aria_m"]} m'
+      f'   -> scarto {abs(massima_dz - G["altezza_aria_m"])*1000:.3f} mm'
+      f' ({abs(massima_dz - G["altezza_aria_m"]) / G["altezza_aria_m"] * 100:.4f} %)')
+print(f'    world_root.UNITA_SCENA_PER_METRO = {world_root.UNITA_SCENA_PER_METRO}'
+      f'  (1 unita di scena = {1/world_root.UNITA_SCENA_PER_METRO:.2f} m)')
+print(f'    riprova indipendente via unita di scena: TUGA.alt = 0.94 unita / '
+      f'{world_root.UNITA_SCENA_PER_METRO} = {0.94 / world_root.UNITA_SCENA_PER_METRO:.6f} m'
+      f'   (posa.json.dichiarato.altezza_aria_m = {G["altezza_aria_m"]} m)')
+print(f'    NOTA: il fattore {world_root.UNITA_SCENA_PER_METRO} NON va applicato al pannello'
+      f' misurato sopra (gia\' metrico): applicarlo darebbe {massima_dz * world_root.UNITA_SCENA_PER_METRO:.4f} m,'
+      f' che NON e\' {G["altezza_aria_m"]} m -- coerente col commento di world_root.py:'
+      f' "i GLB sono gia\' in metri, qui non si converte niente: si dichiara".')
 
 print('')
 print('  APERTURA VERSO IL CORRIDOIO (per l\'agente che ci attacca la scala)')

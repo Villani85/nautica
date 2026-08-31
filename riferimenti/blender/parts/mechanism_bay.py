@@ -72,6 +72,7 @@ scelte, fatte per essere sostituite quando arrivera' un disegno vero.
 import bpy
 import bmesh
 import os
+import sys
 from mathutils import Vector
 
 QUI = os.path.dirname(os.path.abspath(__file__))
@@ -79,12 +80,28 @@ RADICE = os.path.abspath(os.path.join(QUI, '..', '..', '..'))
 USCITE = os.path.abspath(os.path.join(QUI, '..', 'uscite'))
 os.makedirs(USCITE, exist_ok=True)
 
+# `world_root.py` sta nella cartella padre (riferimenti/blender/), il nostro
+# in riferimenti/blender/parts/: va aggiunta al path per poterlo importare.
+_PADRE_BLENDER = os.path.abspath(os.path.join(QUI, '..'))
+if _PADRE_BLENDER not in sys.path:
+    sys.path.insert(0, _PADRE_BLENDER)
+import world_root
+
+# la collocazione di questo pezzo nel frame comune (C2). NON un valore
+# ricopiato a mano: si legge da world_root.COLLOCAZIONI, l'unica fonte.
+MB_AGGANCIO = world_root.COLLOCAZIONI['MECHANISM_BAY']['aggancio_m']
+
 # --- costanti dichiarate, vedi intestazione per la provenienza di ognuna ---
 
 BEAM = 3.2
-Z0, Z1 = -BEAM / 2.0, BEAM / 2.0
+# Z0/Z1 centrati sulla mezzeria del frame comune (MB_AGGANCIO[2] = 0.0), non
+# su uno zero locale scollegato dal mondo.
+Z0, Z1 = MB_AGGANCIO[2] - BEAM / 2.0, MB_AGGANCIO[2] + BEAM / 2.0
 
-PAGLIOLO_Y = 0.0
+# pagliolo del locale tecnico: NON 0.0. Il locale sta 2,10 m sotto il
+# pavimento del salone (la risalita del corridoio, C2/corridor.py:113) --
+# valore preso da MB_AGGANCIO, non ricopiato.
+PAGLIOLO_Y = MB_AGGANCIO[1]
 ALTEZZA_LIBERA = 3.0
 SOFFITTO_Y = PAGLIOLO_Y + ALTEZZA_LIBERA
 
@@ -201,12 +218,12 @@ def costruisci_locale_tecnico():
     cosi' un master puo' chiamare questa funzione e linkare le collezioni
     sotto il proprio WORLD_ROOT invece di rieseguire l'intero script.
     """
-    col_mb = bpy.data.collections.get('MECHANISM_BAY') or bpy.data.collections.new('MECHANISM_BAY')
-    if col_mb.name not in bpy.context.scene.collection.children:
-        bpy.context.scene.collection.children.link(col_mb)
-    col_er = bpy.data.collections.get('ENGINE_ROOM') or bpy.data.collections.new('ENGINE_ROOM')
-    if col_er.name not in bpy.context.scene.collection.children:
-        bpy.context.scene.collection.children.link(col_er)
+    # WORLD_ROOT e tutte le collezioni del contratto, tramite gli strumenti
+    # condivisi -- non piu' creazione locale (era il difetto: due radici
+    # omonime, una per script). Ritrova invece di ricreare, vedi world_root.collezione().
+    root = world_root.radice()
+    col_mb = world_root.collezione('MECHANISM_BAY', root)
+    col_er = world_root.collezione('ENGINE_ROOM', root)
 
     MAT_PARATIA = materiale('MECH_paratia', (0.55, 0.57, 0.60), 0.6, 0.3)
     MAT_PAGLIOLO = materiale('MECH_pagliolo', (0.30, 0.31, 0.33), 0.7, 0.2)
@@ -216,8 +233,11 @@ def costruisci_locale_tecnico():
     pezzi = []
 
     # ═══ MECHANISM_BAY — locale pinne ═══════════════════════════════════
-    # X0..X1 del vano attuatore, con corridoio di servizio prima e dopo
-    X_MB0 = 0.0
+    # X0..X1 del vano attuatore, con corridoio di servizio prima e dopo.
+    # X_MB0 non e' piu' 0.0: quello zero era «la mia cucitura» locale, non
+    # l'origine del mondo (world_root.py). Ora e' la collocazione dichiarata
+    # in world_root.COLLOCAZIONI['MECHANISM_BAY']['aggancio_m'].
+    X_MB0 = MB_AGGANCIO[0]
     X_vano0 = X_MB0 + AISLE_PRUA
     X_vano1 = X_vano0 + VANO_ATT_DX
     X_MB1 = X_vano1 + AISLE_MEDIANA   # fine locale pinne / inizio paratia mediana
@@ -332,6 +352,22 @@ def costruisci_locale_tecnico():
         'varco_corridoio': varco,
     }
     return col_mb, col_er, pezzi, info
+
+
+def verifica_cuciture_contratto():
+    """
+    Dichiara a world_root.py le quote della porta verso il corridoio
+    (cucitura 'porta_locale_tecnico'). NON e' chiamata da `__main__` qui
+    sotto: la cucitura e' oggi in stato CONFLITTO (corridor.py dichiara
+    0,85 x 2,00 m, questo file dichiara 0,70 x 1,90 m) e
+    `world_root.verifica_cucitura()` alza `SystemExit` apposta, per fermare
+    solo chi assembla i due pezzi insieme -- non l'esecuzione isolata di
+    questo script. La chiamera' l'assemblatore (A5+), quando il conflitto
+    sara' deciso da chi deve deciderlo (vedi CUCITURE['porta_locale_tecnico']
+    ['decide'] in world_root.py).
+    """
+    return world_root.verifica_cucitura('porta_locale_tecnico', 'mechanism_bay.py',
+                                         larghezza_m=PORTA_LARG, altezza_m=PORTA_ALT)
 
 
 if __name__ == '__main__':
