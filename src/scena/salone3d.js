@@ -2,6 +2,7 @@ import {
   Group, Mesh, PlaneGeometry, MeshBasicMaterial, VideoTexture,
   TextureLoader, SRGBColorSpace, MathUtils, CanvasTexture
 } from 'three'
+import { creaGuscio } from './guscio.js'
 
 /**
  * IL SALONE DENTRO LA SCENA — la stessa nave, senza montaggio.
@@ -499,6 +500,25 @@ export function creaSalone3D (base, tuga) {
 
   stanza.position.z = 0.004
   gruppo.add(stanza)
+
+  /**
+   * ─── IL GUSCIO, DIETRO UN INTERRUTTORE: `?guscio=1`
+   *
+   * Non entra nel percorso predefinito finche' non e' stato GUARDATO nei punti
+   * dove la lastra si rivela -- scorrimento 0,235 e dintorni, su quattro
+   * viewport. Metterlo in produzione stanotte significherebbe scambiare un
+   * difetto misurato con uno non misurato.
+   *
+   * Sostituisce la lastra invece di aggiungersi: due geometrie che portano la
+   * stessa fotografia si combatterebbero in profondita'. La lastra resta nel
+   * documento, spenta, perche' il confronto fra le due si fa a interruttore e
+   * non a `git checkout`.
+   */
+  if (typeof location !== 'undefined' && location.search.includes('guscio')) {
+    const g = creaGuscio(base, stanzaTex, gruppo.position.clone())
+    gruppo.add(g)
+    stanza.visible = false
+  }
 
   /**
    * ─── LA LASTRA NON DEVE FINIRE DI TAGLIO

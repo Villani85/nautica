@@ -82,7 +82,26 @@ const guasti = []
 const persi = NODI.filter(n => !dopo.nomi.has(n))
 if (persi.length) guasti.push(`nodi persi nella compressione: ${persi.join(', ')}`)
 
-if (!dopo.extras) guasti.push('extras spariti del tutto: il sito non saprebbe ne\' il rapporto ne\' l\'unita\'')
+/**
+ * ─── SI CONFRONTA CON L'INGRESSO, NON CON UN'ASPETTATIVA
+ *
+ * Questa riga diceva «extras spariti del tutto» ogni volta che l'uscita non ne
+ * aveva. E' giusto per l'impianto, che negli extras porta il rapporto del
+ * riduttore e l'unita': se li perde, il sito non sa piu' leggere il modello.
+ * E' sbagliato per un modello che extras non ne ha MAI avuti -- e il guscio del
+ * salone e' cosi': otto nodi, zero extras in partenza, verificato sul file.
+ *
+ * Il cancello bocciava una compressione da 1129 a 122 KB per una perdita che
+ * non c'era stata. Un controllo che confronta con un'ASPETTATIVA invece che con
+ * l'INGRESSO non misura la compressione: misura quanto il modello somiglia a
+ * quello per cui il controllo era stato scritto.
+ *
+ * Adesso: se l'ingresso ne aveva, l'uscita deve averli. Se non ne aveva, non
+ * c'e' niente da perdere, e lo si dice invece di tacerlo.
+ */
+const avevaExtras = !!prima.extras && Object.keys(prima.extras).length > 0
+if (!avevaExtras) console.log('CONTRATTO  nessun extra in ingresso: non c\'e\' contratto da perdere')
+else if (!dopo.extras) guasti.push('extras spariti del tutto: il sito non saprebbe ne\' il rapporto ne\' l\'unita\'')
 else for (const k of EXTRAS) {
   if (dopo.extras[k] === undefined) guasti.push(`extra perso: ${k}`)
   else if (prima.extras && prima.extras[k] !== dopo.extras[k]) {
