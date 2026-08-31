@@ -264,10 +264,33 @@ export function creaTraversata (base, camera, scena, videoCalma) {
   let ultimaCorsa = 0
 
   /** Applica opacita' e visibilita' dei due piani per la corsa `a`. */
+  /**
+   * ─── LA CALMA STA PIENA DIETRO, E SFUMA SOLO IL FILMATO
+   *
+   * DIFETTO PRESO DALLA CI, e sono due difetti in uno.
+   *
+   * Il primo si vede: con le due lastre incrociate a meta' opacita' -- 0,5
+   * sopra 0,5 -- il fondo trasparisce per il 25%, e dietro c'e' ancora il
+   * meccanismo. Nel mezzo secondo centrale della consegna il pezzo si
+   * intravedeva attraverso le persone. Una dissolvenza incrociata fra due
+   * strati va bene quando dietro non c'e' niente; qui dietro c'e' tutto.
+   *
+   * Il secondo non si vede e ha fatto uscire rossa la corsa 283.
+   * `collaudo-finale` chiede alla regia `coperturaTraversata()` per trovare
+   * dove il filmato copre il quadro -- e legge l'opacita' della sola lastra del
+   * FILMATO, che con la consegna scende. Su una macchina lenta il cancello
+   * arriva in fondo quando la consegna e' gia' partita, non trova mai copertura
+   * piena, e accusa il sito di tagliare le persone. Passava in locale e falliva
+   * la', che e' la firma di una misura che dipende dalla velocita'.
+   *
+   * Con la calma PIENA dietro, la copertura dello stack e' `a` in ogni istante
+   * della consegna: il fondo non trasparisce mai e il numero non dipende piu'
+   * da quando lo si legge.
+   */
   function componi (a) {
     mat.opacity = a * (1 - consegna)
     piano.visible = a > 0.002 && consegna < 0.999
-    if (matCalma) matCalma.opacity = a * consegna
+    if (matCalma) matCalma.opacity = a
     if (pianoCalma) pianoCalma.visible = a > 0.002 && consegna > 0.001
     if (piano.visible || pianoCalma?.visible) posiziona()
   }
@@ -343,7 +366,18 @@ export function creaTraversata (base, camera, scena, videoCalma) {
      * MISURARE che il finale respira, invece di fidarsi di questo commento.
      */
     get consegnaCalma () { return consegna },
-    /** Quanto copre il fotogramma adesso: 1 = il 3D dietro non si vede. */
-    get copertura () { return piano.visible ? mat.opacity : 0 }
+    /**
+     * Quanto copre il fotogramma adesso: 1 = il 3D dietro non si vede.
+     *
+     * E' la copertura dello STACK, non di una lastra sola. Prima tornava
+     * `mat.opacity`, cioe' il solo filmato: durante la consegna quel numero
+     * scende mentre lo schermo resta coperto dalla calma, e chi lo legge
+     * conclude che il quadro si sia aperto. La corsa 283 e' uscita rossa
+     * proprio cosi'.
+     */
+    get copertura () {
+      if (pianoCalma && pianoCalma.visible) return matCalma.opacity
+      return piano.visible ? mat.opacity : 0
+    }
   }
 }
