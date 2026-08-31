@@ -30,8 +30,6 @@
  * del sito finche' resta dietro `?guscio=1`, spento. E' uno strumento di
  * convergenza, e lo dichiara.
  *
- * ─── COME SI LEGGE
- *
  * ─── SI MISURA A SCENA INCHIODATA (`?fermo`)
  *
  * Senza, la stessa identica configurazione dava 45,8 · 16,8 · 23,3 in tre
@@ -42,6 +40,36 @@
  * `?fermo=6` inchioda la simulazione a un istante dichiarato -- lo stesso
  * meccanismo che i cancelli della resa usano da sempre per confrontare due
  * fotogrammi. Il valore non conta: conta che sia lo stesso nelle due catture.
+ *
+ * ─── IL PAVIMENTO DI QUESTA MISURA, e va saputo prima di cercare
+ *
+ * Cinque sondaggi a scena inchiodata, un parametro alla volta:
+ *
+ *     convenzione   0 -> 26,7   1 -> 41,0   2 -> 41,0
+ *                   3 -> 29,0   4 -> 29,0   5 -> 63,4
+ *     quota      -0,15 -> 33,1     0 -> 26,7   +0,15 -> 28,4
+ *     trasversale -0,2 -> 41,7     0 -> 26,7    +0,2 -> 30,6
+ *     distanza    -0,3 -> 30,5     0 -> 26,7    +0,3 -> 25,0
+ *     scala       0,85 -> 28,1   1,0 -> 26,7     1,2 -> 26,4
+ *
+ * Quota e trasversale hanno un minimo NETTO dov'e' adesso; distanza e scala
+ * guadagnano meno di due livelli. Il piazzamento e' in un minimo locale su
+ * tutti e cinque i gradi di liberta'.
+ *
+ * **Il residuo di 26,7 non e' un errore di piazzamento**, ed e' la cosa piu'
+ * utile che questo strumento abbia detto. E' strutturale: la lastra e' la
+ * fotografia ritagliata in un rettangolo 16:10, il guscio la proietta su
+ * geometria che quel rettangolo lo eccede -- pavimento, soffitto, pareti. Il
+ * guscio mostra PIU' STANZA, ed e' esattamente cio' per cui esiste.
+ *
+ * Quindi questo metro sa dire «grossolanamente fuori posto» ma **non sa
+ * certificare che sia giusto**: ha un pavimento sopra la soglia dei 10,6. Chi
+ * riprende non perda una giornata a minimizzare un numero che non puo'
+ * scendere.
+ *
+ * Il metro che chiuderebbe la domanda e' un altro, e non l'ho costruito:
+ * confrontare il guscio col FOTOGRAMMA DELLA CLIP dentro il solo rettangolo
+ * del vano, dove le due immagini devono coincidere per costruzione.
  *
  * ─── COME SI LEGGE
  *
