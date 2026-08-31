@@ -77,131 +77,113 @@ glTF e' Y-up e Blender ruota a Z-up. Un asse sbagliato non da' errore: da' un
 modello che non combacia, e tre tentativi persi a cercare la causa altrove.
 """
 
-ORIGINE = ("il bordo del VANO DEL SALONE a X = 0, sulla mezzeria (Z = 0), "
-           "al livello del pavimento del salone (Y = 0)")
+ORIGINE = ("il nodo CAMERA_SORGENTE_SALONE di public/modelli/guscio-salone.glb: "
+           "la posa da cui la traversata arriva nel salone")
+
+ORIGINE_POSIZIONE_GLB = (-2.93219995, 0.607200027, 0.843599975)
+ORIGINE_QUATERNIONE_GLTF = (-0.0215489268, -0.580615103, -0.0122757656, 0.813800395)
 """
-SI ANCORA ALL'UNICA CUCITURA MISURATA, e non e' una preferenza.
+SECONDO RIANCORAGGIO, E IL PRIMO ERA SBAGLIATO IN UN MODO CHE SI POTEVA VEDERE.
 
-Delle quattro cuciture, il vano del salone e' la sola MISURATA: X da -2,1746 a
-0,0 e Y da 0,0 a 1,1449 -- `guscio-salone.py:40`, `riferimenti/salone/posa.json`,
-riscontrata in `prove/00-inventario.txt`. Le altre tre sono derivate, assunte o
-senza fonte.
+Il primo giro ancorava al vano del salone perche' era l'unica cucitura MISURATA.
+Il ragionamento reggeva, la scelta no -- e la contraddizione stava DENTRO
+QUESTA STESSA TABELLA, a otto righe di distanza:
 
-Ancorare il mondo a una cucitura ASSUNTA propagherebbe l'assunzione a tutti i
-pezzi: il giorno in cui la si misura si sposta tutto. Ancorandolo alla misurata,
-il giorno in cui si misura una delle altre si sposta SOLO QUELLA.
+    vano_salone            dichiara x_m e y_m, e nessun z_m
+                           -> un'apertura estesa in X e Y a un solo Z ha la
+                              normale lungo Z
+    porta_locale_tecnico   dichiara normale '+X'
 
-Il primo giro di questo file metteva l'origine sulla paratia del locale tecnico.
-Era comodo -- e' la cucitura contesa, quindi il disaccordo si sarebbe letto come
-uno scarto da zero -- ma era esattamente quella da non usare come riferimento.
+Farle combaciare era geometricamente impossibile, e non serviva eseguire niente
+per accorgersene. La FORMA lo diceva da sola: 2,1746 largo per 1,1449 alto e'
+un rettangolo orizzontale quasi due a uno. Una porta e' verticale e alta almeno
+1,90. **1,14 m non e' un passaggio per una persona: e' una finestra**, e lo era
+gia' quando quel numero e' entrato in tabella come MISURATO.
 
-E spiega perche' `X_MB0 = 0.0` (`mechanism_bay.py:220`) e l'apertura del
-corridoio a `x = 0.0` (`corridor.py:124`) non erano un buon segno: erano due
-zeri che significavano due cose diverse. Da qui zero significa una cosa sola, e
-sta nel salone.
+Sono serviti tre agenti e un'esecuzione in Blender per trovare una cosa che
+l'aritmetica diceva prima. La lezione non e' su di loro: e' che il contratto e'
+la cosa che tutti gli altri prendono per vera, quindi la prossima ancora si
+controlla con i numeri PRIMA di scriverla qui.
+
+--- PERCHE' UN NODO CAMERA, e non un'altra apertura
+
+1. E' MISURATO davvero: letto dal GLB spedito, non ricostruito. Lo legge
+   `camera_path.py:74-93`, che apre il binario e cerca il nodo per nome.
+2. L'arrivo della traversata resta ESATTO PER COSTRUZIONE, non per tolleranza:
+   `camera_path.py:254` scrive che P4 e' esatto proprio perche' E' quel nodo.
+   Ancorandoci il mondo, l'errore d'arrivo non si accumula lungo la catena --
+   e il punto d'arrivo e' la cosa che tutto questo lavoro deve servire.
+3. **Un nodo camera porta posizione E ORIENTAMENTO.** E' esattamente cio' che
+   serve a un'origine. Un piano ne porta uno solo, e la sua normale era
+   abbastanza ambigua da ingannare il contratto e tre agenti.
+
+--- COSA SI PRENDE E COSA NO
+
+Si prende la POSIZIONE come origine. NON si ruota il mondo sul quaternione: gli
+assi restano quelli del GLB del guscio, cioe' quelli della nave. Un mondo che
+segue lo sguardo della camera renderebbe «avanti» una direzione che cambia con
+l'inquadratura.
+
+Il quaternione si conserva come POSA D'ARRIVO DICHIARATA: e' il dato che rende
+esatto P4, e va tenuto dove chiunque lo trova.
 """
 
 RISALITA_CORRIDOIO_M = 2.10
 LUNGHEZZA_CORRIDOIO_M = 5.480
 
+def dal_frame_guscio(p):
+    """
+    Porta un punto dal frame del GLB del guscio al frame del mondo.
+
+    E' una sola sottrazione perche' il mondo NON ruota rispetto al guscio: vedi
+    sopra. Esiste come funzione, e non come tre sottrazioni sparse, perche' il
+    riancoraggio di oggi ha invalidato tutte le coordinate assolute consegnate
+    stamattina -- e la prossima volta deve costare una riga sola.
+    """
+    o = ORIGINE_POSIZIONE_GLB
+    return (p[0] - o[0], p[1] - o[1], p[2] - o[2])
+
+
 COLLOCAZIONI = {
+    "SALOON_SHELL": {
+        "traslazione_m": (-ORIGINE_POSIZIONE_GLB[0],
+                          -ORIGINE_POSIZIONE_GLB[1],
+                          -ORIGINE_POSIZIONE_GLB[2]),
+        "stato": "MISURATO",
+        "formula": ("il guscio si sposta dell'opposto della posizione del nodo "
+                    "camera, cosi' quel nodo cade sull'origine."),
+    },
     "STAIR_CORRIDOR": {
-        "traslazione_m": (-LUNGHEZZA_CORRIDOIO_M, -RISALITA_CORRIDOIO_M, 0.0),
-        # DERIVATO era sbagliato: vedi la nota «il vano non e' una porta».
-        "stato": "ASSUNTO",
-        "formula": ("l'apertura lato salone sta in locale a (5,480 | 2,10) e "
-                    "deve mappare sull'origine (0 | 0): X_mondo = X_locale - 5,480, "
-                    "Y_mondo = Y_locale - 2,10"),
+        "traslazione_m": None,
+        "stato": "DA RIDERIVARE",
+        "formula": ("il primo giro la faceva mappare sul vano, che e' il "
+                    "FINESTRONE: derivazione caduta. Serve la porta del salone, "
+                    "che oggi nessuno ha misurato. Vedi la cucitura "
+                    "`ingresso_salone`."),
     },
     "MECHANISM_BAY": {
-        # NON una traslazione: il PUNTO DEL MONDO su cui deve cadere la porta.
-        "cucitura_mondo_m": (-LUNGHEZZA_CORRIDOIO_M, -RISALITA_CORRIDOIO_M, 0.0),
-        "stato": "DERIVATO",
-        "formula": ("la porta del locale tecnico deve cadere dove il corridoio "
-                    "mette la propria apertura lato locale tecnico. La "
-                    "traslazione del pezzo si CALCOLA: "
-                    "traslazione = cucitura_mondo - cucitura_locale, dove "
-                    "cucitura_locale e' la X della porta nel sistema del pezzo."),
-    },
-    "SALOON_SHELL": {
-        "traslazione_m": (0.0, 0.0, 0.0),
-        "stato": "MISURATO",
-        "formula": "e' il riferimento: il vano ci sta gia' sopra per costruzione.",
+        "cucitura_mondo_m": None,
+        "stato": "DA RIDERIVARE",
+        "formula": ("dipende da dove finisce il corridoio, che e' DA RIDERIVARE. "
+                    "La porta del locale tecnico sta a X locale 8,622575 -- vedi "
+                    "`paratia_poppa`: quel numero e' giusto, ed e' nel frame "
+                    "sbagliato. Va TRADOTTO, non abbandonato."),
     },
 }
 """
-─── TRASLAZIONE O PUNTO DI CUCITURA: la distinzione che mi e' costata 8,7 metri
+LE COORDINATE ASSOLUTE CONSEGNATE STAMATTINA SONO MORTE, e le misure no.
 
-DIFETTO MIO, trovato da chi doveva usare questo contratto. La prima stesura
-dava a `STAIR_CORRIDOR` una `traslazione_m` e a `MECHANISM_BAY` un
-`aggancio_m`, e non diceva che sono due cose DIVERSE. Chi ha collocato il
-locale tecnico ha usato l'aggancio come traslazione -- lettura ragionevole, il
-nome non diceva altro -- e il pezzo e' finito con la propria porta a X = +3,19
-invece che a X = -5,480: **8,7 m di scarto**.
+Riancorare invalida i piazzamenti di C2, C3 e C4. Restano invece valide -- e
+sono la ragione per cui questo giro non e' sprecato -- tutte le loro MISURE:
 
-La ragione e' che l'origine locale di quel pezzo non e' la sua porta: e' il suo
-fondo chiuso. Traslarlo del punto di cucitura porta li' il FONDO, non la porta.
+  gli scarti del vano sotto il millimetro (0,059 · 0,115 · 0,062 · 0,165)
+  gli 855,1 mm fra soffitto del corridoio e bordo del vano
+  le normali ortogonali fra le due aperture
+  la derivazione 8,622575 = AISLE_PRUA + VANO_ATT_DX + AISLE_MEDIANA
+                            + SP_PARATIA + LUNGHEZZA_SALA_MACCHINE
 
-  traslazione     quanto si sposta il pezzo
-  cucitura_mondo  dove deve CADERE una sua feature
-
-e la seconda si converte nella prima solo sapendo dov'e' quella feature nel
-sistema locale del pezzo -- cosa che il contratto non puo' sapere, perche' e'
-una proprieta' del pezzo. Quindi il contratto dichiara il PUNTO e il pezzo
-calcola la propria traslazione. I nomi dei campi adesso lo dicono.
-
-E QUESTA E' ANCHE L'ORIGINE DEL FANTASMA 8,6226. Chi ha collocato il pezzo ha
-misurato che
-    AISLE_PRUA + VANO_ATT_DX + AISLE_MEDIANA + SP_PARATIA + LUNGHEZZA_SALA_MACCHINE
-    = 8,622575
-cioe' la lunghezza totale del locale tecnico. Il numero che `Piano.md` portava
-come «paratia di poppa a X = 8,6226» non era inventato: era la lunghezza del
-pezzo letta come se il suo frame locale fosse il mondo. Uno zero preso per un
-altro, propagato per giorni in un documento. Non e' piu' senza fonte: e'
-DERIVATO, e ora si sa da cosa -- ma resta un numero del sistema LOCALE, che nel
-mondo non significa niente.
-
-
-─── IL VANO NON E' UNA PORTA, ed e' il difetto piu' grosso di oggi
-
-DIFETTO MIO, trovato da tre misure indipendenti messe insieme. Ho ancorato
-l'origine del mondo al vano del salone perche' e' l'unica cucitura MISURATA --
-scelta giusta, e C4 l'ha confermata: il vano ci sta sopra con scarti di 0,059,
-0,115, 0,062 e 0,165 mm, tutti sotto il millimetro.
-
-Poi pero' ho DERIVATO da li' la collocazione del corridoio, facendo mappare la
-sua apertura lato salone sull'origine. E quello e' sbagliato, perche':
-
-    apertura del corridoio    0,85 x 2,00 m    normale +X
-    vano del salone           2,17 x 1,14 m    normale +Z
-
-Il soffitto del corridoio finisce 855,1 mm piu' in alto del bordo del vano, ma
-la quota e' il problema minore: **le due normali sono ortogonali**. Il vano non
-e' la porta da cui si entra nel salone: e' il FINESTRONE, il foro nella murata
-da cui si guarda il mare. Ho ancorato il mondo alla finestra e poi ci ho fatto
-arrivare dentro un corridoio.
-
-L'origine RESTA quella, e resta la scelta giusta: e' un caposaldo misurato, e
-un caposaldo non deve essere una porta -- deve solo stare fermo. Quello che
-cade e' la DERIVAZIONE della collocazione del corridoio, che da oggi e'
-ASSUNTO e non DERIVATO. Per farla tornare derivata serve una misura che oggi
-non esiste: dove sta la porta del salone rispetto al finestrone.
-
-E' esattamente il tipo di errore che il contratto doveva rendere visibile
-invece che scoprire in viewport tre settimane dopo. Ha funzionato: tre agenti
-hanno misurato tre pezzi in venti minuti e il disaccordo e' uscito come numero.
-
-
-IL NUMERO CHE QUESTO FILE FA NASCERE, e che prima non esisteva.
-
-Il locale tecnico oggi si colloca a X_MB0 = 0.0 nel proprio sistema. Nel mondo
-deve stare a -5,480 | -2,10. Non e' una scelta: e' la conseguenza di due valori
-gia' scritti nel corridoio -- la sua lunghezza (4,48 + 1,00, riga 113) e la sua
-risalita di 2,10 -- piu' l'origine ancorata al vano misurato.
-
-Fino a stamattina i due pezzi si sarebbero sovrapposti all'origine. Adesso c'e'
-un numero da verificare, e se e' sbagliato lo dira' un confronto invece di una
-compenetrazione da scoprire a occhio in viewport.
+Rifare il piazzamento adesso, con tre pezzi, costa un'ondata. Rifarlo dopo
+l'assemblatore costa una giornata.
 """
 
 
@@ -313,23 +295,35 @@ CUCITURE = {
     },
 
     'vano_salone': {
-        'x_m': [-2.1746, 0.0],
-        'y_m': [0.0, 1.1449],
+        # NEL FRAME DEL MONDO, cioe' gia' tradotte dal frame del guscio.
+        'x_m': [0.757541, 2.932085],
+        'y_m': [-0.607138, 0.537865],
+        'x_m_guscio': [-2.174659, -0.000115],
+        'y_m_guscio': [0.000062, 1.145065],
         'stato': 'MISURATO',
-        'fonte': 'guscio-salone.py, e riscontrato in prove/00-inventario.txt',
+        'fonte': 'misurato da C4 eseguendo saloon.py in Blender 5.2; concorda '
+                 'con posa.json e prove/00-inventario.txt entro 0,165 mm',
+        "nota": ("E UNA FINESTRA, NON UNA PORTA: 2,17 largo per 1,15 alto e un "
+                 "rettangolo orizzontale quasi due a uno, e la normale corre "
+                 "lungo Z. Ci si guarda attraverso, non ci si cammina. Lo diceva "
+                 "gia la forma, prima che tre agenti lo trovassero eseguendo."),
     },
 
     'paratia_poppa': {
         'x_m': None,
-        'stato': 'DERIVATO (ma nel sistema LOCALE del pezzo, non nel mondo)',
+        'stato': 'DA TRADURRE',
         'fonte': 'AISLE_PRUA + VANO_ATT_DX + AISLE_MEDIANA + SP_PARATIA + '
                  'LUNGHEZZA_SALA_MACCHINE = 8,622575 in mechanism_bay.py',
-        'nota': 'Piano.md dichiarava X = 8,6226..8,7226. '
-                '`grep -rn "8.6226"` su tutto il repo, esclusi i blob JSON di '
-                'geometria, non trova NIENTE: ne\' misurato ne\' derivato. '
-                'Il numero e\' stato rimosso dalla tabella invece di essere '
-                'ricopiato: un valore senza fonte in una tabella di riferimento '
-                'diventa, fra un mese, indistinguibile da uno misurato.',
+        "nota": ("IL NUMERO E GIUSTO, E IL FRAME A ESSERE SBAGLIATO -- e la "
+                 "distinzione decide la riparazione. Un valore SENZA FONTE si "
+                 "abbandona; un valore giusto nel frame sbagliato si TRADUCE. "
+                 "Avevo concluso la prima perche un grep della stringa 8.6226 "
+                 "non trovava niente: ma quel numero non e scritto da nessuna "
+                 "parte, e CALCOLATO dalle costanti del pezzo. Un grep che non "
+                 "pesca un calcolo e l immagine speculare di un grep che pesca "
+                 "un commento, e oggi mi hanno fatto sbagliare entrambi. "
+                 "Piano.md lo dichiarava come paratia di poppa a X = 8,6226: "
+                 "va tradotto nel frame del mondo, non ricopiato e non buttato."),
     },
 }
 
@@ -429,7 +423,10 @@ def riepilogo():
     for nome, c in COLLOCAZIONI.items():
         t = c.get('traslazione_m')
         v = t if t is not None else c.get('cucitura_mondo_m')
-        print('  %-16s %-9s  %-14s X %+.3f  Y %+.3f  Z %+.3f'
+        if v is None:
+            print('  %-16s %-13s  -- da riderivare' % (nome, c['stato']))
+            continue
+        print('  %-16s %-13s  %-18s X %+.3f  Y %+.3f  Z %+.3f'
               % (nome, c['stato'],
                  'traslazione' if t is not None else 'punto di cucitura',
                  v[0], v[1], v[2]))
