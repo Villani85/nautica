@@ -605,7 +605,19 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
    suggerimento che resta dopo essere stato capito diventa un rimprovero. */
 .nota{
   font-variation-settings:var(--v-dato);
-  position:absolute;left:50%;transform:translateX(-50%);bottom:31vh;z-index:6;
+  /*
+   * 20vh e non 31: a 31 la riga finiva SOTTO l'invito a scorrere e i due si
+   * sovrapponevano. Misurato a 1280x800 -- nota y534-552, invito y509-544, dieci
+   * pixel di collisione -- e su telefono era totale: 390x844 dava nota y541-557
+   * dentro invito y539-574, cioe' due scritte stampate una sull'altra. E' il
+   * fantasma dietro "SCROLL" che il committente ha fotografato.
+   *
+   * A 20vh la riga cade nella banda libera fra l'invito e i comandi (164 px a
+   * 1280x800, 134 su telefono). Il numero non e' scelto a occhio: lo verifica
+   * `collaudo-ingombri.mjs`, che fallisce se due elementi dell'interfaccia si
+   * toccano.
+   */
+  position:absolute;left:50%;transform:translateX(-50%);bottom:20vh;z-index:6;
   display:flex;align-items:center;gap:.55rem;
   font-family:var(--t-dato);font-size:11px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--inchiostro-tenue);max-width:none;
@@ -621,6 +633,14 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
 }
 .nota i::before{left:0;transform:rotate(-45deg);animation:tira 3s ease-in-out infinite}
 .nota i::after{right:0;transform:rotate(135deg);animation:tira 3s ease-in-out infinite reverse}
+/*
+ * Una barra per verso: quella di sinistra tiene solo la punta sinistra, quella
+ * di destra solo la destra. Con entrambe le punte su entrambe le barre il
+ * disegno tornava simmetrico e il verso spariva di nuovo -- che era il difetto.
+ */
+.nota__punte--sx::after{display:none}
+.nota__punte--dx::before{display:none}
+.nota__verso{white-space:nowrap;opacity:.72}
 @keyframes tira{
   0%,100%{opacity:.45;margin-left:0;margin-right:0}
   50%{opacity:1;margin-left:-3px;margin-right:-3px}
@@ -709,18 +729,56 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
 .mare__tacca:hover .mare__barra{background:rgba(127,163,165,.55)}
 .mare__tacca[aria-pressed="true"] .mare__barra{background:var(--aria)}
 
+/*
+ * ─── SPENTO E' GRIGIO, ACCESO E' VERDE, E PRIMA NON LO ERA
+ *
+ * DIFETTO SEGNALATO DAL COMMITTENTE guardando il sito: *"questi pulsanti devono
+ * essere piu' chiari: in grigio se disattivati con un'indicazione «Attiva il
+ * sistema» (quando e' spento), accesi verde"*. Aveva ragione e la causa era in
+ * questa regola: lo stato SPENTO era scritto in `--acqua-tenue`, che sta nella
+ * stessa famiglia di `--recupero`, il verde dell'acceso. Due stati opposti in
+ * due tonalita' del medesimo verde-acqua: in una schermata con l'acqua dietro,
+ * le tre spie sembravano tutte accese.
+ *
+ * Non e' un dettaglio di gusto: da quando il sito apre con la stabilizzazione
+ * SPENTA, capire quali sistemi sono spenti e' la prima informazione della
+ * pagina. Un interruttore che non dichiara il proprio stato disinnesca l'unico
+ * gesto che il sito chiede.
+ *
+ * Il grigio e' NEUTRO davvero -- niente componente verde -- perche' su un
+ * fondale che va dal verde acqua al blu petrolio qualunque grigio "caldo di
+ * verde" torna a somigliare all'acceso.
+ */
 .interruttore{
   font-variation-settings:var(--v-dato);
+  position:relative;
   display:flex;align-items:center;gap:var(--u2);
   min-height:44px;padding:var(--u2) var(--u3);
-  background:none;border:1px solid rgba(127,163,165,.4);cursor:pointer;
+  background:none;border:1px solid rgba(158,166,170,.34);cursor:pointer;
   font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.18em;
-  text-transform:uppercase;color:var(--acqua-tenue);
+  text-transform:uppercase;color:rgba(176,184,188,.82);
   transition:border-color .2s,color .2s;
 }
-.interruttore:hover{border-color:var(--acqua-tenue)}
-.spia{width:7px;height:7px;border-radius:50%;background:rgba(127,163,165,.35);
+.interruttore:hover{border-color:rgba(198,206,210,.7);color:rgba(214,221,224,.95)}
+.spia{width:7px;height:7px;border-radius:50%;background:rgba(158,166,170,.42);
   transition:background .3s,box-shadow .3s}
+/*
+ * L'indicazione sta SOTTO il pulsante e in posizione assoluta: dentro avrebbe
+ * spostato le tre etichette, e su telefono i tre interruttori dividono gia' la
+ * riga in parti uguali (`flex:1 1 0`). Fuori dal flusso, comparire e sparire
+ * non muove niente.
+ *
+ * Dice "ACTIVATE" e non "Attiva il sistema" per due ragioni misurabili: il
+ * resto dell'interfaccia e' in inglese (`SEA STATE`, `DRAG TO ROTATE`), e a
+ * 390px i tre pulsanti stanno in circa 110px l'uno -- "ACTIVATE SYSTEM" ci va
+ * a capo. La parola e' una decisione del committente: si cambia in una riga.
+ */
+.interruttore:not([aria-pressed="true"])::after{
+  content:"Activate";
+  position:absolute;left:0;right:0;top:calc(100% + 4px);
+  text-align:center;font-size:.62rem;letter-spacing:.14em;
+  color:rgba(176,184,188,.62);pointer-events:none;
+}
 .interruttore[aria-pressed="true"]{color:var(--recupero);border-color:rgba(79,224,196,.55)}
 .interruttore[aria-pressed="true"] .spia{background:var(--recupero);box-shadow:0 0 9px var(--recupero)}
 
@@ -1159,7 +1217,14 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
   /* Qui c'era `display:none`, cioe' da telefono nessuno poteva sapere che la
      nave si gira. Sul tattile il gesto e' anche piu' naturale che col mouse:
      e' l'ultimo posto in cui nascondere l'unico invito a toccare. */
-  .nota{font-size:10px;bottom:34vh}
+  /*
+   * Su telefono restano le due punte e "Drag to rotate": le due parole di verso
+   * porterebbero la riga a capo, e una riga a capo in mezzo alla prima
+   * schermata e' peggio dell'informazione che aggiunge. La freccia il verso lo
+   * dice comunque.
+   */
+  .nota{font-size:10px;bottom:25vh}
+  .nota__verso{display:none}
   .patto{left:var(--u2);font-size:8px;letter-spacing:.14em}
 
   /* le quattro bande, dal basso verso l'alto */

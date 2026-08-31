@@ -112,7 +112,18 @@
        `display:none` -- cioe' da mobile non lo scopriva nessuno. Il committente
        l'ha detto dopo giorni di lavoro sul proprio sito: "che la nave potesse
        girare l'ho capito ora". -->
-  <p id="nota" class="nota"><i aria-hidden="true"></i><span>Drag to rotate</span></p>
+  <!-- E ADESSO DICE ANCHE IL VERSO. Il committente: *"oltre scroll ci devono
+       essere delle frecce con scritto ad esempio «Muovi a destra» «Muovi a
+       sinistra»"*. Le due punte animate c'erano gia' ma erano SIMMETRICHE su
+       una barra sola: dicevano "si tira", non "si tira di qua e di la'". Ora le
+       barre sono due, una per verso, con la parola all'estremo. -->
+  <p id="nota" class="nota">
+    <span class="nota__verso" aria-hidden="true">Move left</span>
+    <i class="nota__punte nota__punte--sx" aria-hidden="true"></i>
+    <span>Drag to rotate</span>
+    <i class="nota__punte nota__punte--dx" aria-hidden="true"></i>
+    <span class="nota__verso" aria-hidden="true">Move right</span>
+  </p>
 
   <div class="pannello pannello--energia" id="energia">
     <div class="barra" id="b-carico">
