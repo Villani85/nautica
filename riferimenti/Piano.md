@@ -89,6 +89,18 @@ aspetta che la corsa chiuda.
 
 Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTATO`
 
+> **AVVISO — gli stati qui sotto NON sono piu' autorevoli.**
+>
+> Rilievo della revisione del 31 agosto, ed era giusto: dentro questo stesso
+> file c'erano **due verita' in conflitto**. Nel §3 A1, A2, A4, A7 e A11
+> risultavano `IN_CORSO` o `PRONTO`; nel §3-bis erano elencate come chiuse. Uno
+> stato duplicato e discorde **vale zero**: chi legge non sa quale credere, e
+> chi scrive aggiorna sempre l'altro.
+>
+> L'unico registro degli esiti e' il **§3-bis**. Le righe qui sotto restano
+> perche' descrivono l'INCARICO — cosa era stato chiesto, con quali file e
+> quale condizione di completamento — e quello non cambia. Lo stato no.
+
 ---
 
 ### A1 — Baseline: git, build, suite, peso, browser
@@ -100,7 +112,7 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
   esito `npm run collaudo` con la lista dei cancelli passati, `peso.mjs`, e la
   versione del browser usata dai collaudi
 - **test richiesti** i comandi stessi sono il test
-- **stato** `IN_CORSO`
+- **stato** → vedi §3-bis
 
 ### A2 — Inventario Blender: bounding box e coordinate
 
@@ -112,7 +124,7 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
   scale locali arbitrarie**; bounding box, trasformazioni mondo e nomi dei nodi;
   la conversione dichiarata (0,4 unità per metro) verificata sui numeri
 - **test richiesti** il file di inventario deve contenere numeri, non prosa
-- **stato** `IN_CORSO`
+- **stato** → vedi §3-bis
 
 ### A3 — Greybox locale tecnico
 
@@ -122,26 +134,26 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
 - **file vietati** il master, gli altri `parts/*`, `public/modelli/*`
 - **risultato atteso** copione che costruisce il locale pinne in **metri**, con
   le collezioni del contratto, e stampa bounding box e conteggio facce
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A4 — Greybox corridoio e scala
 
 - **priorità** 2 · **file consentiti** `riferimenti/blender/parts/corridor.py`
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A5 — Guscio del salone come parte world-space
 
 - **priorità** 2 · **file consentiti** `riferimenti/blender/parts/saloon.py`
 - **nota** il guscio esiste già (`guscio-salone.py`, 123 KB, UV cotte, camera
   sorgente esportata): questa attività lo **riusa**, non lo rifà
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A6 — Curva camera world-space
 
 - **priorità** 2 · **file consentiti** `riferimenti/blender/camera_path.py`
 - **risultato atteso** curva con continuità almeno C1, **senza durata cotta
   nello spazio**: il sito deve poter rimappare il progresso di scroll
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A7 — Progetto del collaudo world-space
 
@@ -149,7 +161,7 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
 - **risultato atteso** il cancello che verifica il criterio non negoziabile:
   **in nessun fotogramma un piano camera-space copre l'intero canvas**; più
   identità di canvas/renderer/camera e assenza di re-parenting
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A8 — Profiling scroll e frame pacing
 
@@ -158,12 +170,12 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
   ms, e il salto massimo nelle quattro giunzioni
 - **attenzione** il metro non deve misurare la macchina: passo dichiarato dove
   serve, e `NON MISURABILE` invece di un numero inventato
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A9 — Audit acqua-scafo
 
 - **priorità** 3 · **sola lettura** + `riferimenti/prove/A9-acqua-scafo.md`
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ### A10 — Validazione visiva della clip tesa candidato 02
 
@@ -183,7 +195,7 @@ Stati: `PRONTO` · `IN_CORSO` · `CHIUSO` · `PARZIALE` · `BLOCCATO` · `SCARTA
   puntuali; **la chiave non compare mai** in file, log, repo o Drive
 - **condizione di arresto esplicita** dopo i quattro candidati **si ferma** e
   aspetta il giudizio prima di spendere altri crediti
-- **stato** `PRONTO`
+- **stato** → vedi §3-bis
 
 ---
 
