@@ -202,12 +202,20 @@ COLLOCAZIONI = {
                     "l'estremita' APERTA del guscio, misurata in Blender."),
     },
     "MECHANISM_BAY": {
-        "cucitura_mondo_m": None,
-        "stato": "DA RIDERIVARE",
-        "formula": ("dipende da dove finisce il corridoio, che e' DA RIDERIVARE. "
-                    "La porta del locale tecnico sta a X locale 8,622575 -- vedi "
-                    "`paratia_poppa`: quel numero e' giusto, ed e' nel frame "
-                    "sbagliato. Va TRADOTTO, non abbandonato."),
+        # il PUNTO su cui deve cadere ER_paratia_poppa, non una traslazione.
+        "cucitura_mondo_m": (-6.280, -3.270, 0.0),
+        # e la feature che ci deve cadere sopra, nel sistema locale del pezzo.
+        "cucitura_locale_x_m": 8.622575,
+        # da cui: X_MB0 = -6,280 - 8,622575 = -14,902575
+        "traslazione_x_derivata_m": -14.902575,
+        "stato": "DERIVATO",
+        "formula": ("il corridoio arriva a X -6,280 (la sua apertura lato locale "
+                    "tecnico, locale x=0). Li' deve cadere ER_paratia_poppa, che "
+                    "nel sistema del pezzo sta a X_MB0 + 8,622575 -- cioe' il "
+                    "numero che Piano.md portava come paratia fantasma. Non era "
+                    "inventato e non era senza fonte: era la POSIZIONE DELLA "
+                    "PORTA, giusta, nel frame sbagliato. Tradotta: "
+                    "X_MB0 = -6,280 - 8,622575 = -14,902575."),
     },
 }
 """
@@ -357,7 +365,7 @@ CUCITURE = {
 
     'paratia_poppa': {
         'x_m': None,
-        'stato': 'DA TRADURRE',
+        'stato': 'TRADOTTO',
         'fonte': 'AISLE_PRUA + VANO_ATT_DX + AISLE_MEDIANA + SP_PARATIA + '
                  'LUNGHEZZA_SALA_MACCHINE = 8,622575 in mechanism_bay.py',
         "nota": ("IL NUMERO E GIUSTO, E IL FRAME A ESSERE SBAGLIATO -- e la "
