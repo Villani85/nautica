@@ -27,6 +27,11 @@ const TESTA = execSync('git rev-parse HEAD').toString().trim()
 const atteso = readFileSync('dist/index.html', 'utf8').match(/assets\/index-[\w-]+\.js/)?.[0]
 if (!atteso) { console.log('non trovo il bundle nella build locale'); process.exit(1) }
 console.log('atteso:', atteso)
+/* si dichiara COSA sta cercando: senza, quando non trova la corsa non si
+   distingue «non e' ancora partita» da «sto cercando l'hash sbagliato» */
+console.log('commit: ', TESTA.slice(0, 7), '· ramo', (() => {
+  try { return execSync('git rev-parse --abbrev-ref HEAD').toString().trim() } catch { return '?' }
+})())
 
 const api = async (v) => (await fetch(v, { headers: { 'accept': 'application/vnd.github+json' } })).json()
 
