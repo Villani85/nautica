@@ -1233,7 +1233,16 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
      da' errore, semplicemente non fa niente. */
   .pila{
     left:var(--u2);right:var(--u2);width:auto;
-    top:calc(50% + var(--u2) + 20px);
+    /* ─── E LA DICHIARAZIONE VA A CAPO, quindi e' alta il doppio
+       Questa quota era `var(--u2) + 20px` = 458 px, tarata su una `.patto` di
+       UNA riga. A 390 px di larghezza quel testo va a capo e diventa alto 26 px
+       invece di 13: misurato, `.patto` occupa 446-472 e la pila cominciava a
+       458, quattordici pixel dentro. Il cancello dell'impaginato lo ha visto in
+       sei battute e in tutti e due gli stati.
+       Chi cede resta la PILA, come deciso qui sopra. La quota si prende dalla
+       stessa variabile di `.patto` piu' il margine che serve a scavalcarne due
+       righe: 422 + 24 + 34 = 480, cioe' otto pixel sotto il suo fondo. */
+    top:calc(50% + var(--u3) + 34px);
     bottom:calc(var(--h-comandi) + var(--u3));
   }
   /* I CONTI, perche' qui non ci sta tutto e va deciso COSA cede.
