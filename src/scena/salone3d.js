@@ -1,6 +1,6 @@
 import {
   Group, Mesh, PlaneGeometry, MeshBasicMaterial, VideoTexture,
-  TextureLoader, SRGBColorSpace, MathUtils, CanvasTexture
+  TextureLoader, SRGBColorSpace, MathUtils, CanvasTexture, Vector3, Quaternion
 } from 'three'
 import { creaGuscio } from './guscio.js'
 
@@ -531,7 +531,13 @@ export function creaSalone3D (base, tuga) {
     return v !== null && (v === '' || v === '1' || v === 'si' || v === 'true')
   }
   if (vuoleGuscio()) {
-    const g = creaGuscio(base, stanzaTex, gruppo.position.clone())
+    /* il bersaglio: dove sta la camera del sito alla battuta del salone, NEL
+       SISTEMA DEL GRUPPO. Misurato con `strumenti/posa-sito.mjs`, non supposto:
+       in asse, 1,31 unita' davanti alla lastra, rotazione identita'. */
+    const g = creaGuscio(base, stanzaTex, {
+      posizione: new Vector3(-0.01, 0, 1.3089),
+      quaternione: new Quaternion()
+    })
     gruppo.add(g)
     stanza.visible = false
   }

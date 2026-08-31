@@ -68,59 +68,36 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 const METRI_PER_UNITA = 2.5
 
 /**
- * `rotazione_stanza_verso_camera` da `riferimenti/salone/posa.json`.
+ * ─── LA POSA SORGENTE ARRIVA DAL GLB, non piu' ricostruita qui
  *
- * La convenzione -- se usarla dritta o trasposta, e se la sorgente guardasse
- * lungo +Z o -Z -- non e' stata indovinata: l'ha DETERMINATA
- * `guscio-camera-prova.py` provando le quattro combinazioni contro la maschera
- * gia' spedita, e vince `trasposta` piu' una rotazione di pi greco attorno a X.
- * Le altre tre sbagliano il montante di centinaia di pixel.
+ * Qui c'era la matrice di `posa.json` riscritta a mano, trasposta, e
+ * moltiplicata per mezzo giro attorno a X. Tre passaggi, e in tutti e tre si
+ * puo' sbagliare in silenzio: il guscio finiva sopra la tuga e nessun errore lo
+ * diceva.
+ *
+ * Adesso `guscio-esporta.py` esporta la camera come nodo
+ * `CAMERA_SORGENTE_SALONE`, e **la conversione degli assi viaggia dentro il
+ * file** insieme alla geometria. Qui si legge un nodo e si compongono due
+ * trasformazioni.
+ *
+ * E' la stessa regola che questo repo applica ai numeri: chi ha la misura la
+ * pubblica, invece di lasciare che chi la usa la ricostruisca per
+ * approssimazione.
  */
-const R = [
-  [0.325471, 0.005043, 0.945539],
-  [-0.045003, -0.99877, 0.020818],
-  [0.944481, -0.049328, -0.324844]
-]
 
-/** posizione della camera sorgente nel sistema del guscio, in metri */
-const CAM_SORGENTE_M = new Vector3(-2.9322, 0.6072, 0.8436)
-
-export function creaGuscio (base, texturaStanza, origineGruppo) {
+export function creaGuscio (base, texturaStanza, bersaglio) {
   const gruppo = new Group()
   gruppo.name = 'GUSCIO_SALONE'
-
-  /* la matrice trasposta, poi il mezzo giro attorno a X: la convenzione
-     determinata per misura, non scelta */
-  const m = new Matrix4().set(
-    R[0][0], R[1][0], R[2][0], 0,
-    R[0][1], R[1][1], R[2][1], 0,
-    R[0][2], R[1][2], R[2][2], 0,
-    0, 0, 0, 1
-  ).multiply(new Matrix4().makeRotationX(Math.PI))
-
-  const qSorgente = new Quaternion().setFromRotationMatrix(m)
-
-  /**
-   * La posa del sito alla battuta del salone, misurata e non supposta. La
-   * rotazione e' zero: la camera guarda il salone in asse.
-   */
-  const C = new Vector3(0.0065, 1.4528, 1.9089)
-  /* il guscio e' FIGLIO del gruppo del salone, che sta gia' a
-     `(0, 1.4528, 0.6)`: la posa misurata e' in coordinate di scena, quindi si
-     toglie l'origine del gruppo o la si applicherebbe due volte */
-  if (origineGruppo) C.sub(origineGruppo)
-  const qSito = new Quaternion()          // identita': rotazione 0, misurata
-
-  const scala = 1 / METRI_PER_UNITA
-  gruppo.quaternion.copy(qSito).multiply(qSorgente.clone().invert())
-  gruppo.position.copy(C).sub(
-    CAM_SORGENTE_M.clone().multiplyScalar(scala).applyQuaternion(gruppo.quaternion)
-  )
-  gruppo.scale.setScalar(scala)
 
   new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
     base + 'modelli/guscio-salone.glb',
     (glb) => {
+      const sorgente = glb.scene.getObjectByName('CAMERA_SORGENTE_SALONE')
+      if (!sorgente) {
+        console.warn('[nautica] il guscio non porta CAMERA_SORGENTE_SALONE: non so dove metterlo')
+        return
+      }
+
       glb.scene.traverse((o) => {
         if (!o.isMesh) return
         /**
@@ -131,13 +108,49 @@ export function creaGuscio (base, texturaStanza, origineGruppo) {
          *
          * `toneMapped: false` come la lastra che sostituisce: la fotografia
          * porta gia' la propria curva, e passarla una seconda volta la
-         * schiarirebbe due volte. E' lo stesso motivo per cui il salone attuale
-         * lo dichiara.
+         * schiarirebbe due volte.
          */
         o.material = new MeshBasicMaterial({
           map: texturaStanza, toneMapped: false, side: DoubleSide
         })
       })
+
+      /**
+       * ─── LA COMPOSIZIONE, e adesso non c'e' piu' niente da indovinare
+       *
+       * Si vuole che la camera sorgente -- quella da cui la fotografia e' stata
+       * proiettata sulle UV -- finisca esattamente dove sta la camera del sito
+       * alla battuta del salone. Se ci finisce, la proiezione combacia con la
+       * geometria e la stanza smette di essere una carta.
+       *
+       * Chiamando `T` la trasformazione del guscio, `S` la posa della sorgente
+       * dentro il GLB e `B` il bersaglio nel sistema del gruppo:
+       *
+       *     T.q = B.q · S.q⁻¹            T.p = B.p − T.q · (S.p · scala)
+       *
+       * `scala` porta dai metri del rilievo alle unita' di scena, 1 = 2,5 m.
+       *
+       * Il bersaglio arriva MISURATO da `strumenti/posa-sito.mjs`, nel sistema
+       * del gruppo e non della scena: il salone e' figlio di `nave`, la cui Y e'
+       * animata dall'emersione, e una posa giusta in coordinate di scena e'
+       * sbagliata come posizione locale. E' la trappola in cui sono caduto per
+       * primo.
+       */
+      const scala = 1 / METRI_PER_UNITA
+      sorgente.updateWorldMatrix(true, false)
+      const sPos = new Vector3()
+      const sQuat = new Quaternion()
+      sorgente.matrixWorld.decompose(sPos, sQuat, new Vector3())
+
+      gruppo.quaternion.copy(bersaglio.quaternione).multiply(sQuat.clone().invert())
+      gruppo.position.copy(bersaglio.posizione).sub(
+        sPos.clone().multiplyScalar(scala).applyQuaternion(gruppo.quaternion)
+      )
+      gruppo.scale.setScalar(scala)
+
+      /* la camera sorgente ha fatto il suo lavoro: non deve restare nella scena
+         come oggetto, o `collaudo-continuita` conterebbe una camera in piu' */
+      sorgente.parent?.remove(sorgente)
       gruppo.add(glb.scene)
     },
     undefined,
