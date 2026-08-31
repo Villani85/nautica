@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5180",
-    "build": "vite build",
+    "build": "vite build && node strumenti/stampiglia.mjs",
     "preview": "vite preview --port 5180",
     "peso": "node strumenti/peso.mjs",
     "riduzioni": "node strumenti/genera-riduzioni.mjs",
