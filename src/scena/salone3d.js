@@ -988,6 +988,15 @@ export function creaSalone3D (base, tuga) {
 
   return {
     gruppo, aggiorna, mostra, riproduci, ferma, smonta, profondita,
+    /**
+     * L'elemento della calma, prestato alla traversata per il finale.
+     *
+     * NON e' un secondo decodificatore: la traversata gli appende una propria
+     * `VideoTexture`, e due tessiture sullo stesso `<video>` costano un solo
+     * flusso. Un secondo elemento sarebbe stato mezzo megabyte decodificato due
+     * volte per mostrare la stessa stanza.
+     */
+    videoCalma: vCalma,
     /** La larghezza vera del piano: la camera ci calcola la propria distanza. */
     largo: larg,
     alto: alt,

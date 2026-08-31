@@ -52,7 +52,7 @@ import { LinearFilter, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, V
 /** Dove sta il piano rispetto alla camera. Non e' un gusto: vedi `posiziona`. */
 const DISTANZA = 1.0
 
-export function creaTraversata (base, camera, scena) {
+export function creaTraversata (base, camera, scena, videoCalma) {
   const v = document.createElement('video')
   v.src = base + 'filmati/traversata.mp4'
   v.muted = true
@@ -114,6 +114,50 @@ export function creaTraversata (base, camera, scena) {
   if (scena && camera.parent !== scena) scena.add(camera)
 
   /**
+   * ─── IL PIANO DELLA CALMA, DIETRO AL FILMATO
+   *
+   * DIFETTO PRESO GUARDANDO IL SITO PUBBLICATO, non leggendo il codice. Alla
+   * fine della corsa la misura diceva:
+   *
+   *     traversata.mp4    t 8.04 -> 8.04   fermo: true   finito: true
+   *     salone-largo.mp4  t 3.75 -> 1.22   fermo: false
+   *
+   * cioe' il filmato era congelato sull'ultimo fotogramma e copriva tutto,
+   * mentre il loop con le due persone tranquille **stava suonando sotto,
+   * invisibile**. L'ultima immagine del sito era una fotografia.
+   *
+   * Il commento qui sopra prometteva che a filmato finito il comando torna al
+   * 3D. Non poteva mantenerlo: dietro la lastra, a quel punto della corsa, c'e'
+   * ancora il meccanismo -- ed e' scritto poco piu' giu' perche' il filmato non
+   * si dissolve da solo. Le due decisioni insieme lasciavano l'unica uscita
+   * peggiore: restare fermi.
+   *
+   * La terza via e' consegnare la lastra invece di toglierla. Questo piano sta
+   * a `renderOrder` 998, cioe' **dietro il filmato e davanti a tutto il resto**:
+   * quando il filmato sfuma, sotto non ricompare il meccanismo, compare la
+   * stanza viva. La coppia continua a respirare e il rollio del sito la trova
+   * di nuovo -- che e' la frase su cui sta in piedi il progetto.
+   *
+   * `videoCalma` e' l'elemento del salone, prestato: una seconda
+   * `VideoTexture` sullo stesso `<video>` non apre un secondo decodificatore.
+   */
+  let pianoCalma = null
+  let matCalma = null
+  if (videoCalma) {
+    const tesCalma = new VideoTexture(videoCalma)
+    tesCalma.colorSpace = SRGBColorSpace
+    tesCalma.minFilter = LinearFilter
+    tesCalma.magFilter = LinearFilter
+    tesCalma.generateMipmaps = false
+    matCalma = new MeshBasicMaterial({ map: tesCalma, transparent: true, opacity: 0, depthTest: false, depthWrite: false })
+    pianoCalma = new Mesh(new PlaneGeometry(1, 1), matCalma)
+    pianoCalma.renderOrder = 998
+    pianoCalma.frustumCulled = false
+    pianoCalma.visible = false
+    camera.add(pianoCalma)
+  }
+
+  /**
    * IL PIANO COPRE ESATTAMENTE IL CAMPO, e la misura non e' negoziabile.
    *
    * Un piano largo "quanto basta" lascia una riga di scena lungo un bordo su
@@ -135,6 +179,15 @@ export function creaTraversata (base, camera, scena) {
     const riempi = scalaTela > scalaVideo ? larg / (alt * scalaVideo) : 1
     piano.scale.set(larg * Math.max(1, riempi), alt * Math.max(1, 1 / riempi), 1)
     piano.position.set(0, 0, -DISTANZA)
+    if (pianoCalma) {
+      /**
+       * Identico al filmato, e deve restarlo: se i due piani avessero
+       * inquadrature diverse la consegna si vedrebbe come uno scarto di scala,
+       * cioe' esattamente il difetto che sta chiudendo.
+       */
+      pianoCalma.scale.copy(piano.scale)
+      pianoCalma.position.copy(piano.position)
+    }
   }
 
   let avviata = false
@@ -158,7 +211,33 @@ export function creaTraversata (base, camera, scena) {
    * troncarlo o lasciarlo fermo sull'ultimo fotogramma -- cioe' una fotografia.
    */
   let finita = false
-  v.addEventListener('ended', () => { finita = true })
+  /**
+   * Da 0 (comanda ancora l'ultimo fotogramma del filmato) a 1 (comanda il loop
+   * della calma). L'avanzamento lo detta **l'orologio del video calmo**, non un
+   * orologio da parete: e' la stessa scelta della consegna del sollievo, e ha
+   * due proprieta' che un `performance.now()` non ha. Se il browser rifiuta di
+   * suonare, `currentTime` resta 0, la consegna non parte e in campo rimane
+   * l'ultimo fotogramma -- brutto ma intero, mai un buco. E sotto
+   * `passoDichiarato` la dissolvenza non dipende da quanto e' carica la
+   * macchina.
+   */
+  let consegna = 0
+  let inConsegna = false
+  /** 1,2 s: piu' corto sembra uno stacco, piu' lungo un'esitazione. */
+  const DURATA_CONSEGNA = 1.2
+  v.addEventListener('ended', () => {
+    finita = true
+    if (!videoCalma) return
+    inConsegna = true
+    /**
+     * Riavvolta a 0 perche' l'ultimo fotogramma del filmato e' una
+     * ricostruzione della posa di apertura del salone: e' li' che i due
+     * combaciano. Prenderla a meta' ciclo vorrebbe dire consegnare a una posa a
+     * caso, ed e' il momento in cui si vede il taglio.
+     */
+    try { videoCalma.currentTime = 0 } catch { /* seek rifiutato: si consegna dalla posa corrente */ }
+    videoCalma.play().catch(() => { /* rifiutata: resta il filmato, mai il vuoto */ })
+  })
 
   /**
    * `q` va da 0 a 1: 0 il 3D comanda, 1 comanda la traversata.
@@ -168,16 +247,68 @@ export function creaTraversata (base, camera, scena) {
    * modo piu' rapido di dire che non lo sono. Se la cucitura e' buona non serve
    * quasi niente; se e' cattiva, allungarla non la ripara, la spalma.
    */
+  /**
+   * L'ultimo comando ricevuto dalla regia. Serve perche' la consegna deve poter
+   * avanzare **anche a dito fermo**, e la regia non gira a fotogrammi.
+   *
+   * ─── IL DIFETTO, E VALE PIU' DELLA RIGA CHE LO CHIUDE
+   *
+   * La dissolvenza scritta qui sotto non partiva mai: il cancello leggeva
+   * `consegna 0.000` mentre il video della calma girava a 2,43 s. Il codice era
+   * giusto e non veniva eseguito. `regia(p)` sta dentro `leggiScorrimento`
+   * (`demo.js:435`), agganciata a `scroll` e `resize`: chi arriva in fondo e
+   * si ferma smette di chiamarla. Ogni transizione che deve continuare da sola
+   * -- e questa e' l'unica del sito -- va guidata dal ciclo di disegno, non
+   * dalla mano.
+   */
+  let ultimaCorsa = 0
+
+  /** Applica opacita' e visibilita' dei due piani per la corsa `a`. */
+  function componi (a) {
+    mat.opacity = a * (1 - consegna)
+    piano.visible = a > 0.002 && consegna < 0.999
+    if (matCalma) matCalma.opacity = a * consegna
+    if (pianoCalma) pianoCalma.visible = a > 0.002 && consegna > 0.001
+    if (piano.visible || pianoCalma?.visible) posiziona()
+  }
+
+  /**
+   * Chiamata a ogni fotogramma da `disegna`. Non tocca niente finche' il
+   * filmato non e' finito: prima del finale la regia comanda da sola.
+   */
+  function avanza () {
+    if (!inConsegna || !videoCalma) return
+    const prima = consegna
+    consegna = Math.max(0, Math.min(1, videoCalma.currentTime / DURATA_CONSEGNA))
+    if (consegna !== prima) componi(ultimaCorsa)
+  }
+
   function mostra (q) {
     const a = Math.max(0, Math.min(1, q * 5))
-    mat.opacity = a
-    piano.visible = a > 0.002
-    if (piano.visible) posiziona()
+    ultimaCorsa = a
+    if (inConsegna && videoCalma) {
+      consegna = Math.max(0, Math.min(1, videoCalma.currentTime / DURATA_CONSEGNA))
+    }
+    componi(a)
     if (a > 0.002 && !avviata) {
       avviata = true
       v.play().catch(() => { /* rifiutata: resta il primo fotogramma, che e' la posa di consegna */ })
     }
-    if (a <= 0.002 && avviata) { avviata = false; v.pause(); v.currentTime = 0 }
+    if (a <= 0.002 && avviata) {
+      avviata = false
+      v.pause()
+      v.currentTime = 0
+      /**
+       * E si riavvolge anche la consegna, `finita` compresa. Senza questa riga
+       * chi risale e poi ridiscende trova il filmato che riparte da capo ma la
+       * scena che lo crede gia' finito: il cruscotto rientrava in campo sopra
+       * la traversata in corso. Difetto vecchio, scoperto mentre si chiudeva
+       * questo.
+       */
+      finita = false
+      inConsegna = false
+      consegna = 0
+    }
   }
 
   /** Il ciclo di disegno spento non deve lasciare un decodificatore acceso. */
@@ -201,10 +332,17 @@ export function creaTraversata (base, camera, scena) {
    */
   return {
     mostra,
+    avanza,
     spegni,
     piano,
     video: v,
     get finita () { return finita },
+    /**
+     * Da 0 a 1: quanto il finale e' passato dal fotogramma congelato del
+     * filmato al loop vivo della calma. Esposto perche' un cancello possa
+     * MISURARE che il finale respira, invece di fidarsi di questo commento.
+     */
+    get consegnaCalma () { return consegna },
     /** Quanto copre il fotogramma adesso: 1 = il 3D dietro non si vede. */
     get copertura () { return piano.visible ? mat.opacity : 0 }
   }

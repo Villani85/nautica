@@ -257,10 +257,72 @@ cancello piu' sensibile ai tempi che questo repo abbia.
 Da rifare a ondata chiusa. **Il numero di A1 non e' cancellato**: resta come
 misura sotto carico, che e' un'informazione vera su un'altra domanda.
 
-### IN CORSO
+**A9 · audit acqua-scafo** — e ha trovato la distinzione piu' fine della
+giornata:
 
-A3 locale tecnico · A5 guscio salone world-space · A6 curva camera ·
-A9 audit acqua-scafo
+> il cancello della scia **passa**, ma con mediana di schiarimento **0 livelli
+> su 255** e solo il p90 a 20. *«Misura che l'effetto c'e', non che si vede.»*
+
+I quattro cancelli dell'acqua passano tutti (mare, scia, varco, orizzonte), e
+**nessuno copre la fascia di galleggiamento**: e' dipinta a quota FISSA sullo
+scafo (`materiali.js:329`, `alto: 0.058`), mentre il pelo dell'acqua ondeggia
+sotto con ampiezza `mare*0,052`. La nave ha rollio ma non sussulto.
+L'agente lo dichiara **letto nel codice e non misurato**, che e' la cosa giusta.
+
+**A6 · curva camera** — arco 11,0901 m, arrivo con scarto **0,000000 m** sul
+nodo `CAMERA_SORGENTE_SALONE` letto dentro il GLB. Riparametrizzata per
+lunghezza d'arco: nessuna legge oraria cotta nella curva. Picco di jerk al nodo
+del corridoio, **atteso e spiegato**: Catmull-Rom centripeta e' C1 e non C2.
+
+**A5 · guscio salone** — importato, non rifatto. Altezza aria 2,3501 contro
+2,35 (0,004%). Decadimento oltre 1,9 m in due modi: ombra vera nel materiale
+**piu' una paratia fisica** a 2,2 m con una porta. Una causa materiale, non una
+dissolvenza nel vuoto.
+
+**A3 · locale tecnico** — 21 pezzi. Non ha importato la geometria di
+`impianto.glb`: ne ha usato il bounding box come **taglia**, perche' non e'
+certo quale asse diventera' l'alto. Vano di sicurezza invece di incasso su un
+orientamento presunto.
+
+**A8 · fluidita'** — trova le quattro giunzioni **interrogando la pagina viva**
+invece di cablare le soglie di `regia.js`.
+
+```
+  p50 33,1 ms · p95 33,6 · p99 49,8 · max 66,7
+  peggiore: scafo->meccanismo e meccanismo->traversata, 66,7 ms con
+            un salto di camera di 1,97 unita'
+```
+
+E dichiara il proprio limite: p50 a 33 ms **puo' essere il vsync di questa
+macchina**, non il costo del sito.
+
+---
+
+## 3-ter · ONDATA 2 — il blocco che l'ondata 1 ha scoperto
+
+**Manca un frame world-space comune.** A6 lo dice esplicitamente: P2 e' misurato
+(il centro del vano da `posa.json`), ma P0 e P1 sono **assunti**, perche' i
+quattro tratti sono stati costruiti da agenti diversi in sistemi di riferimento
+diversi. Senza un `WORLD_ROOT` condiviso i pezzi non si toccano.
+
+Le cuciture dichiarate, da allineare:
+
+```
+  A3 locale tecnico   paratia di poppa a X = 8,6226..8,7226
+                      porta 0,70 x 1,90, Z -0,350..0,350, normale +X
+  A4 corridoio        apertura bassa X = 0,000   (0,85 largo, 2,00 alto)
+                      apertura alta  X = 5,480   (dislivello 2,10 m)
+  A5 salone           vano X = -2,1746..0,0  Y = 0,0..1,1449  Z = 0,0
+```
+
+| ID | attivita' | proprietario | stato |
+|---|---|---|---|
+| B1 | master world-space: `scena-continua.py`, un solo `WORLD_ROOT`, aperture allineate | `riferimenti/blender/scena-continua.py` | `PRONTO` |
+| B2 | cancello della fascia di galleggiamento: segue l'onda vera? | `strumenti/collaudo-galleggiamento.mjs` | `PRONTO` |
+| B3 | audio: crossfade sui due candidati migliori + versioni web | `uscite/audio/**` | `PRONTO` |
+
+**Nota di orchestrazione:** l'ondata 2 parte **dopo** la rimisura della catena a
+macchina ferma, non durante. E' la regola nata da A1.
 
 ### SBLOCCATO DALL'ORCHESTRATORE
 

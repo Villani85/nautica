@@ -632,7 +632,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * ruotando la nave si vedrebbe da dietro. Appeso alla camera e' il
    * fotogramma, e quando prende il comando non c'e' piu' niente davanti.
    */
-  const traversata = creaTraversata(base, camera, scena)
+  /**
+   * Il video della calma passa alla traversata perche' il finale possa
+   * consegnarle la lastra invece di restare fermo. Vedi `traversata.js`, «il
+   * piano della calma». Se il salone non c'e' (`LA_SCENA_E_UNA` spento) la
+   * traversata resta com'era: finisce e si ferma.
+   */
+  const traversata = creaTraversata(base, camera, scena, salone?.videoCalma)
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
@@ -1031,6 +1037,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        `FERMO_A` in `stato.js`, che spiega perche' non basta fermarne uno */
     if (FERMO_A !== null) t = FERMO_A
     else t += dt
+
+    /**
+     * La consegna del finale al loop della calma avanza qui, non nella regia:
+     * la regia gira sullo scorrimento e chi arriva in fondo si ferma. Vedi
+     * `traversata.js`, `avanza`.
+     */
+    traversata.avanza()
 
     // Il passo della simulazione non lo fa piu' questa scena: lo fa `stato.js`,
     // che e' l'unico a sapere se qualcun altro l'ha gia' fatto in questo
@@ -1560,6 +1573,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        */
       coperturaTraversata: () => traversata.copertura,
       traversataFinita: () => traversata.finita,
+      consegnaCalma: () => traversata.consegnaCalma,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
@@ -1793,6 +1807,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     impostaTraversata: (q) => traversata.mostra(SENZA_FILMATO ? 0 : q),
     /** La regia lo chiede per far tornare il cruscotto quando il film e' finito. */
     traversataFinita: () => traversata.finita,
+    /** Quanto il finale e' passato al loop vivo: 0 fotogramma fermo, 1 stanza viva. */
+    consegnaCalma: () => traversata.consegnaCalma,
     /**
      * Quanto il filmato copre il fotogramma, da 0 a 1. Serve a
      * `collaudo-continuita`: la camera puo' fare UN salto -- il rientro nel
