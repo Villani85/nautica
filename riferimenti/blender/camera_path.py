@@ -297,9 +297,28 @@ def look_at_quat(forward, up_hint=(0.0, 1.0, 0.0)):
 # ---------------------------------------------------------------------------
 
 _INGRESSO = world_root.CUCITURE['ingresso_salone']
+# ─── P2 STA SULLA MEZZERIA DEL CORRIDOIO, NON AL CENTRO DEL BUCO
+#
+# DIFETTO TROVATO DALL'ASSEMBLATORE, ed e' una disputa fra due assunzioni
+# ragionevoli che nessuna delle due sapeva dell'altra.
+#
+# `ingresso_salone` e' MISURATO ed e' largo 4,57 m: Z da -3,731 a +0,843. Il
+# suo CENTRO cade a Z = -1,444. Ma il corridoio arriva sulla PROPRIA mezzeria,
+# Z = 0, ed e' largo 0,85 -- cioe' Z da -0,425 a +0,425.
+#
+# Mettendo P2 al centro dell'apertura, la curva usciva di lato dal corridoio di
+# 1,03 m: tredici campioni su sessanta fuori dal volume libero, tutti raccolti
+# a X ~= -0,84, cioe' proprio alla soglia.
+#
+# La camera passa da dove passa il CORRIDOIO. L'apertura del salone e' larga
+# quattro metri e mezzo perche' e' il punto in cui il guscio smette, non perche'
+# sia una porta: il centro di un'estremita' aperta non e' un passaggio.
+#
+# X e Y restano dall'apertura misurata (la soglia e la quota le detta lei); Z
+# viene dal corridoio, che e' l'unico che sa da dove si entra.
 P2_X = _INGRESSO['x_m']
 P2_Y = sum(_INGRESSO['altezza_libera_m']) / 2.0
-P2_Z = sum(_INGRESSO['larghezza_libera_m']) / 2.0
+P2_Z = world_root.traslazione('STAIR_CORRIDOR', 'gltf')[2]
 P2 = np.array([P2_X, P2_Y, P2_Z])
 
 _TX_COR, _TY_COR, _TZ_COR = world_root.traslazione('STAIR_CORRIDOR', 'gltf')

@@ -229,7 +229,8 @@ print('-' * 78)
 print('VERIFICA 3 — CURVA CAMERA vs VOLUME LIBERO (controllo DEBOLE, dichiarato)')
 print('-' * 78)
 print('  NON e\' un test punto-dentro-mesh: non c\'e\' geometria reale sufficiente')
-print('  in questa sessione (SALOON_SHELL e MECHANISM_BAY sono falliti, vedi sopra).')
+_zone = sum(1 for k in ('STAIR_CORRIDOR','SALOON_SHELL','MECHANISM_BAY') if bboxes.get(k))
+print('  Zone con bbox MISURATO in questa sessione: %d su 3.' % _zone)
 print('  Si campiona la curva di camera_path.py e si verifica solo che ogni punto')
 print('  stia dentro un volume libero DICHIARATO per zona (bbox meno spessori),')
 print('  costruito dai numeri del contratto e dei sorgenti letti (non misurato ora).')
@@ -241,7 +242,7 @@ print('  guscio dichiarato della zona in cui dovrebbe trovarsi.')
 CAMERA_PATH_FILE = os.path.join(QUI, 'camera_path.py')
 with open(CAMERA_PATH_FILE, encoding='utf-8') as f:
     codice_cam = f.read()
-g_cam = {'__name__': '__nondunder__', '__file__': CAMERA_PATH_FILE}
+g_cam = {'__name__': '__main__', '__file__': CAMERA_PATH_FILE}
 try:
     exec(compile(codice_cam, CAMERA_PATH_FILE, 'exec'), g_cam)
     camera_ok = True
@@ -262,11 +263,11 @@ if camera_ok:
     #   mechanism_bay.py (righe 96-106), non misurate ora perche' lo script e'
     #   fallito prima di costruire la geometria — DICHIARATO come tale.
     X_MB0 = world_root.COLLOCAZIONI['MECHANISM_BAY']['traslazione_x_derivata_m']
-    X_MB1 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m'][0]
-    MB_Y0 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m'][1]  # PAGLIOLO_Y, -3.270
+    X_MB1 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m_gltf'][0]
+    MB_Y0 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m_gltf'][1]  # PAGLIOLO_Y, -3.270
     MB_Y1 = MB_Y0 + 3.0 - 0.05  # +ALTEZZA_LIBERA (mechanism_bay.py:105) - SP_SOFFITTO margine
-    MB_Z0 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m'][2] - 3.2 / 2 + 0.12
-    MB_Z1 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m'][2] + 3.2 / 2 - 0.12
+    MB_Z0 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m_gltf'][2] - 3.2 / 2 + 0.12
+    MB_Z1 = world_root.COLLOCAZIONI['MECHANISM_BAY']['cucitura_mondo_m_gltf'][2] + 3.2 / 2 - 0.12
 
     # zona STAIR_CORRIDOR: X world -6.280..-0.800 (misurato REALMENTE sopra,
     #   bboxes['STAIR_CORRIDOR'], se disponibile — altrimenti dal contratto).
