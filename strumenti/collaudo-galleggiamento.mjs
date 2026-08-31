@@ -198,7 +198,7 @@ async function main () {
   if (alto?.rapporto == null) {
     console.log('  NON MISURABILE.')
   } else {
-    for (const soglia of [0.5, 0.05]) {
+    for (const soglia of [0.5, 0.98]) {
       const segue = alto.rapporto > soglia
       console.log(`  soglia ${soglia.toFixed(2)}:  rapporto ${alto.rapporto.toFixed(3)} ${segue ? '>' : '<='} soglia -> ` +
         (segue ? 'VERDE (la fascia "segue" l onda)' : 'ROSSO (la fascia resta ferma mentre il mare oscilla: dipinta a quota costante)'))

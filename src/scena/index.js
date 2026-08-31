@@ -165,6 +165,8 @@ const LUCI = {
 export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   /** L'ultimo stato passato a `disegna`, per `?ispeziona=1`. */
   let ultimoStato = null
+  /** L'ultima corsa della traversata, per la camera del mondo. Vedi `disegna`. */
+  let corsaTraversata = 0
   /* l'ultima simulazione passata a `disegna`: serve al passo dichiarato, che
      deve poter rientrare in `disegna` senza che il chiamante gliela ripassi */
   let ultimaSim = null
@@ -1574,6 +1576,32 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       MathUtils.lerp(tugaZ, miraZ, uscita))
 
     /**
+     * ─── E SE IL MONDO E' ACCESO, LA CAMERA LO ATTRAVERSA
+     *
+     * L'inquadratura qui sopra e' quella che il sito ha sempre avuto: la camera
+     * guarda la nave da fuori e scende sul meccanismo. Quando `?mondo=1` e' su
+     * e la traversata comanda, la camera smette di guardare e comincia ad
+     * ATTRAVERSARE: prende posizione e orientamento dalla curva misurata, che
+     * porta dal locale tecnico fino alla posa del salone.
+     *
+     * Si fa QUI, in coda, e non nella regia, per due ragioni. La prima e' che
+     * la regia gira sullo scorrimento e questa e' una posa che deve essere
+     * giusta a ogni fotogramma. La seconda e' che sovrascrivere in coda lascia
+     * intatto tutto il calcolo di sopra: spegnendo l'interruttore il sito torna
+     * esattamente com'era, senza un ramo in piu' da mantenere in ogni funzione.
+     *
+     * `corsaTraversata` e' la stessa `q` che la regia passa a `impostaTraversata`.
+     * Zero significa che comanda la scena; uno che comanda la traversata.
+     */
+    if (mondo && mondo.pronto && corsaTraversata > 0.002) {
+      const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
+      if (posa) {
+        camera.position.copy(posa.p)
+        camera.quaternion.copy(posa.q)
+      }
+    }
+
+    /**
      * Quanta della linea di vista sta in aria. La camera non e' figlia di
      * niente, quindi la sua posizione e' gia' in coordinate di mondo e non
      * serve `getWorldPosition` -- che a ogni fotogramma allocherebbe.
@@ -1941,7 +1969,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * accenderlo o spegnerlo per far tornare un numero. Puo' solo chiedere di
      * misurare cio' che c'e' SOTTO, dichiarandolo nella URL.
      */
-    impostaTraversata: (q) => traversata.mostra(SENZA_FILMATO ? 0 : q),
+    impostaTraversata: (q) => {
+      corsaTraversata = q
+      /* col mondo acceso il filmato non serve: la traversata la fa la camera */
+      traversata.mostra(SENZA_FILMATO || (mondo && mondo.pronto) ? 0 : q)
+      mondo?.mostra(q)
+    },
     /**
      * Aggancia i richiami tecnici. `fn.nomi` sono i nodi del GLB a cui puntano;
      * `fn` riceve a ogni fotogramma le loro posizioni in pixel di tela.

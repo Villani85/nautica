@@ -658,3 +658,65 @@ if HAVE_BPY:
 else:
     print("\n[nota] eseguito fuori da Blender: solo calcolo/stampa, come previsto "
           "quando serve iterare in fretta sui numeri prima di aprire la GUI.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# L'ESPORTAZIONE — la curva esce dal computer e diventa un file che il sito legge
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# ─── PERCHE' JSON E NON LA CAMERA DENTRO IL GLB
+#
+# Le due strade erano sul tavolo. La camera nel GLB e' battuta -- il progetto
+# usa gia' `export_cameras=True` in `guscio-esporta.py` -- ma rende la curva
+# OPACA dentro un binario, e ogni ritocco costa un riesport.
+#
+# Decide un vincolo, non un gusto: il sito deve poter SCRUBBARE, cioe' mappare
+# il progresso di scorrimento sulla curva a piacere. E' l'articolo 4 del
+# contratto world-space: «la durata non si cuoce nello spazio; il sito deve
+# poter rimappare il progresso di scroll sulla curva senza cambiarne la
+# traiettoria». Una camera animata dentro un GLB porta con se' una LEGGE
+# ORARIA; una tabella di pose no.
+#
+# ─── E IL PASSO E' DI LUNGHEZZA, NON DI PARAMETRO
+#
+# Campionando in `u` i punti si addenserebbero dove la curva e' lenta e si
+# diraderebbero dove corre: la velocita' apparente cambierebbe senza che nessuno
+# l'abbia chiesto. A passo di lunghezza d'arco, interpolare fra due campioni
+# consecutivi e' interpolare a velocita' costante.
+
+def esporta_json(percorso, campioni=96):
+    """Scrive la curva in JSON, a passo costante di lunghezza d'arco."""
+    import json as _json
+    dati = {
+        'formato': 'nautica.traversata.camera/1',
+        'frame': 'mondo (world_root.py) - origine sul nodo CAMERA_SORGENTE_SALONE',
+        'unita': 'metri',
+        'passo': "costante in lunghezza d'arco",
+        'lunghezza_m': round(float(ARC_LENGTH_TOTALE_M), 6),
+        'campioni': int(campioni),
+        'pose': [],
+    }
+    for i in range(campioni):
+        s01 = i / (campioni - 1)
+        p3 = pos_at_arclength(s01)
+        q = quat_at_arclength(s01)
+        dati['pose'].append({
+            's': round(s01, 6),
+            'p': [round(float(c), 6) for c in p3],
+            # quaternione in ordine glTF (x, y, z, w), come tutto il progetto:
+            # l'ordine di Blender e' (w, x, y, z), e confonderli da' norma 1 e
+            # centoundici gradi di errore senza nessun avviso.
+            'q_gltf': [round(float(c), 6) for c in q],
+        })
+    with open(percorso, 'w', encoding='utf-8') as f:
+        _json.dump(dati, f, ensure_ascii=False, indent=1)
+        f.write('\n')
+    return dati
+
+
+_FUORI = os.path.join(os.path.abspath(os.path.join(_QUI, '..', '..')), 'public', 'modelli', 'traversata-camera.json')
+_d = esporta_json(_FUORI)
+print('')
+print(f'  CURVA ESPORTATA  {_FUORI}')
+print(f'    {_d["campioni"]} pose · lunghezza {_d["lunghezza_m"]:.3f} m · '
+      f'{os.path.getsize(_FUORI)} byte')

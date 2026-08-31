@@ -1,4 +1,4 @@
-import { Group, MathUtils, Vector3 } from 'three'
+import { Group, MathUtils, Quaternion, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
@@ -211,11 +211,68 @@ export function creaMondo (base, scena) {
       )
   })
 
+  /**
+   * ─── LA CURVA, e perche' arriva come tabella e non come animazione
+   *
+   * `traversata-camera.json` porta 96 pose a passo costante di lunghezza
+   * d'arco, in metri, nel frame del mondo. NON e' un'animazione: non contiene
+   * nessun tempo. E' l'articolo 4 del contratto -- «la durata non si cuoce
+   * nello spazio: il sito deve poter rimappare il progresso di scroll sulla
+   * curva senza cambiarne la traiettoria» -- ed e' la ragione per cui la camera
+   * NON e' stata messa dentro il GLB, dove si sarebbe portata dietro una legge
+   * oraria.
+   *
+   * Le pose vengono trasformate una volta sola, al caricamento, dallo spazio
+   * del mondo a quello della scena: sono poche decine di punti, e farlo a ogni
+   * fotogramma sarebbe lavoro ripetuto per un dato che non cambia mai.
+   */
+  let pose = null
+  let lunghezza = 0
+
+  const curva = fetch(base + 'modelli/traversata-camera.json')
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+    .then((d) => {
+      lunghezza = d.lunghezza_m || 0
+      gruppo.updateWorldMatrix(true, false)
+      pose = d.pose.map((v) => {
+        const p = new Vector3(v.p[0], v.p[1], v.p[2]).applyMatrix4(gruppo.matrixWorld)
+        /* il quaternione arriva in ordine glTF (x,y,z,w), che e' anche quello
+           del costruttore di three: si passa diretto. Poi si compone con la
+           rotazione del gruppo, o la camera guarderebbe dove guardava nel
+           frame del mondo invece che in quello della scena. */
+        const q = new Quaternion(v.q_gltf[0], v.q_gltf[1], v.q_gltf[2], v.q_gltf[3])
+        return { s: v.s, p, q: gruppo.quaternion.clone().multiply(q) }
+      })
+      return true
+    })
+    .catch((e) => { errore = errore || ('curva: ' + e.message); return false })
+
+  /**
+   * La posa a `s` (0..1 sulla lunghezza d'arco), gia' nello spazio della scena.
+   * Interpola linearmente fra i due campioni piu' vicini per la posizione e
+   * `slerp` per l'orientamento -- che e' l'unico modo di interpolare una
+   * rotazione senza passare per pose che nessuno ha chiesto.
+   */
+  const _pa = new Vector3()
+  const _qa = new Quaternion()
+  function posaA (s) {
+    if (!pose || pose.length < 2) return null
+    const x = MathUtils.clamp(s, 0, 1) * (pose.length - 1)
+    const i = Math.min(pose.length - 2, Math.floor(x))
+    const f = x - i
+    _pa.copy(pose[i].p).lerp(pose[i + 1].p, f)
+    _qa.copy(pose[i].q).slerp(pose[i + 1].q, f)
+    return { p: _pa, q: _qa }
+  }
+
   scena.add(gruppo)
 
   return {
     gruppo,
-    caricato,
+    caricato: Promise.all([caricato, curva]).then((v) => v[0] && v[1]),
+    posaA,
+    get lunghezza () { return lunghezza },
+    get pose () { return pose ? pose.length : 0 },
     get pronto () { return pronto },
     get errore () { return errore },
     get maglie () { return maglie },
@@ -232,6 +289,8 @@ export function creaMondo (base, scena) {
         offsetZ: gruppo.position.z,
         offsetY: gruppo.position.y,
         sfondamentoPonte: sfondamento,
+        pose: pose ? pose.length : 0,
+        lunghezzaCurva: lunghezza,
         ponte: 'DERIVATO, non confermato — vedi collaudo-verticale.mjs'
       }
     }
