@@ -558,6 +558,30 @@ export function creaSimulazione ({ ridotto = false, seme, velocitaDinamica = fal
     nuda.passo(dt, t, S.mare, 0, onda, 0)
 
     S.rollio = MathUtils.radToDeg(viva.c.theta)
+    /**
+     * ─── LA VELOCITA' DEL ROLLIO, e perche' non bastava l'angolo
+     *
+     * DIFETTO SEGNALATO DAL COMMITTENTE ascoltando: *«il suono e'
+     * fastidiosissimo continuo, non e' coerente con nessun movimento»*. Aveva
+     * ragione, e la causa stava nel fatto che `suono.js` aveva a disposizione
+     * solo grandezze SCALARI e MEDIATE -- stato del mare, andatura, giri, e il
+     * rollio RMS, che e' gia' una media con costante di tempo mezzo secondo.
+     *
+     * A comandi fermi sono tutte costanti. Un paesaggio sonoro costruito su
+     * costanti e' un ronzio PER COSTRUZIONE, e nessuna quantita' di taratura lo
+     * cura: mancava un ingresso che oscillasse.
+     *
+     * `theta` da' la posizione, `omega` la VELOCITA' ANGOLARE -- ed e' quella
+     * che serve, perche' il rumore di uno scafo che rolla non e' massimo quando
+     * la nave e' piu' inclinata: e' massimo quando si muove piu' in fretta,
+     * cioe' a meta' oscillazione, e cambia segno agli estremi. Sono due
+     * grandezze in quadratura, e l'orecchio le distingue.
+     *
+     * In gradi al secondo perche' e' l'unita' in cui il resto della pagina
+     * parla di rollio, e un valore in radianti fra gradi e' il modo in cui
+     * qualcuno lo moltiplichera' per 57 di troppo.
+     */
+    S.rollioVel = MathUtils.radToDeg(viva.c.omega)
     S.rollioNudo = MathUtils.radToDeg(nuda.c.theta)
     S.picco = MathUtils.radToDeg(viva.c.picco)
     /**

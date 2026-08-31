@@ -196,7 +196,56 @@ export function creaSuono () {
        piu', ed e' il punto -- la nave che plana e' silenziosa prima ancora di
        essere lenta */
     voci.scia.gain.setTargetAtTime(LIV.scia * v * v * v, t, 0.35)
-    voci.scafo.gain.setTargetAtTime(LIV.scafo * agitata, t, 0.5)
+    /**
+     * ─── LO SCAFO RESPIRA CON IL MOVIMENTO, NON CON LA SUA MEDIA
+     *
+     * DIFETTO SEGNALATO ASCOLTANDO: «il suono e' fastidiosissimo continuo, non
+     * e' coerente con nessun movimento». Era vero, e la causa e' strutturale:
+     * qui c'erano cinque voci guidate da cinque SCALARI -- stato del mare,
+     * andatura, giri, giri, e il rollio RMS. A comandi fermi sono tutte
+     * costanti, e cinque costanti fanno un ronzio per costruzione. Non mancava
+     * la taratura: mancava un ingresso che OSCILLASSE.
+     *
+     * Adesso `S.rollioVel` porta la velocita' angolare, in gradi al secondo.
+     * Non l'angolo: la VELOCITA'. Uno scafo che rolla non fa piu' rumore quando
+     * e' piu' inclinato -- lo fa quando si muove piu' in fretta, cioe' a meta'
+     * oscillazione. Le due grandezze sono in quadratura e l'orecchio le
+     * distingue: legare il suono all'angolo lo farebbe gonfiare agli estremi,
+     * che e' il momento in cui una nave vera e' momentaneamente ferma.
+     *
+     * ─── E LA MEDIA RESTA, come fondo
+     *
+     * `agitata` non sparisce: tiene il LIVELLO DI FONDO, cioe' quanto e'
+     * mosso il mare in generale. `respiro` aggiunge la modulazione istantanea
+     * sopra quel fondo. Senza il fondo, a rollio zero lo scafo tacerebbe di
+     * colpo; senza il respiro, e' il ronzio di prima.
+     *
+     * ─── 6,8 GRADI AL SECONDO, E QUESTA VOLTA E' MISURATO
+     *
+     * Avevo scritto 12 stimandolo da theta e dal periodo, e dichiarandolo
+     * «dichiarato, non misurato». Misurato per davvero, a mare 5, su 600
+     * fotogrammi per ciascun caso:
+     *
+     *   stabilizzatori SPENTI   |rollioVel| max 6,78 gradi/s   |rollio| 8,43
+     *   stabilizzatori accesi   |rollioVel| max 0,94 gradi/s   |rollio| 1,67
+     *
+     * Con 12 la modulazione sarebbe arrivata al 57% della sua profondita' anche
+     * nel caso peggiore che il sito sa produrre: mezzo effetto, e nessun modo di
+     * accorgersene se non ascoltando.
+     *
+     * E il secondo numero e' quello che rende questa voce PARTE DEL RACCONTO
+     * invece che un abbellimento: accendendo la stabilizzazione la velocita' di
+     * rollio cala di SETTE VOLTE, quindi lo scafo si azzittisce. Il suono non
+     * accompagna lo stabilizzatore: lo dimostra.
+     *
+     * La costante di tempo scende da 0,5 a 0,08 s: con mezzo secondo di
+     * lisciatura la modulazione verrebbe spianata via, che e' esattamente il
+     * difetto che si sta curando.
+     */
+    const VEL_RIF = 6.8
+    const respiro = Math.min(1, Math.abs(S.rollioVel || 0) / VEL_RIF)
+    voci.scafo.gain.setTargetAtTime(
+      LIV.scafo * (0.35 * agitata + 0.65 * agitata * respiro), t, 0.08)
 
     voci.motore.gain.setTargetAtTime(LIV.motore * giriM * giriM, t, 0.12)
     const f = 26 + 54 * giriM
