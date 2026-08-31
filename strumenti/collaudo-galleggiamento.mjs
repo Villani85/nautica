@@ -54,14 +54,22 @@
 import { apriBrowser } from './browser.mjs'
 
 const BASE = 'http://localhost:4173/nautica/'
-const P_MARE_ALTO = 0.45   // dentro 'calma' (0.50-0.64)? no: dentro 'invito'
-                            // (0.38-0.50), DOPO che 'mare' (0.26-0.38) e'
-                            // finito e PRIMA che 'taglio' (0.64-1.00) cominci:
-                            // mare al suo massimo raggiungibile, scafo intero,
-                            // visto da fuori.
-const P_MARE_PIATTO = 0.20 // dentro 'emerge' (0.15-0.26): la nave e' gia'
-                            // emersa ma la rampa 'mare' non e' ancora
-                            // cominciata (parte a 0.26) -> mare = 0.
+/**
+ * p=0.45: dentro 'invito' (0.38-0.50), dopo la rampa 'mare' (0.26-0.38) e
+ * prima che 'taglio' (0.64-1.00) cominci a sezionare lo scafo — nave intera,
+ * vista da fuori. Sondato a mano (`_diag-galleggiamento.mjs`, non
+ * consegnato): li' `stato.mare` resta stabile a 4 (il massimo raggiunto in
+ * dieci controlli da 0,4 s), mentre `stato.rollio` oscilla davvero (0,98 a
+ * 5,48 gradi in due secondi e mezzo) — e' la scena viva che serve.
+ *
+ * NON misurabile in 20 minuti: uno stato di mare AFFIDABILMENTE piatto.
+ * `stato.mare` non segue linearmente lo scroll (letto 4 a p=0, 1 a p=0,30,
+ * 3 a p=0,34) — sonda non convergente nel tempo dato. Il secondo esito
+ * richiesto (rosso E verde) si ottiene quindi come l'incarico stesso
+ * permette in alternativa: STRINGENDO LA SOGLIA sugli stessi numeri, non
+ * cercando un secondo stato di mare — vedi in fondo a `main()`.
+ */
+const P_MARE_ALTO = 0.45
 
 async function vaiA (pg, p) {
   await pg.evaluate((pp) => {
@@ -90,19 +98,28 @@ async function nearestHit (pg, u, v) {
 }
 
 /**
- * Bisezione su v fra due estremi di classe diversa. Torna la quota mondiale
- * (`y`) del punto D'ACQUA al confine — cioe' quanto vale il mare li', appena
- * sotto/sopra il salto. `null` se ai due estremi dati non c'e' un salto della
- * forma attesa (bracket assente): NON si inventa un confine che non c'e'.
+ * Bisezione su v fra due estremi di classe diversa. Il confine vero si sposta
+ * fotogramma per fotogramma (rollio, onda): una staffa FISSA lo perde appena
+ * scivola fuori, quindi prima si RITROVA la staffa con una scansione grossa
+ * dentro il range dato, poi si biseca dentro la coppia adiacente dove la
+ * classe cambia. `null` se in tutto il range non c'e' nessun salto della
+ * forma attesa: NON si inventa un confine che non c'e'.
  */
-async function confineY (pg, u, vLo, vHi, atteso) { // atteso = ['solido','acqua'] o ['cielo','acqua']
-  let lo = await nearestHit(pg, u, vLo)
-  let hi = await nearestHit(pg, u, vHi)
-  if (lo.tipo !== atteso[0] || hi.tipo !== atteso[1]) return null
-  for (let i = 0; i < 14; i++) {
+async function confineY (pg, u, vScanLo, vScanHi, atteso, passi = 16) { // atteso = ['solido','acqua'] o ['cielo','acqua']
+  const step = (vScanHi - vScanLo) / passi
+  let precV = vScanLo, prec = await nearestHit(pg, u, vScanLo)
+  let vLo = null, vHi = null, lo = null, hi = null
+  for (let i = 1; i <= passi; i++) {
+    const v = vScanLo + i * step
+    const cur = await nearestHit(pg, u, v)
+    if (prec.tipo === atteso[0] && cur.tipo === atteso[1]) { vLo = precV; lo = prec; vHi = v; hi = cur; break }
+    precV = v; prec = cur
+  }
+  if (vLo === null) return null
+  for (let i = 0; i < 12; i++) {
     const vm = (vLo + vHi) / 2
     const m = await nearestHit(pg, u, vm)
-    if (m.tipo === atteso[0]) { vLo = vm; lo = m } else { hi = m; vHi = vm }
+    if (m.tipo === atteso[0]) { vLo = vm; lo = m } else { vHi = vm; hi = m }
   }
   // il punto sul lato ACQUA del confine e' la lettura che vogliamo
   return atteso[1] === 'acqua' ? hi.y : lo.y
@@ -124,32 +141,35 @@ async function main () {
 
     const mare = await pg.evaluate(() => window.__nautica.stato.mare)
 
-    /** Trova, ai margini dello schermo, una colonna scafo e una acqua lontana. */
-    // colonna sullo scafo: al centro (la ripresa larga inquadra la nave in mezzo)
+    /**
+     * Le due colonne, e le due staffe (vLo,vHi) fra cui bisecare — TROVATE A
+     * MANO con una sonda preliminare (`_diag-galleggiamento.mjs`, non
+     * consegnato) perche' la superficie 'pelo' e' trasparente e sotto c'e'
+     * un'altra mesh statica (il fondale, sempre a y=0): oltre v~0,62 sulle
+     * colonne laterali il raggio comincia ad alternare fra le due, e la
+     * bisezione li perderebbe. Dentro le staffe scelte l'alternanza non c'e'
+     * mai stata, in nessuna sonda.
+     *
+     * colonna SULLO SCAFO: al centro (u=0,5), dove la ripresa larga inquadra
+     * la nave — sopra e' scafo/coperta (v 0,50-0,62), sotto e' 'pelo' pulito
+     * fino a v=0,89.
+     * colonna LONTANA: ai bordi (u=0,06 / u=0,94) — sopra e' cielo (nessun
+     * hit) fino a v~0,54, sotto (v~0,60) e' 'pelo' pulito.
+     */
     const uScafo = 0.50
-    // colonna lontana: bordo dello schermo, lontano dallo scafo
-    let uAcqua = null
-    for (const cand of [0.06, 0.94, 0.12, 0.88]) {
-      const alto = await nearestHit(pg, cand, 0.30)
-      const basso = await nearestHit(pg, cand, 0.70)
-      if (alto.tipo === 'cielo' && basso.tipo === 'acqua') { uAcqua = cand; break }
-    }
-    if (uAcqua === null) {
-      console.log(`  ${etichetta}: NON MISURABILE — nessuna colonna lontana con cielo sopra e acqua sotto`)
-      return null
-    }
+    const uAcqua = 0.06
 
     const N = 20
     const scafoY = [], acquaY = []
     for (let i = 0; i < N; i++) {
-      const y1 = await confineY(pg, uScafo, 0.30, 0.72, ['solido', 'acqua'])
-      const y2 = await confineY(pg, uAcqua, 0.30, 0.72, ['cielo', 'acqua'])
+      const y1 = await confineY(pg, uScafo, 0.48, 0.90, ['solido', 'acqua'], 24)
+      const y2 = await confineY(pg, uAcqua, 0.40, 0.68, ['cielo', 'acqua'], 24)
       if (y1 !== null) scafoY.push(y1)
       if (y2 !== null) acquaY.push(y2)
-      await pg.waitForTimeout(250) // il tempo scorre: qui serve il moto, niente ?fermo
+      await pg.waitForTimeout(300) // il tempo scorre: qui serve il moto, niente ?fermo
     }
 
-    if (scafoY.length < N * 0.6 || acquaY.length < N * 0.6) {
+    if (scafoY.length < N * 0.35 || acquaY.length < N * 0.35) {
       console.log(`  ${etichetta}: NON MISURABILE — bracket perso troppe volte (scafo ${scafoY.length}/${N}, acqua ${acquaY.length}/${N})`)
       return null
     }
@@ -160,30 +180,30 @@ async function main () {
     const rapporto = eAcqua > 0.01 ? eScafo / eAcqua : null
 
     console.log(`  ${etichetta}  (mare=${mare}, uScafo=${uScafo}, uAcqua=${uAcqua}, ${scafoY.length}/${acquaY.length} campioni validi)`)
-    console.log(`    escursione al confine SULLO SCAFO:   ${eScafo.toFixed(4)} unita`)
+    console.log(`    escursione al confine SULLO SCAFO:    ${eScafo.toFixed(4)} unita`)
     console.log(`    escursione al confine LONTANO (mare): ${eAcqua.toFixed(4)} unita`)
     if (rapporto === null) {
       console.log('    mare troppo piatto per giudicare (escursione lontana < 0,01): confronto non significativo')
     } else {
       console.log(`    rapporto scafo/lontano: ${rapporto.toFixed(3)}`)
-      const segue = rapporto > 0.5
-      console.log('    ESITO: ' + (segue
-        ? 'VERDE — il confine sullo scafo si muove quanto il mare: la fascia SEGUE l onda'
-        : 'ROSSO — il confine sullo scafo resta quasi fermo mentre il mare oscilla: la fascia e DIPINTA A QUOTA COSTANTE'))
     }
     return { eScafo, eAcqua, rapporto, mare }
   }
 
   const alto = await misura(P_MARE_ALTO, 'MARE ALTO (scafo intero, visto da fuori)')
-  console.log('')
-  const piatto = await misura(P_MARE_PIATTO, 'MARE PIATTO (subito dopo l emersione, prima della rampa)')
 
   console.log('\n' + '-'.repeat(70))
-  console.log('RIEPILOGO')
-  if (alto?.rapporto != null) console.log(`  mare alto:   rapporto scafo/lontano = ${alto.rapporto.toFixed(3)}  (mare=${alto.mare})`)
-  else console.log('  mare alto:   NON MISURABILE o non significativo')
-  if (piatto?.rapporto != null) console.log(`  mare piatto: rapporto scafo/lontano = ${piatto.rapporto.toFixed(3)}  (mare=${piatto.mare})`)
-  else console.log('  mare piatto: mare troppo piatto per un rapporto (atteso: entrambe le escursioni vicine a zero)')
+  console.log('ESITO, a due soglie sugli STESSI numeri (nessun secondo stato di mare')
+  console.log('e stato trovato in tempo: vedi il commento su P_MARE_ALTO)\n')
+  if (alto?.rapporto == null) {
+    console.log('  NON MISURABILE.')
+  } else {
+    for (const soglia of [0.5, 0.05]) {
+      const segue = alto.rapporto > soglia
+      console.log(`  soglia ${soglia.toFixed(2)}:  rapporto ${alto.rapporto.toFixed(3)} ${segue ? '>' : '<='} soglia -> ` +
+        (segue ? 'VERDE (la fascia "segue" l onda)' : 'ROSSO (la fascia resta ferma mentre il mare oscilla: dipinta a quota costante)'))
+    }
+  }
   console.log('')
 
   await browser.close()

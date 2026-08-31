@@ -10,6 +10,7 @@ import { creaImpianto } from './impianto.js'
 import { creaSovrastruttura } from './sovrastruttura.js'
 import { creaSalone3D } from './salone3d.js'
 import { creaTraversata } from './traversata.js'
+import { creaMondo, vuoleMondo } from './mondo.js'
 import { creaMacchine } from './macchine.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
 import { creaAmbiente, telaAmbiente } from './ambiente.js'
@@ -639,6 +640,13 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * traversata resta com'era: finisce e si ferma.
    */
   const traversata = creaTraversata(base, camera, scena, salone?.videoCalma)
+
+  /**
+   * Il mondo della traversata: gli spazi veri, dietro `?mondo=1`. Entra spento
+   * e non tocca niente finche' la prova verticale non e' verde -- vedi la
+   * testata di `mondo.js`, «entra spento».
+   */
+  const mondo = vuoleMondo() ? creaMondo(base, scena) : null
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
@@ -1702,6 +1710,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       coperturaTraversata: () => traversata.copertura,
       traversataFinita: () => traversata.finita,
       consegnaCalma: () => traversata.consegnaCalma,
+      mondo: () => mondo?.stato ?? null,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
