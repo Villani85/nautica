@@ -61,14 +61,15 @@ aspetta che la corsa chiuda.
 | D4 | **il salone si rivela una carta** a scorrimento 0,235 | `feedback/prove/` |
 | D5 | **lo scroll è annullato per 550 ms** e 220svh non raccontano | `attrito.js:36,61` |
 | D6 | **tre orologi diversi**: attrito, `leggiScorrimento`, `seguiDiscesa` | codice |
-| D7 | **il sito è muto** | zero occorrenze audio in `src/` |
+| D7 | ~~il sito è muto~~ **SMENTITO** | falso: `src/ui/suono.js:121` costruisce `AudioContext` dopo il gesto, `:143-150` cinque sorgenti procedurali. Il sito **suona**; mancano i CAMPIONI, che è un'altra cosa. Quel «zero occorrenze audio» veniva da un grep di estensioni: cercava `.mp3`, e la sintesi non ha file. |
 | D8 | tre bordi rivelati non riprodotti (cavità, sezioni senza cappatura) | suo |
 | D9 | yacht sui primi cinque punti dell'ordine | giudizio |
 
 ### Ingressi mancanti, non producibili da qui
 
-- `WORLDSPACE-CONTRATTO.md` — **non è nel repo**, sta nel pacchetto Drive: va
-  scaricato prima della Fase B;
+- ~~`WORLDSPACE-CONTRATTO.md` — non è nel repo~~ **RISOLTO da `708e0bf`**:
+  `riferimenti/WORLDSPACE-CONTRATTO.md`, 4.843 byte, versionato. Se il pacchetto
+  Drive arriva, l'originale ha la precedenza — ma non è più un ingresso mancante;
 - i cinque test utenti: servono cinque persone;
 - il giudizio artistico sulla clip tesa: è del committente.
 
