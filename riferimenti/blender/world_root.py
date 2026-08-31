@@ -169,6 +169,92 @@ esatto P4, e va tenuto dove chiunque lo trova.
 RISALITA_CORRIDOIO_M = 2.10
 LUNGHEZZA_CORRIDOIO_M = 5.480
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 2-quater · IL PONTE VERSO IL SISTEMA DEL SITO
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Lo scafo del sito e PROCEDURALE: lo genera `src/scafo/ordinate.js`, e
+# `scafo.glb` non esiste. La sezione che la traversata attraversa va derivata
+# DALLE STESSE ORDINATE, o la traversata attraversa uno scafo diverso da quello
+# che il visitatore vede intorno a se.
+#
+# Ma i due sistemi non si chiamano nemmeno allo stesso modo:
+#
+#   world_root (qui)     X in METRI, origine sul nodo camera del salone
+#   ordinate.js          z in UNITA DI SCENA, da PRUA_Z = -8 a POPPA_Z = +8,
+#                        zero a mezzanave, 1 unita = 2,5 m
+#
+# L asse della lunghezza si chiama X di qua e z di la. Sono la stessa direzione
+# con due nomi e due unita, ed e la configurazione esatta in cui oggi si e
+# sbagliato sei volte.
+#
+# LA CORRISPONDENZA E DERIVATA, NON MISURATA, e va detto: nessun singolo file
+# la dichiara. B2 l ha ricostruita incrociando TRE numeri indipendenti che
+# concordano -- `src/scena/nave.js:55` (TUGA.z = 0,6),
+# `src/scena/salone3d.js:544` (bersaglio locale 1,3089) e
+# `src/scena/guscio.js:53-56` (misura in scena 1,9089) -- piu il fatto che il
+# sito e questo contratto condividono lo STESSO nodo CAMERA_SORGENTE_SALONE
+# dello stesso GLB.
+#
+# Finche resta derivata da tre letture indirette invece che dichiarata da una
+# costante, e il punto piu fragile della catena. Sta qui, con un nome che porta
+# entrambi i sistemi, perche nessuno debba ricostruirla una seconda volta.
+
+PONTE_SITO_ORIGINE_Z_UNITA = 1.9089
+"""Dove cade l origine del mondo sull asse z del sito, in unita di scena."""
+
+PONTE_SITO_STATO = "DERIVATO"
+
+# ─── DUE COSE CHE IL SITO HA GIA, E CHE NON VANNO RISCRITTE
+#
+# 1. `src/scafo/ordinate.js:56` — `sezioneA(t)` e dichiarata «l UNICA
+#    interpolazione, tutto il resto del file la chiama», ed e LINEARE su una
+#    tabella di nove ordinate (`:42-53`). Chi deriva la sezione in Python deve
+#    usare la stessa interpolazione lineare. Una spline darebbe una sezione piu
+#    bella E DIVERSA, e lo scafo di Blender non combacerebbe con quello che il
+#    visitatore vede intorno a se. Sarebbe un difetto invisibile in viewport e
+#    lampante in pagina.
+#
+# 2. `src/scafo/ordinate.js:247` — `tappoA(z)` ESISTE GIA. La logica delle
+#    cappature (CUT_CAPS, il difetto dei bordi rivelati) non va inventata: il
+#    sito ce l ha, e la versione Blender deve RISPECCHIARLA, non riscriverla.
+#
+# E `_interno = { ORDINATE, PER_ANELLO, GIRO }` e esportato apposta alla riga
+# 419: la tabella si legge da un test senza ricopiarla. Nessuna duplicazione di
+# costanti fra JS e Python -- che e il modo esatto in cui due scafi divergono in
+# silenzio, senza che nessuno dei due sia sbagliato.
+#
+# LE SEZIONI, gia in metri, per non rifare il conto:
+#
+#   t      z (m)    baglio   chiglia   ponte   altezza libera
+#   0,30   -8,00      6,00    -2,35    +2,71        5,06
+#   0,50    0,00      7,70    -2,31    +2,44        4,75
+#   0,70   +8,00      8,27    -2,08    +2,29        4,37
+#   0,90  +16,00      8,00    -1,71    +2,23        3,94
+#
+# Quaranta metri, baglio massimo 8,27 a t=0,70, parete 0,045 u = 0,1125 m.
+# La traversata ne occupa 14,10, cioe 5,64 unita su 16: poco piu di un terzo.
+#
+# QUEL 5,64 E CONFERMATO DA DUE DERIVAZIONI INDIPENDENTI. Il ponte qui sopra da
+# z 2,2289 (a X -0,800) e z 7,8699 (a X -14,902575), differenza 5,6410. Il
+# committente ci e arrivato per un altra strada, partendo dalla lunghezza in
+# metri. Due conti che non si sono parlati, stesso numero: e la sola ragione
+# per cui questo ponte si puo usare pur restando DERIVATO.
+
+
+def z_unita_scena_da_x_m_mondo(x_m_mondo):
+    """
+    Porta una X del mondo (metri) sulla z di `src/scafo/ordinate.js` (unita).
+
+        z = 1,9089 - X / 2,5
+
+    Il segno e invertito perche +X qui va verso PRUA e la z del sito cresce
+    verso POPPA. Un ponte che sbagliasse solo il segno darebbe una sezione
+    presa dall altra meta della nave, senza nessun errore.
+    """
+    return PONTE_SITO_ORIGINE_Z_UNITA - x_m_mondo / (1.0 / UNITA_SCENA_PER_METRO)
+
+
 def origine_quaternione(convenzione):
     """
     Il quaternione dell origine, NELLA CONVENZIONE CHIESTA.
