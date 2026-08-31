@@ -77,19 +77,65 @@ glTF e' Y-up e Blender ruota a Z-up. Un asse sbagliato non da' errore: da' un
 modello che non combacia, e tre tentativi persi a cercare la causa altrove.
 """
 
-ORIGINE = 'il piano di calpestio del corridoio, sulla mezzeria (Z = 0), ' \
-          'in corrispondenza della paratia che lo separa dal locale tecnico'
+ORIGINE = ("il bordo del VANO DEL SALONE a X = 0, sulla mezzeria (Z = 0), "
+           "al livello del pavimento del salone (Y = 0)")
 """
-X = 0 e' LA CUCITURA, non il centro di un pezzo.
+SI ANCORA ALL'UNICA CUCITURA MISURATA, e non e' una preferenza.
 
-Sceglierla sulla cucitura invece che su un oggetto ha una proprieta' che
-nessun'altra scelta ha: i due moduli che devono combaciare misurano entrambi
-**da li'**, quindi un disaccordo si vede come un numero diverso da zero invece
-che come una compenetrazione da scoprire a occhio in viewport.
+Delle quattro cuciture, il vano del salone e' la sola MISURATA: X da -2,1746 a
+0,0 e Y da 0,0 a 1,1449 -- `guscio-salone.py:40`, `riferimenti/salone/posa.json`,
+riscontrata in `prove/00-inventario.txt`. Le altre tre sono derivate, assunte o
+senza fonte.
 
-E spiega anche perche' oggi `X_MB0 = 0.0` e l'apertura del corridoio a
-`x = 0.0` non erano un buon segno: erano due zeri che significavano due cose
-diverse. Da qui in poi zero significa una cosa sola.
+Ancorare il mondo a una cucitura ASSUNTA propagherebbe l'assunzione a tutti i
+pezzi: il giorno in cui la si misura si sposta tutto. Ancorandolo alla misurata,
+il giorno in cui si misura una delle altre si sposta SOLO QUELLA.
+
+Il primo giro di questo file metteva l'origine sulla paratia del locale tecnico.
+Era comodo -- e' la cucitura contesa, quindi il disaccordo si sarebbe letto come
+uno scarto da zero -- ma era esattamente quella da non usare come riferimento.
+
+E spiega perche' `X_MB0 = 0.0` (`mechanism_bay.py:220`) e l'apertura del
+corridoio a `x = 0.0` (`corridor.py:124`) non erano un buon segno: erano due
+zeri che significavano due cose diverse. Da qui zero significa una cosa sola, e
+sta nel salone.
+"""
+
+RISALITA_CORRIDOIO_M = 2.10
+LUNGHEZZA_CORRIDOIO_M = 5.480
+
+COLLOCAZIONI = {
+    "STAIR_CORRIDOR": {
+        "traslazione_m": (-LUNGHEZZA_CORRIDOIO_M, -RISALITA_CORRIDOIO_M, 0.0),
+        "stato": "DERIVATO",
+        "formula": ("l'apertura lato salone sta in locale a (5,480 | 2,10) e "
+                    "deve mappare sull'origine (0 | 0): X_mondo = X_locale - 5,480, "
+                    "Y_mondo = Y_locale - 2,10"),
+    },
+    "MECHANISM_BAY": {
+        "aggancio_m": (-LUNGHEZZA_CORRIDOIO_M, -RISALITA_CORRIDOIO_M, 0.0),
+        "stato": "DERIVATO",
+        "formula": ("la porta deve cadere dove il corridoio mette la propria "
+                    "apertura lato locale tecnico, cioe' l'origine locale del "
+                    "corridoio portata nel mondo. Sostituisce X_MB0 = 0.0."),
+    },
+    "SALOON_SHELL": {
+        "traslazione_m": (0.0, 0.0, 0.0),
+        "stato": "MISURATO",
+        "formula": "e' il riferimento: il vano ci sta gia' sopra per costruzione.",
+    },
+}
+"""
+IL NUMERO CHE QUESTO FILE FA NASCERE, e che prima non esisteva.
+
+Il locale tecnico oggi si colloca a X_MB0 = 0.0 nel proprio sistema. Nel mondo
+deve stare a -5,480 | -2,10. Non e' una scelta: e' la conseguenza di due valori
+gia' scritti nel corridoio -- la sua lunghezza (4,48 + 1,00, riga 113) e la sua
+risalita di 2,10 -- piu' l'origine ancorata al vano misurato.
+
+Fino a stamattina i due pezzi si sarebbero sovrapposti all'origine. Adesso c'e'
+un numero da verificare, e se e' sbagliato lo dira' un confronto invece di una
+compenetrazione da scoprire a occhio in viewport.
 """
 
 
@@ -281,6 +327,12 @@ def riepilogo():
     print('  origine  : %s' % ORIGINE)
     for a, v in ASSI.items():
         print('  %s       : %s' % (a, v))
+    print('')
+    print('COLLOCAZIONI (dove va ciascun pezzo, e da cosa deriva)')
+    for nome, c in COLLOCAZIONI.items():
+        v = c.get('traslazione_m') or c.get('aggancio_m')
+        print('  %-16s %-9s  X %+.3f  Y %+.3f  Z %+.3f'
+              % (nome, c['stato'], v[0], v[1], v[2]))
     print('\nCUCITURE')
     for nome, c in CUCITURE.items():
         print('  %-24s %s' % (nome, c['stato']))

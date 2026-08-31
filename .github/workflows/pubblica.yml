@@ -84,6 +84,41 @@ jobs:
         env: { CHROMIUM: '1' }
       - { name: 'Cancello · normali',      run: node strumenti/collaudo-normali.mjs }
       - { name: 'Cancello · modello glTF', run: node strumenti/collaudo-glb.mjs }
+
+      # ─── D1: I CANCELLI CHE MANCAVANO, TROVATI DA `collaudo-cancelli.mjs`
+      #
+      # Erano nella catena locale (`npm run collaudo`) e non qui: nessuno dei
+      # due era rosso, quindi la divergenza non si vedeva da nessuna parte.
+      # Aprono tutti un browser -- il passo che lo installa gira gia' sopra a
+      # questo punto del job, e scia/varco (piu' su) dimostrano che un
+      # `apriBrowser({ conGpu: true })` regge gia' su questo runner senza GPU.
+      - name: 'Cancello · ogni battuta mostra il proprio soggetto'
+        run: node strumenti/collaudo-inquadrature.mjs
+        env: { CHROMIUM: '1' }
+      - name: 'Cancello · il finale non taglia le persone'
+        run: node strumenti/collaudo-finale.mjs
+        env: { CHROMIUM: '1' }
+      - name: 'Cancello · il finale respira'
+        run: node strumenti/collaudo-finale-vivo.mjs
+        env: { CHROMIUM: '1' }
+      - name: 'Cancello · due scritte non si sovrappongono'
+        run: node strumenti/collaudo-ingombri.mjs
+        env: { CHROMIUM: '1' }
+      - name: 'Cancello · lo scroll fa sempre qualcosa'
+        run: node strumenti/collaudo-corsa-viva.mjs
+        env: { CHROMIUM: '1' }
+      # La fluidita' si autoriconosce su un rasterizzatore software (cerca
+      # SwiftShader/llvmpipe nel renderer) e in quel caso non da' un verdetto
+      # di prestazione -- stampa i numeri per debug ed esce verde. Per questo
+      # puo' entrare in CI anche senza GPU vera, a differenza di orizzonte e
+      # cielo qui sotto.
+      - name: 'Cancello · fluidita dello scorrimento'
+        run: node strumenti/collaudo-fluidita.mjs
+        env: { CHROMIUM: '1' }
+      # Non apre un browser: legge riferimenti/ e feedback/ e cerca righe che
+      # negano l'esistenza di qualcosa che il disco smentisce. Nessuna ragione
+      # per restare fuori dalla CI -- puo' girare ovunque giri Node.
+      - { name: 'Cancello · i documenti non dichiarano mancanze smentite', run: node strumenti/collaudo-piano.mjs }
       # ─── LA DIVERGENZA FRA LE DUE LISTE, ADESSO DICHIARATA
       #
       # Per un giorno intero `npm run collaudo` e questo workflow non hanno
