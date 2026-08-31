@@ -235,11 +235,27 @@ PONTE_SITO_STATO = "DERIVATO"
 # Quaranta metri, baglio massimo 8,27 a t=0,70, parete 0,045 u = 0,1125 m.
 # La traversata ne occupa 14,10, cioe 5,64 unita su 16: poco piu di un terzo.
 #
-# QUEL 5,64 E CONFERMATO DA DUE DERIVAZIONI INDIPENDENTI. Il ponte qui sopra da
-# z 2,2289 (a X -0,800) e z 7,8699 (a X -14,902575), differenza 5,6410. Il
-# committente ci e arrivato per un altra strada, partendo dalla lunghezza in
-# metri. Due conti che non si sono parlati, stesso numero: e la sola ragione
-# per cui questo ponte si puo usare pur restando DERIVATO.
+# QUEL 5,64 NON CONFERMA IL PONTE, e credere di si e stato un verde falso.
+#
+# Avevo scritto che due derivazioni indipendenti davano 5,641 e quindi il ponte
+# reggeva. Non regge: LA CAMPATA DIPENDE SOLO DAL FATTORE 1/2,5, che entrambi i
+# conti usavano gia. Qualunque offset -- 1,9089, zero, quaranta -- avrebbe dato
+# 5,641 lo stesso. L unica parte del ponte che porta informazione e proprio l
+# OFFSET, ed e l unica che quel confronto non tocca.
+#
+# E della stessa famiglia dei mebibyte letti come megabyte: un numero giusto che
+# verifica qualcosa di diverso da quello che sembra verificare. Due conti che
+# concordano su cio che avevano gia in comune non sono due conti indipendenti.
+#
+# LA PROVA CHE MORDE E VERTICALE, e sta in `strumenti/collaudo-verticale.mjs`:
+# l offset decide a QUALI ORDINATE cade la traversata, e lo scafo si stringe
+# verso poppa. Oggi quella prova esce ROSSA -- il soffitto del salone esce sopra
+# il trincarino di 0,609 m -- e l offset da solo non spiega il difetto: per
+# azzerarlo servirebbero 8,33 m in avanti, che porterebbero il locale tecnico a
+# mezzanave invece che a poppa.
+#
+# Quindi il ponte resta DERIVATO E NON CONFERMATO. Chi ci costruisce contro deve
+# saperlo.
 
 
 def z_unita_scena_da_x_m_mondo(x_m_mondo):
