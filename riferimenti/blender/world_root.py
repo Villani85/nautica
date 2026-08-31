@@ -128,6 +128,44 @@ Il quaternione si conserva come POSA D'ARRIVO DICHIARATA: e' il dato che rende
 esatto P4, e va tenuto dove chiunque lo trova.
 """
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 2-ter · IL GUSCIO E APERTO DA UNA PARTE, e la misura mancante era li dentro
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Avevo scritto che per riderivare il corridoio serviva "una misura che nessuno
+# ha fatto: dove sta la porta del salone rispetto al finestrone". Sbagliato di
+# nuovo, e nello stesso modo delle altre due volte oggi: la misura ESISTEVA,
+# nella geometria gia spedita, e non l avevo guardata.
+#
+# Il GLB del guscio ha otto maglie con otto nomi. Misurate in Blender 5.2 nel
+# frame del mondo, con la permutazione glTF Y-up -> Blender Z-up applicata
+# (senza quella i numeri escono sbagliati: e lo stesso inciampo che ad A2 era
+# costato il 412% di scarto, e ci sono ricascato al primo tentativo):
+#
+#   parete del finestrone   Y +0,843..+0,964   davanti, montante, sopra_vano,
+#                                              sotto_vano, col buco del vano a
+#                                              X 0,758..2,932  Z -0,607..+0,538
+#   fondo                   X +8,932..+9,052
+#   opposta                 Y -3,851..-3,731
+#   pavimento               Z -1,250..-1,170
+#   soffitto                Z +1,180..+1,260
+#
+#   X = -0,800              NIENTE.
+#
+# Cinque pareti e un estremita APERTA. Non e una dimenticanza: e la regola del
+# contratto §3.2 applicata -- il guscio esiste solo dove la fotografia lo
+# sostiene, e oltre deve consegnare a una paratia, una porta, un ombra vera.
+# Quell estremita E il punto di consegna, ed e li che arriva il corridoio.
+#
+# Quindi l ingresso del salone non e una porta da disegnare: e un piano
+# misurato, X = -0,800, alto 2,350 e largo 4,574. L apertura del corridoio,
+# 0,85 x 2,00, ci sta dentro.
+#
+# LA PROVA CHE LA MISURA E BUONA: il vano misurato per questa via,
+# X 0,758..2,932 e Z -0,607..+0,538, combacia con quello che C4 ha consegnato
+# eseguendo saloon.py (0,757541..2,932085 e -0,607138..+0,537865). Due strade
+# indipendenti, stessi numeri.
+
 RISALITA_CORRIDOIO_M = 2.10
 LUNGHEZZA_CORRIDOIO_M = 5.480
 
@@ -154,12 +192,14 @@ COLLOCAZIONI = {
                     "camera, cosi' quel nodo cade sull'origine."),
     },
     "STAIR_CORRIDOR": {
-        "traslazione_m": None,
-        "stato": "DA RIDERIVARE",
-        "formula": ("il primo giro la faceva mappare sul vano, che e' il "
-                    "FINESTRONE: derivazione caduta. Serve la porta del salone, "
-                    "che oggi nessuno ha misurato. Vedi la cucitura "
-                    "`ingresso_salone`."),
+        # apertura lato salone in locale (5,480 | 2,10) -> estremita' aperta del
+        # guscio (-0,800 | -1,170). Vedi la nota "il guscio e aperto da una parte".
+        "traslazione_m": (-6.280, -3.270, 0.0),
+        "stato": "DERIVATO",
+        "formula": ("X: -0,800 - 5,480 = -6,280.  Y: -1,170 - 2,10 = -3,270. "
+                    "Il primo giro la faceva mappare sul VANO, che e' il "
+                    "finestrone: derivazione caduta. La misura giusta e' "
+                    "l'estremita' APERTA del guscio, misurata in Blender."),
     },
     "MECHANISM_BAY": {
         "cucitura_mondo_m": None,
@@ -265,7 +305,13 @@ CUCITURE = {
     },
 
     'ingresso_salone': {
-        'stato': 'CONFLITTO',
+        'x_m': -0.800,
+        'altezza_libera_m': [-1.170, 1.180],
+        'larghezza_libera_m': [-3.731, 0.843],
+        'stato': 'MISURATO',
+        'fonte': 'misurato in Blender 5.2 sul GLB spedito: il guscio ha CINQUE '
+                 'pareti e nessuna a X = -0,800. Vedi la nota sotto.',
+        'stato_precedente': 'CONFLITTO',
         'valori': {
             'corridor.py': {
                 'larghezza_m': 0.85,
