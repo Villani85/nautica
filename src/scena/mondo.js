@@ -1,4 +1,4 @@
-import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide } from 'three'
+import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { vestiMondo } from './materie-mondo.js'
 import { arredaMondo } from './arredo-mondo.js'
@@ -422,6 +422,7 @@ function accendiLuci () {
     gruppo.position.set(x, y, z)
     gruppo.updateWorldMatrix(true, true)
     componiPose()            // dipendono da matrixWorld: vanno rifatte
+    alzaSulPavimento()       // e l'occhio va sopra il pavimento, non dentro
     misuraFrancoChiglia()
     contaPoseSopraPonte()
     /* la correzione porta l'ULTIMA posa esattamente sull'orientamento del sito:
@@ -512,6 +513,89 @@ function accendiLuci () {
    * scrive, non si spera nell'ordine di arrivo.
    */
   let grezze = null
+
+/**
+ * ─── L'OCCHIO STA SOPRA IL PAVIMENTO, e prima ci passava dentro
+ *
+ * MISURATO tirando un raggio in avanti da ogni posa e guardando quanto corre
+ * prima di incontrare una superficie:
+ *
+ *   s 0,00  6,79 m libera        s 0,55  0,56 m   CORRIDOIO_gradino_07
+ *   s 0,30  3,57 m               s 0,60  0,02 m   CORRIDOIO_gradino_07
+ *   s 0,50  1,40 m               s 0,75  0,06 m   CORRIDOIO_gradino_12
+ *
+ * Per un quarto della traversata la camera guardava l'INTERNO DI UNO SCALINO da
+ * due centimetri. Non era un'inquadratura piatta: era una camera dentro la
+ * scala. E' anche il motivo per cui i tubi non si vedevano mai -- da li' non si
+ * vede niente.
+ *
+ * La causa sta nel contratto: i nodi della curva mettono la quota «pavimento
+ * interpolato», e quando il pavimento diventa una scala il percorso ci va
+ * dentro invece che sopra. Con la geometria dritta non si vedeva; con i gradini
+ * cotti si', e nessun cancello poteva prenderlo perche' nessuno misura da dove
+ * si guarda.
+ *
+ * LA CURA NON E' UN NUMERO, E' UNA MISURA: da ogni posa si tira un raggio in
+ * GIU', si trova il pavimento vero -- gradino compreso -- e ci si mette l'occhio
+ * sopra. Cosi' la camera sale la scala come la salirebbe una persona, e se
+ * domani i gradini cambiano l'occhio li segue senza che nessuno se ne ricordi.
+ *
+ * L'ULTIMA POSA NON SI TOCCA. E' l'arrivo, ancorato alla camera del salone: la
+ * correzione si spegne sull'ultimo tratto con la stessa dissolvenza
+ * dell'orientamento, o si perderebbe una giunzione misurata a 0,097 gradi.
+ */
+const OCCHIO_M = 1.55
+/** Quanto si sta sotto il soffitto: la testa non sfiora. */
+const FRANCO_TESTA = 0.25
+const SPEGNI_DA = 0.85
+const _giu = new Vector3(0, -1, 0)
+
+function alzaSulPavimento () {
+  if (!pose || !pose.length) return
+  const bersagli = []
+  gruppo.traverse((o) => { if (o.isMesh) bersagli.push(o) })
+  if (!bersagli.length) return
+  const alto = OCCHIO_M / METRI_PER_UNITA
+  for (let i = 0; i < pose.length; i++) {
+    const s = i / (pose.length - 1)
+    if (s >= 1) break
+    /* si parte da un po' piu' in alto: partendo dalla posa, che puo' essere
+       gia' DENTRO un gradino, il raggio uscirebbe da sotto e non troverebbe
+       niente */
+    const da = pose[i].p.clone().addScaledVector(_giu, -alto)
+    _raggio.set(da, _giu)
+    _raggio.far = alto * 3
+    const colpi = _raggio.intersectObjects(bersagli, false)
+    if (!colpi.length) continue
+    const pavimento = colpi[0].point.y
+
+    /**
+     * ─── E IL SOFFITTO, che alla prima stesura ho dimenticato
+     *
+     * Alzando di 1,55 m sopra il pavimento e basta, il referto e' cambiato di
+     * difetto invece che sparire: la camera usciva dai gradini e ANDAVA A
+     * SBATTERE IN ALTO -- 0,06 m dall'architrave della paratia di poppa a
+     * s=0,35, e 0,97 dal soffitto del corridoio a s=0,80.
+     *
+     * L'altezza d'occhio giusta non e' un numero: e' un numero DENTRO UN VANO,
+     * e il vano qui cambia -- due metri nel corridoio, meno sotto un'architrave.
+     * Quindi si misura anche il soffitto e ci si tiene sotto di un franco.
+     *
+     * Venticinque centimetri: sotto, la testa sfiora e l'inquadratura si
+     * schiaccia; sopra, in un vano basso l'occhio scenderebbe piu' del
+     * necessario.
+     */
+    const su = pose[i].p.clone()
+    _raggio.set(su, new Vector3(0, 1, 0))
+    _raggio.far = alto * 3
+    const sopra = _raggio.intersectObjects(bersagli, false)
+    const tetto = sopra.length ? sopra[0].point.y - FRANCO_TESTA / METRI_PER_UNITA : Infinity
+    const voluta = Math.min(pavimento + alto, tetto)
+    /* si spegne verso l'arrivo: quella posa e' ancorata e non si tocca */
+    const peso = s < SPEGNI_DA ? 1 : 1 - (s - SPEGNI_DA) / (1 - SPEGNI_DA)
+    pose[i].p.y += (voluta - pose[i].p.y) * peso
+  }
+}
 
   function componiPose () {
     if (!grezze) return
@@ -604,6 +688,56 @@ function accendiLuci () {
     })
   }
 
+/**
+ * ─── QUANTO E' LIBERA LA VISTA DAVANTI, posa per posa
+ *
+ * Guardando il provino: dentro il corridoio l'inquadratura e' piatta, in alcuni
+ * tratti la camera guarda una PARETE invece di guardare lungo il passaggio, e i
+ * tubi non si vedono mai perche' ci passa sotto senza inquadrarli.
+ *
+ * Luci, materie e 327 pezzi d'arredo valgono zero se la camera li tiene fuori
+ * quadro: la curva decide se il lavoro si vede.
+ *
+ * «Piatta» pero' e' un'impressione, e un'impressione non si corregge. Questa la
+ * trasforma in un numero: da ogni posa si tira un raggio nella direzione dello
+ * sguardo e si misura quanto corre prima di incontrare una superficie. Dove la
+ * distanza crolla, li' la camera sta guardando un muro -- e si sa QUALE muro e
+ * a che punto della corsa.
+ *
+ * Serve agli strumenti, non alla pagina: e' un accessore che si legge, non un
+ * comportamento che cambia.
+ */
+const _raggio = new Raycaster()
+/**
+ * ─── E IL RAGGIO DEVE GUARDARE LO STRATO DEL MONDO
+ *
+ * Prima stesura: TUTTE le pose risultavano «vista libera», cioe' nessun colpo,
+ * dentro un corridoio largo ottantacinque centimetri. Impossibile, e infatti
+ * era il metro.
+ *
+ * `Raycaster` ha i propri strati e di serie guarda solo lo zero. Ma le maglie
+ * del mondo stanno sullo strato 1 da quando le ho isolate dalla luce di fuori:
+ * il raggio le attraversava senza vederle. Lo stesso meccanismo che ha risolto
+ * l'illuminazione ha rotto la misura, in silenzio -- e senza il numero
+ * impossibile non me ne sarei accorto.
+ */
+_raggio.layers.enable(STRATO_MONDO)
+const _dir = new Vector3()
+
+function vistaLibera (s) {
+  const posa = posaA(s)
+  if (!posa) return null
+  _dir.set(0, 0, -1).applyQuaternion(posa.q).normalize()
+  _raggio.set(posa.p, _dir)
+  _raggio.far = 40
+  const bersagli = []
+  gruppo.traverse((o) => { if (o.isMesh && o.visible) bersagli.push(o) })
+  const colpi = _raggio.intersectObjects(bersagli, false)
+  if (!colpi.length) return { m: null, cosa: null }
+  /* in metri del mondo: la scena e' scalata 1/METRI_PER_UNITA */
+  return { m: +(colpi[0].distance * METRI_PER_UNITA).toFixed(2), cosa: colpi[0].object.name || '(senza nome)' }
+}
+
   const _pa = new Vector3()
   const _qa = new Quaternion()
   const _qc = new Quaternion()
@@ -637,6 +771,7 @@ function accendiLuci () {
       return v[0] && v[1]
     }),
     posaA,
+    vistaLibera,
     ancoraA,
     get ancorato () { return ancorato },
     get lunghezza () { return lunghezza },

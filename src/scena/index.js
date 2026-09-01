@@ -1902,6 +1902,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       traversataFinita: () => traversata.finita,
       consegnaCalma: () => traversata.consegnaCalma,
       mondo: () => mondo?.stato ?? null,
+      /* quanto e' libera la vista davanti a una posa della traversata: serve a
+         capire dove la camera guarda un muro invece del passaggio */
+      vistaTraversata: (s) => mondo?.vistaLibera?.(s) ?? null,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
