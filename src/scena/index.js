@@ -167,6 +167,24 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let ultimoStato = null
   /** L'ultima corsa della traversata, per la camera del mondo. Vedi `disegna`. */
   let corsaTraversata = 0
+  /* quanto si e' dentro la CODA. Serve al ciclo di disegno per sapere che la
+     traversata e' finita: vedi `mostra` qui sotto. */
+  let corsaCoda = 0
+  /**
+   * ─── E IL MONDO NON SE NE VA PRIMA CHE IL SALONE SIA ARRIVATO
+   *
+   * La consegna alla calma sale con `c * 8` in `traversata.js`, quindi la
+   * lastra e' piena a `c = 0,125`. Spegnendo il mondo a 0,002 -- appena la coda
+   * comincia -- restava una finestra in cui il salone e' al due per cento e il
+   * mondo non c'e' piu': dentro quella finestra si vedrebbe la nave DA FUORI,
+   * cioe' un lampo di mare in mezzo a una consegna che deve essere continua.
+   *
+   * 0,13 e' appena oltre il punto in cui la lastra copre: il mondo resta dietro
+   * finche' non serve piu'. Un numero solo, e viene dallo stesso conto della
+   * rampa -- se quella cambia, questo va cambiato con lei, e sta scritto qui
+   * accanto perche' si trovino insieme.
+   */
+  const CODA_CONSEGNATA = 0.13
   /**
    * Appoggio per costruire la posa d'arrivo del mondo: vedi `ancoraA`.
    *
@@ -1712,7 +1730,26 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        *
        * La soglia sta dentro `mostra`, ed e' la stessa della posa: cosi' i due
        * non possono divergere, che e' il difetto pagato tre volte stanotte. */
-      mondo.mostra(corsaTraversata)
+      /**
+       * ─── UN PADRONE SOLO PER `mostra`, e ci sono voluti due tentativi
+       *
+       * REGRESSIONE PRESA DALLA CORSA 299: «il finale e' una fotografia, 0.000
+       * livelli di movimento». Nella coda `corsaTraversata` vale 1, quindi il
+       * mondo restava «dentro» e teneva spento lo strato di fuori -- dove vive
+       * la lastra del salone. Il filmato con le due persone non era fermo: NON
+       * VENIVA DISEGNATO.
+       *
+       * Il primo rimedio -- chiamare `mostra(0)` da `impostaCoda` -- non ha
+       * funzionato, e il perche' vale piu' del rimedio: QUESTA RIGA lo
+       * riaccendeva a ogni fotogramma. Due posti che scrivono la stessa cosa
+       * sono due valori che divergono, ed e' il difetto che questo repo insegue
+       * da giorni; misurato invece che dedotto, la maschera della camera
+       * restava 2 e il gruppo `visible`.
+       *
+       * Adesso decide una sola espressione: la traversata e' finita quando
+       * comincia la coda.
+       */
+      mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata)
       if (corsaTraversata > 0.002) {
         const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
         if (posa) {
@@ -2123,6 +2160,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * giusto, perche' e' il filmato del salone con le due persone, che era
        * gia' l'ultima immagine del sito.
        */
+      /**
+       * ─── E IL MONDO SI FA DA PARTE, o il finale non si vede
+       *
+       * REGRESSIONE MIA, presa dalla corsa 299: «il finale e' una fotografia,
+       * 0.000 livelli di movimento».
+       *
+       * Nella coda `corsaTraversata` vale 1, quindi il mondo restava «dentro» e
+       * teneva spento lo strato di fuori sulla camera -- che e' giusto mentre si
+       * attraversa lo scafo, ed e' esattamente cio' che serviva a togliere il
+       * mare dai lati del corridoio. Ma la lastra del salone vive su quello
+       * strato: spento lui, il filmato con le due persone non veniva disegnato.
+       * Non era fermo: NON C'ERA.
+       *
+       * La traversata finisce quando comincia la coda. Da li' il mondo si
+       * spegne e la camera riapre gli occhi sul resto.
+       */
+      corsaCoda = c
       traversata.mostraCalma(c)
     },
     impostaTraversata: (q) => {
