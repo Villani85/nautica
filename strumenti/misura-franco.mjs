@@ -50,6 +50,9 @@ try {
   console.log('')
   console.log('  ogni ottava posa:')
   for (const f of t) if (f.i % 8 === 0 || f.i === t.length - 1) console.log(`    i=${String(f.i).padStart(2)} s=${f.s}  franco ${f.franco} m  ${f.cosa}  ${f.dentro.length ? 'DENTRO ' + f.dentro.join(',') : ''}`)
+  console.log('')
+  console.log('  le ultime dodici, con la posizione (metri di scena, x y z):')
+  for (const f of t.slice(-12)) console.log(`    i=${f.i} s=${f.s}  p=(${f.p.join(', ')})  franco ${f.franco} ${f.cosa}  -y: ${f.assi[3] ? f.assi[3].m + ' ' + f.assi[3].cosa : 'libero'}  +y: ${f.assi[2] ? f.assi[2].m + ' ' + f.assi[2].cosa + (f.assi[2].dietro ? ' DIETRO' : '') : 'libero'}`)
 } finally {
   a.ferma()
   await browser.close()

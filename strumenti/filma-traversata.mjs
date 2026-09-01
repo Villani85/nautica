@@ -30,7 +30,7 @@
  * cosa che un provino puo' dire onestamente.
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, renameSync, readdirSync } from 'node:fs'
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 import { S } from '../src/regia.js'
@@ -53,6 +53,11 @@ for (let i = 0; i < 60; i++) {
   await new Promise((r) => setTimeout(r, 500))
 }
 
+/* il video comincia quando nasce il contesto, non quando comincia la corsa:
+   i primi secondi sono caricamento e assestamento. Si segna quando nasce, e
+   alla fine si scrive lo SCARTO fino all'inizio della corsa, cosi' chi taglia
+   il provino taglia un numero misurato e non a occhio. */
+const nascita = Date.now()
 const browser = await chromium.launch({
   channel: 'chromium',
   args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars']
@@ -97,13 +102,21 @@ while (Date.now() - t0 < durata) {
 }
 await pg.waitForTimeout(1200)
 
+/* IL FILE VERO, non «l'ultimo in ordine alfabetico». La prima versione
+   prendeva l'ultimo `.webm` della cartella ordinata per nome: Playwright
+   scrive `page@<hex>.webm`, e `traversata-1440x900.webm` -- il provino
+   PRECEDENTE -- viene dopo, perche' 't' > 'p'. Il vecchio veniva rinominato su
+   se stesso e il nuovo restava li' col nome casuale: ho giudicato due volte il
+   provino di prima credendo di guardare il nuovo. Il percorso lo sa la pagina. */
+const percorsoVideo = await pg.video()?.path()
 await contesto.close()
 await browser.close()
 try { preview.kill() } catch { /* gia' morto */ }
 
-const nato = readdirSync(FUORI).filter((f) => f.endsWith('.webm')).sort()
-if (nato.length) {
+if (percorsoVideo) {
   const nome = `traversata-${L}x${A}.webm`
-  renameSync(join(FUORI, nato[nato.length - 1]), join(FUORI, nome))
-  console.log(`  scritto ${join(FUORI, nome)}`)
+  renameSync(percorsoVideo, join(FUORI, nome))
+  const scarto = +((t0 - nascita) / 1000).toFixed(2)
+  writeFileSync(join(FUORI, `traversata-${L}x${A}.json`), JSON.stringify({ scarto_s: scarto, corsa_s: SECONDI, da, coda: CODA }, null, 1))
+  console.log(`  scritto ${join(FUORI, nome)}  (la corsa comincia a ${scarto} s: tagliare da li')`)
 }

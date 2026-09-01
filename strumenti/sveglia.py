@@ -56,6 +56,13 @@ import urllib.request
 REPO = "Villani85/nautica"
 SITO = "https://villani85.github.io/nautica/"
 PASSO_S = 30  # piu' spesso e' rumore
+# Le corse si chiedono a GitHub senza chiave: 60 chiamate l'ora. A un passo di
+# 30 s sarebbero 120, e dopo mezz'ora l'API risponde 403 e `corsa_ultima()`
+# torna None -- che la prima versione leggeva come «nessuna corsa in volo» e
+# suggeriva il push proprio mentre una corsa girava. Un metro che non vede
+# deve dire «non vedo», non «zero». Quindi: le corse ogni quarto passo (30/h)
+# e il None resta None.
+OGNI_QUANTI_PASSI_LA_CORSA = 4
 
 
 def guscio(cmd):
@@ -158,9 +165,12 @@ def main():
 
     ultimo_cambio = time.time()
     precedente = loc0
+    passo = 0
+    corsa = corsa0
 
     while True:
         time.sleep(PASSO_S)
+        passo += 1
 
         loc = testa_locale()
         if loc and loc != precedente:
@@ -180,7 +190,8 @@ def main():
                 f"il ramo remoto si e mosso: {rem0[:7]} -> {rem[:7]}. Controlla la corsa."
             )
 
-        corsa = corsa_ultima()
+        if passo % OGNI_QUANTI_PASSI_LA_CORSA == 0:
+            corsa = corsa_ultima()
         if corsa and corsa0:
             finita_ora = corsa0["stato"] != "completed" and corsa["stato"] == "completed"
             nuova = corsa["numero"] != corsa0["numero"]
@@ -200,18 +211,21 @@ def main():
         da_spingere = non_spinti()
 
         if da_spingere > 0 and fermo_min > 3:
-            in_volo = corsa and corsa["stato"] != "completed"
-            if in_volo:
+            # Con una corsa in volo NON si esce: uscire ogni tre minuti per dire
+            # «non spingere» e' rumore, non un fatto -- e la fine della corsa e'
+            # gia' una sveglia sua. Si aspetta quella. E se l'API non risponde
+            # (corsa None) NON si sa: si dice quello, non «nessuna corsa».
+            if corsa is None:
                 chiudi(
-                    f"hai {da_spingere} commit non spinti, MA LA CORSA {corsa['numero']} "
-                    f"({corsa['sha']}) STA GIRANDO. NON spingere: ogni push la annulla "
-                    "(cancel-in-progress), ed e cosi che sono morte la 289 e la 290. "
-                    "Aspetta che chiuda e spingi il lotto in una volta."
+                    f"HAI {da_spingere} COMMIT NON SPINTI da {fermo_min:.0f} minuti e NON SO se "
+                    "una corsa gira: l'API di GitHub non risponde (limite?). Controlla con la "
+                    "chiave prima di spingere."
                 )
-            chiudi(
-                f"HAI {da_spingere} COMMIT NON SPINTI da {fermo_min:.0f} minuti, e nessuna "
-                "corsa sta girando. Da fuori il lavoro non esiste: spingi."
-            )
+            elif corsa["stato"] == "completed":
+                chiudi(
+                    f"HAI {da_spingere} COMMIT NON SPINTI da {fermo_min:.0f} minuti, e nessuna "
+                    "corsa sta girando. Da fuori il lavoro non esiste: spingi."
+                )
 
         if fermo_min >= a.silenzio:
             chiudi(

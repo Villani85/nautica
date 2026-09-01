@@ -361,6 +361,42 @@ N = len(POSITIONS)
 # intermedi (differenza centrata sui vicini, come la tangente di
 # Catmull-Rom stessa, cosi' l'orientamento "segue" davvero il percorso),
 # quaternione ESATTO del GLB al nodo finale.
+#
+# ─── LO SGUARDO E' ORIZZONTALE: si segue la tangente IN PIANTA, non in quota
+#
+# Visto nel provino (fotogrammi 12-16 s): salendo la scala la camera guarda il
+# soffitto, e arriva nel salone inquadrando il plafone dal basso. Il numero:
+# beccheggio 5,7 gradi a s=0, 36 gradi a s=0.92, poi -4 all'arrivo.
+#
+# La causa e' qui. I punti di controllo non hanno la stessa semantica in quota:
+# P0 e P1 stanno al PAVIMENTO, P2 a mezza altezza dell'apertura e P4 all'OCCHIO
+# della camera del film. Fra P1 e P2 la spline sale la scala (1,40 m) piu'
+# l'altezza dell'apertura (1,17 m) in quattro metri di corsa: la tangente punta
+# in alto di 36 gradi, e il lookAt la seguiva. La QUOTA della camera la corregge
+# gia' il sito (`alzaSulPavimento` mette l'occhio a 1,55 m dal pavimento
+# misurato), quindi la salita della tangente e' un artefatto dei nodi, non un
+# moto che qualcuno abbia chiesto.
+#
+# Chi cammina guarda dove va, in piano: la tangente si proietta sul piano
+# orizzontale e il beccheggio dei nodi e' zero. L'unico nodo inclinato resta
+# l'ultimo, che e' il quaternione ESATTO della camera del film; SQUAD porta la
+# camera da orizzontale a quella inclinazione negli ultimi due tratti, che e'
+# la fusione senza stacco chiesta dal contratto. Se sulla scala si vuole uno
+# sguardo un po' alzato (una persona sale guardando il pianerottolo, +5..+10
+# gradi), e' un numero per il committente: si mette in BECCHEGGIO_NODI_GRADI.
+BECCHEGGIO_NODI_GRADI = 0.0
+
+def _tangente_in_piano(t):
+    t = np.asarray(t, dtype=float).copy()
+    t[1] = 0.0
+    n = np.linalg.norm(t)
+    if n < 1e-9:
+        return t
+    t = t / n
+    if BECCHEGGIO_NODI_GRADI:
+        t[1] = math.tan(math.radians(BECCHEGGIO_NODI_GRADI))
+    return t
+
 ORIENTATIONS = []
 for i in range(N):
     if i == N - 1:
@@ -373,7 +409,7 @@ for i in range(N):
         tangent = POSITIONS[i + 1] - POSITIONS[i - 1]
     else:
         tangent = POSITIONS[i + 1] - POSITIONS[i - 1]
-    ORIENTATIONS.append(look_at_quat(tangent))
+    ORIENTATIONS.append(look_at_quat(_tangente_in_piano(tangent)))
 
 
 # ---------------------------------------------------------------------------

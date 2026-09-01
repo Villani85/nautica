@@ -1,7 +1,7 @@
-import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4 } from 'three'
+import { Group, MathUtils, Quaternion, Vector3, PointLight, AmbientLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { vestiMondo } from './materie-mondo.js'
-import { arredaMondo } from './arredo-mondo.js'
+import { arredaMondo, misuratore } from './arredo-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
 import { sezioneA, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
@@ -278,12 +278,12 @@ export function creaMondo (base, scena) {
  * mettere una plafoniera sopra ogni tratto la mette dove serve, e se domani il
  * percorso cambia le luci lo seguono senza che nessuno se ne ricordi.
  *
- * L'altezza e' l'unico numero libero: 1,55 m sopra la posa, cioe' poco sotto un
- * soffitto che sta a 2,00. Sopra si incassano nel solaio, sotto si vedono in
- * faccia.
+ * L'altezza NON e' un numero: era 1,55 m sopra la posa «poco sotto un soffitto
+ * che sta a 2,00» -- ma il soffitto sta a 2,00 solo nel corridoio; in sala
+ * macchine sta a 3,00 e la posa e' l'occhio, non il pavimento. Adesso si
+ * misura, vedi `accendiLuci`.
  */
 const QUANTE_LUCI = 7
-const ALTEZZA_LUCE_M = 1.55
 /** Portata: due terzi di corridoio, cosi' due plafoniere si sovrappongono
  *  appena e restano i tratti in ombra fra l'una e l'altra. */
 const PORTATA_M = 3.6
@@ -305,6 +305,33 @@ const INTENSITA = (() => {
     : NaN
   return Number.isFinite(v) && v > 0 ? v : 0.35
 })()
+/**
+ * ─── LA COTTURA SI VEDE SOLO CON UNA LUCE DIFFUSA, e non ce n'era
+ *
+ * Gli ambienti hanno un'occlusione ambientale cotta in Blender (`*-ao.png`,
+ * `cuoci-traversata.py`), e nel provino gli spigoli delle stanze non si
+ * leggevano: la sala macchine era un gradiente senza angoli. Non era la
+ * cottura: in three.js `aoMap` modula SOLO la luce indiretta -- ambiente, sonde,
+ * mappa d'ambiente -- e qui erano tutte a zero, di proposito
+ * (`isolaDallaLuceDiFuori`: sotto coperta non c'e' cielo). Le plafoniere sono
+ * luce diretta, e la diretta l'occlusione non la tocca. Quindi la mappa che si
+ * era pagata era moltiplicata per zero, e non lo diceva.
+ *
+ * Una luce d'ambiente bassa, sullo strato del mondo, e' la cosa che la accende.
+ * Il livello e' un numero, e `?ambiente=<n>` lo cambia per guardarlo.
+ */
+const AMBIENTE = (() => {
+  const v = typeof location !== 'undefined'
+    ? Number(new URLSearchParams(location.search).get('ambiente'))
+    : NaN
+  return Number.isFinite(v) && v >= 0 ? v : 0.22
+})()
+/** Quanto sotto il soffitto misurato sta il corpo della plafoniera, e la sua luce. */
+const PIASTRA_SOTTO_IL_SOFFITTO_M = 0.01
+const LUCE_SOTTO_IL_SOFFITTO_M = 0.18
+/** Da dove parte il raggio che cerca il soffitto: sopra la posa, sotto l'occhio. */
+const SONDA_SOFFITTO_DA_M = 1.0
+const SOFFITTO_ENTRO_M = 6.0
 
 let luci = null
 /* la camera del sito: serve a toglierle lo strato di fuori mentre si e' dentro.
@@ -390,6 +417,27 @@ function accendiLuci () {
   if (luci || !grezze || !grezze.length) return
   luci = new Group()
   luci.name = 'luciPratiche'
+  const ambiente = new AmbientLight(0xffffff, AMBIENTE)
+  ambiente.layers.set(STRATO_MONDO)
+  luci.add(ambiente)
+  /**
+   * ─── LA PLAFONIERA STA SUL SOFFITTO, non a sei centimetri dall'occhio
+   *
+   * Prima stava a `posa + 1,55 + 0,06`: l'occhio e' a 1,55 dal pavimento,
+   * quindi la piastra passava SEI CENTIMETRI sopra la testa. Nel provino, ogni
+   * volta che la camera ci arrivava sotto, una lastra color crema larga
+   * mezzo metro riempiva il quadro -- e sulla soglia del corridoio sembrava
+   * un tettuccio sospeso nel vuoto. Un corpo illuminante da 50 cm visto da 6
+   * cm e' un muro luminoso.
+   *
+   * Adesso il soffitto si MISURA con un raggio, come fanno i tubi, e la
+   * piastra ci sta appoggiata sotto. Dove il raggio non trova soffitto (fuori
+   * da ogni stanza, o sopra il cielino del salone, dove l'ultima finiva) la
+   * plafoniera non si mette: una lampada senza soffitto e' un altro oggetto
+   * che galleggia.
+   */
+  const misura = misuratore(gruppo)
+  const SU = new Vector3(0, 1, 0)
   const n = QUANTE_LUCI
   for (let i = 0; i < n; i++) {
     /* si salta il primo e l'ultimo estremo: agli estremi ci sono le soglie, e
@@ -397,12 +445,15 @@ function accendiLuci () {
     const t = (i + 0.5) / n
     const v = grezze[Math.round(t * (grezze.length - 1))]
     const x = v.p[0]
-    const y = v.p[1] + ALTEZZA_LUCE_M
     const z = v.p[2]
+    const sonda = new Vector3(x, v.p[1] + SONDA_SOFFITTO_DA_M, z)
+    const soffitto = misura(sonda, SU, SOFFITTO_ENTRO_M)
+    if (soffitto === null) continue
+    const cielino = sonda.y + soffitto
 
     const l = new PointLight(COLORE_LUCE, INTENSITA, PORTATA_M, 2)
     l.layers.set(STRATO_MONDO)
-    l.position.set(x, y, z)
+    l.position.set(x, cielino - LUCE_SOTTO_IL_SOFFITTO_M, z)
     luci.add(l)
 
     /* e il corpo illuminante si VEDE: una luce senza sorgente visibile e' una
@@ -411,7 +462,7 @@ function accendiLuci () {
       new PlaneGeometry(0.5, 0.12),
       new MeshBasicMaterial({ color: new Color(COLORE_LUCE), toneMapped: false })
     )
-    piastra.position.set(x, y + 0.06, z)
+    piastra.position.set(x, cielino - PIASTRA_SOTTO_IL_SOFFITTO_M, z)
     piastra.layers.set(STRATO_MONDO)
     piastra.rotation.x = Math.PI / 2
     luci.add(piastra)
@@ -664,23 +715,61 @@ const OCCHIO_M = 1.55
 /** Quanto si sta sotto il soffitto: la testa non sfiora. */
 const FRANCO_TESTA = 0.25
 const SPEGNI_DA = 0.85
+/** Da quanto sopra la posa grezza parte il raggio che cerca il pavimento. */
+const SOPRA_LA_POSA_M = 0.30
 const _giu = new Vector3(0, -1, 0)
 const _su = new Vector3(0, 1, 0)
 const _nrm = new Vector3()
 
+/**
+ * ─── GLI AMBIENTI, senza quello che ci ho messo dentro io
+ *
+ * Le maglie contro cui misurare sono quelle del mondo cotto. Nel gruppo ci
+ * stanno anche i pannelli delle plafoniere (`luciPratiche`) e l'arredo
+ * generato (`arredoMondo`): il raggio del soffitto prendeva un pannello da
+ * 50x12 cm per soffitto e ci abbassava l'occhio sotto di 25 cm -- misurato:
+ * cinque tratti a franco 0,25 verso «(senza nome)», e un 6 mm a s=0,905 che
+ * era un pannello sfiorato, non il corridoio. E `vistaLibera` fermava lo
+ * sguardo su un tubo. Un pezzo che ho aggiunto io non e' un muro.
+ */
+const MIEI = /^(luciPratiche|arredoMondo)$/
+function maglieDelMondo () {
+  const b = []
+  ;(function raccogli (o) {
+    if (MIEI.test(o.name)) return
+    if (o.isMesh && o.visible) b.push(o)
+    for (const c of o.children) raccogli(c)
+  })(gruppo)
+  return b
+}
+
 function alzaSulPavimento () {
   if (!pose || !pose.length) return
-  const bersagli = []
-  gruppo.traverse((o) => { if (o.isMesh) bersagli.push(o) })
+  const bersagli = maglieDelMondo()
   if (!bersagli.length) return
   const alto = OCCHIO_M / METRI_PER_UNITA
   for (let i = 0; i < pose.length; i++) {
     const s = i / (pose.length - 1)
     if (s >= 1) break
-    /* si parte da un po' piu' in alto: partendo dalla posa, che puo' essere
-       gia' DENTRO un gradino, il raggio uscirebbe da sotto e non troverebbe
-       niente */
-    const da = pose[i].p.clone().addScaledVector(_giu, -alto)
+    /**
+     * ─── DA DOVE PARTE IL RAGGIO, e perche' non da 1,55 m sopra la posa
+     *
+     * Prima stesura: si partiva da posa + altezza d'occhio, per non partire
+     * dentro un gradino. Misurato dopo la ricottura a otto gradini: alle
+     * ultime dodici pose la camera stava SUL TETTO del corridoio (0,93 m
+     * sopra il suo soffitto, s=0,884) e poi scendeva nel salone passando
+     * per il soffitto (dentro Mesh_5 a s=0,937).
+     *
+     * La posa grezza di Blender sta a circa 1,2 m dal pavimento; il corridoio
+     * e' alto 2,08. Partendo 1,55 sopra la posa il raggio nasceva SOPRA IL
+     * SOFFITTO e ne prendeva il dorso per pavimento. La difesa contro i
+     * gradini era diventata il difetto.
+     *
+     * Trenta centimetri bastano: la posa non sta dentro un gradino se la
+     * curva e il mondo vengono dallo stesso world_root -- e se non e' cosi'
+     * lo dice misuraFrancoPose(), non questo numero.
+     */
+    const da = pose[i].p.clone().addScaledVector(_giu, -SOPRA_LA_POSA_M / METRI_PER_UNITA)
     _raggio.set(da, _giu)
     _raggio.far = alto * 3
     /* e anche qui si scartano le facce posteriori: alla porta di poppa della
@@ -779,12 +868,7 @@ function misuraFrancoPose () {
   if (!pose || !pose.length) { francoPose = null; francoRiassunto = null; return }
   /* solo gli AMBIENTI: l'arredo generato sta lungo la curva per costruzione e
      un tubo a trenta centimetri dall'asse non e' un difetto della curva */
-  const bersagli = []
-  ;(function raccogli (o) {
-    if (o.name === 'arredoMondo') return
-    if (o.isMesh) bersagli.push(o)
-    for (const c of o.children) raccogli(c)
-  })(gruppo)
+  const bersagli = maglieDelMondo()
   if (!bersagli.length) return
   francoPose = pose.map((v, i) => {
     let franco = Infinity
@@ -963,9 +1047,7 @@ function vistaLibera (s) {
   _dir.set(0, 0, -1).applyQuaternion(posa.q).normalize()
   _raggio.set(posa.p, _dir)
   _raggio.far = 40
-  const bersagli = []
-  gruppo.traverse((o) => { if (o.isMesh && o.visible) bersagli.push(o) })
-  const colpi = _raggio.intersectObjects(bersagli, false)
+  const colpi = _raggio.intersectObjects(maglieDelMondo(), false)
   if (!colpi.length) return { m: null, cosa: null }
   /* in metri del mondo: la scena e' scalata 1/METRI_PER_UNITA */
   return { m: +(colpi[0].distance * METRI_PER_UNITA).toFixed(2), cosa: colpi[0].object.name || '(senza nome)' }
@@ -1007,6 +1089,32 @@ function vistaLibera (s) {
     vistaLibera,
     /** La tabella completa, posa per posa -- vedi misuraFrancoPose(). */
     francoPose: () => francoPose,
+    /**
+     * L'inventario di quello che questo modulo ha MESSO nel mondo -- arredo e
+     * plafoniere -- come scatole nel frame del gruppo, cioe' in metri. Serve a
+     * rispondere «ma i tubi ci sono?» con un numero invece che scrutando un
+     * fotogramma grigio: nel provino non si vedevano, e non si poteva dire se
+     * mancassero o se fossero solo fuori quadro.
+     */
+    inventario: () => {
+      gruppo.updateWorldMatrix(true, true)
+      const inv = new Matrix4().copy(gruppo.matrixWorld).invert()
+      const b = new Box3()
+      const m = new Matrix4()
+      const out = []
+      for (const radice of [gruppo.getObjectByName('arredoMondo'), luci]) {
+        if (!radice) continue
+        radice.traverse((o) => {
+          if (!o.isMesh || o === radice) return
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+          m.multiplyMatrices(inv, o.matrixWorld)
+          b.copy(o.geometry.boundingBox).applyMatrix4(m)
+          const f = (v) => [v.x, v.y, v.z].map((n) => +n.toFixed(2))
+          out.push({ in: radice.name, tipo: o.geometry.type, min: f(b.min), max: f(b.max) })
+        })
+      }
+      return out
+    },
     ancoraA,
     get ancorato () { return ancorato },
     get lunghezza () { return lunghezza },

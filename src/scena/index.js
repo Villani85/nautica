@@ -203,12 +203,57 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const scena = new Scene()
 
   /**
+   * ─── DENTRO SI GUARDA CON UNA LENTE PIU' CORTA, e non e' gusto: e' geometria
+   *
+   * Il campo del sito e' 34 gradi in verticale -- una lente da 60 mm -- ed e'
+   * quello giusto per la nave al largo e per la fotografia del salone, che e'
+   * stata montata su quell'angolo (`riferimenti/salone/posa.json`). Ma la
+   * traversata passa DENTRO stanze da 3,2 m di larghezza e 3,0 di altezza, e
+   * a 34 gradi (26 in orizzontale, per lato, su una tela 16:10) le pareti
+   * entrano nel quadro solo oltre 3,3 m, il soffitto oltre 4,7 m, il
+   * pavimento oltre 5. La sala macchine e' lunga 4,3: a quella lente NON PUO'
+   * mostrare ne' soffitto, ne' pavimento, ne' i tubi che le corrono sotto il
+   * cielino. Nel provino si vedeva un gradiente grigio con una porta in
+   * mezzo, e si era dato la colpa alla cottura, alle luci, all'arredo: era la
+   * lente. L'inventario (`strumenti/inventario-mondo.mjs`) diceva che i tubi
+   * c'erano, a 1,1 m sopra l'occhio e 1,5 di lato: fuori quadro per
+   * costruzione.
+   *
+   * Quindi dentro il campo si apre e torna a 34 PRIMA che il salone conti: la
+   * fotografia esige l'angolo suo, e il guscio e' proiettato su quello. La
+   * rampa e' morbida lungo il percorso -- una carrellata in avanti con uno
+   * zoom lento verso il teleobiettivo si legge come «ci si avvicina», non come
+   * un effetto.
+   *
+   * IL VALORE APERTO E' UN NUMERO SUL TAVOLO: 58 e' quello che fa entrare le
+   * pareti della sala macchine entro 1,6 m e il soffitto entro 2,2. `?campo=<n>`
+   * lo cambia per guardarlo; dove finisce la rampa e' `CAMPO_TORNA_SITO_A`.
+   */
+  const CAMPO_SITO_GRADI = 34
+  const CAMPO_DENTRO_GRADI = (() => {
+    const v = Number(new URLSearchParams(location.search).get('campo'))
+    return Number.isFinite(v) && v >= CAMPO_SITO_GRADI && v <= 100 ? v : 58
+  })()
+  /* la rampa: da s=0 (campo aperto) a qui (campo del sito), poi resta */
+  const CAMPO_TORNA_SITO_A = 0.88
+  function campoTraversata (s) {
+    const t = MathUtils.smoothstep(s, 0, CAMPO_TORNA_SITO_A)
+    return MathUtils.lerp(CAMPO_DENTRO_GRADI, CAMPO_SITO_GRADI, t)
+  }
+  /* si scrive solo se cambia: la matrice di proiezione non si rifa' per niente */
+  function impostaCampo (gradi) {
+    if (camera.fov === gradi) return
+    camera.fov = gradi
+    camera.updateProjectionMatrix()
+  }
+
+  /**
    * Il fulcro di tutto il sito: la camera sta a quota zero e guarda
    * l'orizzonte. Cosi' la linea di galleggiamento cade SEMPRE a meta'
    * schermo esatta, e il fondo CSS puo' spaccarsi al 50% combaciando col
    * disegno senza che niente vada sincronizzato.
    */
-  const camera = new PerspectiveCamera(34, 1, 0.1, 120)
+  const camera = new PerspectiveCamera(CAMPO_SITO_GRADI, 1, 0.1, 120)
   camera.position.set(0, 0, RAGGIO)
   camera.lookAt(0, 0, 0)
 
@@ -1757,11 +1802,15 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
          comincia deve gia' presentare, o restano due secondi di quadro vuoto */
       if (corsaTraversata > 0.002) traversata.scaldaCalma()
       if (corsaTraversata > 0.002) {
-        const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
+        const s = MathUtils.clamp(corsaTraversata, 0, 1)
+        const posa = mondo.posaA(s)
         if (posa) {
           camera.position.copy(posa.p)
           camera.quaternion.copy(posa.q)
         }
+        impostaCampo(campoTraversata(s))
+      } else {
+        impostaCampo(CAMPO_SITO_GRADI)
       }
     }
 
@@ -1913,6 +1962,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       vistaTraversata: (s) => mondo?.vistaLibera?.(s) ?? null,
       /* la tabella completa del franco, posa per posa: vedi mondo.js misuraFrancoPose */
       francoTraversata: () => mondo?.francoPose?.() ?? null,
+      /* cosa il mondo ha messo dentro se stesso (arredo, plafoniere), in metri: vedi mondo.js inventario */
+      inventarioMondo: () => mondo?.inventario?.() ?? null,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
