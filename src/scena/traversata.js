@@ -401,6 +401,29 @@ export function creaTraversata (base, camera, scena, videoCalma) {
    * l'origine e' il nodo CAMERA_SORGENTE_SALONE (world_root.py:80). La camera
    * 3D finisce NELLA STESSA POSIZIONE da cui e' stato girato questo filmato.
    */
+/**
+ * ─── LA CALMA SI SCALDA MENTRE SI ATTRAVERSA
+ *
+ * Nel provino della sola traversata, fra il corridoio e il salone restavano due
+ * secondi di quadro quasi vuoto. Non era uno stato sbagliato -- la copertura
+ * era gia' 0,82 e la maschera giusta -- era LATENZA: il filmato del salone
+ * cominciava a suonare solo quando cominciava la coda, e un `<video>` ci mette
+ * un paio di secondi a presentare il primo fotogramma. La lastra c'era, sopra
+ * non c'era ancora niente.
+ *
+ * Farlo partire mentre si attraversa costa un decodificatore acceso per pochi
+ * secondi in piu' e toglie il buco. Resta INVISIBILE: si accende il video, non
+ * la lastra.
+ *
+ * (E' l'opposto della cura di `salone3d.js`, dove un video invisibile che
+ * decodificava era lo spreco da togliere. Li' restava acceso per minuti senza
+ * che nessuno lo guardasse; qui sono i secondi esatti che precedono il momento
+ * in cui lo si guarda.)
+ */
+  function scaldaCalma () {
+    if (videoCalma && videoCalma.paused) videoCalma.play().catch(() => {})
+  }
+
   function mostraCalma (c) {
     if (!pianoCalma || !matCalma) return
     /**
@@ -444,6 +467,7 @@ export function creaTraversata (base, camera, scena, videoCalma) {
   return {
     mostra,
     mostraCalma,
+    scaldaCalma,
     avanza,
     spegni,
     piano,

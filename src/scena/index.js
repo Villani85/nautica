@@ -1750,6 +1750,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * comincia la coda.
        */
       mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata)
+      /* il fuori si spegne solo mentre si attraversa: appena comincia la coda
+         il salone deve poter apparire, e vive sullo strato zero */
+      mondo.soloDentro(corsaTraversata > 0.002 && corsaCoda <= 0.002)
+      /* e il filmato del salone si scalda mentre si attraversa: quando la coda
+         comincia deve gia' presentare, o restano due secondi di quadro vuoto */
+      if (corsaTraversata > 0.002) traversata.scaldaCalma()
       if (corsaTraversata > 0.002) {
         const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
         if (posa) {

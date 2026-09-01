@@ -1,4 +1,4 @@
-import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster } from 'three'
+import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { vestiMondo } from './materie-mondo.js'
 import { arredaMondo } from './arredo-mondo.js'
@@ -314,6 +314,8 @@ let cameraDelSito = null
 let vestite = 0
 /* quanti pezzi d'arredo: tubi, staffe, macchine */
 let arredati = 0
+/* quanti pezzi del guscio sono stati riportati nel frame della curva */
+let riallineati = 0
 
 /**
  * ─── PRIMA DI ACCENDERE, BISOGNA SPEGNERE
@@ -414,7 +416,119 @@ function accendiLuci () {
     piastra.rotation.x = Math.PI / 2
     luci.add(piastra)
   }
+  /**
+   * ─── E IL SALONE HA UNA LUCE SUA
+   *
+   * Le sette plafoniere stanno lungo la CURVA, e la curva finisce sulla soglia:
+   * il salone e' nove metri di stanza oltre quel punto, e restava al buio --
+   * luminanza 7 su 255, cioe' nero. Rimessa a posto la stanza, il difetto e'
+   * passato da «non c'e' niente» a «c'e' ma non si vede», che e' un altro
+   * difetto e va chiuso a parte.
+   *
+   * Le posizioni vengono dal GUSCIO, non da numeri scritti: si prende la sua
+   * scatola e ci si mettono due sorgenti lungo l'asse, a tre quarti d'altezza.
+   * Se domani la stanza cambia, le luci la seguono.
+   *
+   * Piu' calde e piu' larghe di quelle del corridoio: un salone e' illuminato
+   * da lampade e dal finestrone, non da plafoniere da locale tecnico.
+   */
+  /**
+   * LA SCATOLA VA PRESA NEL FRAME DEL GRUPPO, non in quello della scena.
+   *
+   * Prima stesura: `expandByObject` da' una scatola in coordinate di SCENA,
+   * cioe' gia' scalate di 1/2,5 e ruotate. Usarla per posizionare luci che sono
+   * FIGLIE del gruppo -- quindi in coordinate locali -- mescola due sistemi, ed
+   * e' l'errore che questo repo insegue da giorni. Le lampade finivano a due
+   * metri e mezzo dal posto giusto e la portata era sbagliata dello stesso
+   * fattore.
+   *
+   * Si porta la scatola dentro il frame del gruppo con la matrice inversa: cosi'
+   * posizione e portata parlano la stessa lingua.
+   */
+  const scatola = new Box3()
+  const _inv = new Matrix4().copy(gruppo.matrixWorld).invert()
+  const _m = new Matrix4()
+  gruppo.updateWorldMatrix(true, true)
+  gruppo.traverse((o) => {
+    if (!o.isMesh || !PEZZI_MAGLIA_SALONE.test(o.name || '')) return
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+    _m.multiplyMatrices(_inv, o.matrixWorld)
+    scatola.union(o.geometry.boundingBox.clone().applyMatrix4(_m))
+  })
+  if (!scatola.isEmpty()) {
+    const c = new Vector3(); scatola.getCenter(c)
+    const d = new Vector3(); scatola.getSize(d)
+    for (const f of [0.3, 0.72]) {
+      const l = new PointLight(0xffdcb0, INTENSITA * 2.6, Math.max(d.x, d.z) * 0.9, 2)
+      l.layers.set(STRATO_MONDO)
+      l.position.set(
+        scatola.min.x + d.x * f,
+        scatola.min.y + d.y * 0.78,
+        c.z
+      )
+      luci.add(l)
+    }
+  }
+
   gruppo.add(luci)
+}
+
+/**
+ * ─── IL SALONE ERA NEL POSTO SBAGLIATO, e la camera gli finiva fuori
+ *
+ * Una revisione ha contato i nodi del GLB per prefisso e ha concluso che la
+ * stanza d'arrivo non esistesse: `SALOON` zero, `HULL` zero. Il conteggio era
+ * giusto e la conclusione no -- il guscio C'E', sotto otto nodi che si chiamano
+ * `davanti`, `fondo`, `opposta`, `pavimento`, `soffitto`, `montante`,
+ * `sopra_vano`, `sotto_vano`, cioe' i nomi che gli da' `guscio-salone.py`.
+ * Cercare per prefisso li ha mancati tutti.
+ *
+ * Ma il difetto c'era lo stesso, ed e' peggio: LA STANZA E' NEL POSTO
+ * SBAGLIATO. Misurato sul file:
+ *
+ *   guscio    x -0,80 -> 9,05    y -5,30 -> -0,49    z -1,49 -> 1,02
+ *   camera                        y  0                z  0
+ *
+ * In y la camera sta MEZZO METRO FUORI. E il nodo `CAMERA_SORGENTE_SALONE`
+ * porta traslazione (0, -1,4508, -0,2364): la curva e' espressa rispetto a quel
+ * nodo -- l'ultima posa e' [0,0,0] -- mentre il guscio e' rimasto nel frame
+ * originale. Due sistemi, sfalsati di un metro e quarantacinque.
+ *
+ * Sono i quattro secondi vuoti fra il corridoio e il salone: la camera usciva
+ * dal corridoio e si trovava FUORI dalla stanza d'arrivo, a guardare il nulla.
+ * Il filmato del salone arrivava a coprire il vuoto, ed e' per questo che
+ * nessun cancello l'ha mai segnalato.
+ *
+ * La correzione non e' un numero scritto a mano: e' la traslazione DEL NODO
+ * STESSO, letta dal GLB. Se domani l'export cambia, la correzione cambia con
+ * lui. E si applica SOLO al guscio -- corridoio, locale tecnico e sala macchine
+ * li ha collocati l'assemblatore nel frame giusto, e spostarli romperebbe le
+ * cuciture misurate.
+ */
+/** Le maglie del guscio: `guscio-salone.py` non le prefissa, l'export le
+ *  chiama Mesh_0..Mesh_7 e i loro padri portano i nomi delle facce. */
+const PEZZI_MAGLIA_SALONE = /^Mesh_[0-7]$/
+
+const PEZZI_SALONE = new Set([
+  'davanti', 'fondo', 'opposta', 'pavimento', 'soffitto',
+  'montante', 'sopra_vano', 'sotto_vano'
+])
+
+function riallineaSalone (radice) {
+  let nodoCamera = null
+  radice.traverse((o) => { if (o.name === 'CAMERA_SORGENTE_SALONE') nodoCamera = o })
+  if (!nodoCamera) return 0
+  const d = nodoCamera.position
+  if (d.lengthSq() < 1e-9) return 0
+  let mossi = 0
+  radice.traverse((o) => {
+    if (!PEZZI_SALONE.has(o.name)) return
+    o.position.sub(d)
+    o.updateMatrix()
+    mossi++
+  })
+  riallineati = mossi
+  return mossi
 }
 
   let ancorato = false
@@ -455,6 +569,7 @@ function accendiLuci () {
         (glb) => {
           glb.scene.traverse((o) => { if (o.isMesh) maglie++ })
           gruppo.add(glb.scene)
+          riallineaSalone(glb.scene)
           misuraFrancoChiglia()
           pronto = true
           risolvi(true)
@@ -808,13 +923,41 @@ function vistaLibera (s) {
      *
      * Si riaccende uscendo, perche' il resto del racconto e' tutto la' fuori.
      */
-    mostra (q) {
-      const dentro = pronto && q > 0.002
-      gruppo.visible = dentro
-      if (cameraDelSito) {
-        if (dentro) cameraDelSito.layers.disable(0)
-        else cameraDelSito.layers.enable(0)
-      }
+    /**
+     * `q` accende la GEOMETRIA. Lo strato di fuori lo governa `soloDentro`, ed
+     * e' una cosa diversa: vedi li' sotto il perche' averle unite fosse un
+     * difetto.
+     */
+    mostra (q) { gruppo.visible = pronto && q > 0.002 },
+
+    /**
+     * ─── ESSERE DENTRO E SPEGNERE IL FUORI SONO DUE COSE DIVERSE
+     *
+     * Erano una sola, e produceva un BUCO NERO fra il corridoio e il salone.
+     * Misurato lungo la consegna:
+     *
+     *   f 0,45   copertura 0,207   maschera 2
+     *   f 0,55   copertura 0,822   maschera 2
+     *   f 0,62   copertura 1,000   maschera 3
+     *
+     * La copertura saliva -- la lastra del salone c'era e si stava aprendo --
+     * ma la maschera era 2, cioe' lo strato zero spento, e la lastra vive
+     * proprio li'. Il numero DICHIARAVA una consegna che il fotogramma non
+     * disegnava: per un terzo della consegna lo schermo restava vuoto.
+     *
+     * E' la stessa bugia che `coperturaTraversata` raccontava sul filmato
+     * tolto, in un altro punto: una copertura e' un'opacita', non una prova che
+     * qualcosa si veda.
+     *
+     * Lo strato di fuori si spegne SOLO mentre si attraversa davvero. Appena
+     * comincia la coda si riaccende, cosi' il salone puo' aprirsi sopra il
+     * mondo che e' ancora li' dietro -- ed e' proprio la sovrapposizione che
+     * rende la consegna continua invece di uno stacco.
+     */
+    soloDentro (si) {
+      if (!cameraDelSito) return
+      if (si && pronto) cameraDelSito.layers.disable(0)
+      else cameraDelSito.layers.enable(0)
     },
     /** Lo stato, per i cancelli: cosi' misurano invece di fidarsi. */
     get stato () {
@@ -832,6 +975,7 @@ function vistaLibera (s) {
         luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
         vestite,
         arredati,
+        riallineati,
         diag,
         correzioneGradi: correzione ? +(2 * Math.acos(Math.min(1, Math.abs(correzione.w))) * 180 / Math.PI).toFixed(2) : null,
         /* misurati nello spazio della scena, non sull'asset -- vedi
