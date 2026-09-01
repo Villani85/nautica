@@ -199,6 +199,33 @@ const TOLLERANZA = 0.3
 const SCRIVI = process.argv.includes('--scrivi')
 let paginaNuova = pagina
 const scarti = []
+
+/**
+ * ─── I TETTI DORMONO FINCHE' IL SITO NON E' COMPLETO
+ *
+ * DECISIONE DEL COMMITTENTE, 1 settembre 2026, con la ragione detta per esteso:
+ * «non voglio tetti per il momento, i tetti li mettiamo a sito completo ...
+ * altrimenti mi impedisce di completare il sito inutilmente».
+ *
+ * Ha ragione, e il motivo e' strutturale. Un tetto di peso e' un budget, e un
+ * budget si scrive quando si sa cosa ci deve stare dentro. Qui non si sa ancora:
+ * il mondo deve essere promosso (e allora `traversata.mp4` sparisce, -1,59 MB),
+ * la posa tesa e' appena entrata, il mare dietro il vetro non c'e' ancora. Ogni
+ * pezzo che arriva sfonda un tetto tarato su cio' che c'era prima, e il lavoro
+ * si ferma per un numero che nessuno aveva ancora deciso.
+ *
+ * MA NON SI SPENGONO IN SILENZIO. Un cancello che smette di bocciare senza dirlo
+ * e' peggio di un cancello che non c'e': nessuno se ne accorge finche' non e'
+ * tardi, ed e' esattamente il difetto che questo repo chiama «uno strumento
+ * verde non vuol dire pulito». Quindi da qui in avanti il peso si MISURA e si
+ * STAMPA a ogni corsa come prima, ma non ferma piu' nessuno, e ogni riga dice
+ * a voce alta che il tetto e' addormentato e da quanto lo sfora.
+ *
+ * PER RIARMARLI: `TETTI_ARMATI = true`. Va fatto a sito completo, quando
+ * l'elenco di cio' che viaggia e' definitivo -- e allora i tetti vanno tarati
+ * su quelle misure, non su queste.
+ */
+const TETTI_ARMATI = false
 console.log('\nI NUMERI IN PAGINA')
 for (const [etichetta, byte] of ATTESI) {
   /**
@@ -368,7 +395,8 @@ try {
 } catch { /* nessuna cartella */ }
 if (modelli.length) {
   const ok = pesoModelli <= TETTO_MODELLI
-  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Modelli sempre scaricati'.padEnd(42)} ` +
+  const etich = TETTI_ARMATI ? (ok ? 'OK   ' : 'FALSO') : (ok ? 'peso ' : 'SFORA')
+  console.log(`  ${etich}  ${'Modelli sempre scaricati'.padEnd(42)} ` +
               `${(pesoModelli / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_MODELLI / 1e6).toFixed(1)}` +
               `   (${modelli.join(', ')})`)
   if (pesoDietro) {
@@ -377,7 +405,12 @@ if (modelli.length) {
       try { console.log(`           ${f} — ${perche}`) } catch { /* assente */ }
     }
   }
-  if (!ok) {
+  if (!ok && !TETTI_ARMATI) {
+    console.log(`         TETTO ADDORMENTATO: sforerebbe di ` +
+                `${((pesoModelli - TETTO_MODELLI) / 1e6).toFixed(2)} MB. Non ferma nessuno per ` +
+                'decisione del committente (vedi TETTI_ARMATI); si riarma a sito completo.')
+  }
+  if (!ok && TETTI_ARMATI) {
     scarti.push(`i modelli sempre scaricati pesano ${(pesoModelli / 1e6).toFixed(2)} MB contro un ` +
                 `tetto di ${(TETTO_MODELLI / 1e6).toFixed(1)}. Se e' appena stato promosso il mondo, ` +
                 "la via d uscita misurata e togliere traversata.mp4: libera 1.587.637 byte " +
@@ -385,7 +418,36 @@ if (modelli.length) {
   }
 }
 
-const TETTO_FILMATI = 4 * 1024 * 1024
+/**
+ * ─── IL TETTO DEI FILMATI: ALZATO A 5,0 MB, E DETTO PERCHE'
+ *
+ * Stava a `4 * 1024 * 1024` senza una riga di ragione accanto, ed e' l'unico
+ * numero di questo file che non poggiava su niente. Peggio: era dichiarato in
+ * MiB e stampato diviso 1e6, quindi il cancello scriveva «tetto di 4.2» per un
+ * tetto di 4.194.304 byte. Chi leggeva il referto e chi leggeva il codice
+ * vedevano due numeri diversi, ed e' la trappola MiB/MB che questo repo ha gia'
+ * pagato. Adesso e' in byte decimali: cio' che si dichiara e' cio' che si
+ * stampa.
+ *
+ * ALZATO SU DECISIONE DEL COMMITTENTE ("aumenta il tetto"), dopo che la posa
+ * tesa validata ha portato i filmati a 4,69 MB: la clip nuova pesa 641 KB piu'
+ * di quella che sostituisce, ed e' un peso pagato per una ripresa che passa
+ * entrambi i cancelli invece di una che non li passava.
+ *
+ * PERCHE' 5,0 E NON DI PIU': questo tetto NON e' il percorso critico. I filmati
+ * si scaricano per sezione, non all'apertura -- il percorso critico e' il tetto
+ * dei modelli (1,6 MB, sopra), che quello si' arriva prima del primo fotogramma.
+ * Qui si sorveglia il totale che viaggia in una visita intera. Cinque megabyte
+ * di video per un sito che vive di riprese sono modesti; il doppio non lo
+ * sarebbero, e un tetto che si alza ogni volta che si tocca non sorveglia piu'
+ * niente.
+ *
+ * SI ASPETTA DI SCENDERE: quando il mondo viene promosso, `traversata.mp4`
+ * (1,59 MB) sparisce e i filmati tornano a ~3,1 MB. Se fra un mese siamo ancora
+ * a ridosso di 5,0 vuol dire che quella promozione non e' avvenuta, e il numero
+ * lo dira'.
+ */
+const TETTO_FILMATI = 5.0 * 1e6
 let pesoFilmati = 0
 const filmati = []
 try {
@@ -398,10 +460,11 @@ try {
 } catch { /* nessuna cartella: niente da pesare */ }
 if (filmati.length) {
   const ok = pesoFilmati <= TETTO_FILMATI
+  const etichF = TETTI_ARMATI ? (ok ? 'OK   ' : 'FALSO') : (ok ? 'peso ' : 'SFORA')
   /* «Filmati del salone» era gia' falso da un pezzo: dentro ci sono la discesa
      e la traversata, che il salone non c'entra. Adesso l'etichetta dice il vero
      e il conto separa cio' che il codice nomina da cio' che nessuno scarica. */
-  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Filmati'.padEnd(42)} ` +
+  console.log(`  ${etichF}  ${'Filmati'.padEnd(42)} ` +
               `${(pesoFilmati / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_FILMATI / 1e6).toFixed(1)}` +
               `   (${filmati.join(', ')})`)
   if (orfani.length) {
@@ -410,7 +473,12 @@ if (filmati.length) {
     console.log('         non e un guasto: e peso che viaggia e che nessuno scarica. ' +
                 'Si chiude montandoli o togliendoli, ed e una decisione di messa in scena.')
   }
-  if (!ok) {
+  if (!ok && !TETTI_ARMATI) {
+    console.log(`         TETTO ADDORMENTATO: sforerebbe di ` +
+                `${((pesoFilmati - TETTO_FILMATI) / 1e6).toFixed(2)} MB. Non ferma nessuno per ` +
+                'decisione del committente (vedi TETTI_ARMATI); si riarma a sito completo.')
+  }
+  if (!ok && TETTI_ARMATI) {
     scarti.push(`i filmati pesano ${(pesoFilmati / 1e6).toFixed(2)} MB contro un tetto di ` +
                 `${(TETTO_FILMATI / 1e6).toFixed(1)}. Il tetto e' una decisione, non una misura: ` +
                 'se va alzato, va alzato scrivendo perche in strumenti/peso.mjs')
