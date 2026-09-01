@@ -1,3 +1,4 @@
+import { misuraPrecarico } from './precarico-comune.mjs'
 import { readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
 import { join } from 'node:path'
@@ -398,37 +399,46 @@ const TETTO_MODELLI = 1.6 * 1e6
  * esce dal flag nessuno se ne accorgerebbe.
  */
 /**
- * ─── UNA DICHIARAZIONE CHE DIVENTA FALSA DA SOLA
+ * ─── CHI SCARICA COSA LO DICE IL BROWSER, non un dizionario
  *
- * Qui c'era anche `traversata-world.glb`, «dietro ?mondo=1, non ancora
- * promosso». Era vero quando l'ho scritto, ed e' diventato falso NELLO STESSO
- * LOTTO in cui ho promosso il mondo -- senza che niente protestasse, perche'
- * una dichiarazione non si accorge di essere smentita.
+ * Qui c'era `DIETRO_INTERRUTTORE`, una mappa scritta a mano che DICHIARAVA
+ * quali modelli il visitatore non scarica, e li sottraeva dal totale
+ * sorvegliato. Fra di essi `traversata-world.glb`, «?mondo=1, non ancora
+ * promosso».
  *
- * Costo: 1,67 MB contati fra «cio' che nessuno scarica» mentre OGNI visitatore
- * lo scarica. Il referto diceva «modelli 1,22 MB» e il numero vero era 2,89.
- * Il cancello del peso, che esiste per non far crescere il peso di nascosto,
- * stava nascondendo la crescita piu' grande della giornata.
+ * Vero quando l'ho scritto. Falso NELLO STESSO LOTTO in cui ho promosso il
+ * mondo, e niente ha protestato: una dichiarazione non si accorge di essere
+ * smentita. 1,67 MB contati fra «cio' che nessuno scarica» mentre ogni
+ * visitatore lo scaricava -- e questo cancello esiste proprio per impedire al
+ * peso di crescere di nascosto.
  *
- * L'ha trovato una revisione leggendo i file del repo -- 3,02 MB in
- * `public/modelli/` contro 1,22 dichiarati -- e l'ho confermato col browser:
- * `misura-precarico` vede `traversata-world.glb` chiesto all'APERTURA, +1157 ms,
- * 1,670 MB.
+ * L'ha trovato una revisione contando i file del repo: 3,02 MB in
+ * `public/modelli/` contro 1,22 dichiarati.
  *
- * CIO' CHE RESTA QUI DEVE ESSERE VERIFICABILE, non solo dichiarato: sotto,
- * ogni voce viene confrontata con cio' che il codice nomina.
+ * LA CURA NON E' AGGIORNARE LA LISTA: E' NON AVERLA. Un file sta dietro un
+ * interruttore quando IL BROWSER NON LO CHIEDE, non quando una riga lo afferma.
+ * `precarico-comune.mjs` percorre il sito e registra chi viene chiesto e
+ * quando; qui si legge quel risultato.
+ *
+ * COSTA: questo cancello era istantaneo e adesso apre un browser. E' il prezzo
+ * di una misura al posto di un'affermazione, e sta scritto nel referto.
  */
-const DIETRO_INTERRUTTORE = {
-  'guscio-salone.glb': '?guscio=1 — il guscio 3D del salone, non certificato'
-}
+const _precarico = await misuraPrecarico()
+const scaricatiDavvero = _precarico.fine
+console.log('  (elenco chiesto al browser, non dichiarato: ' +
+            `${scaricatiDavvero.size} risorse viste in una visita intera)`)
 
 let pesoModelli = 0
 let pesoDietro = 0
 const modelli = []
+const dietro = []
 try {
   for (const f of readdirSync('public/modelli')) {
     const b = statSync('public/modelli/' + f).size
-    if (DIETRO_INTERRUTTORE[f]) { pesoDietro += b; continue }
+    /* il browser lo chiede in una visita intera? allora il visitatore lo
+       scarica, e conta. Se non lo chiede, sta dietro un interruttore -- e lo
+       sappiamo perche' l'abbiamo guardato, non perche' l'abbiamo scritto. */
+    if (!scaricatiDavvero.has(f)) { pesoDietro += b; dietro.push(f); continue }
     pesoModelli += b
     modelli.push(`${f} ${(b / 1e6).toFixed(2)} MB`)
   }
@@ -440,10 +450,9 @@ if (modelli.length) {
               `${(pesoModelli / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_MODELLI / 1e6).toFixed(1)}` +
               `   (${modelli.join(', ')})`)
   if (pesoDietro) {
-    console.log(`         piu' ${(pesoDietro / 1e6).toFixed(2)} MB dietro interruttore, che nessuno scarica:`)
-    for (const [f, perche] of Object.entries(DIETRO_INTERRUTTORE)) {
-      try { console.log(`           ${f} — ${perche}`) } catch { /* assente */ }
-    }
+    console.log(`         piu' ${(pesoDietro / 1e6).toFixed(2)} MB che il browser NON CHIEDE ` +
+                'in una visita intera:')
+    for (const f of dietro) console.log(`           ${f}`)
   }
   if (!ok && !TETTI_ARMATI) {
     console.log(`         TETTO ADDORMENTATO: sforerebbe di ` +
