@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   compila:
+    outputs:
+      bundle: ${{ steps.bundle.outputs.nome }}
     # ─── UN PASSO PIANTATO DEVE ARRENDERSI, e senza questo non puo'
     #
     # Il 31 agosto la corsa 279 e' rimasta ferma quaranta minuti sullo stesso
@@ -62,6 +64,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # ─── SI DICHIARA COSA SI E' COSTRUITO, per poterlo poi ritrovare in rete
+      #
+      # Senza questo il job che pubblica non sa cosa aspettarsi, e «pubblicato»
+      # resta una speranza: `deploy-pages` dice che ha caricato l'artefatto, non
+      # che un visitatore lo riceve. Sono due cose diverse, e la differenza e'
+      # costata otto ore su un sito fermo alla build delle 12:23.
+      - id: bundle
+        run: echo "nome=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html | head -1)" >> $GITHUB_OUTPUT
 
       # IL BROWSER SI INSTALLA PRIMA DI QUALUNQUE COLLAUDO.
       #
@@ -360,3 +370,44 @@ jobs:
     steps:
       - id: pubblicazione
         uses: actions/deploy-pages@v4
+
+      # ─── E QUI SI VERIFICA CHE SIA DAVVERO ARRIVATO
+      #
+      # LA LACUNA PIU' GRANDE DELLA SUITE, segnalata da una revisione e vera:
+      # trentanove cancelli e nessuno guardava il sito PUBBLICATO. Giravano
+      # tutti sull'anteprima, cioe' validavano un artefatto diverso da quello
+      # che vede la giuria. `strumenti/attendi-pubblicazione.mjs` faceva questa
+      # cosa da giorni, ma come attrezzo da lanciare a mano: non stava nella
+      # catena e non faceva fallire niente.
+      #
+      # Non si aspetta un tempo: si aspetta il FATTO, cioe' che l'HTML servito
+      # da Pages nomini il bundle che questa corsa ha costruito. Fino a cinque
+      # minuti, perche' la propagazione di Pages non e' istantanea; oltre, il
+      # passo fallisce, ed e' giusto che fallisca: se il sito non serve quello
+      # che abbiamo appena approvato, la corsa verde sarebbe una bugia.
+      - name: 'Cancello · il sito pubblicato serve questa build'
+        timeout-minutes: 8
+        env:
+          ATTESO: ${{ needs.compila.outputs.bundle }}
+          INDIRIZZO: ${{ steps.pubblicazione.outputs.page_url }}
+        run: |
+          if [ -z "$ATTESO" ]; then
+            echo "il job che compila non ha dichiarato nessun bundle: non posso verificare niente."
+            exit 1
+          fi
+          echo "atteso:   $ATTESO"
+          echo "indirizzo: $INDIRIZZO"
+          for i in $(seq 1 30); do
+            servito=$(curl -s -H 'Cache-Control: no-cache' "${INDIRIZZO}?x=$(date +%s)"                       | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+            echo "  tentativo $i: servito ${servito:-(niente)}"
+            if [ "$servito" = "$ATTESO" ]; then
+              echo "PUBBLICATO: il sito serve la build di questa corsa."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo ""
+          echo "DOPO CINQUE MINUTI il sito serve ancora '${servito:-niente}' invece di '$ATTESO'."
+          echo "La corsa e' verde ma il lavoro non e' arrivato a nessuno: e' esattamente"
+          echo "il caso che questo cancello esiste per non lasciar passare in silenzio."
+          exit 1
