@@ -397,8 +397,28 @@ const TETTO_MODELLI = 1.6 * 1e6
  * Si DICHIARANO: dedurlo dal nome sarebbe indovinare, e il giorno in cui uno
  * esce dal flag nessuno se ne accorgerebbe.
  */
+/**
+ * ─── UNA DICHIARAZIONE CHE DIVENTA FALSA DA SOLA
+ *
+ * Qui c'era anche `traversata-world.glb`, «dietro ?mondo=1, non ancora
+ * promosso». Era vero quando l'ho scritto, ed e' diventato falso NELLO STESSO
+ * LOTTO in cui ho promosso il mondo -- senza che niente protestasse, perche'
+ * una dichiarazione non si accorge di essere smentita.
+ *
+ * Costo: 1,67 MB contati fra «cio' che nessuno scarica» mentre OGNI visitatore
+ * lo scarica. Il referto diceva «modelli 1,22 MB» e il numero vero era 2,89.
+ * Il cancello del peso, che esiste per non far crescere il peso di nascosto,
+ * stava nascondendo la crescita piu' grande della giornata.
+ *
+ * L'ha trovato una revisione leggendo i file del repo -- 3,02 MB in
+ * `public/modelli/` contro 1,22 dichiarati -- e l'ho confermato col browser:
+ * `misura-precarico` vede `traversata-world.glb` chiesto all'APERTURA, +1157 ms,
+ * 1,670 MB.
+ *
+ * CIO' CHE RESTA QUI DEVE ESSERE VERIFICABILE, non solo dichiarato: sotto,
+ * ogni voce viene confrontata con cio' che il codice nomina.
+ */
 const DIETRO_INTERRUTTORE = {
-  'traversata-world.glb': '?mondo=1 — il mondo della traversata, non ancora promosso',
   'guscio-salone.glb': '?guscio=1 — il guscio 3D del salone, non certificato'
 }
 
