@@ -1,6 +1,7 @@
 import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { vestiMondo } from './materie-mondo.js'
+import { arredaMondo } from './arredo-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
 import { sezioneA, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
@@ -311,6 +312,8 @@ let luci = null
 let cameraDelSito = null
 /* quante superfici hanno ricevuto una materia: un numero si guarda */
 let vestite = 0
+/* quanti pezzi d'arredo: tubi, staffe, macchine */
+let arredati = 0
 
 /**
  * ─── PRIMA DI ACCENDERE, BISOGNA SPEGNERE
@@ -433,6 +436,9 @@ function accendiLuci () {
     /* le materie DOPO l'isolamento: `isolaDallaLuceDiFuori` chiama
        `needsUpdate`, e vestire prima significherebbe farlo due volte */
     vestite = vestiMondo(gruppo)
+    /* l'arredo DOPO l'isolamento e le materie: nasce gia' sullo strato giusto e
+       con materiali suoi, quindi non va rivestito */
+    arredati = arredaMondo(gruppo, grezze || [])
     ancorato = true
   }
 
@@ -690,6 +696,7 @@ function accendiLuci () {
         ancorato,
         luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
         vestite,
+        arredati,
         diag,
         correzioneGradi: correzione ? +(2 * Math.acos(Math.min(1, Math.abs(correzione.w))) * 180 / Math.PI).toFixed(2) : null,
         /* misurati nello spazio della scena, non sull'asset -- vedi
