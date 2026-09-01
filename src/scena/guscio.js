@@ -1,4 +1,5 @@
-import { Group, Matrix4, Quaternion, Vector3, MeshBasicMaterial, DoubleSide } from 'three'
+import { Group, Matrix4, Quaternion, Vector3, MeshBasicMaterial, DoubleSide, PerspectiveCamera } from 'three'
+import { innestaProiezione } from './proiezione.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 
@@ -39,14 +40,39 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
  * sensibilita': focale +/-20% sposta il fondo del +/-20% e lascia il vano
  * fermo allo 0,05%.
  *
- * ─── LE UV SONO COTTE, e non e' pigrizia
+ * ─── LE UV NON SONO COTTE, e qui c'era scritto di si'
  *
- * La proiezione potrebbe rifarsi in uno shader a ogni fotogramma. Sarebbe la
- * stessa aritmetica in un secondo posto, e questo repo ha gia' pagato due volte
- * il prezzo di due implementazioni della stessa cosa. La camera sorgente non si
- * muove mai: la proiezione e' un DATO del modello, non un calcolo. Cotta nel
- * GLB da `riferimenti/blender/guscio-esporta.py`, il browser applica una
- * texture video e basta.
+ * CORREZIONE DEL 2 SETTEMBRE 2026. Questo paragrafo diceva che la proiezione e'
+ * un DATO del modello -- UV cotte da `guscio-esporta.py` -- e che rifarla in uno
+ * shader sarebbe stata la stessa aritmetica in un secondo posto. L'argomento
+ * regge; il fatto no. `public/modelli/guscio-salone.glb` porta otto maglie con
+ * `POSITION` e `NORMAL` **e nient'altro**: nessun `TEXCOORD_0`. Letto nel glTF,
+ * non nel commento.
+ *
+ * La conseguenza spiega perche' `?guscio=1` non ha mai mostrato la stanza: con
+ * `map` assegnata e senza attributo `uv`, WebGL da' zero a ogni vertice e tutto
+ * il guscio prende il colore di UN texel. Non era da guardare e da tarare: era
+ * rotto, e il commento diceva il contrario.
+ *
+ * Adesso la proiezione si fa nello shader, e da un file solo -- `proiezione.js`
+ * -- usato anche dalla traversata. Non e' la stessa aritmetica in due posti: e'
+ * la stessa aritmetica in UN posto, chiamata da due. E nella traversata una UV
+ * cotta non potrebbe nemmeno esistere, perche' la posa d'arrivo la decide
+ * `ancoraA` a runtime.
+ *
+ * ─── COSA FUNZIONA ADESSO E COSA NO, guardato il 2 settembre
+ *
+ * FUNZIONA: il guscio porta la fotografia invece di una tinta piatta. Nella
+ * traversata la stessa proiezione regge fino a combaciare con la lastra
+ * all'arrivo (`mondo.js`).
+ *
+ * NON FUNZIONA ANCORA: la POSA di questo guscio. A scorrimento 0,05 e 0,09 la
+ * stanza proiettata sta storta rispetto alla lastra -- la coppia non e' dove
+ * deve essere, e a 0,09 il guscio si legge come un accrocco di piani. Non e' la
+ * proiezione: e' il piazzamento, quello che `?conv=`, `?ds=` e `?dx/dy/dz`
+ * dichiarano di cercare e che nessuno ha ancora chiuso col registro in pixel
+ * (`strumenti/registro-guscio.mjs`). Per questo `?guscio=1` resta un
+ * interruttore e non il percorso predefinito.
  *
  * ─── DOVE VA MESSO: aritmetica, non tentativi
  *
@@ -85,9 +111,21 @@ const METRI_PER_UNITA = 2.5
  * approssimazione.
  */
 
-export function creaGuscio (base, texturaStanza, bersaglio) {
+/**
+ * @param {number} aspetto  il rapporto del fotogramma su cui la fotografia e'
+ *   montata: la lastra e' larga `larg` e alta `alt`, e riempie il quadro, quindi
+ *   il proiettore deve avere lo stesso rapporto o la stanza esce stirata.
+ */
+export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
   const gruppo = new Group()
   gruppo.name = 'GUSCIO_SALONE'
+  /* la lente della fotografia: 34 gradi verticali, dichiarati da posa.json */
+  const proiettore = new PerspectiveCamera(34, aspetto, 0.05, 60)
+  const matriceLocaleSorgente = new Matrix4()
+  const _proiezione = new Matrix4()
+  const proiezioni = []
+  let dentroIlGruppo = null
+  let pronto = false
 
   new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
     base + 'modelli/guscio-salone.glb',
@@ -110,9 +148,16 @@ export function creaGuscio (base, texturaStanza, bersaglio) {
          * porta gia' la propria curva, e passarla una seconda volta la
          * schiarirebbe due volte.
          */
+        /**
+         * Niente `map`: il guscio non ha UV (vedi la testa del file). Il
+         * materiale porta il colore di fondo del guscio e la fotografia gli
+         * arriva PROIETTATA, da `proiezione.js`.
+         */
         o.material = new MeshBasicMaterial({
-          map: texturaStanza, toneMapped: false, side: DoubleSide
+          color: 0xb4b0a8, toneMapped: false, side: DoubleSide
         })
+        const r = innestaProiezione(o.material, texturaStanza)
+        if (r) proiezioni.push(r)
       })
 
       /**
@@ -178,14 +223,42 @@ export function creaGuscio (base, texturaStanza, bersaglio) {
       const ds = Number(new URLSearchParams(location.search).get('ds') || 1)
       gruppo.scale.setScalar(scala * ds)
 
-      /* la camera sorgente ha fatto il suo lavoro: non deve restare nella scena
-         come oggetto, o `collaudo-continuita` conterebbe una camera in piu' */
+      /**
+       * ─── IL PROIETTORE E' LA CAMERA SORGENTE, ma non entra in scena
+       *
+       * La sua posa serve a ogni fotogramma (il gruppo si muove col salone, che
+       * rolla), e un nodo camera in piu' lo conterebbe `collaudo-continuita`.
+       * Quindi si tiene la sua matrice LOCALE e si compone a mano: il
+       * proiettore vive fuori dal grafo e la sua `matrixWorld` la scrivo io.
+       */
+      matriceLocaleSorgente.copy(sorgente.matrix)
       sorgente.parent?.remove(sorgente)
       gruppo.add(glb.scene)
+      dentroIlGruppo = glb.scene
+      proiettore.aspect = aspetto
+      proiettore.updateProjectionMatrix()
+      pronto = true
     },
     undefined,
     (e) => console.warn('[nautica] il guscio del salone non si carica:', e?.message || e)
   )
+
+  /**
+   * Da chiamare a ogni fotogramma finche' il guscio si vede: la posa del
+   * proiettore segue il gruppo, che segue il salone, che rolla.
+   */
+  gruppo.aggiornaProiezione = (miscela = 1) => {
+    if (!pronto || !proiezioni.length) return
+    dentroIlGruppo.updateWorldMatrix(true, false)
+    proiettore.matrixWorld.multiplyMatrices(dentroIlGruppo.matrixWorld, matriceLocaleSorgente)
+    proiettore.matrixWorldInverse.copy(proiettore.matrixWorld).invert()
+    _proiezione.copy(proiettore.projectionMatrix).multiply(proiettore.matrixWorldInverse)
+    for (const r of proiezioni) {
+      if (!r.uniformi) continue
+      r.uniformi.uMiscela.value = miscela
+      r.uniformi.uProiezione.value.copy(_proiezione)
+    }
+  }
 
   return gruppo
 }

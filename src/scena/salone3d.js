@@ -525,6 +525,7 @@ export function creaSalone3D (base, tuga) {
    * `URLSearchParams` e valori dichiarati, come `?doppia` in `regia.js`: si
    * accetta la presenza nuda (`?guscio`) o un si' esplicito, e nient'altro.
    */
+  let guscio = null
   const vuoleGuscio = () => {
     if (typeof location === 'undefined') return false
     const v = new URLSearchParams(location.search).get('guscio')
@@ -543,8 +544,9 @@ export function creaSalone3D (base, tuga) {
         0 + Number(new URLSearchParams(location.search).get('dy') || 0),
         1.3089 + Number(new URLSearchParams(location.search).get('dz') || 0)),
       quaternione: new Quaternion()
-    })
+    }, larg / alt)
     gruppo.add(g)
+    guscio = g
     stanza.visible = false
   }
 
@@ -943,6 +945,10 @@ export function creaSalone3D (base, tuga) {
   }
 
   function aggiorna (gradi, dt) {
+    /* il guscio proietta la stessa fotografia della lastra, e il proiettore
+       segue il gruppo: il salone rolla, quindi la posa cambia a ogni
+       fotogramma. Una riga qui e nessun secondo padrone. */
+    guscio?.aggiornaProiezione?.(1)
     const a = Math.abs(gradi)
     if (a > ACCENDE) {
       calmoDa = 0

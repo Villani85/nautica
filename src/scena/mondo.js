@@ -5,6 +5,7 @@ import { arredaMondo, misuratore } from './arredo-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
 import { sezioneA, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
+import { innestaProiezione, matriceProiettore } from './proiezione.js'
 
 /**
  * IL MONDO DELLA TRAVERSATA — gli spazi veri, attraversati davvero.
@@ -621,7 +622,7 @@ let daRicuocere = 0
    */
   const proiettore = new PerspectiveCamera(PROIEZIONE_GRADI, 1.6, 0.05, 60)
   let fotoSalone = null
-  const uniformiProiezione = []
+  const proiezioni = []
   const _matriceProiezione = new Matrix4()
   /**
    * ─── E SI SPEGNE APPENA LA CODA COMINCIA
@@ -658,60 +659,17 @@ let daRicuocere = 0
     if (!fotoSalone) {
       fotoSalone = new VideoTexture(videoSalone)
       fotoSalone.colorSpace = SRGBColorSpace
-      /**
-       * ─── IL PROIETTORE STA DOVE LA CAMERA ARRIVA, non dove il GLB dice
-       *
-       * L'ultima posa grezza e' [0,0,0] col quaternione della sorgente, cioe'
-       * la lente da cui la fotografia e' stata scattata
-       * (`riferimenti/salone/posa.json`). Ma la camera del sito NON ci arriva
-       * esattamente: `ancoraA` applica una `correzione` che porta l'ultima posa
-       * sull'orientamento della lastra -- fino a diciannove gradi, ed e' la cura
-       * di `983af51`. Con il proiettore sulla posa grezza, nel provino la
-       * fotografia arrivava spostata di quei gradi: si vedeva la stanza sul
-       * fianco sinistro del quadro e una fascia beige a destra.
-       *
-       * Quindi il proiettore prende `posaA(1)`, che e' la posa CORRETTA -- la
-       * stessa che la camera avra' all'arrivo, e quella su cui la lastra e'
-       * montata. Cosi' i due si sovrappongono invece di litigare.
-       */
     }
     const mm = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     for (const m of mm) {
-      if (!m || m.__proiettato) continue
-      m.__proiettato = true
-      m.onBeforeCompile = (sh) => {
-        sh.uniforms.uFoto = { value: fotoSalone }
-        sh.uniforms.uProiezione = { value: new Matrix4() }
-        sh.uniforms.uMiscela = { value: 0 }
-        uniformiProiezione.push(sh.uniforms)
-        sh.vertexShader = `varying vec3 vPuntoMondo;
-` + sh.vertexShader.replace(
-          '#include <begin_vertex>',
-          `#include <begin_vertex>
-  vPuntoMondo = (modelMatrix * vec4(position, 1.0)).xyz;`)
-        sh.fragmentShader = `uniform sampler2D uFoto;
-uniform mat4 uProiezione;
-uniform float uMiscela;
-varying vec3 vPuntoMondo;
-` +
-          sh.fragmentShader.replace('#include <colorspace_fragment>', `#include <colorspace_fragment>
-  if (uMiscela > 0.001) {
-    vec4 pp = uProiezione * vec4(vPuntoMondo, 1.0);
-    if (pp.w > 0.0) {
-      vec2 uvp = pp.xy / pp.w * 0.5 + 0.5;
-      /* fuori dal fotogramma non si inventa niente: si resta sul guscio */
-      float dentro = step(0.0, uvp.x) * step(uvp.x, 1.0) * step(0.0, uvp.y) * step(uvp.y, 1.0);
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, texture2D(uFoto, uvp).rgb, uMiscela * dentro);
-    }
-  }`)
-      }
-      m.needsUpdate = true
+      const r = innestaProiezione(m, fotoSalone)
+      if (r && !proiezioni.includes(r)) proiezioni.push(r)
     }
   }
 
   /** La miscela segue la corsa: zero lontano, tutta all'arrivo. */
   function aggiornaProiezione (q, coda) {
-    if (!uniformiProiezione.length) return
+    if (!proiezioni.length) return
     const t = MathUtils.smoothstep(q, PROIEZIONE_DA, 1)
     /**
      * ─── E SI SPEGNE QUANDO LA CAMERA LASCIA LA POSA D'ARRIVO
@@ -749,11 +707,11 @@ varying vec3 vPuntoMondo;
       proiettore.aspect = cameraDelSito.aspect
       proiettore.updateProjectionMatrix()
     }
-    proiettore.updateMatrixWorld(true)
-    _matriceProiezione.copy(proiettore.projectionMatrix).multiply(proiettore.matrixWorldInverse)
-    for (const u of uniformiProiezione) {
-      u.uMiscela.value = t * vicino * PROIEZIONE
-      u.uProiezione.value.copy(_matriceProiezione)
+    matriceProiettore(proiettore, _matriceProiezione)
+    for (const r of proiezioni) {
+      if (!r.uniformi) continue
+      r.uniformi.uMiscela.value = t * vicino * PROIEZIONE
+      r.uniformi.uProiezione.value.copy(_matriceProiezione)
     }
   }
 
@@ -1633,8 +1591,8 @@ function vistaLibera (s) {
         /* la proiezione sul guscio: quanto ne arriva adesso e quanto siamo
            lontani dalla posa in cui e' esatta. Un cancello (o io in un
            provino) deve poterlo LEGGERE invece di dedurlo dal colore */
-        proiezione: uniformiProiezione.length
-          ? { miscela: +(uniformiProiezione[0].uMiscela.value.toFixed(3)), pezzi: uniformiProiezione.length, arrivo: [+proiettore.position.x.toFixed(3), +proiettore.position.y.toFixed(3), +proiettore.position.z.toFixed(3)] }
+        proiezione: proiezioni.length && proiezioni[0].uniformi
+          ? { miscela: +(proiezioni[0].uniformi.uMiscela.value.toFixed(3)), pezzi: proiezioni.length, arrivo: [+proiettore.position.x.toFixed(3), +proiettore.position.y.toFixed(3), +proiettore.position.z.toFixed(3)] }
           : null,
         vestite,
         arredati,
