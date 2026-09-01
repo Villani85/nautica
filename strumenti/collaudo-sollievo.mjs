@@ -79,10 +79,31 @@ try {
    *   fermo=24 -> -1,343    fermo=28 -> +1,184    fermo=32 -> +1,599
    *   fermo=29 -> +6,288    fermo=30 -> +7,226    fermo=33 -> -2,165
    *
-   * 28 sta sotto CALMO (2,0) e molto sotto ACCENDE (5,0): il ciclo non puo'
-   * ne' interrompere ne' azzerare `calmoDa`. Non e' un numero scelto a occhio.
+   * PRIMA SCELTA SBAGLIATA: 28, cioe' +1,184 gradi. Avevo ragionato solo su
+   * ACCENDE e avevo preso il piu' quieto che trovavo. Ma 1,184 sta SOTTO CALMO
+   * (2,0), e li' il ciclo di disegno accumula `calmoDa` da solo: il sollievo
+   * partiva all'apertura, prima che il cancello chiedesse niente. La corsa 294
+   * l'ha detto con precisione --
+   *
+   *     finale 5.00 s · fermo si        (il filmato ADESSO arriva in fondo:
+   *                                      quello per cui il fermo esisteva e'
+   *                                      risolto)
+   *     gesto  NON PARTE dopo tensione + quiete
+   *     calma  riparte a 1.19 s         invece che da zero
+   *
+   * -- cioe' era gia' partito e finito da sé.
+   *
+   * SERVE LA BANDA NEUTRA: sopra CALMO cosi' il ciclo non accumula quiete, e
+   * sotto ACCENDE cosi' non interrompe. Misurati uno per uno:
+   *
+   *   fermo=24 -> -1,343   fermo=28 -> +1,184   fermo=32 -> +1,599   (sotto CALMO)
+   *   fermo=20 -> +2,483   fermo=33 -> -2,165                        (nella banda)
+   *   fermo=29 -> +6,288   fermo=30 -> +7,226                        (sopra ACCENDE)
+   *
+   * 20 sta a +2,483: mezzo grado sopra CALMO e due e mezzo sotto ACCENDE, il
+   * punto piu' lontano da entrambi i bordi. Non e' un numero scelto a occhio.
    */
-  await pagina.goto(BASE + '?ispeziona=1&fermo=28', { waitUntil: 'load', timeout: 45000 })
+  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
   await pagina.waitForFunction(() => window.__nautica?.statoSollievo?.(), null, { timeout: 60000 })
   /**
    * ─── `>= 3`, NON `>= 2`, e la differenza e' tutta qui
@@ -165,6 +186,38 @@ try {
     return Math.abs(n.stato.rollio) < 1.2
   }, null, { timeout: 20000 }).then(() => true).catch(() => false)
   if (!calmata) guai.push('accendendo lo stabilizzatore il rollio non scende: il sollievo non avrebbe una causa')
+
+  /**
+   * ─── DA QUI IN POI LA SIMULAZIONE SI INCHIODA, E PRIMA NO
+   *
+   * Sono due domande diverse e vogliono due condizioni opposte.
+   *
+   * LA CAUSALITA' -- «accendendo, il rollio scende» -- ha bisogno della
+   * simulazione VIVA: e' proprio il suo muoversi la cosa che si misura. Con
+   * `?fermo` il rollio non puo' scendere per definizione, e il controllo
+   * diventa un rosso garantito. L'ho provato: la corsa lo dice.
+   *
+   * IL MONTAGGIO -- parte, dura cinque secondi, consegna alla calma -- ha
+   * bisogno del contrario: che nessuno gli cambi il mare sotto mentre lo
+   * guarda. Sul runner il filmato impiega piu' tempo REALE ad arrivare in
+   * fondo, e la simulazione ha piu' occasioni di superare la soglia che
+   * interrompe. Senza fermo, il video restava a 0,00 s.
+   *
+   * Quindi si ricarica. Il fermo va scelto NELLA BANDA NEUTRA, sopra CALMO
+   * (2,0) cosi' il ciclo non accumula quiete da solo e sotto ACCENDE (5,0)
+   * cosi' non interrompe:
+   *
+   *   fermo=24 -> -1,343   fermo=28 -> +1,184   fermo=32 -> +1,599   sotto CALMO
+   *   fermo=20 -> +2,483   fermo=33 -> -2,165                        NELLA BANDA
+   *   fermo=29 -> +6,288   fermo=30 -> +7,226                        sopra ACCENDE
+   *
+   * 20 e' il punto piu' lontano da entrambi i bordi. Con 28 -- che avevo scelto
+   * guardando solo ACCENDE -- il sollievo partiva all'apertura da solo, e la
+   * corsa 294 diceva «gesto NON PARTE» perche' era gia' finito.
+   */
+  await pagina.goto(BASE + '?ispeziona=1&fermo=20', { waitUntil: 'load', timeout: 45000 })
+  await pagina.waitForFunction(() => window.__nautica?.statoSollievo?.(), null, { timeout: 60000 })
+    .catch(() => guai.push('dopo il fermo la scena non rinasce'))
 
   /* Poi il mare obbliga davvero a puntellarsi; poi resta calmo oltre la
      stessa soglia temporale usata dal sito. Il passo e' dichiarato: il test
