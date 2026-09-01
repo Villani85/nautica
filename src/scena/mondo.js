@@ -1,4 +1,4 @@
-import { Group, MathUtils, Quaternion, Vector3, PointLight, AmbientLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4 } from 'three'
+import { Group, MathUtils, Quaternion, Vector3, PointLight, AmbientLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4, PerspectiveCamera, VideoTexture, SRGBColorSpace } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { vestiMondo } from './materie-mondo.js'
 import { arredaMondo, misuratore } from './arredo-mondo.js'
@@ -102,7 +102,7 @@ const _v = new Vector3()
  *   leggono lo stesso interruttore sono due valori che un giorno divergono, ed
  *   e' il difetto che questo file ha gia' pagato con `mostra`.
  */
-export function creaMondo (base, scena, { ombre = 0, ambienteInterno = null } = {}) {
+export function creaMondo (base, scena, { ombre = 0, ambienteInterno = null, videoSalone = null } = {}) {
   const gruppo = new Group()
   gruppo.name = 'MONDO_TRAVERSATA'
   gruppo.visible = false
@@ -435,6 +435,40 @@ const LATO_OMBRA_PICCOLO = 256
  */
 const RIFLESSO = numeroDaUrl('riflesso', 1, 0, 4)
 
+/**
+ * ─── IL GUSCIO DEL SALONE NON DEVE RESTARE UNA SCATOLA BEIGE
+ *
+ * Nel filmato della traversata gli ultimi otto secondi sono una stanza vuota di
+ * colore crema: il guscio del salone e' fatto di otto piani (`Mesh_0..7`,
+ * materiale `GUSCIO`) e non porta nessuna immagine. E' il difetto piu' visibile
+ * di tutta la corsa, e la revisione lo chiede da giorni: «un modo di far reggere
+ * una proiezione su un guscio essenziale».
+ *
+ * La proiezione qui e' possibile per una ragione che non vale in nessun altro
+ * punto del sito: **la traversata FINISCE sulla camera sorgente**. L'origine del
+ * frame del mondo E' `CAMERA_SORGENTE_SALONE` -- l'ultima posa e' [0,0,0] -- e
+ * `riferimenti/salone/posa.json` dichiara che quella fotografia e' montata su
+ * una lente da 34 gradi verticali (focale 1177,51 px). Quindi:
+ *
+ *   · da lontano la proiezione si spalma, ed e' il difetto noto di ogni
+ *     proiezione su guscio;
+ *   · man mano che la camera si avvicina l'errore si CHIUDE da solo;
+ *   · all'arrivo la camera e' NEL fuoco del proiettore e l'immagine e' esatta,
+ *     che e' anche l'istante in cui la lastra del filmato prende il comando.
+ *
+ * Non e' un trucco che regge per caso: regge dove serve e sbaglia dove non si
+ * guarda. Per questo la miscela sale con la corsa invece di stare accesa.
+ *
+ * Il filmato e' lo STESSO della lastra che segue (`salone-largo.mp4`, che
+ * `salone3d.js` chiama la calma e presta gia' alla traversata): una seconda
+ * `VideoTexture` sullo stesso `<video>` non costa un secondo flusso.
+ */
+const PROIEZIONE_GRADI = 34
+/** Da che punto della corsa la fotografia comincia a comparire sul guscio. */
+const PROIEZIONE_DA = numeroDaUrl('proiezioneda', 0.55, 0, 1)
+/** Quanto ne arriva alla fine: `?proiezione=0` spegne tutto e lascia il beige. */
+const PROIEZIONE = numeroDaUrl('proiezione', 1, 0, 1)
+
 const PIASTRA_SOTTO_IL_SOFFITTO_M = 0.01
 const LUCE_SOTTO_IL_SOFFITTO_M = 0.18
 /** Da dove parte il raggio che cerca il soffitto: sopra la posa, sotto l'occhio. */
@@ -523,6 +557,7 @@ function isolaDallaLuceDiFuori (camera) {
        * scena senza disegnarla) si resta a zero, che e' il comportamento di
        * prima e non rompe niente.
        */
+      if (m.name === 'GUSCIO') preparaProiezione(o)
       m.envMap = ambienteInterno || null
       m.envMapIntensity = ambienteInterno ? RIFLESSO : 0
       /**
@@ -559,7 +594,158 @@ let ombreggianti = []
 /** Quante volte ancora ricuocere la mappa dopo un cambio: vedi `RICOTTURE`. */
 let daRicuocere = 0
 
-function accendiLuci () {
+  /**
+   * ─── LA PROIEZIONE SUL GUSCIO, e come si aggancia a un materiale esistente
+   *
+   * Si innesta nello shader del materiale del guscio invece di sostituirlo:
+   * cosi' il guscio resta illuminato come il resto della traversata finche' la
+   * miscela e' bassa, e diventa fotografia quando sale.
+   *
+   * L'innesto sta DOPO `colorspace_fragment`, non prima. La lastra del filmato
+   * si monta con `toneMapped: false` perche' la fotografia porta gia' la
+   * propria curva; mescolare il colore dopo la conversione di spazio fa
+   * esattamente la stessa cosa, e i due (guscio e lastra) restano confrontabili
+   * invece di stare uno una curva piu' in la' dell'altro.
+   */
+  const proiettore = new PerspectiveCamera(PROIEZIONE_GRADI, 1.6, 0.05, 60)
+  let fotoSalone = null
+  const uniformiProiezione = []
+  const _matriceProiezione = new Matrix4()
+  /**
+   * ─── E SI SPEGNE APPENA LA CODA COMINCIA
+   *
+   * La proiezione e' esatta in UN punto: la posa d'arrivo, che e' la lente
+   * della fotografia. Finche' ci si avvicina l'errore si chiude e va bene.
+   * Dopo, no: nella coda il mondo resta acceso finche' il filmato e' pronto
+   * (`960cf20`), la lastra sta 1,3 unita' davanti -- cioe' DIETRO le pareti del
+   * guscio -- e la camera si muove. Nel provino a pCoda 0,03 si vedevano bande
+   * e cunei: la stessa stanza disegnata due volte con qualche grado di scarto.
+   *
+   * Provato anche a proiettare dalla camera VIVA in quel tratto: peggio (43
+   * livelli di scarto medio contro 22). E provato a spegnere con la DISTANZA
+   * dalla posa d'arrivo: la camera che `ancoraA` riceve non e' quella che
+   * percorre la traversata -- il suo `getWorldPosition` dava [1,82 0 0,69]
+   * mentre la posa d'arrivo sta a [0,01 1,45 1,91] -- quindi la distanza
+   * misurava due cose diverse e la proiezione restava spenta sempre.
+   *
+   * La coda invece arriva a `mostra` insieme alla corsa, dallo stesso posto e
+   * nello stesso istante: e' l'unico numero che non puo' divergere.
+   *
+   * E il valore non e' scelto: 0,125 e' il punto in cui la lastra e' PIENA
+   * (`traversata.js` la sale con `c * 8`, e `index.js` ci appoggia sopra il suo
+   * `CODA_CONSEGNATA = 0,13`). Cosi' le due immagini si scambiano invece di
+   * sommarsi: il guscio perde la fotografia con la stessa rampa con cui la
+   * lastra la prende, e sono la STESSA fotografia. Se quella rampa cambia,
+   * questo numero va cambiato con lei -- come gia' avverte il commento di
+   * `CODA_CONSEGNATA`.
+   */
+  const CODA_SPEGNI_PROIEZIONE = 0.125
+
+  function preparaProiezione (mesh) {
+    if (!videoSalone) return
+    if (!fotoSalone) {
+      fotoSalone = new VideoTexture(videoSalone)
+      fotoSalone.colorSpace = SRGBColorSpace
+      /**
+       * ─── IL PROIETTORE STA DOVE LA CAMERA ARRIVA, non dove il GLB dice
+       *
+       * L'ultima posa grezza e' [0,0,0] col quaternione della sorgente, cioe'
+       * la lente da cui la fotografia e' stata scattata
+       * (`riferimenti/salone/posa.json`). Ma la camera del sito NON ci arriva
+       * esattamente: `ancoraA` applica una `correzione` che porta l'ultima posa
+       * sull'orientamento della lastra -- fino a diciannove gradi, ed e' la cura
+       * di `983af51`. Con il proiettore sulla posa grezza, nel provino la
+       * fotografia arrivava spostata di quei gradi: si vedeva la stanza sul
+       * fianco sinistro del quadro e una fascia beige a destra.
+       *
+       * Quindi il proiettore prende `posaA(1)`, che e' la posa CORRETTA -- la
+       * stessa che la camera avra' all'arrivo, e quella su cui la lastra e'
+       * montata. Cosi' i due si sovrappongono invece di litigare.
+       */
+    }
+    const mm = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const m of mm) {
+      if (!m || m.__proiettato) continue
+      m.__proiettato = true
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.uFoto = { value: fotoSalone }
+        sh.uniforms.uProiezione = { value: new Matrix4() }
+        sh.uniforms.uMiscela = { value: 0 }
+        uniformiProiezione.push(sh.uniforms)
+        sh.vertexShader = `varying vec3 vPuntoMondo;
+` + sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+  vPuntoMondo = (modelMatrix * vec4(position, 1.0)).xyz;`)
+        sh.fragmentShader = `uniform sampler2D uFoto;
+uniform mat4 uProiezione;
+uniform float uMiscela;
+varying vec3 vPuntoMondo;
+` +
+          sh.fragmentShader.replace('#include <colorspace_fragment>', `#include <colorspace_fragment>
+  if (uMiscela > 0.001) {
+    vec4 pp = uProiezione * vec4(vPuntoMondo, 1.0);
+    if (pp.w > 0.0) {
+      vec2 uvp = pp.xy / pp.w * 0.5 + 0.5;
+      /* fuori dal fotogramma non si inventa niente: si resta sul guscio */
+      float dentro = step(0.0, uvp.x) * step(uvp.x, 1.0) * step(0.0, uvp.y) * step(uvp.y, 1.0);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, texture2D(uFoto, uvp).rgb, uMiscela * dentro);
+    }
+  }`)
+      }
+      m.needsUpdate = true
+    }
+  }
+
+  /** La miscela segue la corsa: zero lontano, tutta all'arrivo. */
+  function aggiornaProiezione (q, coda) {
+    if (!uniformiProiezione.length) return
+    const t = MathUtils.smoothstep(q, PROIEZIONE_DA, 1)
+    /**
+     * ─── E SI SPEGNE QUANDO LA CAMERA LASCIA LA POSA D'ARRIVO
+     *
+     * La proiezione e' esatta in UN punto -- la posa d'arrivo, che e' la lente
+     * della fotografia -- e sbaglia tanto quanto ci si allontana. Finche' ci si
+     * avvicina, l'errore si chiude e va bene cosi'. Dopo, no: nella coda il
+     * mondo resta acceso finche' il filmato e' pronto (`960cf20`), la lastra sta
+     * 1,3 unita' davanti (cioe' DIETRO le pareti del guscio) e la camera si
+     * muove. Nel provino a pCoda 0,03 si vedevano bande e cunei: la stessa
+     * stanza disegnata due volte con qualche grado di scarto.
+     *
+     * Provato anche a proiettare dalla camera VIVA in quel tratto -- il guscio
+     * come schermo allineato al quadro -- ed era peggio: 43 livelli di scarto
+     * medio contro i 22 di prima, perche' li' il guscio sta gia' sfumando e
+     * l'immagine ci passa attraverso.
+     *
+     * Quindi la miscela si spegne con la DISTANZA dalla posa d'arrivo. Non e'
+     * una soglia sul tempo ne' sulla battuta: e' la stessa quantita' che rende
+     * la proiezione sbagliata, misurata dove nasce.
+     */
+    const arrivo = posaA(1)
+    if (!arrivo) return
+    proiettore.position.copy(arrivo.p)
+    proiettore.quaternion.copy(arrivo.q)
+    const vicino = 1 - MathUtils.smoothstep(coda, 0, CODA_SPEGNI_PROIEZIONE)
+    /**
+     * L'apertura del proiettore e' quella della LASTRA che segue, non quella
+     * della camera in quel momento: durante la traversata l'obiettivo si apre
+     * a 58 gradi per far stare i locali nel quadro (`index.js`, `campoTraversata`),
+     * ma la fotografia e' montata su 34. Il rapporto invece e' quello dello
+     * schermo, perche' e' cosi' che la lastra riempie il quadro.
+     */
+    if (cameraDelSito && cameraDelSito.aspect && proiettore.aspect !== cameraDelSito.aspect) {
+      proiettore.aspect = cameraDelSito.aspect
+      proiettore.updateProjectionMatrix()
+    }
+    proiettore.updateMatrixWorld(true)
+    _matriceProiezione.copy(proiettore.projectionMatrix).multiply(proiettore.matrixWorldInverse)
+    for (const u of uniformiProiezione) {
+      u.uMiscela.value = t * vicino * PROIEZIONE
+      u.uProiezione.value.copy(_matriceProiezione)
+    }
+  }
+
+  function accendiLuci () {
   if (luci || !grezze || !grezze.length) return
   luci = new Group()
   luci.name = 'luciPratiche'
@@ -1378,11 +1564,15 @@ function vistaLibera (s) {
      * e' una cosa diversa: vedi li' sotto il perche' averle unite fosse un
      * difetto.
      */
-    mostra (q) {
+    mostra (q, coda = 0) {
       gruppo.visible = pronto && q > 0.002
       /* chi proietta lo decide chi si vede: `mostra` e' l'unico che sa se la
          stanza e' in scena, e riceve la stessa corsa della posa */
-      if (gruppo.visible) { const p = posaA(q); if (p) scegliChiProietta(p.p) }
+      if (gruppo.visible) {
+        const p = posaA(q)
+        if (p) scegliChiProietta(p.p)
+        aggiornaProiezione(q, coda)
+      }
     },
 
     /**
@@ -1428,6 +1618,12 @@ function vistaLibera (s) {
         francoChiglia,
         ancorato,
         luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
+        /* la proiezione sul guscio: quanto ne arriva adesso e quanto siamo
+           lontani dalla posa in cui e' esatta. Un cancello (o io in un
+           provino) deve poterlo LEGGERE invece di dedurlo dal colore */
+        proiezione: uniformiProiezione.length
+          ? { miscela: +(uniformiProiezione[0].uMiscela.value.toFixed(3)), pezzi: uniformiProiezione.length, arrivo: [+proiettore.position.x.toFixed(3), +proiettore.position.y.toFixed(3), +proiettore.position.z.toFixed(3)] }
+          : null,
         vestite,
         arredati,
         riallineati,

@@ -745,7 +745,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * `?mondo=0` resta per misurare il sito com'era: serve ai cancelli, non al
    * visitatore.
    */
-  const mondo = vuoleMondo() ? creaMondo(base, scena, { ombre: TESSITURA_OMBRA, ambienteInterno: creaAmbienteInterno(render, PMREMGenerator) }) : null
+  const mondo = vuoleMondo() ? creaMondo(base, scena, { ombre: TESSITURA_OMBRA, ambienteInterno: creaAmbienteInterno(render, PMREMGenerator), videoSalone: salone?.videoCalma || null }) : null
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE
@@ -1794,7 +1794,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * Adesso decide una sola espressione: la traversata e' finita quando
        * comincia la coda.
        */
-      mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata)
+      mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata, corsaCoda)
       /* il fuori si spegne solo mentre si attraversa: appena comincia la coda
          il salone deve poter apparire, e vive sullo strato zero */
       mondo.soloDentro(corsaTraversata > 0.002 && corsaCoda <= 0.002)
@@ -2245,7 +2245,12 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       corsaTraversata = q
       /* col mondo acceso il filmato non serve: la traversata la fa la camera */
       traversata.mostra(SENZA_FILMATO || (mondo && mondo.pronto) ? 0 : q)
-      mondo?.mostra(q)
+      /* la coda va passata anche qui: questa chiamata arriva a ogni scorrimento
+         e, senza, riaccenderebbe la proiezione che il fotogramma aveva spento.
+         E' il difetto dei due padroni che questo file ha gia' pagato con
+         `mostra`, e stavolta l'ho visto in un provino: 92 livelli di scarto
+         sul primo fotogramma della coda fra proiezione accesa e spenta. */
+      mondo?.mostra(q, corsaCoda)
     },
     /**
      * Aggancia i richiami tecnici. `fn.nomi` sono i nodi del GLB a cui puntano;
