@@ -314,9 +314,28 @@ scelte sono di messa in scena e le ho scritte come numeri, non decise:
 CAMPO_DENTRO_GRADI       58      src/scena/index.js    lente dentro i locali; ?campo=N per provare (34..100)
 CAMPO_TORNA_SITO_A       0,88    src/scena/index.js    a che s la lente e' tornata a 34; alternativa: rampa solo in scala [0,62, 0,88]
 AMBIENTE                 0,22    src/scena/mondo.js    luce diffusa che rende leggibile l'AO cotta; ?ambiente=N
+PORTATA_M                3,6     src/scena/mondo.js    dice metri e vale UNITA': sono nove metri; ?portata=1.44 per i 3,6 veri
 guscio vuoto del salone  pCoda 0-0,13                  6-8 s di scatola beige a velocita' costante prima del filmato
 cielino del salone       striscia calda                dalle PointLight del salone, che non ho toccato
 ```
+
+**Due avvertenze su questa tabella, perche' due numeri non erano quello che
+sembravano.** `AMBIENTE` valeva **zero** in ogni visita fino al commit
+`04fd461`: `Number(new URLSearchParams(...).get('ambiente'))` su un parametro
+assente da' `0`, non `NaN`, e il controllo lo accettava. La luce diffusa che
+serve a far vedere l'occlusione cotta era spenta, e il filmato che ho mandato
+prima di quel commit e' senza. E `PORTATA_M` e' un difetto di unita' con una
+conseguenza visibile: `PointLight.distance` sta in coordinate di mondo e non si
+scala col gruppo, quindi le sette plafoniere -- una ogni metro e mezzo --
+hanno tutte nove metri di portata e illuminano la stessa stanza.
+
+**E da li' viene il terzo numero: le ombre della traversata non si vedono.** Le
+due plafoniere piu' vicine proiettano davvero (mappa cubica 512, l'arredo
+proietta, le stanze ricevono), ma l'ombra di una la riempiono le altre sei.
+Misurato con `node strumenti/misura-ombra.mjs`: **6 livelli su 255 nel blocco
+che cambia di piu', contro un fondo di rumore di 6** -- cioe' niente. Se le
+macchine devono toccare il pavimento, la leva non e' l'ombra: e' la luce
+(portata, quante plafoniere, intensita'), e quella e' tua.
 
 E due che restano dal giro precedente: **le schede HUD sopra il corridoio a
 p≈0,93** (la traversata comincia sotto una scheda), e **lo sguardo in scala**

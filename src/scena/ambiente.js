@@ -159,3 +159,58 @@ export function creaAmbiente (render, PMREMGenerator, intensitaSole, sotto = 0) 
   pmrem.dispose()
   return bersaglio.texture
 }
+
+/**
+ * ─── E SOTTO COPERTA SERVE UN AMBIENTE SUO, non il cielo e non il buio
+ *
+ * `mondo.js` porta le maglie della traversata su uno strato proprio e mette
+ * `envMapIntensity = 0`, con una ragione giusta: dentro lo scafo non c'e'
+ * cielo, e il mare che entrava da tutte le paratie era il difetto peggiore che
+ * quelle stanze avessero. Ma zero e' l'altro estremo, e si vede nel provino: i
+ * tubi, il corrimano e i carter delle macchine sono `metalness` alto, e un
+ * metallo che non riflette NIENTE non e' metallo, e' plastica opaca. Anche la
+ * ruvidita' variabile e le normali di `materie-mondo.js` restano invisibili:
+ * senza una sorgente larga da accrocciare, un rilievo non si legge.
+ *
+ * Quindi una mappa d'ambiente SUA, che descrive la stanza in cui si trova:
+ * un cielino chiaro e caldo (le plafoniere), pareti a meta' tono, un pagliolo
+ * scuro. Costa una tela 128x64 e una prefiltratura, cioe' zero byte di rete --
+ * la stessa scelta, e le stesse ragioni, dell'ambiente di fuori.
+ *
+ * Non e' un HDRI e non pretende di esserlo: e' il gradiente giusto perche' un
+ * tubo abbia un alto e un basso.
+ */
+export function creaAmbienteInterno (render, PMREMGenerator) {
+  const L = 128
+  const H = 64
+  const c = typeof document !== 'undefined' ? document.createElement('canvas') : null
+  if (!c) return null
+  c.width = L; c.height = H
+  const x = c.getContext('2d')
+
+  /* dall'alto in basso: cielino caldo, paratie a meta' tono, pagliolo scuro.
+     I numeri sono quelli dei materiali del mondo, non colori nuovi */
+  const g = x.createLinearGradient(0, 0, 0, H)
+  g.addColorStop(0.00, 'rgb(255,238,214)')   // il cielino sotto le plafoniere
+  g.addColorStop(0.22, 'rgb(150,140,126)')
+  g.addColorStop(0.55, 'rgb(96,92,86)')      // le paratie
+  g.addColorStop(0.80, 'rgb(46,45,43)')
+  g.addColorStop(1.00, 'rgb(24,24,23)')      // il pagliolo
+  x.fillStyle = g
+  x.fillRect(0, 0, L, H)
+
+  /* e due strisce piu' chiare in alto: le plafoniere sono lunghe e strette, e
+     un tubo cilindrico riflette la LORO forma -- una riga, non una macchia */
+  x.fillStyle = 'rgba(255,244,224,0.85)'
+  x.fillRect(0, Math.round(H * 0.06), L, Math.max(1, Math.round(H * 0.05)))
+
+  const tela = new CanvasTexture(c)
+  tela.mapping = EquirectangularReflectionMapping
+  tela.colorSpace = SRGBColorSpace
+  const pmrem = new PMREMGenerator(render)
+  pmrem.compileEquirectangularShader()
+  const bersaglio = pmrem.fromEquirectangular(tela)
+  tela.dispose()
+  pmrem.dispose()
+  return bersaglio.texture
+}

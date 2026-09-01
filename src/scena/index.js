@@ -13,7 +13,7 @@ import { creaTraversata } from './traversata.js'
 import { creaMondo, vuoleMondo } from './mondo.js'
 import { creaMacchine } from './macchine.js'
 import { LA_SCENA_E_UNA } from '../regia.js'
-import { creaAmbiente, telaAmbiente } from './ambiente.js'
+import { creaAmbiente, creaAmbienteInterno, telaAmbiente } from './ambiente.js'
 import { applicaAmbiente, materiaDelloScafo} from './materiali.js'
 import { costruisciFuoribordo } from './fuoribordo.js'
 import { avanza, FERMO_A } from '../stato.js'
@@ -745,7 +745,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * `?mondo=0` resta per misurare il sito com'era: serve ai cancelli, non al
    * visitatore.
    */
-  const mondo = vuoleMondo() ? creaMondo(base, scena, { ombre: TESSITURA_OMBRA }) : null
+  const mondo = vuoleMondo() ? creaMondo(base, scena, { ombre: TESSITURA_OMBRA, ambienteInterno: creaAmbienteInterno(render, PMREMGenerator) }) : null
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE

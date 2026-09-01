@@ -102,7 +102,7 @@ const _v = new Vector3()
  *   leggono lo stesso interruttore sono due valori che un giorno divergono, ed
  *   e' il difetto che questo file ha gia' pagato con `mostra`.
  */
-export function creaMondo (base, scena, { ombre = 0 } = {}) {
+export function creaMondo (base, scena, { ombre = 0, ambienteInterno = null } = {}) {
   const gruppo = new Group()
   gruppo.name = 'MONDO_TRAVERSATA'
   gruppo.visible = false
@@ -429,6 +429,12 @@ const OMBRA_FORZA = numeroDaUrl('ombraforza', 0.7, 0, 1)
 const LATO_OMBRA_GRANDE = 512
 const LATO_OMBRA_PICCOLO = 256
 
+/**
+ * Quanto riflettono le superfici della traversata. `?riflesso=<n>` lo cambia.
+ * Non e' una tavolozza: e' quanto della stanza si vede addosso al metallo.
+ */
+const RIFLESSO = numeroDaUrl('riflesso', 1, 0, 4)
+
 const PIASTRA_SOTTO_IL_SOFFITTO_M = 0.01
 const LUCE_SOTTO_IL_SOFFITTO_M = 0.18
 /** Da dove parte il raggio che cerca il soffitto: sopra la posa, sotto l'occhio. */
@@ -509,7 +515,16 @@ function isolaDallaLuceDiFuori (camera) {
        * Zero e' voluto e non e' timidezza: sotto coperta non c'e' cielo. Se un
        * riflesso servira', tornera' da una mappa SUA -- non da quella di fuori.
        */
-      m.envMapIntensity = 0
+      /**
+       * ─── ZERO E' L'ALTRO ESTREMO: adesso c'e' una mappa DI QUI
+       *
+       * Vedi `creaAmbienteInterno` in `ambiente.js`. Se il mondo non la
+       * riceve (nessun renderer, per esempio nei cancelli che montano la
+       * scena senza disegnarla) si resta a zero, che e' il comportamento di
+       * prima e non rompe niente.
+       */
+      m.envMap = ambienteInterno || null
+      m.envMapIntensity = ambienteInterno ? RIFLESSO : 0
       /**
        * ─── E SI VEDONO ANCHE DA DENTRO
        *
