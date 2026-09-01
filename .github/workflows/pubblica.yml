@@ -366,7 +366,24 @@ jobs:
       # corsa: se un giorno cresce, si vede quando e' successo e per cosa.
       # Gira anche dentro `npm run collaudo`: qui resta perche' la sua uscita
       # e' il registro, e un registro si vuole leggere anche quando tutto passa.
+      #
+      # ─── E DA OGGI APRE UN BROWSER, quindi vuole quello che vogliono gli altri
+      #
+      # `peso.mjs` era deterministico: leggeva dimensioni di file. Adesso chiede
+      # al browser QUALI risorse il visitatore scarica davvero, perche' il
+      # dizionario che lo dichiarava e' diventato falso da solo e ha nascosto
+      # 1,67 MB. Con il browser arrivano due bisogni che questo passo non aveva:
+      #
+      #   CHROMIUM: '1'      qui non c'e' un Chrome di sistema
+      #   timeout-minutes    senza, un avvio che si appende ferma la corsa senza
+      #                      dire perche' -- ed e' gia' successo in questo file
+      #
+      # Il cancello cede da solo se il browser non parte: stampa NON MISURABILE
+      # per la riga dei modelli e continua a giudicare filmati e JS. Provato con
+      # ROMPI_PRECARICO=1, che esiste apposta.
       - run: npm run peso
+        timeout-minutes: 20
+        env: { CHROMIUM: '1' }
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

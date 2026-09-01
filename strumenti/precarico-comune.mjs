@@ -47,6 +47,15 @@ const FOTOGRAMMI_DI_QUIETE = 300
  * }>}
  */
 export async function misuraPrecarico () {
+  /* ─── UN GANCIO PER PROVARE IL RIPIEGO, dichiarato
+     Chi usa questa misura deve cedere con grazia quando il browser non parte --
+     `peso.mjs` stampa NON MISURABILE per quella riga e continua a giudicare il
+     resto. Ma un ripiego che non si puo' provare non e' provato, e non c'e'
+     modo di far fallire Chromium a comando senza rompere la macchina.
+     `ROMPI_PRECARICO=1` lo fa, e non esiste in nessun percorso normale. */
+  if (process.env.ROMPI_PRECARICO) {
+    throw new Error('precarico rotto a comando (ROMPI_PRECARICO): serve a provare il ripiego')
+  }
   const a = await anteprima()
   let browser
   try {

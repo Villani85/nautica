@@ -423,10 +423,38 @@ const TETTO_MODELLI = 1.6 * 1e6
  * COSTA: questo cancello era istantaneo e adesso apre un browser. E' il prezzo
  * di una misura al posto di un'affermazione, e sta scritto nel referto.
  */
-const _precarico = await misuraPrecarico()
-const scaricatiDavvero = _precarico.fine
-console.log('  (elenco chiesto al browser, non dichiarato: ' +
-            `${scaricatiDavvero.size} risorse viste in una visita intera)`)
+/**
+ * ─── E SE IL BROWSER NON PARTE, QUESTA RIGA DICE «NON MISURABILE»
+ *
+ * Aprendo un browser questo cancello ha cambiato specie. Era deterministico --
+ * leggeva dimensioni di file, non poteva fallire per ragioni esterne, ed era
+ * istantaneo. Adesso eredita l'intera classe di guasti che ha ucciso venti
+ * corse: Chromium che non parte, SwiftShader lento, un timeout.
+ *
+ * Il rischio non e' la lentezza: e' che il cancello del PESO diventi rosso per
+ * un motivo che col peso non c'entra. Un rosso che tre volte su cinque e'
+ * Chromium insegna a guardare quel cancello con sufficienza, ed e' cosi' che
+ * qui hanno perso credibilita' la manopola (misurava la macchina) e il finale
+ * (misurava la CI).
+ *
+ * La forma che tiene entrambe le proprieta' e' gia' in uso in
+ * `collaudo-filmato`, `collaudo-finale-vivo` e `collaudo-fluidita`: quando una
+ * misura non si puo' fare, QUELLA RIGA dice NON MISURABILE invece di inventare
+ * un numero o bocciare tutto. Il resto del peso -- filmati, JS, tetti -- resta
+ * deterministico e continua a giudicare, e il cancello fallisce solo se un
+ * numero MISURATO sfora.
+ */
+let scaricatiDavvero = null
+let perche = null
+try {
+  scaricatiDavvero = (await misuraPrecarico()).fine
+  console.log('  (elenco chiesto al browser, non dichiarato: ' +
+              `${scaricatiDavvero.size} risorse viste in una visita intera)`)
+} catch (e) {
+  perche = String(e).split(String.fromCharCode(10))[0]
+  console.log(`  NON MISURABILE  l elenco di cio che il browser chiede: ${perche}`)
+  console.log('                  la riga dei modelli non dara un verdetto; il resto si.')
+}
 
 let pesoModelli = 0
 let pesoDietro = 0
@@ -438,12 +466,18 @@ try {
     /* il browser lo chiede in una visita intera? allora il visitatore lo
        scarica, e conta. Se non lo chiede, sta dietro un interruttore -- e lo
        sappiamo perche' l'abbiamo guardato, non perche' l'abbiamo scritto. */
-    if (!scaricatiDavvero.has(f)) { pesoDietro += b; dietro.push(f); continue }
+    if (scaricatiDavvero && !scaricatiDavvero.has(f)) { pesoDietro += b; dietro.push(f); continue }
     pesoModelli += b
     modelli.push(`${f} ${(b / 1e6).toFixed(2)} MB`)
   }
 } catch { /* nessuna cartella */ }
-if (modelli.length) {
+if (modelli.length && !scaricatiDavvero) {
+  /* senza la misura il totale sarebbe la somma di TUTTA la cartella, che non e'
+     cio' che il visitatore scarica: si stampa e non si giudica */
+  console.log(`  NON MIS  ${'Modelli sempre scaricati'.padEnd(42)} ` +
+              `${(pesoModelli / 1e6).toFixed(2)} MB sulla CARTELLA INTERA, non su cio che il ` +
+              'browser chiede — nessun verdetto')
+} else if (modelli.length) {
   const ok = pesoModelli <= TETTO_MODELLI
   const etich = TETTI_ARMATI ? (ok ? 'OK   ' : 'FALSO') : (ok ? 'peso ' : 'SFORA')
   console.log(`  ${etich}  ${'Modelli sempre scaricati'.padEnd(42)} ` +
