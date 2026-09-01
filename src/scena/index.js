@@ -1693,7 +1693,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        */
       _mira.position.set(scarto, dentroY, tugaZ + dist)
       _mira.lookAt(scarto, dentroY, tugaZ)
-      mondo.ancoraA(scarto, dentroY, tugaZ + dist, _mira.quaternion.clone())
+      mondo.ancoraA(scarto, dentroY, tugaZ + dist, _mira.quaternion.clone(), camera)
     }
 
     if (mondo && mondo.pronto) {

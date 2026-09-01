@@ -1,4 +1,4 @@
-import { Group, MathUtils, Quaternion, Vector3 } from 'three'
+import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
@@ -251,8 +251,168 @@ export function creaMondo (base, scena) {
   let correzione = null
   let diag = null
 
+/**
+ * ─── LE LUCI PRATICHE, e perche' sono il primo passo
+ *
+ * DECISIONE DEL COMMITTENTE, 1 settembre 2026, guardando il provino: «e'
+ * bruttissima la traversata ancora». Ha ragione, e il file lo conferma senza
+ * ambiguita': 45 maglie, 17 materiali, TRE immagini -- tutte mappe d'ombra --
+ * NESSUNA texture di colore, e ZERO LUCI.
+ *
+ * Un locale tecnico illuminato dal cielo del sito, cioe' dalla stessa luce che
+ * illumina il mare, e dipinto di grigio uniforme fra 0,20 e 0,62, non puo' che
+ * sembrare una scatola. In un ambiente chiuso e' la LUCE a dire dove sei: prima
+ * delle materie, prima dei contenuti.
+ *
+ * Si parte da qui perche' costa mezz'ora e risponde alla domanda che conta --
+ * questa traversata puo' funzionare? Se no, si sono risparmiate le materie e i
+ * contenuti.
+ *
+ * ─── E LE POSIZIONI SI DERIVANO DALLA CURVA, non si scrivono
+ *
+ * Scrivere coordinate a mano vorrebbe dire ricopiare i numeri del contratto in
+ * un terzo posto -- ed e' il difetto che questo repo ha pagato quattro volte in
+ * tre giorni. La curva della camera passa DENTRO gli ambienti per costruzione:
+ * mettere una plafoniera sopra ogni tratto la mette dove serve, e se domani il
+ * percorso cambia le luci lo seguono senza che nessuno se ne ricordi.
+ *
+ * L'altezza e' l'unico numero libero: 1,55 m sopra la posa, cioe' poco sotto un
+ * soffitto che sta a 2,00. Sopra si incassano nel solaio, sotto si vedono in
+ * faccia.
+ */
+const QUANTE_LUCI = 7
+const ALTEZZA_LUCE_M = 1.55
+/** Portata: due terzi di corridoio, cosi' due plafoniere si sovrappongono
+ *  appena e restano i tratti in ombra fra l'una e l'altra. */
+const PORTATA_M = 3.6
+const COLORE_LUCE = 0xffe6c4     // lampada da lavoro, non luce di giorno
+/**
+ * Intensita' di serie, e `?luce=<n>` la cambia per cercarla guardando -- come
+ * `?quota=` e `?raggio=` fanno gia' per l'inquadratura.
+ *
+ * SEI ERA TROPPO, e non di poco: dentro un corridoio le pareti stanno a mezzo
+ * metro da una plafoniera, e col decadimento quadratico l'illuminamento va a
+ * quattro volte l'intensita'. Il provino usciva PIU' CHIARO che senza mondo --
+ * luminanza media 187 contro 136 -- cioe' le lampade bruciavano la stanza
+ * invece di illuminarla. Un ambiente sotto coperta deve essere piu' scuro del
+ * mare, non piu' chiaro.
+ */
+const INTENSITA = (() => {
+  const v = typeof location !== 'undefined'
+    ? Number(new URLSearchParams(location.search).get('luce'))
+    : NaN
+  return Number.isFinite(v) && v > 0 ? v : 0.35
+})()
+
+let luci = null
+/* la camera del sito: serve a toglierle lo strato di fuori mentre si e' dentro.
+   La riceve `ancoraA`, che e' l'unico posto in cui il sito si presenta. */
+let cameraDelSito = null
+
+/**
+ * ─── PRIMA DI ACCENDERE, BISOGNA SPEGNERE
+ *
+ * Messe le sette plafoniere, il provino non e' cambiato di niente: gli ambienti
+ * restavano bianchi. La causa non erano le luci, era che NON SERVIVANO -- la
+ * scena del sito ha un `HemisphereLight` piu' due direzionali, tarati per una
+ * nave vista al largo, e dentro un corridoio quella luce entra da tutte le
+ * pareti insieme. Una stanza gia' illuminata a giorno non si illumina.
+ *
+ * Aggiungere senza togliere e' il modo di lavorare mezz'ora e non vedere
+ * differenza, e sarebbe stato facile concludere «le luci non bastano» invece di
+ * «le luci non arrivano».
+ *
+ * Lo strato lo risolve alla radice: three.js accende una maglia solo con le
+ * luci il cui strato interseca il suo. Il mondo va su uno strato tutto suo, le
+ * plafoniere pure, e le luci del sito -- che restano sullo strato zero -- non lo
+ * toccano piu'. La camera abilita entrambi, cosi' continua a vedere tutto.
+ *
+ * E la nebbia si toglie con `material.fog = false`: e' l'aria fra la camera e
+ * la nave, e dentro lo scafo non c'e' aria da attraversare.
+ */
+const STRATO_MONDO = 1
+
+function isolaDallaLuceDiFuori (camera) {
+  gruppo.traverse((o) => {
+    if (!o.isMesh) return
+    /* SOLO lo strato del mondo: restando anche sullo zero, le luci del sito
+       continuerebbero ad arrivare e non sarebbe cambiato niente */
+    o.layers.set(STRATO_MONDO)
+    const mm = Array.isArray(o.material) ? o.material : [o.material]
+    for (const m of mm) {
+      if (!m) continue
+      m.fog = false
+      /**
+       * ─── E L'AMBIENTE, che gli strati NON fermano
+       *
+       * Messi gli strati, il provino era ancora identico. Non e' che non
+       * funzionassero: `camera.layers.mask` era 3 e le maglie erano sullo
+       * strato 1 -- verificato leggendo le maschere, non guardando l'immagine.
+       *
+       * La luce arrivava da un'altra parte. `scena.environment` illumina OGNI
+       * materiale standard e non guarda gli strati: e' una mappa, non una
+       * lampada. Il mare e il cielo del sito stavano dentro il corridoio da
+       * tutte le pareti insieme, e nessuna plafoniera poteva competere.
+       *
+       * Zero e' voluto e non e' timidezza: sotto coperta non c'e' cielo. Se un
+       * riflesso servira', tornera' da una mappa SUA -- non da quella di fuori.
+       */
+      m.envMapIntensity = 0
+      /**
+       * ─── E SI VEDONO ANCHE DA DENTRO
+       *
+       * Con la luce giusta la scala si leggeva, ma ai lati si vedeva IL MARE:
+       * le pareti del corridoio non c'erano. Non mancavano -- sono nel file, 45
+       * maglie -- erano scartate. Gli ambienti sono modellati come volumi visti
+       * da FUORI, con le normali in fuori, e la traversata li attraversa da
+       * DENTRO: il taglio delle facce posteriori le fa sparire tutte insieme.
+       *
+       * `DoubleSide` costa un po' di riempimento e risolve la classe intera. La
+       * cura «giusta» sarebbe rivoltare le normali in Blender e ricuocere, che
+       * e' mezza giornata per la stessa immagine.
+       */
+      m.side = DoubleSide
+      m.needsUpdate = true
+    }
+  })
+  camera?.layers?.enable(STRATO_MONDO)
+}
+
+function accendiLuci () {
+  if (luci || !grezze || !grezze.length) return
+  luci = new Group()
+  luci.name = 'luciPratiche'
+  const n = QUANTE_LUCI
+  for (let i = 0; i < n; i++) {
+    /* si salta il primo e l'ultimo estremo: agli estremi ci sono le soglie, e
+       una plafoniera sulla soglia acceca invece di illuminare */
+    const t = (i + 0.5) / n
+    const v = grezze[Math.round(t * (grezze.length - 1))]
+    const x = v.p[0]
+    const y = v.p[1] + ALTEZZA_LUCE_M
+    const z = v.p[2]
+
+    const l = new PointLight(COLORE_LUCE, INTENSITA, PORTATA_M, 2)
+    l.layers.set(STRATO_MONDO)
+    l.position.set(x, y, z)
+    luci.add(l)
+
+    /* e il corpo illuminante si VEDE: una luce senza sorgente visibile e' una
+       stanza illuminata da niente, che l'occhio legge come finta */
+    const piastra = new Mesh(
+      new PlaneGeometry(0.5, 0.12),
+      new MeshBasicMaterial({ color: new Color(COLORE_LUCE), toneMapped: false })
+    )
+    piastra.position.set(x, y + 0.06, z)
+    piastra.layers.set(STRATO_MONDO)
+    piastra.rotation.x = Math.PI / 2
+    luci.add(piastra)
+  }
+  gruppo.add(luci)
+}
+
   let ancorato = false
-  function ancoraA (x, y, z, guardaCome) {
+  function ancoraA (x, y, z, guardaCome, camera) {
     gruppo.position.set(x, y, z)
     gruppo.updateWorldMatrix(true, true)
     componiPose()            // dipendono da matrixWorld: vanno rifatte
@@ -265,6 +425,8 @@ export function creaMondo (base, scena) {
       correzione = guardaCome.clone().multiply(ultima.clone().invert())
       diag = { voluto: [guardaCome.x, guardaCome.y, guardaCome.z, guardaCome.w].map(n=>+n.toFixed(4)), ultima: [ultima.x, ultima.y, ultima.z, ultima.w].map(n=>+n.toFixed(4)) }
     }
+    cameraDelSito = camera || null
+    isolaDallaLuceDiFuori(camera)
     ancorato = true
   }
 
@@ -459,7 +621,7 @@ export function creaMondo (base, scena) {
     caricato: Promise.all([caricato, curva]).then((v) => {
       /* qui, e solo qui, il gruppo e' appoggiato sulla chiglia E le pose
          esistono: e' l'unico istante in cui comporle e' corretto */
-      if (v[0] && v[1]) { componiPose(); misuraFrancoChiglia(); contaPoseSopraPonte() }
+      if (v[0] && v[1]) { componiPose(); misuraFrancoChiglia(); contaPoseSopraPonte(); accendiLuci() }
       return v[0] && v[1]
     }),
     posaA,
@@ -475,7 +637,38 @@ export function creaMondo (base, scena) {
     get errore () { return errore },
     get maglie () { return maglie },
     /** `q` da 0 a 1: quanto il mondo e' in campo. Per ora acceso/spento. */
-    mostra (q) { gruppo.visible = pronto && q > 0.002 },
+    /**
+     * ─── E DENTRO LO SCAFO NON SI VEDE IL MARE
+     *
+     * Con la luce giusta la scala si leggeva, ma ai lati compariva il mare e
+     * una riga orizzontale tagliava il quadro a meta' -- la stessa che si vede
+     * nel provino, anche sopra le due persone del finale.
+     *
+     * NON ERANO LE NORMALI. L'ipotesi ovvia -- volumi modellati da fuori, facce
+     * posteriori scartate -- l'ho provata con `DoubleSide` e non e' cambiato
+     * niente. Misurato invece di indovinato: le pareti ci sono e sono visibili,
+     * x da -0,21 a +0,22 e y da 0,11 a 1,82, e la camera sta a
+     * (0,01 · 0,52 · 3,93), cioe' DENTRO in tutte e tre le direzioni.
+     *
+     * Quello che si vedeva era il MARE DEL SITO disegnato sopra: la camera
+     * durante la traversata sta sulla linea d'acqua, e il piano del mare
+     * attraversa il corridoio.
+     *
+     * Gli strati risolvono anche questo, e in una riga: mentre si e' dentro, la
+     * camera smette di guardare lo strato zero -- mare, cielo, scafo, tutto
+     * cio' che sta fuori. Restano solo gli ambienti e le loro plafoniere, che
+     * e' esattamente cio' che si vede stando sotto coperta.
+     *
+     * Si riaccende uscendo, perche' il resto del racconto e' tutto la' fuori.
+     */
+    mostra (q) {
+      const dentro = pronto && q > 0.002
+      gruppo.visible = dentro
+      if (cameraDelSito) {
+        if (dentro) cameraDelSito.layers.disable(0)
+        else cameraDelSito.layers.enable(0)
+      }
+    },
     /** Lo stato, per i cancelli: cosi' misurano invece di fidarsi. */
     get stato () {
       return {
@@ -489,6 +682,7 @@ export function creaMondo (base, scena) {
         sfondamentoPonte: sfondamento,
         francoChiglia,
         ancorato,
+        luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
         diag,
         correzioneGradi: correzione ? +(2 * Math.acos(Math.min(1, Math.abs(correzione.w))) * 180 / Math.PI).toFixed(2) : null,
         /* misurati nello spazio della scena, non sull'asset -- vedi
