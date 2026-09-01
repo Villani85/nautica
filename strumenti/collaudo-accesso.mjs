@@ -90,6 +90,7 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { anteprima } from './anteprima.mjs'
+import { vaiA } from './inquadratura-comune.mjs'
 import { execSync } from 'node:child_process'
 import { readFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -202,13 +203,29 @@ try {
     cruda = readFileSync(DOVE + '/' + nome + '.rgb')
   }
 
-  const corsa = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight)
+  /**
+   * ─── LE STAZIONI SONO BATTUTE, NON FRAZIONI DI PAGINA
+   *
+   * Scorrevo a `frazione x scrollHeight`. Ma l'altezza del documento NON E' UNA
+   * COSTANTE: e' un risultato. Stanotte ho portato quattro etichette da 8 a
+   * 11px, i pannelli sono cresciuti, il documento si e' allungato -- e la stessa
+   * frazione e' atterrata in un punto diverso del racconto, senza che nessuno lo
+   * dicesse. Il cancello continuava a stampare numeri plausibili su un soggetto
+   * cambiato.
+   *
+   * E' la stessa famiglia che questo repo insegue da tre giorni -- una
+   * coordinata giusta in un sistema che si e' mosso sotto -- applicata stavolta
+   * a nove cancelli in una volta, per una modifica di tipografia.
+   *
+   * `vaiA` porta alla BATTUTA: `cimaSezione + corsaRacconto * f`. La battuta e'
+   * il soggetto della misura, non il pixel.
+   */
   const peggiore = new Map()
   let corpoMinimo = Infinity
   let quantiFotogrammi = 0
 
   for (let k = 0; k < STAZIONI; k++) {
-    await pg.evaluate((y) => scrollTo(0, y), Math.round(corsa * k / (STAZIONI - 1)))
+    await vaiA(pg, k / (STAZIONI - 1))
     for (let j = 0; j < FOTOGRAMMI; j++) {
       /* si aspetta un FOTOGRAMMA NUOVO, non un tempo: a 2,3 fps un'attesa a
          orologio fotograferebbe due volte la stessa tela */
@@ -243,30 +260,69 @@ try {
   console.log('  corpo minimo  ' + (corpoMinimo === Infinity ? 'n/d' : corpoMinimo + 'px reso a schermo'))
 
   /* --- fuoco e tabulazione, in cima dove la barra e' quella vera ---------- */
-  await pg.evaluate(() => scrollTo(0, 0))
+  await vaiA(pg, 0)
+
+  /**
+   * ─── IL FUOCO SI PROVA TABULANDO, NON CHIAMANDO `focus()`
+   *
+   * Prima facevo `el.focus()` e confrontavo lo stile prima e dopo. Il referto
+   * diceva DIECI elementi senza segno del fuoco -- `button.mare__tacca`,
+   * `button.interruttore`, `button.richiamo`, cioe' tutti i comandi del sito --
+   * e stavo per riportarlo come difetto di accessibilita' grave.
+   *
+   * Non lo e'. `stile.css:342` ha gia' `:focus-visible{outline:2px solid
+   * var(--recupero); outline-offset:3px}`. Il punto e' che **`:focus-visible`
+   * non scatta sul fuoco dato da codice**: il browser lo riserva
+   * all'interazione da tastiera, ed e' proprio il suo scopo -- non disegnare
+   * l'anello a chi clicca col mouse.
+   *
+   * Quindi il metro chiedeva «cosa succede se do il fuoco» e la domanda era
+   * «cosa vede chi naviga col tasto di tabulazione». Un'altra della stessa
+   * famiglia, e stavolta stava per farmi accusare il sito di un difetto che il
+   * sito non ha.
+   *
+   * Adesso si preme TAB davvero, e si confronta lo stile dell'elemento che
+   * riceve il fuoco con quello che aveva prima.
+   */
   const f = await pg.evaluate(() => {
+    const chiave = (e) => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).split(' ')[0] : '')
+    const st = (e) => { const s = getComputedStyle(e)
+      return [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow, s.borderColor, s.backgroundColor].join('|') }
     const tab = [...document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')]
       .filter((e) => e.tabIndex >= 0 && e.offsetParent !== null)
-    const senza = []
-    for (const el of tab) {
-      const p = getComputedStyle(el)
-      const prima = [p.outlineStyle, p.outlineWidth, p.boxShadow, p.borderColor, p.backgroundColor].join('|')
-      el.focus()
-      const d = getComputedStyle(el)
-      if (prima === [d.outlineStyle, d.outlineWidth, d.boxShadow, d.borderColor, d.backgroundColor].join('|')) {
-        senza.push(el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).split(' ')[0] : ''))
-      }
-      el.blur()
-    }
-    return { quanti: tab.length, senza }
+    window.__acc = { prima: new Map(tab.map((e) => [e, st(e)])), chiave, st, quanti: tab.length }
+    document.body.focus()
+    return { quanti: tab.length }
   })
-  console.log('  tabulazione   ' + f.quanti + ' elementi raggiungibili da tastiera')
-  console.log('  fuoco         ' + f.senza.length + ' senza nessun segno visibile')
-  for (const s of [...new Set(f.senza)].slice(0, 6)) console.log('      ' + s)
+
+  const senza = []
+  const visti = new Set()
+  for (let i = 0; i < f.quanti + 4; i++) {
+    await pg.keyboard.press('Tab')
+    const r = await pg.evaluate(() => {
+      const e = document.activeElement
+      if (!e || e === document.body || !window.__acc.prima.has(e)) return null
+      return { k: window.__acc.chiave(e), cambiato: window.__acc.st(e) !== window.__acc.prima.get(e) }
+    })
+    if (!r) continue
+    if (visti.has(r.k) && visti.size >= f.quanti) break
+    visti.add(r.k)
+    if (!r.cambiato && !senza.includes(r.k)) senza.push(r.k)
+  }
+  const tabbati = visti.size
+
+  /* «classi», non «elementi»: la chiave e' tag+prima classe, quindi le sei
+     tacche del mare contano una volta sola. Dirlo, invece di far credere che
+     sei elementi su diciassette siano raggiungibili -- che sarebbe un difetto
+     grave e non e' quello che questo numero misura. */
+  console.log('  tabulazione   ' + tabbati + ' TIPI di comando raggiunti premendo TAB, su ' +
+              f.quanti + ' elementi candidati')
+  console.log('  fuoco         ' + senza.length + ' senza nessun segno visibile')
+  for (const s of senza.slice(0, 8)) console.log('      ' + s)
 
   if (scarsi.length) guai.push(scarsi.length + ' testi sotto ' + SOGLIA + ':1 nel loro momento PEGGIORE')
-  if (!f.quanti) guai.push('nessun elemento raggiungibile col tasto di tabulazione')
-  if (f.senza.length) guai.push(f.senza.length + ' elementi non mostrano dove sta il fuoco')
+  if (!tabbati) guai.push('nessun elemento raggiunto premendo TAB')
+  if (senza.length) guai.push(senza.length + ' elementi non mostrano dove sta il fuoco premendo TAB')
 } finally {
   a.ferma()
   await b?.close()
