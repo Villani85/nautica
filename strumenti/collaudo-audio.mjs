@@ -84,6 +84,30 @@ try {
     if (bott.premuto !== 'false') guai.push(`il pulsante si annuncia gia acceso (aria-pressed=${bott.premuto})`)
   }
 
+  /* --- B-bis. IL PULSANTE NON DEVE COPRIRE NIENTE ------------------------
+     `.suono` e' `position:fixed`, quindi esce dal flusso e la testata non sa
+     che esiste. Il 1 settembre 2026 copriva INTERAMENTE la voce «Contact»
+     (pulsante x 1179-1266, voce x 1195-1248): un elemento di navigazione
+     illeggibile e non cliccabile. Si e' riservato lo spazio con
+     `--riserva-suono` in `stile.css`, e questo controllo esiste perche' quella
+     riserva e' un numero e i numeri divergono: se il pulsante cresce, lo dice
+     qui invece di farlo scoprire a un giurato. */
+  const collisione = await pg.evaluate(() => {
+    const b = document.querySelector('button.suono')
+    if (!b) return null
+    const r = b.getBoundingClientRect()
+    return [...document.querySelectorAll('.testata nav a, .testata a, .testata button')]
+      .filter((e) => e !== b)
+      .map((e) => ({ t: e.textContent.trim().slice(0, 24), q: e.getBoundingClientRect() }))
+      .filter((v) => v.q.left < r.right && v.q.right > r.left && v.q.top < r.bottom && v.q.bottom > r.top)
+      .map((v) => v.t)
+  })
+  if (collisione && collisione.length) {
+    guai.push('il pulsante del suono copre: ' + collisione.join(', ') +
+              ' — alza --riserva-suono in stile.css')
+  }
+  console.log('  collisioni    ' + (collisione ? (collisione.length || 'nessuna') : 'pulsante assente'))
+
   /* --- C. DOPO IL GESTO: un contesto solo, e vivo ------------------------- */
   if (bott.c) {
     await pg.click('button.suono')

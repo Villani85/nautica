@@ -28,6 +28,9 @@
    su entrambi i lati: cambia il colore, non la misura.                        */
 :root{
   /* sopra il taglio — carta da disegno navale */
+  /* larghezza da tenere libera a destra nella testata per `.suono`, che e'
+     fisso e fuori dal flusso: 87 del pulsante + 14 di scostamento + respiro */
+  --riserva-suono:110px;
   --aria:#E9E5DD;
   --inchiostro:#15181B;
   --inchiostro-tenue:#5F6367;   /* 4,82:1 su --aria. Il #6A6E72 del prototipo
@@ -379,13 +382,37 @@ p{max-width:60ch}
   padding:var(--u3) var(--u4);
   background:none;pointer-events:none;flex-wrap:wrap;
 }
+/* ─── IL FONDO DELLA TESTATA COPRE TUTTA LA TESTATA, e non e' tavolozza
+   E' una decisione del committente presa il 1 settembre 2026 dopo aver
+   calcolato i rapporti sui colori DICHIARATI, che passano tutti:
+     inchiostro-tenue #5F6367 su aria #E9E5DD     4,82:1
+     acqua-tenue      #7FA3A5 su acqua #071A1D    6,54:1
+     acqua-tenue              su acqua-viva       4,79:1
+   Quindi i colori erano gia' a norma e cambiarli sarebbe stata la riparazione
+   sbagliata: si perdeva la tavolozza senza toccare la causa.
+
+   LA CAUSA E' QUI. Il gradiente sfumava a trasparente dal 38%: sotto quella
+   quota le voci di navigazione stavano DIRETTAMENTE SOPRA LA TELA WebGL, che
+   cambia luminanza col mare, col rollio e con lo scorrimento. Misurato col
+   metro che campiona i pixel veri fotogramma per fotogramma, la barra scendeva
+   fino a 1,19:1 contro un minimo di 4,5.
+
+   Un contrasto che dipende da cosa sta facendo il mare non e' un contrasto: e'
+   una coincidenza per fotogramma. Il testo non puo' appoggiarsi a uno sfondo
+   che non controlla.
+
+   PERCHE' `calc(100% - var(--u4))` E NON `100%`. Lo pseudo-elemento e' alto
+   `100% + u4`, quindi quella quota e' ESATTAMENTE il bordo inferiore della
+   testata: il pieno copre tutto il testo, e la dissolvenza si consuma sui
+   quattro spazi in piu', dove testo non ce n'e'. Con `100%` il velo diventava
+   una lastra con un taglio netto in fondo. */
 .testata::before{
   content:'';position:absolute;inset:0 0 auto 0;height:calc(100% + var(--u4));
   z-index:-1;pointer-events:none;
-  background:linear-gradient(to bottom,var(--aria) 38%,transparent);
+  background:linear-gradient(to bottom,var(--aria) calc(100% - var(--u4)),transparent);
 }
 .testata[data-lato="sotto"]::before{
-  background:linear-gradient(to bottom,var(--acqua) 38%,transparent);
+  background:linear-gradient(to bottom,var(--acqua) calc(100% - var(--u4)),transparent);
 }
 /* Sopra la scena mista la testata sta sempre nella meta' di carta: il velo di
    carta e' quello giusto, ed e' anche quello che gia' c'e' come ripiego. */
@@ -396,7 +423,20 @@ p{max-width:60ch}
   display:flex;gap:var(--u2);flex-wrap:wrap;max-width:none;
 }
 .occhiello b{font-weight:700;color:var(--inchiostro)}
-.testata nav{display:flex;gap:var(--u3);pointer-events:auto;flex-wrap:wrap}
+/* ─── SI RISERVA LO SPAZIO DEL PULSANTE DEL SUONO
+   `.suono` e' `position:fixed` in alto a destra (riga ~1671), quindi esce dal
+   flusso e la testata non sa che esiste. Misurato in pagina: il pulsante
+   occupava x 1179-1266 e la voce «Contact» x 1195-1248 — COPERTA INTERAMENTE.
+   Una voce di menu illeggibile e non cliccabile, e il cancello del contrasto la
+   segnalava a 1,73:1 senza poter dire perche': non era contrasto, era una
+   collisione.
+
+   La riserva sta in una variabile sola perche' due numeri che devono coincidere
+   un giorno divergono, ed e' il difetto che questo repo ha gia' pagato piu'
+   volte. Se il pulsante cresce, `collaudo-audio` se ne accorge: verifica che
+   nessuna voce di menu stia sotto di lui. */
+.testata nav{display:flex;gap:var(--u3);pointer-events:auto;flex-wrap:wrap;
+  margin-right:var(--riserva-suono)}
 .testata nav a{
   font-variation-settings:var(--v-dato);
   font-family:var(--t-dato);font-size:var(--etichetta);letter-spacing:.16em;
@@ -645,7 +685,7 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
 .nota__punte--dx::before{display:none}
 .nota__verso{white-space:nowrap;opacity:.72}
 @keyframes tira{
-  0%,100%{opacity:.45;margin-left:0;margin-right:0}
+  0%,100%{opacity:.45;margin-left:0;margin-right:var(--riserva-suono)}
   50%{opacity:1;margin-left:-3px;margin-right:-3px}
 }
 @media (prefers-reduced-motion:reduce){ .nota i::before,.nota i::after{animation:none} }

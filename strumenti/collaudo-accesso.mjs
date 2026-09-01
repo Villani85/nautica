@@ -38,12 +38,28 @@
  *    E l'opacita' si conta CUMULATIVA, risalendo i genitori: un contenitore a
  *    0,2 rende invisibile un figlio che si dichiara a 1.
  *
- * 2. IL CONTRASTO NON E' UNA MEDIA. Prima prendevo la mediana di una fascia
- *    fuori dal riquadro. Ma il numero che serve e' fra INCHIOSTRO e CARTA, e
- *    dentro il riquadro ci sono entrambi: si prendono i percentili di luminanza
- *    (5o e 95o), che danno il piu' scuro e il piu' chiaro senza farsi ingannare
- *    da qualche pixel di antialiasing. Su un font sottile la media sottostima,
- *    su un grassetto sovrastima; i percentili no.
+ * 2. INCHIOSTRO DICHIARATO CONTRO CARTA MISURATA. E ci sono volute due prove
+ *    per arrivarci.
+ *
+ *    Prima prendevo la mediana di una fascia fuori dal riquadro. Poi, su
+ *    suggerimento della revisione, i percentili 5o e 95o DENTRO il riquadro,
+ *    per avere inchiostro e carta senza assumere niente sui dintorni.
+ *
+ *    NON FUNZIONA SU QUESTO SITO, e il perche' e' misurabile. Istogramma della
+ *    voce «Saloon», 46x44 pixel, con la testata gia' velata:
+ *
+ *      min 114 · 1% 141 · 5% 182 · mediana 229 · 95% 229 · max 229
+ *
+ *    La carta e' 229, giusta. Ma l'inchiostro DICHIARATO e' rgb(95,99,103),
+ *    luminanza 98: su un carattere da 10px i glifi sono cosi' sottili che
+ *    NEMMENO IL PIXEL PIU' SCURO lo raggiunge, e il 5o percentile (182) e'
+ *    antialiasing puro. Il metro dava 1,61:1 su un testo che ne fa 4,82.
+ *
+ *    E WCAG valuta i COLORI DICHIARATI, non la resa antialiasata. Quindi:
+ *    inchiostro dal foglio di stile, carta dal pixel vero -- la MODA della
+ *    luminanza dentro il riquadro, che su un testo sparso e' il fondo. Cosi' si
+ *    misura cio' che la norma chiede, dove la norma non sa guardare: sotto una
+ *    tela che si muove.
  *
  * 3. LO SFONDO NON E' UN COLORE, E' UNA TELA CHE SI MUOVE. Il mare cambia, il
  *    rollio cambia. Un cancello che misura UN fotogramma su una tela animata e'
@@ -132,6 +148,7 @@ const RACCOGLI = (opacitaMinima) => {
       chiave: el.tagName + '|' + (el.className || '') + '|' + testo.slice(0, 30),
       testo: testo.slice(0, 40),
       px: +parseFloat(st.fontSize).toFixed(1),
+      colore: (st.color.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number),
       r: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
     })
   }
@@ -155,19 +172,28 @@ try {
    * 95o danno inchiostro e carta senza che un pixel di antialiasing o un
    * singolo punto acceso spostino la risposta.
    */
-  const contrastoDi = (r) => {
-    const L = []
+  /**
+   * La CARTA sotto un testo: la moda della luminanza dentro il riquadro. Su un
+   * testo sparso i pixel di fondo sono la stragrande maggioranza, quindi la
+   * moda e' il fondo -- e a differenza della media non la sposta l'inchiostro.
+   * Si conta a passi di 1/255 di luminanza, che e' la risoluzione del pixel.
+   */
+  const cartaSotto = (r) => {
+    const conta = new Int32Array(256)
+    let n = 0
     for (let y = Math.max(0, r.y); y < Math.min(ALTO, r.y + r.h); y++) {
       for (let x = Math.max(0, r.x); x < Math.min(LARG, r.x + r.w); x++) {
         const k = (y * LARG + x) * 3
-        L.push(lum([cruda[k], cruda[k + 1], cruda[k + 2]]))
+        const g = Math.round(0.2126 * cruda[k] + 0.7152 * cruda[k + 1] + 0.0722 * cruda[k + 2])
+        conta[g]++; n++
       }
     }
-    if (L.length < 40) return null
-    L.sort((p, q) => p - q)
-    const scuro = L[Math.floor(L.length * 0.05)]
-    const chiaro = L[Math.floor(L.length * 0.95)]
-    return (chiaro + 0.05) / (scuro + 0.05)
+    if (n < 40) return null
+    let miglior = 0
+    for (let i = 1; i < 256; i++) if (conta[i] > conta[miglior]) miglior = i
+    /* si torna il livello in 0..255, e la luminanza relativa si ricava da li' */
+    const t = miglior / 255
+    return t <= 0.03928 ? t / 12.92 : ((t + 0.055) / 1.055) ** 2.4
   }
 
   const fotografa = async (nome) => {
@@ -195,8 +221,10 @@ try {
 
       for (const t of testi) {
         if (t.px < corpoMinimo) corpoMinimo = t.px
-        const c = contrastoDi(t.r)
-        if (c == null) continue
+        const carta = cartaSotto(t.r)
+        if (carta == null) continue
+        const inchiostro = lum(t.colore)
+        const c = (Math.max(carta, inchiostro) + 0.05) / (Math.min(carta, inchiostro) + 0.05)
         const p = peggiore.get(t.chiave)
         /* IL PEGGIO, non il meglio: e' la correzione che vale */
         if (!p || c < p.c) peggiore.set(t.chiave, { ...t, c: +c.toFixed(2), stazione: k })
