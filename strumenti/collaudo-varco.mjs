@@ -36,6 +36,23 @@ await new Promise(r => setTimeout(r, 4000))
 const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage()
 /**
+ * `mondo=0`: DICHIARATO come `senzaFilmato=1`, e per la stessa ragione. Il
+ * varco nel pelo dell'acqua e' una proprieta' della nave vista DA FUORI --
+ * dentro non c'e' nessun pelo d'acqua da aprire. Da quando la traversata e' 3D
+ * (1 settembre 2026) la ricerca cadeva al 93% dello scorrimento, dove ormai la
+ * camera e' DENTRO LO SCAFO, e il referto diceva «il meccanismo non e in quadro
+ * a questa quota»: vero, e non il difetto che cerca.
+ *
+ * HO PROVATO PRIMA A CIRCOSCRIVERE LA RICERCA, e non e' la strada. Fermandola
+ * a `S.traversata[0]` cadeva al 70%, dove la SEZIONE VERTICALE e' gia' aperta
+ * (`verticale: [0.74, 0.86]`) e il meccanismo si vede per quella, non per il
+ * varco. Fermandola a `S.verticale[0]` non trovava piu' niente: prima di quella
+ * battuta il palco non e' ancora sul meccanismo. Il momento che il cancello
+ * cerca esiste solo nel racconto SENZA il mondo.
+ *
+ * Non e' una deroga: e' la stessa dichiarazione che il file fa gia' due righe
+ * sotto per il filmato. Un cancello dice cosa toglie.
+ *
  * `senzaFilmato=1`: questo cancello cerca il MECCANISMO in quadro, e da quando
  * la traversata prende il comando lo trova coperto -- al 91% dello scorrimento
  * davanti c'e' il filmato. Usciva rosso dicendo «il meccanismo non e' in
@@ -46,7 +63,7 @@ const pg = await (await browser.newContext({ viewport: { width: 1280, height: 72
  * puo' accendere o spegnere il filmato per far tornare un numero; puo' chiedere
  * di guardare sotto, dichiarandolo.
  */
-await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1${process.env.EXTRA || ''}`, { waitUntil: 'load', timeout: 45000 })
+await pg.goto(`http://localhost:${PORTA}/?ispeziona=1&senzaFilmato=1&mondo=0${process.env.EXTRA || ''}`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => !!window.__nautica, null, { timeout: 30000 })
 /**
  * ─── LA POSIZIONE SI RICAVA DALLA SEZIONE, non e' una frazione del documento
@@ -73,6 +90,15 @@ const trovata = await pg.evaluate(async () => {
   for (let f = fondo; f >= cima; f -= 0.01) {
     scrollTo(0, Math.round(H * f))
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    /* ─── e non nella CODA, dove ora c'e' il salone
+       Da quando la traversata e' 3D, la coda accende il filmato del salone a
+       piena copertura: e' l'ultima immagine del sito, ed e' voluta. Ma li' il
+       meccanismo non e' in quadro perche' davanti c'e' una stanza, non perche'
+       il varco sia rotto -- e la ricerca, che parte dal fondo, ci cadeva
+       dentro per prima (93% dello scorrimento).
+       `pCoda` e' zero per tutto il racconto e sale solo dopo: e' il confine
+       esatto, e non e' una frazione di pagina. */
+    if (window.__nautica && window.__nautica.pCoda > 0) continue
     const palco = sez.querySelector('.palco[data-battuta]')
     const b = palco.getBoundingClientRect()
     if (palco.dataset.battuta === 'meccanismo' && b.top > -1 && b.bottom > innerHeight - 1) return f
