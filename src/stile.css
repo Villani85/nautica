@@ -1165,6 +1165,7 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
    Se undici rompe l'impaginato da qualche parte lo dice `collaudo-ingombri`,
    che e' il cancello giusto per questa modifica -- non quello del contrasto. */
 @media (max-width:820px){
+
   /* ─── L'APERTURA DEBORDA, e non e' un vezzo
 
      Su uno schermo stretto un'apertura larga quanto la finestra lascia 400 px di
@@ -1742,7 +1743,33 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
 }
 /* Sotto i 420 px resta la sola icona: 44x44 pieni, nessun testo che stringa
    l'intestazione. */
-@media (max-width:420px){ .suono__testo{display:none} .suono{padding:0 13px} }
+/* ─── SOTTO I 420 LA RISERVA VA A ZERO, e il confine e' un conto
+   Su desktop `--riserva-suono` tiene libero l'angolo dove sta `.suono`, che e'
+   fisso e fuori dal flusso. Su uno schermo stretto lo stesso margine e' un
+   disastro, ed e' una regressione che ho introdotto io e che `collaudo-telefono`
+   ha preso subito:
+
+     a 360, senza margine   nav larga 273, scrollWidth 273  -> il pulsante si tocca
+     a 360, con 110 px      nav larga 218, scrollWidth 273  -> RITAGLIATO
+
+   La nav qui scorre in orizzontale, quindi stringerla non manda i pezzi a capo:
+   li spinge FUORI dal riquadro visibile. `#entra-esplorazione` finiva a x
+   245-289 dentro una nav che arrivava a 234, e con lui l'unico modo di aprire
+   l'esplorazione col dito.
+
+   IL CONFINE NON E' A OCCHIO. La nav misura 273 px di contenuto, la testata ne
+   spende 32 di padding, la riserva 110: servono 415 px di finestra perche' ci
+   stiano tutti. Sotto, la riserva va tolta. 420 e' il primo punto di rottura
+   gia' dichiarato qui, ed e' anche quello dove `.suono__testo` sparisce e il
+   pulsante si stringe da solo -- quindi ne ha meno bisogno.
+
+   E l'ho verificato in tutte e due le direzioni: a 768 px con la riserva a zero
+   il pulsante tornava a coprire «Mechanism» e «Below». Sopra i 420 la riserva
+   serve, sotto no. */
+@media (max-width:420px){
+  .suono__testo{display:none} .suono{padding:0 13px}
+  :root{--riserva-suono:0px}
+}
 
 /* ═══ L'ESPERIMENTO INCOMPIUTO ═══
    Il richiamo che si ricorda. La ragione per cui esiste — e quella per cui NON
