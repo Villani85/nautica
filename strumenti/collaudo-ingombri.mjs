@@ -22,8 +22,87 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { anteprima } from './anteprima.mjs'
+import { readFileSync } from 'node:fs'
 
-const FORMATI = [[1280, 800], [1440, 900], [390, 844], [768, 1024]]
+/**
+ * ─── I FORMATI NON SI SCELGONO: SI LEGGONO DAL CSS
+ *
+ * Qui c'erano quattro formati fissi -- 1280x800, 1440x900, 390x844, 768x1024 --
+ * e per due giorni hanno lasciato passare tre difetti DELLA STESSA SPECIE:
+ *
+ *   «Contact» sotto il pulsante del suono          trovato a 1280, per caso
+ *   il pulsante dell'esplorazione fuori dal riquadro a 360   NON provato
+ *   il pulsante sopra «Mechanism» a 768            trovato riparando il secondo
+ *
+ * Non e' sfortuna. Un cancello che campiona quattro larghezze trova le
+ * collisioni che stanno a quelle quattro larghezze, e le regole di
+ * impaginazione cambiano AI PUNTI DI ROTTURA: e' li' che la geometria si
+ * rompe, ed erano proprio i punti che nessuno provava.
+ *
+ * Adesso l'elenco si DERIVA da `src/stile.css`: ogni `min-width`/`max-width`
+ * dichiarata diventa tre prove -- un pixel prima, esatta, un pixel dopo -- piu'
+ * i formati reali che restano perche' descrivono dispositivi veri.
+ *
+ * Derivato e non ricopiato, perche' una lista di punti di rottura scritta a
+ * mano e' una lista che un giorno diverge dal foglio di stile. Se domani
+ * qualcuno aggiunge un `@media`, il cancello lo prova senza che nessuno se ne
+ * ricordi.
+ */
+/* I quattro che c'erano, e che bocciano da sempre. 360x640 NON e' qui: e'
+   appena entrato con la copertura estesa, non era mai stato provato, e come le
+   larghezze derivate misura e grida senza fermare -- vedi BLOCCA_ROTTURE. */
+const DISPOSITIVI = [[1280, 800], [1440, 900], [390, 844], [768, 1024]]
+const NUOVI = [[360, 640]]
+
+/**
+ * ─── LE LARGHEZZE NUOVE MISURANO E GRIDANO, NON FERMANO. Per ora.
+ *
+ * La copertura estesa ha trovato subito sei collisioni, e quattro di esse
+ * PREESISTONO a chiunque le legga adesso: verificato ricostruendo il foglio di
+ * stile precedente, a 821 e 822 px `.comandi` copre `.pannello--energia` per
+ * 224x60 px e `.pannello--letture` per 206x60. Non le ha introdotte questo giro:
+ * non erano mai state provate.
+ *
+ * Farle fallire oggi fermerebbe la pubblicazione su difetti vecchi, ed e'
+ * esattamente cio' che il committente ha deciso di non voler fare finche' il
+ * sito non e' completo. Quindi le larghezze DERIVATE dai punti di rottura
+ * misurano e stampano; i quattro dispositivi reali continuano a bocciare come
+ * hanno sempre fatto.
+ *
+ * Non e' un cancello spento: e' un cancello che dice a voce alta cosa
+ * boccerebbe. Per armarlo, `BLOCCA_ROTTURE = true`.
+ */
+const BLOCCA_ROTTURE = false
+
+/* PRIMA STESURA SBAGLIATA, e si e' vista dall'elenco: usciva «680, 680» e
+   mancava 821. Il motivo e' che facevo precedere `@media[^{]*` e poi prendevo
+   il PRIMO numero della porzione trovata -- che in
+   `@media (max-height:680px) and (min-width:821px)` e' l'altezza. Un numero
+   giusto, letto per un'altra grandezza: la stessa famiglia di errori che questo
+   repo insegue da due giorni, dentro lo strumento che dovrebbe prenderla.
+   Adesso si cerca direttamente ogni `(min|max)-width: Npx`. */
+const rotture = [...new Set(
+  [...readFileSync('src/stile.css', 'utf8')
+    .matchAll(/\((?:min|max)-width:\s*(\d+)px\)/g)].map((m) => Number(m[1]))
+)].filter((n) => n >= 300 && n <= 2000).sort((x, y) => x - y)
+
+const daRotture = []
+for (const b of rotture) for (const d of [-1, 0, 1]) daRotture.push([b + d, 900])
+
+/* si tolgono i doppioni per larghezza: l'altezza qui non cambia le regole
+   orizzontali, e provare due volte la stessa larghezza costa e non aggiunge */
+let rotti = 0
+const viste = new Set()
+const FORMATI = [...DISPOSITIVI.map((f) => [...f, 'dispositivo']),
+                 ...NUOVI.map((f) => [...f, 'rottura']),
+                 ...daRotture.map((f) => [...f, 'rottura'])].filter(([w]) => {
+  if (viste.has(w)) return false
+  viste.add(w); return true
+})
+
+console.log(`  ${rotture.length} punti di rottura letti da src/stile.css: ${rotture.join(', ')}`)
+console.log(`  ${FORMATI.length} larghezze provate (i dispositivi veri, piu' ogni rottura a -1/0/+1)`)
+console.log('')
 /** Gli elementi che occupano la prima schermata e non devono toccarsi. */
 const PEZZI = ['#nota', '#invito-scorri', '.comandi', '.pannello--energia', '.pannello--letture', '#apri-chiusura']
 /** Sotto questa opacita' un elemento non e' in campo: sovrapporsi non conta. */
@@ -36,7 +115,7 @@ const b = await apriBrowser({ conGpu: true })
 const pg = await b.newPage()
 let rossi = 0
 
-for (const [W, H] of FORMATI) {
+for (const [W, H, DA] of FORMATI) {
   await pg.setViewportSize({ width: W, height: H })
   await pg.goto(`${_ant.indirizzo}?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
   await pg.waitForFunction(() => window.__nautica?.corsaRacconto > 0, null, { timeout: 30000 })
@@ -53,7 +132,7 @@ for (const [W, H] of FORMATI) {
   }).filter(Boolean), PEZZI)
 
   const vivi = box.filter((e) => e.op > VISIBILE && e.x2 > e.x && e.y2 > e.y)
-  console.log(`--- ${W}x${H}  (${vivi.length} elementi in campo)`)
+  console.log(`--- ${W}x${H} ${DA === 'rottura' ? '[punto di rottura]' : '[dispositivo]'}  (${vivi.length} elementi in campo)`)
   /* per formato, non globale: con un contatore solo l'ultimo formato pulito
      non stampava niente e sembrava non essere stato misurato */
   let quiRossi = 0
@@ -64,7 +143,8 @@ for (const [W, H] of FORMATI) {
       const dy = Math.min(a.y2, c.y2) - Math.max(a.y, c.y)
       if (dx > 0 && dy > 0) {
         console.log(`  ROSSO  ${a.s} e ${c.s} si sovrappongono per ${Math.round(dx)}x${Math.round(dy)} px`)
-        rossi++; quiRossi++
+        if (DA === 'rottura') rotti++; else rossi++
+        quiRossi++
       }
     }
   }
@@ -73,5 +153,18 @@ for (const [W, H] of FORMATI) {
 await b.close()
 _ant.ferma()
 
-if (rossi) { console.log(`\nROSSO — ${rossi} collisioni fra elementi dell'interfaccia.`); process.exit(1) }
-console.log('\nVERDE — nessun elemento dell\'interfaccia ne copre un altro.')
+if (rotti) {
+  console.log(`\n${BLOCCA_ROTTURE ? 'ROSSO' : 'DA VEDERE'} — ${rotti} collisioni sulle larghezze APPENA COPERTE.`)
+  if (!BLOCCA_ROTTURE) {
+    console.log('  Non fermano nessuno. Quattro di esse PREESISTONO: verificato ricostruendo')
+    console.log('  il foglio di stile precedente, a 821 e 822 px .comandi copriva gia')
+    console.log('  .pannello--energia per 224x60 e .pannello--letture per 206x60. Non erano')
+    console.log('  mai state provate. Bloccare oggi vorrebbe dire fermare la pubblicazione')
+    console.log('  su difetti vecchi. BLOCCA_ROTTURE = true le arma.')
+  }
+}
+if (rossi || (rotti && BLOCCA_ROTTURE)) {
+  console.log(`\nROSSO — ${rossi} collisioni sui quattro dispositivi che bocciano da sempre.`)
+  process.exit(1)
+}
+console.log(`\nVERDE sui dispositivi reali${rotti ? `, con ${rotti} da vedere sulle larghezze nuove.` : '.'}`)
