@@ -153,7 +153,35 @@ export function creaMondo (base, scena) {
    */
   let sfondamento = null
 
-  function appoggiaSullaChiglia () {
+  /**
+   * ─── L'APPOGGIO SULLA CHIGLIA ERA UN CRITERIO, E DOVEVA ESSERE UNA VERIFICA
+   *
+   * Questa funzione trovava il punto piu' basso del mondo e ce lo appoggiava:
+   * `gruppo.position.y = chiglia - piuBasso`. In astratto e' ragionevole. Ma
+   * NON E' LA REGOLA DEL CONTRATTO, e la sovrascriveva in silenzio.
+   *
+   * Il mondo e' ancorato al nodo `CAMERA_SORGENTE_SALONE`, e nell'asset
+   * l'ultima posa e' esattamente [0, 0, 0]: verificato, non supposto.
+   * L'arrivo doveva essere l'origine PER COSTRUZIONE. Collocando il gruppo per
+   * il suo punto piu' basso, la quota la decideva il pavimento del locale
+   * tecnico e l'origine finiva dove capitava.
+   *
+   * Ed e' la causa UNICA di tre misure che sembravano tre difetti:
+   *   - l'ultima posa a 3,14 m contro un soffitto del salone a 2,233
+   *   - diciotto pose su novantasei sopra il ponte
+   *   - margine peggiore -0,337 unita'
+   * Sono lo stesso spostamento rigido applicato a tutto il mondo. Non la curva,
+   * non i pezzi: la regola di appoggio.
+   *
+   * Misurato: la camera del sito alla battuta «salotto» sta a
+   * (0,0065 · 1,4528 · 1,778); l'origine del mondo stava a (0 · 1,2546 ·
+   * 1,9089). Mezzo metro piu' in basso e trentatre centimetri piu' a poppa.
+   *
+   * Adesso la chiglia NON colloca piu' niente: MISURA. Se dopo l'ancoraggio
+   * giusto il pavimento del locale tecnico sfonda la chiglia, quello e' un
+   * difetto di geometria vero e va saputo -- prima veniva assorbito in silenzio.
+   */
+  function misuraFrancoChiglia () {
     let piuBasso = Infinity
     let zDelPiuBasso = 0
     let piuAlto = -Infinity
@@ -172,13 +200,28 @@ export function creaMondo (base, scena) {
     if (!Number.isFinite(piuBasso)) return
 
     const t = (z) => MathUtils.clamp((z - PRUA_Z) / (POPPA_Z - PRUA_Z), 0, 1)
-    const chiglia = sezioneA(t(zDelPiuBasso)).chiglia
-    gruppo.position.y = chiglia - piuBasso
+    /* positivo = il pavimento sta SOPRA la chiglia, cioe' dentro lo scafo */
+    francoChiglia = piuBasso - sezioneA(t(zDelPiuBasso)).chiglia
+    sfondamento = piuAlto - sezioneA(t(zDelPiuAlto)).ponteY
+  }
 
-    /* e si misura subito cosa costa: il tetto contro il ponte, alla stazione
-       del punto piu' alto del mondo */
-    const ponte = sezioneA(t(zDelPiuAlto)).ponteY
-    sfondamento = (piuAlto + gruppo.position.y) - ponte
+  /**
+   * ─── DOVE VA L'ORIGINE: gliela dice la regia, non la chiglia
+   *
+   * L'ultima posa e' [0,0,0], quindi collocare l'origine e' collocare
+   * l'ARRIVO. E l'arrivo e' la posa da cui il sito guarda il salone --
+   * `dentroY`, `tugaZ + dist`, `scarto` in `index.js:1423-1471`. Quei valori
+   * arrivano da li', dallo stesso ambito che li usa per la camera, cosi' non
+   * esistono due copie che un giorno divergono.
+   */
+  let ancorato = false
+  function ancoraA (x, y, z) {
+    gruppo.position.set(x, y, z)
+    gruppo.updateWorldMatrix(true, true)
+    componiPose()            // dipendono da matrixWorld: vanno rifatte
+    misuraFrancoChiglia()
+    contaPoseSopraPonte()
+    ancorato = true
   }
 
   let pronto = false
@@ -193,7 +236,7 @@ export function creaMondo (base, scena) {
         (glb) => {
           glb.scene.traverse((o) => { if (o.isMesh) maglie++ })
           gruppo.add(glb.scene)
-          appoggiaSullaChiglia()
+          misuraFrancoChiglia()
           pronto = true
           risolvi(true)
         },
@@ -298,7 +341,25 @@ export function creaMondo (base, scena) {
    * `componiPose()`, con `sezioneA` a portata di mano. Chi guarda da fuori
    * legge un numero invece di rifare una trasformazione -- e rifarla e'
    * esattamente il modo in cui si sbaglia.
+   *
+   * ─── MA ATTENZIONE A COSA VUOL DIRE, che me lo sono chiarito dopo
+   *
+   * `ponteY` e' il PONTE PRINCIPALE. Il salone non ci sta sopra per errore: ci
+   * sta sopra per costruzione, perche' e' dentro la TUGA. La regia stessa mette
+   * la camera del salotto a `nave.position.y + tugaQuota` = 1,4528, mentre il
+   * ponte a quella stazione e' a 0,936: mezzo metro piu' in basso.
+   *
+   * Quindi «pose sopra il ponte» NON e' un elenco di difetti. E' un numero
+   * onesto su una domanda che, per l'ultimo tratto, e' quella sbagliata: la
+   * traversata FINISCE nella tuga, e li' stare sopra il ponte principale e'
+   * giusto. Il numero serve per il tratto BASSO -- locale tecnico e corridoio,
+   * che sotto coperta ci devono stare -- e li' va guardato.
+   *
+   * Lo si tiene perche' misura qualcosa di vero, non perche' giudichi. Il
+   * giudizio richiederebbe la superficie visibile di scafo e tuga, che questo
+   * modulo non ha.
    */
+  let francoChiglia = null
   let poseSopraPonte = null
   let campionePonte = null
   let margineMinimoPonte = null
@@ -344,10 +405,12 @@ export function creaMondo (base, scena) {
     caricato: Promise.all([caricato, curva]).then((v) => {
       /* qui, e solo qui, il gruppo e' appoggiato sulla chiglia E le pose
          esistono: e' l'unico istante in cui comporle e' corretto */
-      if (v[0] && v[1]) { componiPose(); contaPoseSopraPonte() }
+      if (v[0] && v[1]) { componiPose(); misuraFrancoChiglia(); contaPoseSopraPonte() }
       return v[0] && v[1]
     }),
     posaA,
+    ancoraA,
+    get ancorato () { return ancorato },
     get lunghezza () { return lunghezza },
     get pose () { return pose ? pose.length : 0 },
     /* «pronto» vuol dire USABILE, non «il GLB e' arrivato». Senza le pose
@@ -370,6 +433,8 @@ export function creaMondo (base, scena) {
         offsetZ: gruppo.position.z,
         offsetY: gruppo.position.y,
         sfondamentoPonte: sfondamento,
+        francoChiglia,
+        ancorato,
         /* misurati nello spazio della scena, non sull'asset -- vedi
            contaPoseSopraPonte() e la nota che la accompagna */
         poseSopraPonte,

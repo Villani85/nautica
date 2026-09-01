@@ -1593,6 +1593,26 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * `corsaTraversata` e' la stessa `q` che la regia passa a `impostaTraversata`.
      * Zero significa che comanda la scena; uno che comanda la traversata.
      */
+    /**
+     * ─── L'ANCORAGGIO LO DA' LA REGIA, non la chiglia
+     *
+     * `mondo.js` collocava il gruppo appoggiando il suo punto piu' basso sulla
+     * chiglia. Ragionevole in astratto, ma non e' la regola del contratto: il
+     * mondo e' ancorato al nodo della camera del salone, e nell'asset l'ultima
+     * posa e' esattamente [0,0,0]. Collocando per il punto piu' basso, la
+     * quota la decideva il pavimento del locale tecnico.
+     *
+     * L'arrivo va dove il sito guarda il salone, e quei tre numeri sono qui
+     * sopra -- `scarto`, `dentroY`, `tugaZ + dist` -- calcolati dalla stessa
+     * regia che li usa per la camera. Passarli evita la copia che un giorno
+     * diverge: e' lo stesso difetto che il contratto ha pagato tre volte.
+     *
+     * Una volta sola: `ancorato` lo dichiara il mondo.
+     */
+    if (mondo && mondo.pronto && !mondo.ancorato) {
+      mondo.ancoraA(scarto, dentroY, tugaZ + dist)
+    }
+
     if (mondo && mondo.pronto) {
       /* ─── E SI ACCENDE ANCHE LA GEOMETRIA, che prima non si accendeva
        *
