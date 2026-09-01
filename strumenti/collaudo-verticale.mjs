@@ -43,7 +43,7 @@ const M = 2.5                    // ordinate.js:19 — 1 unita' di scena = 2,5 m
 const OFFSET = 1.9089            // world_root.PONTE_SITO_ORIGINE_Z_UNITA
 const X_SALONE = -0.800          // world_root.CUCITURE.ingresso_salone.x_m
 const X_FONDO = -14.902575       // world_root.COLLOCAZIONI.MECHANISM_BAY
-const RISALITA = 2.10            // corridor.py:54 — dichiarata INVENTATA
+const RISALITA = 1.40            // world_root.RISALITA_CORRIDOIO_M, vincolata dalle ordinate
 const ALTEZZA_SALONE = 2.35      // il guscio misurato
 
 const z = (x) => OFFSET - x / M

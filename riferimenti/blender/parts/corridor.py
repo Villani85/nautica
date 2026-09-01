@@ -98,14 +98,30 @@ LARGHEZZA_CORRIDOIO = 0.85
 ALTEZZA_LIBERA = 2.00
 
 # La scala: alzata e pedata dentro il range chiesto (17-18 / 28-30 cm).
-ALZATA = 0.175
-PEDATA = 0.29
-N_GRADINI = 12
-RISALITA_TOTALE = round(ALZATA * N_GRADINI, 4)  # 2.10 m
+ALZATA = world_root.ALZATA_M
+PEDATA = world_root.PEDATA_M
+# ─── LA RISALITA VIENE DAL CONTRATTO, e i gradini si contano da lei
+#
+# Era il contrario: dodici gradini scelti qui, e la risalita che ne usciva.
+# Quel numero era dichiarato «nessuna misura» due righe sopra, e la prova
+# verticale l'ha bocciato: con 2,10 m il soffitto del salone esce sopra il
+# trincarino. Il vincolo viene dalle ordinate dello scafo, cioe' da fuori questo
+# file, quindi il numero deve venire da fuori questo file.
+#
+# `world_root.RISALITA_CORRIDOIO_M` porta la ragione per esteso. Qui si contano
+# i gradini che ci stanno, e si verifica che l'alzata resti quella dichiarata.
+RISALITA_TOTALE = world_root.RISALITA_CORRIDOIO_M
+N_GRADINI = int(round(RISALITA_TOTALE / ALZATA))
+assert abs(N_GRADINI * ALZATA - RISALITA_TOTALE) < 1e-9, (
+    "la risalita del contratto (%.4f) non e un multiplo dell alzata (%.4f): "
+    "verrebbero %.2f gradini. O cambia l alzata, o cambia la risalita: un "
+    "gradino a meta non esiste." % (RISALITA_TOTALE, ALZATA, RISALITA_TOTALE / ALZATA))
 
 # Pianerottoli piani alle due estremita' (INVENTATI, minimo ergonomico).
-PIANO_INFERIORE = 1.00
-PIANO_SUPERIORE = 1.00
+# Stanno nel contratto e non qui, perche' entrano nella lunghezza totale, e la
+# lunghezza totale la usa anche chi colloca il pezzo nel mondo.
+PIANO_INFERIORE = world_root.PIANEROTTOLO_BASSO_M
+PIANO_SUPERIORE = world_root.PIANEROTTOLO_ALTO_M
 
 # Spessori strutturali, RIUSATI da guscio-salone.py per coerenza di repo.
 SPESSORE_PARETE = 0.12
@@ -116,6 +132,13 @@ CORSA_SCALA = round(PEDATA * N_GRADINI, 4)
 X_INIZIO_SCALA = PIANO_INFERIORE
 X_FINE_SCALA = round(X_INIZIO_SCALA + CORSA_SCALA, 4)
 LUNGHEZZA_TOTALE = round(X_FINE_SCALA + PIANO_SUPERIORE, 4)
+# Il contratto rifa' lo stesso conto per collocare il pezzo nel mondo. Se i due
+# conti divergono, il corridoio finisce a una X e il mondo lo aspetta a un'altra:
+# e' esattamente il buco da 1,16 m di stanotte. Quindi si confrontano.
+assert abs(LUNGHEZZA_TOTALE - world_root.LUNGHEZZA_CORRIDOIO_M) < 1e-9, (
+    "corridor.py costruisce %.4f m, world_root ne colloca %.4f: il pezzo e la "
+    "sua cucitura non parlano piu' della stessa cosa."
+    % (LUNGHEZZA_TOTALE, world_root.LUNGHEZZA_CORRIDOIO_M))
 
 Y_TOP = round(RISALITA_TOTALE + ALTEZZA_LIBERA, 4)  # soffitto, costante in X
 L2 = LARGHEZZA_CORRIDOIO / 2.0

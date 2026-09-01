@@ -166,8 +166,87 @@ esatto P4, e va tenuto dove chiunque lo trova.
 # eseguendo saloon.py (0,757541..2,932085 e -0,607138..+0,537865). Due strade
 # indipendenti, stessi numeri.
 
-RISALITA_CORRIDOIO_M = 2.10
-LUNGHEZZA_CORRIDOIO_M = 5.480
+# ─────────────────────────────────────────────────────────────────────────────
+# LA RISALITA DEL CORRIDOIO: DA INVENTATA A VINCOLATA
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Era 2,10 m -- dodici gradini da 0,175 -- e `corridor.py:54` lo dichiarava da
+# se': «nessuna misura». Non era un numero sbagliato: era un numero che nessuno
+# aveva mai messo alla prova.
+#
+# La prova l'ha messo alla prova, e l'ha bocciato. A due stazioni, con le
+# ordinate vere dello scafo che il visitatore vede:
+#
+#   chiglia alla stazione del locale tecnico   -1,517 m
+#   + risalita 2,10 -> pavimento salone         0,583 m
+#   + altezza salone 2,35 -> soffitto           2,933 m
+#   ponte alla stazione del salone              2,324 m
+#   IL SOFFITTO ESCE SOPRA IL TRINCARINO DI     0,609 m
+#
+# E in scena, misurando sulla geometria vera invece che sulle ordinate, lo
+# sfondamento e' 0,337 m. Due strade indipendenti, due numeri diversi, STESSO
+# SEGNO: il difetto e' reale.
+#
+# Con l'offset dichiarato la risalita non puo' superare 1,491 m. Con l'alzata di
+# 0,175 che il corridoio gia' usa, il numero piu' alto che ci sta e':
+#
+#   8 gradini x 0,175 = 1,400 m      franco 0,091 m
+#   9 gradini x 0,175 = 1,575 m      MANCA per 0,084 m
+#
+# Otto. E non e' una scelta di gusto: e' l'unico intero che soddisfa un vincolo
+# misurato sulla geometria dello scafo.
+#
+# ─── E ADESSO VIVE IN UN POSTO SOLO
+#
+# Prima stava in due file: qui e in `corridor.py:104`, ciascuno per conto
+# proprio. Cambiarne uno solo apriva settanta centimetri alla cucitura senza
+# nessun errore, perche' ogni file restava coerente con se stesso. Adesso il
+# corridoio legge questo numero, e il numero di gradini lo DERIVA.
+RISALITA_CORRIDOIO_M = 1.40
+
+# ─── E LE COLLOCAZIONI LA DERIVANO, invece di ricopiarla
+#
+# Prima le due terne portavano -3,270 scritto a mano, che era -1,170 - 2,10.
+# Cambiando la risalita da 2,10 a 1,40 quei due numeri sarebbero rimasti
+# indietro, e il corridoio sarebbe finito 70 cm sotto il proprio pavimento --
+# senza nessun errore, perche' ogni file restava coerente con se stesso.
+#
+# E' lo stesso difetto che il contratto ha gia' pagato tre volte: un valore in
+# due posti sono due valori che un giorno divergono.
+PAVIMENTO_SALONE_M = -1.170        # CUCITURE['ingresso_salone'].altezza_libera_m[0]
+INGRESSO_SALONE_X_M = -0.800       # CUCITURE['ingresso_salone'].x_m
+QUOTA_CORRIDOIO_M = round(PAVIMENTO_SALONE_M - RISALITA_CORRIDOIO_M, 4)
+# X: il corridoio comincia una lunghezza prima dell'ingresso del salone.
+# PRIMA STESURA SBAGLIATA, e il numero l'ha detto subito: avevo messo la sola
+# lunghezza (-5,480) al posto della differenza (-0,800 - 5,480 = -6,280), e la
+# stampa mostrava il corridoio spostato di ottocento millimetri verso poppa.
+# ─── LA LUNGHEZZA NON SI DICHIARA: SI CONTA
+#
+# Qui c'era `LUNGHEZZA_CORRIDOIO_M = 5.480`, scritta a mano. Era giusta finche'
+# la risalita era 2,10 m: 12 gradini da 29 cm fanno 3,48, piu' due pianerottoli
+# da 1,00 fanno 5,48.
+#
+# Poi la risalita e' passata a 1,40 (8 gradini, l'unico intero che lascia il
+# soffitto sotto il ponte). La scala si e' accorciata di 1,16 m, e questo numero
+# e' rimasto indietro: il corridoio finiva a X -1,960 mentre la porta del salone
+# sta a -0,800. UN METRO E SEDICI DI NIENTE, e la camera ci passava dentro.
+#
+# Nessuno script ha protestato -- ognuno restava coerente con se stesso. L'ha
+# detto solo il conteggio dei campioni fuori zona: 7 su 60. E' la terza volta
+# che lo stesso difetto si ripresenta con un altro nome, quindi qui la lunghezza
+# smette di essere un dato e diventa il risultato di un conto.
+#
+# La cura NON e' allungare il pianerottolo fino a farne tornare 5,480: sarebbe
+# inventare all'indietro per far quadrare un numero che non comanda piu'.
+# Il corridoio e' lungo quanto e' lungo; e' il fondo che si sposta.
+ALZATA_M = 0.175                  # corridor.py la usava sua: ora la legge da qui
+PEDATA_M = 0.29
+PIANEROTTOLO_BASSO_M = 1.00       # INVENTATI, minimo ergonomico davanti a una soglia
+PIANEROTTOLO_ALTO_M = 1.00
+N_GRADINI_CORRIDOIO = int(round(RISALITA_CORRIDOIO_M / ALZATA_M))
+LUNGHEZZA_CORRIDOIO_M = round(
+    PIANEROTTOLO_BASSO_M + N_GRADINI_CORRIDOIO * PEDATA_M + PIANEROTTOLO_ALTO_M, 4)
+FONDO_CORRIDOIO_X_M = round(INGRESSO_SALONE_X_M - LUNGHEZZA_CORRIDOIO_M, 4)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2-quater · IL PONTE VERSO IL SISTEMA DEL SITO
@@ -409,16 +488,17 @@ COLLOCAZIONI = {
     "STAIR_CORRIDOR": {
         # apertura lato salone in locale (5,480 | 2,10) -> estremita' aperta del
         # guscio (-0,800 | -1,170). Vedi la nota "il guscio e aperto da una parte".
-        "traslazione_m_gltf": (-6.280, -3.270, 0.0),
+        "traslazione_m_gltf": (FONDO_CORRIDOIO_X_M, QUOTA_CORRIDOIO_M, 0.0),
         "stato": "DERIVATO",
-        "formula": ("X: -0,800 - 5,480 = -6,280.  Y: -1,170 - 2,10 = -3,270. "
+        "formula": ("X: -0,800 - 5,480 = -6,280.  Y: pavimento del salone "
+                    "-1,170 meno la risalita, ed entrambi vengono da qui. "
                     "Il primo giro la faceva mappare sul VANO, che e' il "
                     "finestrone: derivazione caduta. La misura giusta e' "
                     "l'estremita' APERTA del guscio, misurata in Blender."),
     },
     "MECHANISM_BAY": {
         # il PUNTO su cui deve cadere ER_paratia_poppa, non una traslazione.
-        "cucitura_mondo_m_gltf": (-6.280, -3.270, 0.0),
+        "cucitura_mondo_m_gltf": (FONDO_CORRIDOIO_X_M, QUOTA_CORRIDOIO_M, 0.0),
         # e la feature che ci deve cadere sopra, nel sistema locale del pezzo.
         "cucitura_locale_x_m": 8.622575,
         # da cui: X_MB0 = -6,280 - 8,622575 = -14,902575
@@ -726,8 +806,8 @@ def riepilogo():
     print('')
     print('COLLOCAZIONI (dove va ciascun pezzo, e da cosa deriva)')
     for nome, c in COLLOCAZIONI.items():
-        t = c.get('traslazione_m')
-        v = t if t is not None else c.get('cucitura_mondo_m')
+        t = c.get('traslazione_m_gltf')
+        v = t if t is not None else c.get('cucitura_mondo_m_gltf')
         if v is None:
             print('  %-16s %-13s  -- da riderivare' % (nome, c['stato']))
             continue
