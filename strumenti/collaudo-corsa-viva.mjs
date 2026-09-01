@@ -57,6 +57,24 @@ await pg.setViewportSize({ width: 1280, height: 800 })
 await pg.goto(`${_ant.indirizzo}?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => window.__nautica && typeof window.__nautica.p === 'number', null, { timeout: 30000 })
 
+/**
+ * ─── QUESTO CANCELLO SCORRE PER FRAZIONE DI PAGINA, ED E' GIUSTO COSI'
+ *
+ * Nove cancelli si posizionano per frazione, e per otto di essi e' un difetto:
+ * l'altezza del documento non e' una costante, e' un risultato -- basta portare
+ * quattro etichette da 8 a 11px e la stessa frazione atterra in un'altra
+ * battuta. Quelli vanno agganciati a `vaiA`, che porta alla battuta.
+ *
+ * QUESTO NO, e chi verra' a convertirlo lo rompera'. Qui la frazione di pagina
+ * non e' il modo di ARRIVARE alla misura: e' la misura. Il soggetto e' proprio
+ * la RELAZIONE fra scorrimento e racconto -- quanta pagina si consuma senza che
+ * `p` si muova. Usare `vaiA` vorrebbe dire chiedere al racconto dove si trova
+ * il racconto, e la risposta sarebbe sempre «dove hai chiesto»: il cancello
+ * diventerebbe verde per costruzione.
+ *
+ * E' la distinzione che conta: chi misura QUALCOSA A UNA BATTUTA usa la
+ * battuta; chi misura LA MAPPA fra pagina e battuta usa la pagina.
+ */
 const H = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight)
 const letti = []
 for (let i = 0; i <= PASSI; i++) {
