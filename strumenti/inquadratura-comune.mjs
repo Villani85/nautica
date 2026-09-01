@@ -326,19 +326,46 @@ export function misuraInPagina ({ def, conColpevoli, soloLato }) {
 }
 
 /**
- * DOVE VIVE UNA BATTUTA, in frazioni di scorrimento.
+ * DOVE VIVE UNA BATTUTA, in frazioni DEL RACCONTO.
  *
  * Si CERCA, non si indovina: e' la regola che `collaudo-varco` e
  * `collaudo-manopola` hanno gia' pagato due volte. Una frazione di pagina
  * scritta a mano smette di valere il giorno in cui il documento cambia, e il
  * sintomo non e' un rosso onesto -- e' una statistica calcolata sul rumore, su
  * un fotogramma in cui il soggetto non c'e'.
+ *
+ * ─── E LA CURA DEL 31 AGOSTO ERA STATA DATA A META'
+ *
+ * DIFETTO PRESO IL 2 SETTEMBRE, ed e' lo stesso di `96b0fc9` lasciato vivo
+ * nell'altra meta' della coppia. Quel commit ha convertito `vaiA` alle
+ * frazioni del RACCONTO -- `cimaSezione + corsaRacconto * f` -- e ha lasciato
+ * QUESTA funzione, che quelle frazioni le PRODUCE, a scandire la pagina.
+ * Da allora il cancello misurava un arco in un'unita' e lo campionava in
+ * un'altra, e le due unita' divergono di quanto pesano antefatto e coda:
+ *
+ *     pagina 4980 px · racconto da 360 a 3744 px · coda 864 px
+ *     arco del meccanismo    0,63 - 1,00 di PAGINA
+ *     campionato come        0,63 - 1,00 di RACCONTO
+ *     cioe' a p 0,63 e 0,72, che sono ancora la battuta del TAGLIO
+ *
+ * Il referto che ne usciva -- «3,26% di quadro, 0/5 dell'arco sopra il minimo»
+ * -- non descriveva nessun momento del sito: il meglio dei cinque campioni
+ * cadeva a p 0,91, mentre il primo piano del meccanismo culmina a p 0,930 e li'
+ * misura 5,65%. Il cancello accusava il sito di una cosa che non aveva
+ * guardato, ed e' la seconda volta che questa coppia lo fa.
+ *
+ * Adesso la scansione usa la STESSA maniglia del campionamento (`vaiA`), cosi'
+ * le due non possono divergere di nuovo: chi cerca e chi va misurano nella
+ * stessa unita' o non misurano niente.
  */
 export const trovaArco = (pg, battuta) => pg.evaluate(async (b) => {
+  const n = window.__nautica
+  const conManiglia = n && typeof n.cimaSezione === 'number' && n.corsaRacconto > 0
   const H = document.documentElement.scrollHeight - innerHeight
+  const vai = (f) => scrollTo(0, Math.round(conManiglia ? n.cimaSezione + n.corsaRacconto * f : H * f))
   let da = null; let a = null
   for (let f = 0; f <= 1.0001; f += 0.005) {
-    scrollTo(0, Math.round(H * f))
+    vai(f)
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
     const palco = document.querySelector('.palco[data-battuta]')
     if (palco && palco.dataset.battuta === b) { if (da === null) da = f; a = f }

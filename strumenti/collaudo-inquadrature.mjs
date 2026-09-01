@@ -47,6 +47,44 @@
  * abbastanza larghe da non diventare rosse per il rumore di un fotogramma,
  * abbastanza strette da prendere una battuta che perde il suo soggetto.
  *
+ * ─── QUELLA TABELLA E' PRESA IN UN'UNITA' CHE L'ARCO NON USA PIU'
+ *
+ * 2 SETTEMBRE 2026. `trovaArco` scandiva la PAGINA e `vaiA` andava nel
+ * RACCONTO (vedi il commento di `trovaArco`): le due unita' si sono separate il
+ * 31 agosto e la tabella qui sopra e' di prima. Non e' una tabella sbagliata,
+ * e' una tabella di un altro metro -- e i numeri sotto un metro diverso non si
+ * confrontano. Rimisurato con le due unita' riunite, due corse di fila:
+ *
+ *     battuta      presenza al meglio   occlusione        arco (racconto)
+ *     salotto            94,93%             5,1%          0,00-0,13
+ *     emerge             17,76%            24,0-24,1%     0,15-0,26
+ *     mare                9,56%            14,0%          0,26-0,38
+ *     invito              9,56%            14,0%          0,38-0,50
+ *     calma               9,56%            14,0%          0,50-0,64
+ *     taglio             16,22-16,24%       0,7%          0,64-0,82
+ *     meccanismo          5,77%            35,8%          0,82-0,93 (tagliato)
+ *
+ * Fra due corse: quattro centesimi di scarto sul taglio, uno su emerge, zero
+ * sul meccanismo. Il metro adesso e' fermo.
+ *
+ * LE SOGLIE NON LE HO TOCCATE, e il cancello resta ROSSO su due voci. Alzarle
+ * per far tornare verde un cancello e' la cosa che questo file si e' vietato
+ * per iscritto, e le due voci sono fatti, non rumore:
+ *
+ *   `meccanismo`  il primo piano culmina a 5,77% di quadro (minimo 6,0) e a
+ *                 p 0,930, l'ultimo istante prima che la traversata prenda la
+ *                 camera. E' coperto per il 35,8%: 22,3 dal MARE (la pinna sta
+ *                 sotto il pelo, ed e' il mestiere di `collaudo-varco`) e 11,1
+ *                 dalla nave stessa.
+ *   `emerge`      coperto per il 24,0% dal mare, tetto 22. All'istante 12,5,
+ *                 che e' fermo: non e' piu' l'oscillazione di tre punti del
+ *                 31 agosto, e' un valore che non si muove.
+ *
+ * Le leve sono tutte di messa in scena -- far arrivare l'avvicinamento piu'
+ * vicino, far cominciare la traversata piu' tardi di 0,93, scegliere un altro
+ * istante -- e quelle le decide il committente. Stanno scritte come numeri in
+ * `feedback/CHIEDO.md`, §3.6.
+ *
  * ─── E QUELLE TRE CORSE SONO LA RAGIONE PER CUI SI ASPETTA IL FATTO
  *
  * La prima versione aspettava 1,2 secondi a orologio dopo ogni `scrollTo`. La
@@ -76,7 +114,7 @@
  */
 import { apriBrowser } from './browser.mjs'
 import { spawn } from 'node:child_process'
-import { SOGGETTI, misuraInPagina, trovaArco, vaiA, attendiCameraFerma } from './inquadratura-comune.mjs'
+import { SOGGETTI, misuraInPagina, trovaArco, vaiA, attendiCameraFerma, finestra } from './inquadratura-comune.mjs'
 import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
 const PRESENZA_MINIMA = 6.0     // misurato 7,87 al peggio, su tre corse
@@ -166,11 +204,42 @@ const referto = []
    perche' una misura presa su una camera ancora in volo non e' quella misura */
 const fermateMancate = []
 
+/**
+ * ─── DOVE LA TRAVERSATA HA LA CAMERA, QUESTO CANCELLO NON MISURA -- e lo dice
+ *
+ * Dalla promozione della traversata (`8fbfe5d`) l'ultimo tratto del racconto e'
+ * un movimento DENTRO la nave: locale tecnico, sala macchine, scala, salone.
+ * Li' il soggetto di ogni battuta -- che e' sempre la nave vista da fuori -- non
+ * e' in quadro per COSTRUZIONE, non per un difetto di inquadratura: la camera
+ * sta dentro lo scafo. La battuta scritta su `.palco` resta «meccanismo» fino
+ * in fondo, quindi l'arco trovato ci finisce dentro e due campioni su cinque
+ * leggono zero -- e trascinano il «migliore» via dal culmine.
+ *
+ * L'intervallo NON e' una tacca scelta qui: e' `S.traversata` della regia, la
+ * stessa che muove la camera. Un'esclusione dichiarata da chi comanda il
+ * movimento non e' la «cura per esclusioni» contro cui mette in guardia il
+ * commento di `inquadratura-comune`: quella e' un criterio inventato dal
+ * cancello, questa e' una domanda alla regia. E si STAMPA, cosi' nessuno
+ * scambia un arco tagliato per l'arco intero.
+ *
+ * Quel tratto ha i cancelli suoi: `collaudo-traversata-world`, `collaudo-varco`
+ * per il pelo dell'acqua, e i provini della traversata.
+ */
+const [DENTRO_DA] = finestra('traversata')
+
 for (const [battuta, def] of Object.entries(SOGGETTI)) {
-  const arco = await trovaArco(pg, battuta)
-  if (arco === null) {
+  const trovato = await trovaArco(pg, battuta)
+  if (trovato === null) {
     guai.push(`la battuta "${battuta}" non compare in nessun punto dello scorrimento: ` +
               'o e stata rinominata, o la regia non la scrive piu su .palco[data-battuta]')
+    continue
+  }
+  const arco = { da: trovato.da, a: Math.min(trovato.a, DENTRO_DA) }
+  const tagliato = arco.a < trovato.a - 1e-9
+  if (arco.a <= arco.da) {
+    guai.push(`la battuta "${battuta}" vive tutta dentro la traversata ` +
+              `(${trovato.da.toFixed(2)}-${trovato.a.toFixed(2)}, la traversata comincia a ${DENTRO_DA}): ` +
+              'qui il soggetto non puo esserci, e questo cancello non e quello giusto per misurarla')
     continue
   }
 
@@ -218,6 +287,8 @@ for (const [battuta, def] of Object.entries(SOGGETTI)) {
               `${presenza.toFixed(2).padStart(6)}% di quadro · ` +
               `${occlusione === null ? ' n/d ' : occlusione.toFixed(1).padStart(5) + '%'} coperto · ` +
               `${sopra}/${QUANTI} dell'arco sopra il minimo${bandiera}`)
+  console.log(`               arco ${arco.da.toFixed(2)}-${arco.a.toFixed(2)} del racconto` +
+              (tagliato ? `, tagliato a ${DENTRO_DA} dove la traversata prende la camera (finiva a ${trovato.a.toFixed(2)})` : ''))
   r.colpevoli.forEach(c => console.log(`               lo copre ${c.ramo} per il ${c.quota}% (${c.mesh} mesh)`))
 
   if (presenza < PRESENZA_MINIMA) {
