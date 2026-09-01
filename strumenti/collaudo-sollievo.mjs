@@ -42,7 +42,47 @@ try {
   const pagina = await browser.newPage({ viewport: { width: 1280, height: 800 } })
   const errori = []
   pagina.on('pageerror', e => errori.push(String(e)))
-  await pagina.goto(BASE + '?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
+  /**
+   * ─── LA SIMULAZIONE SI INCHIODA, O E' LEI A DECIDERE L'ESITO
+   *
+   * La corsa 292 e' morta qui, e il referto diceva tutto:
+   *
+   *   CI       finale 0.00 s · fermo si   ritorno ... riarmato si
+   *   locale   finale 5.00 s · fermo si   ritorno ... riarmato si
+   *
+   * IL FATTO E' UNO SOLO: la' il video del sollievo resta a zero e fermo, qui
+   * arriva in fondo. Non e' un codec -- nello stesso referto la clip calma
+   * gira (2,99 s).
+   *
+   * LA MIA PRIMA SPIEGAZIONE ERA SBAGLIATA, e l'ho scritta qui prima di
+   * verificarla: avevo letto «riarmato si» come prova di un'interruzione. Ma
+   * «riarmato si» compare ANCHE nella corsa che passa: fa parte della chiusura
+   * normale. Non prova niente, e citarlo come causa sarebbe stato costruire una
+   * spiegazione sul primo indizio che la confermava.
+   *
+   * Quello che resta e' un'IPOTESI, e va detta come tale: il ciclo di disegno
+   * continua a passare a `salone3d.aggiorna` il rollio VERO della simulazione,
+   * che sopra ACCENDE (5,0 gradi) interrompe la sequenza. Sul runner il filmato
+   * da cinque secondi impiega piu' tempo REALE ad arrivare in fondo, quindi la
+   * simulazione ha piu' occasioni di superare la soglia. Se e' cosi', il sito
+   * si comporta correttamente in entrambi i casi -- se il mare torna cattivo,
+   * il sollievo DEVE interrompersi -- ed e' il cancello a misurare la lentezza
+   * della macchina.
+   *
+   * Non posso provarlo da qui: qui non fallisce. Quello che posso fare e'
+   * TOGLIERE LA VARIABILE, cosi' che se la corsa resta rossa la causa e'
+   * un'altra e lo si sa subito.
+   *
+   * `?fermo=<t>` inchioda la simulazione a un istante. Serve un istante QUIETO,
+   * o il rollio inchiodato interromperebbe comunque. Misurati uno per uno:
+   *
+   *   fermo=24 -> -1,343    fermo=28 -> +1,184    fermo=32 -> +1,599
+   *   fermo=29 -> +6,288    fermo=30 -> +7,226    fermo=33 -> -2,165
+   *
+   * 28 sta sotto CALMO (2,0) e molto sotto ACCENDE (5,0): il ciclo non puo'
+   * ne' interrompere ne' azzerare `calmoDa`. Non e' un numero scelto a occhio.
+   */
+  await pagina.goto(BASE + '?ispeziona=1&fermo=28', { waitUntil: 'load', timeout: 45000 })
   await pagina.waitForFunction(() => window.__nautica?.statoSollievo?.(), null, { timeout: 60000 })
   /**
    * ─── `>= 3`, NON `>= 2`, e la differenza e' tutta qui
