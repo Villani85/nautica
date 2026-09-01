@@ -134,6 +134,11 @@ jobs:
       # Provato al contrario prima di entrare: con un limite finto a 0,5 esce 1,
       # e col pulsante rinominato dice «non esiste nessun button.suono».
       - { name: 'Cancello · il suono non parte da solo e non satura', run: node strumenti/collaudo-audio.mjs, timeout-minutes: 20 }
+      # Anche questo era una lacuna dichiarata: contrasto, tabulazione, fuoco --
+      # voci di Usability, che pesa il 30%. MISURA E GRIDA, NON FERMA: un
+      # contrasto scarso si corregge cambiando un colore, e i colori li decide
+      # il committente. Vedi BLOCCA_ACCESSO in testa al file.
+      - { name: 'Referto · contrasto, tabulazione, fuoco', run: node strumenti/collaudo-accesso.mjs, timeout-minutes: 25 }
       - name: 'Cancello · il sollievo e una conseguenza'
         timeout-minutes: 20
         run: node strumenti/collaudo-sollievo.mjs
