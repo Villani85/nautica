@@ -43,7 +43,30 @@
  *
  * ─── IL PAVIMENTO DI QUESTA MISURA, e va saputo prima di cercare
  *
- * Cinque sondaggi a scena inchiodata, un parametro alla volta:
+ * ─── E I SONDAGGI DI PRIMA ERANO SU UN GUSCIO CIECO
+ *
+ * DA SAPERE PRIMA DI FIDARSI DEI NUMERI QUI SOTTO. Fino al 2 settembre 2026 il
+ * guscio non portava nessuna fotografia: `guscio-salone.glb` non ha `TEXCOORD_0`
+ * e con `map` assegnata senza UV WebGL da' zero a ogni vertice, quindi TUTTO il
+ * guscio prendeva il colore di un texel. Questi sondaggi confrontavano la lastra
+ * con una scatola di tinta piatta: dicevano dove stava la SAGOMA, non dove
+ * stava l'immagine. La conclusione «minimo locale su tutti e cinque i gradi di
+ * liberta'» valeva per la sagoma.
+ *
+ * Rifatti con la proiezione che funziona (`proiezione.js`), stessa scena
+ * inchiodata, p = 0,02:
+ *
+ *     convenzione   0 -> 24,3   1 -> 60,0   2 -> 60,0
+ *                   3 -> 27,9   4 -> 27,9   5 -> 46,5
+ *     scala      0,85 -> 25,8   1,0 -> 24,3   1,15 -> 24,5
+ *     distanza   -0,25 -> 28,8     0 -> 24,3  +0,25 -> 23,4
+ *                +0,50 -> 24,4  +0,75 -> 28,4  +1,00 -> 45,8
+ *
+ * La convenzione 0 resta la migliore e adesso lo dice con uno scarto vero (le
+ * altre raddoppiano invece di aggiungere il 50%). Distanza e scala restano
+ * piatte entro un livello: dentro il rumore di questo metro.
+ *
+ * ─── I SONDAGGI DI PRIMA (guscio cieco, tenuti per confronto)
  *
  *     convenzione   0 -> 26,7   1 -> 41,0   2 -> 41,0
  *                   3 -> 29,0   4 -> 29,0   5 -> 63,4
