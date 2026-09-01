@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **31 agosto 2026, 13:45.** Da quando hai clonato potrei aver spinto
+Aggiornato: **2 settembre 2026, 00:35.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -300,6 +300,28 @@ adesso e' piu' stretta:
 mostrarla?** Il vincolo e' che il 3D arriva in differita apposta -- il percorso
 critico e' 17 KB e non lo rompo -- quindi la promessa deve essere fatta di
 testo, CSS o al massimo un'immagine minuscola. Non «aggiungi un video».
+
+### 3.6 · La traversata (2 settembre, notte) — cinque numeri sul tavolo
+
+La traversata 3D (locale tecnico → sala macchine → scala → salone) adesso si
+vede: il video sta in `uscite/traversata/traversata-leggera.mp4`, e il commit
+`8db6494` dice perche' prima era un vuoto grigio (la lente a 34° in un locale
+largo 3,2 m, non la cottura). Quello che ho messo e' MISURATO — soffitti,
+pareti, posto per le macchine, tutto con raggi sul mondo cotto — ma cinque
+scelte sono di messa in scena e le ho scritte come numeri, non decise:
+
+```
+CAMPO_DENTRO_GRADI       58      src/scena/index.js    lente dentro i locali; ?campo=N per provare (34..100)
+CAMPO_TORNA_SITO_A       0,88    src/scena/index.js    a che s la lente e' tornata a 34; alternativa: rampa solo in scala [0,62, 0,88]
+AMBIENTE                 0,22    src/scena/mondo.js    luce diffusa che rende leggibile l'AO cotta; ?ambiente=N
+guscio vuoto del salone  pCoda 0-0,13                  6-8 s di scatola beige a velocita' costante prima del filmato
+cielino del salone       striscia calda                dalle PointLight del salone, che non ho toccato
+```
+
+E due che restano dal giro precedente: **le schede HUD sopra il corridoio a
+p≈0,93** (la traversata comincia sotto una scheda), e **lo sguardo in scala**
+(`BECCHEGGIO_NODI_GRADI` = 0: la camera sale i gradini guardando dritto). Tutte
+e sette sono del committente; io le sposto quando me lo dice.
 
 ---
 
