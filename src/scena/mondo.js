@@ -1,5 +1,6 @@
 import { Group, MathUtils, Quaternion, Vector3, PointLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { vestiMondo } from './materie-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
 import { sezioneA, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
@@ -308,6 +309,8 @@ let luci = null
 /* la camera del sito: serve a toglierle lo strato di fuori mentre si e' dentro.
    La riceve `ancoraA`, che e' l'unico posto in cui il sito si presenta. */
 let cameraDelSito = null
+/* quante superfici hanno ricevuto una materia: un numero si guarda */
+let vestite = 0
 
 /**
  * ─── PRIMA DI ACCENDERE, BISOGNA SPEGNERE
@@ -427,6 +430,9 @@ function accendiLuci () {
     }
     cameraDelSito = camera || null
     isolaDallaLuceDiFuori(camera)
+    /* le materie DOPO l'isolamento: `isolaDallaLuceDiFuori` chiama
+       `needsUpdate`, e vestire prima significherebbe farlo due volte */
+    vestite = vestiMondo(gruppo)
     ancorato = true
   }
 
@@ -683,6 +689,7 @@ function accendiLuci () {
         francoChiglia,
         ancorato,
         luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
+        vestite,
         diag,
         correzioneGradi: correzione ? +(2 * Math.acos(Math.min(1, Math.abs(correzione.w))) * 180 / Math.PI).toFixed(2) : null,
         /* misurati nello spazio della scena, non sull'asset -- vedi
