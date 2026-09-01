@@ -1774,6 +1774,11 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * trasforma in un numero che sembra una misura.
        */
       coperturaTraversata: () => traversata.copertura,
+      /* la `q` che la regia passa a `impostaTraversata`, cioe' la posizione
+         DENTRO la finestra della traversata. Serve a leggerla nello stesso
+         fotogramma di `p`: senza, «p satura» e «q non avanza» sono due
+         affermazioni che nessuno puo' confrontare. */
+      corsaTraversata: () => corsaTraversata,
       traversataFinita: () => traversata.finita,
       consegnaCalma: () => traversata.consegnaCalma,
       mondo: () => mondo?.stato ?? null,
