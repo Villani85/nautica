@@ -48,7 +48,9 @@ jobs:
     # piantato, non lento. Senza il tetto per passo, un solo cancello bloccato
     # consumerebbe comunque tutti i novanta e il log direbbe "scaduto" senza
     # dire quale -- che e' esattamente il buco di stasera.
-    timeout-minutes: 90
+    # alzato con il passo del telefono: 90 non basta piu' se un solo cancello
+    # puo' legittimamente durarne 45. Vedi la nota su quel passo.
+    timeout-minutes: 180
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -275,8 +277,32 @@ jobs:
       # fotogrammi al secondo NON sono una misura qui (niente GPU): il
       # collaudo lo stampa in testa e in coda, e fallisce solo su cio' che sa
       # giudicare.
+      # ─── VENTI MINUTI NON BASTANO, E IL NUMERO LO DICE
+      #
+      # Questo passo ha fatto fallire la corsa 291 andando in timeout a 20,2
+      # minuti. Non era appeso e non era rotto: e' una misura che in software
+      # costa davvero tanto, e il tetto di 20 l'avevo scelto a occhio.
+      #
+      # Misurato il 1 settembre 2026 su questa macchina:
+      #   con Chrome di sistema          52 s   -> verde
+      #   con CHROMIUM=1 (come qui)      ~20 min
+      #
+      # La causa e' una sola e vale per tutta la suite: SENZA GPU IL SITO GIRA
+      # A 2,34 FOTOGRAMMI AL SECONDO. Un fotogramma costa 427 ms, un doppio
+      # requestAnimationFrame 1,24 s, e questo cancello percorre 66 stazioni per
+      # ciascuno dei tre schermi -- 82 s di sola attesa per schermo, prima di
+      # contare le misure. Il runner non ha una GPU e non puo' averla.
+      #
+      # Ho provato la leva ovvia -- rasterizzare a 1x invece che a 2x -- e NON
+      # E' QUELLA: 2,20 fps contro 1,78, un guadagno di 1,24 volte. Il costo non
+      # sta nei pixel, sta nel lavoro per fotogramma. Se l'avessi applicata
+      # avrei dichiarato risolto qualcosa che non lo era.
+      #
+      # La cura vera e' rendere i cancelli d'impaginato indipendenti dal disegno
+      # (misurano il DOM, non il 3D), ed e' un lavoro che tocca la suite intera.
+      # Nel frattempo il tetto dice la verita' misurata invece di una speranza.
       - name: 'Cancello · il sito su schermi da telefono'
-        timeout-minutes: 20
+        timeout-minutes: 45
         run: node strumenti/collaudo-telefono.mjs
         env: { CHROMIUM: '1' }
 
