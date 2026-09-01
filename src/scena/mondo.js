@@ -281,6 +281,50 @@ export function creaMondo (base, scena) {
    * `slerp` per l'orientamento -- che e' l'unico modo di interpolare una
    * rotazione senza passare per pose che nessuno ha chiesto.
    */
+  /**
+   * ─── QUANTE POSE STANNO SOPRA IL PONTE, misurato QUI e non altrove
+   *
+   * Una revisione aveva risposto «zero pose sopra il ponte» contando su
+   * `traversata-camera.json`. Il conto era giusto e la risposta non valeva: il
+   * JSON e' l'ASSET, e le pose che il sito usa passano per una scala 1/2,5, una
+   * rotazione di 90 gradi, un offset in z e -- soprattutto -- un `position.y`
+   * calcolato a runtime da `appoggiaSullaChiglia()`. Misurare sull'asset
+   * significa rispondere in un sistema di coordinate in cui la domanda non vive.
+   *
+   * E' la stessa famiglia del difetto che questo file ha appena pagato, dove le
+   * pose venivano composte prima che quell'offset esistesse.
+   *
+   * Quindi il conto si fa dove le due cose sono nello stesso spazio: qui, dopo
+   * `componiPose()`, con `sezioneA` a portata di mano. Chi guarda da fuori
+   * legge un numero invece di rifare una trasformazione -- e rifarla e'
+   * esattamente il modo in cui si sbaglia.
+   */
+  let poseSopraPonte = null
+  let campionePonte = null
+  let margineMinimoPonte = null
+
+  function contaPoseSopraPonte () {
+    if (!pose || !pose.length) return
+    let sopra = 0
+    let peggiore = Infinity
+    for (const v of pose) {
+      const t = MathUtils.clamp((v.p.z - PRUA_Z) / (POPPA_Z - PRUA_Z), 0, 1)
+      const margine = sezioneA(t).ponteY - v.p.y   // positivo = la camera sta SOTTO
+      if (margine < 0) sopra++
+      if (margine < peggiore) peggiore = margine
+    }
+    poseSopraPonte = sopra
+    margineMinimoPonte = peggiore
+    /* per chi deve capire se il numero e' plausibile: qualche riga in chiaro */
+    campionePonte = [0, 24, 48, 72, 95].map((i) => {
+      const v = pose[Math.min(i, pose.length - 1)]
+      const t = MathUtils.clamp((v.p.z - PRUA_Z) / (POPPA_Z - PRUA_Z), 0, 1)
+      const sez = sezioneA(t)
+      return { i, z: +v.p.z.toFixed(3), camY: +v.p.y.toFixed(3),
+               ponteY: +sez.ponteY.toFixed(3), chiglia: +sez.chiglia.toFixed(3) }
+    })
+  }
+
   const _pa = new Vector3()
   const _qa = new Quaternion()
   function posaA (s) {
@@ -300,7 +344,7 @@ export function creaMondo (base, scena) {
     caricato: Promise.all([caricato, curva]).then((v) => {
       /* qui, e solo qui, il gruppo e' appoggiato sulla chiglia E le pose
          esistono: e' l'unico istante in cui comporle e' corretto */
-      if (v[0] && v[1]) componiPose()
+      if (v[0] && v[1]) { componiPose(); contaPoseSopraPonte() }
       return v[0] && v[1]
     }),
     posaA,
@@ -326,6 +370,11 @@ export function creaMondo (base, scena) {
         offsetZ: gruppo.position.z,
         offsetY: gruppo.position.y,
         sfondamentoPonte: sfondamento,
+        /* misurati nello spazio della scena, non sull'asset -- vedi
+           contaPoseSopraPonte() e la nota che la accompagna */
+        poseSopraPonte,
+        margineMinimoPonte,
+        campionePonte,
         pose: pose ? pose.length : 0,
         lunghezzaCurva: lunghezza,
         ponte: 'DERIVATO, non confermato — vedi collaudo-verticale.mjs'
