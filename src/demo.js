@@ -410,6 +410,31 @@ export function avviaDimostrazione () {
     if (window.__nautica) {
       window.__nautica.p = p
       /**
+       * ─── E LA CODA, COME PARAMETRO A PARTE
+       *
+       * `p` e' tappato a 1 quando il fondo della sezione tocca il fondo della
+       * finestra, e da li' resta 1,2 altezze di scorrimento in cui non dice
+       * piu' niente. Con il FILMATO quel tratto e' pieno per costruzione: e'
+       * dove il filmato finisce sul proprio orologio, ed e' la ragione per cui
+       * la coda esiste (vedi la nota sopra). Con il MONDO promosso il filmato
+       * non c'e' -- `index.js` spegne la lastra appena `mondo.pronto` -- e la
+       * coda riserva spazio a un evento che li' non accade.
+       *
+       * `pCoda` misura quel tratto, da 0 a 1, SENZA toccare `corsa`. E' la
+       * differenza che conta: `corsa` la leggono diciannove strumenti fra
+       * cancelli e attrezzi, e la nota qui sopra spiega che non e' cambiata di
+       * un pixel proprio perche' ogni finestra della regia restasse dov'era.
+       * Cambiarla per allungare la traversata sposterebbe `avvicina`,
+       * `verticale` e `traversata` insieme, e diciannove soggetti con loro.
+       *
+       * Aggiungere un parametro non sposta niente: chi non lo legge non se ne
+       * accorge.
+       */
+      window.__nautica.coda = coda
+      window.__nautica.pCoda = coda > 0
+        ? Math.min(1, Math.max(0, (-r.top - ante - corsa) / coda))
+        : 0
+      /**
        * E anche la CORSA, in pixel. Con la sola posizione un cancello puo'
        * solo cercare il punto per bisezione -- e cercare vuol dire SALTARE
        * per tutta la pagina, venti volte, trascinandosi dietro la fisica.
