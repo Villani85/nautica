@@ -329,6 +329,23 @@ conseguenza visibile: `PointLight.distance` sta in coordinate di mondo e non si
 scala col gruppo, quindi le sette plafoniere -- una ogni metro e mezzo --
 hanno tutte nove metri di portata e illuminano la stessa stanza.
 
+**E il primo piano del meccanismo: un numero e tre fotogrammi.** Il cancello
+delle inquadrature dice che il soggetto della battuta «The part you never see»
+occupa il **5,77% del quadro** nel suo momento migliore, sotto il minimo di 6
+che il cancello stesso si era misurato. La leva e' una sola ed e' tua: quanto
+si avvicina la camera, cioe' `RAGGIO_MECCANISMO` (`src/scena/index.js:97`,
+`?raggio=<n>` per guardarlo). Misurato a p 0,93, stesso istante, stessa
+finestra:
+
+```
+raggio 2,0  (com'e' adesso)   5,77% di quadro
+raggio 1,6                    9,56%   <- il pezzo si legge: riduttore, servo, albero
+raggio 1,3                    8,73%   (piu' vicino ma qualcosa esce dal quadro)
+```
+
+Non lo cambio da solo: e' inquadratura. Ma se il meccanismo e' il pezzo forte
+del sito, oggi lo si vede meno di quanto il sito dichiara.
+
 **E da li' viene il terzo numero: le ombre della traversata non si vedono.** Le
 due plafoniere piu' vicine proiettano davvero (mappa cubica 512, l'arredo
 proietta, le stanze ricevono), ma l'ombra di una la riempiono le altre sei.
