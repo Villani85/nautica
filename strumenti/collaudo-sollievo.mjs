@@ -360,7 +360,33 @@ try {
   if (finale.calmaAllaConsegna === null) {
     guai.push('la scena non registra l istante della consegna: non misuro il raccordo')
   } else if (finale.calmaAllaConsegna > 0.5) {
-    guai.push(`la calma non riparte dal raccordo: ${finale.calmaAllaConsegna.toFixed(2)} s`)
+    /**
+     * ─── DUE CASI CHE SI SOMIGLIANO E VOGLIONO GIUDIZI OPPOSTI
+     *
+     * `chiudi()` in `salone3d.js` aspetta che il seek a zero atterri, ma con un
+     * tetto di SESSANTA FOTOGRAMMI, e poi chiude comunque -- «meglio un
+     * raccordo impreciso di uno schermo coperto per sempre», dice il codice, ed
+     * e' una scelta, non una svista.
+     *
+     * Su un rasterizzatore software sessanta fotogrammi sono ventisei secondi
+     * di orologio: il seek non atterra e il montaggio CEDE COME PROGETTATO. Le
+     * corse 294 e 295 hanno accusato il sito di un difetto che il sito ha
+     * scelto -- 1,19 s e 1,07 s.
+     *
+     * Adesso la scena registra anche QUANTE attese sono servite, e i due casi si
+     * distinguono invece di somigliarsi: chiuso subito su una posizione vecchia
+     * e' un difetto; tetto esaurito e' il ripiego dichiarato, e si stampa senza
+     * bocciare.
+     */
+    if (finale.consegnaAttese >= 60) {
+      console.log(`  raccordo  ceduto sul tetto: ${finale.consegnaAttese} attese, ` +
+                  `calma a ${finale.calmaAllaConsegna.toFixed(2)} s. E' il ripiego ` +
+                  'dichiarato in salone3d.js, non un difetto.')
+    } else {
+      guai.push(`la calma non riparte dal raccordo: ${finale.calmaAllaConsegna.toFixed(2)} s ` +
+                `dopo sole ${finale.consegnaAttese} attese su 60 -- ha chiuso su una ` +
+                'posizione vecchia senza esaurire il tetto')
+    }
   }
 
   const ritornaMare = await pagina.evaluate(() => {

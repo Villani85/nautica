@@ -613,6 +613,8 @@ export function creaSalone3D (base, tuga) {
   let opacitaSollievo = 0
   /* l'istante del ciclo calmo quando la consegna si e' chiusa: vedi `chiudi` */
   let calmaAllaConsegna = null
+  /* quante attese sono servite al seek: vedi `chiudi` */
+  let consegnaAttese = null
   let versioneConsegna = 0
 
   const ARMA_SOLLIEVO = 0.6
@@ -737,6 +739,23 @@ export function creaSalone3D (base, tuga) {
        * conclusione sbagliata, perche' misurava il ritardo di chi guarda.
        */
       calmaAllaConsegna = vCalma.currentTime
+      /**
+       * ─── E SI REGISTRA ANCHE SE IL TETTO E' STATO ESAURITO
+       *
+       * Senza questo numero, chi guarda da fuori non puo' distinguere due casi
+       * che si somigliano e vogliono giudizi opposti:
+       *
+       *   la consegna ha chiuso SUBITO su una posizione vecchia   -> difetto
+       *   ha aspettato i sessanta fotogrammi e poi ha ceduto      -> il ripiego
+       *                                                              dichiarato
+       *                                                              qui sopra
+       *
+       * Il secondo caso e' quello che succede su un rasterizzatore software:
+       * sessanta fotogrammi a 2,3 al secondo sono ventisei secondi, il seek non
+       * atterra, e il montaggio cede COME PROGETTATO. Un cancello che li
+       * confonde accusa il sito di un difetto che il sito ha scelto.
+       */
+      consegnaAttese = attese
       vCalma.play().catch(() => {})
     }
     /**
@@ -1010,6 +1029,7 @@ export function creaSalone3D (base, tuga) {
         concluso: sollievoConcluso,
         daRiavvolgere: sollievoDaRiavvolgere,
         tempo: vSollievo?.currentTime || 0,
+        consegnaAttese,
         durata: vSollievo?.duration || 0,
         opacita: opacitaSollievo,
         loop: vSollievo?.loop ?? null
