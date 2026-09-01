@@ -63,6 +63,18 @@ const NUOVI = [[360, 640]]
  * 224x60 px e `.pannello--letture` per 206x60. Non le ha introdotte questo giro:
  * non erano mai state provate.
  *
+ * ─── E L'INTERVALLO ROTTO E' 821-881, non «821 e 822»
+ *
+ * Sapere che rompe a 821 e a 822 e' un numero; sapere DA DOVE A DOVE e' una
+ * diagnosi. Un impaginato che sopra gli 820 pretende piu' larghezza di quella
+ * che ha non si rompe in due punti: si rompe su un intervallo.
+ *
+ *   821  206x60      861  190x60      881  181x60      882  PULITO
+ *
+ * La sovrapposizione si restringe linearmente e sparisce fra 881 e 882.
+ * L'intervallo comprende l'iPad Pro 11 pollici in verticale (834 px), che dopo
+ * il telefono e' il dispositivo piu' probabile per chi guarda un sito la sera.
+ *
  * Farle fallire oggi fermerebbe la pubblicazione su difetti vecchi, ed e'
  * esattamente cio' che il committente ha deciso di non voler fare finche' il
  * sito non e' completo. Quindi le larghezze DERIVATE dai punti di rottura
