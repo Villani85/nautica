@@ -1692,6 +1692,25 @@ html[data-unica="si"] .atto--demo{margin-top:-100svh}
   transition:opacity .5s ease,visibility 0s linear .5s;
   pointer-events:none;
 }
+
+/* ─── E LA LINEA D'ACQUA SI RITIRA CON GLI ALTRI, perche' dentro non c'e' pelo
+   `.linea` e' l'unica idea meccanica del sito: divide l'aria dall'acqua alla
+   quota del pelo, e sta SOPRA la tela per non dipendere da cosa la tela
+   disegna. Giusto finche' la nave si guarda da fuori.
+
+   Da quando la traversata e' 3D si attraversa lo scafo, e la riga restava
+   accesa: tagliava il corridoio a meta' e passava sopra le due persone del
+   finale. Presa guardando il provino, non da un cancello -- nessuno di loro
+   misura una riga da un pixel, e nessuno poteva.
+
+   Dentro un corridoio non c'e' nessun pelo d'acqua da segnare, e nel salone
+   nemmeno. L'attributo che serve esiste gia' sulla radice (`regia.js:366`), ed
+   e' lo stesso con cui si ritirano cruscotto e richiami: la linea se ne va con
+   loro, e torna uscendo. */
+html[data-traversata="si"] .linea{
+  opacity:0;visibility:hidden;
+  transition:opacity .5s ease,visibility 0s linear .5s;
+}
 .palco[data-traversata="no"] .pannello,
 .palco[data-traversata="no"] .comandi{
   transition:opacity .35s ease,visibility 0s;
