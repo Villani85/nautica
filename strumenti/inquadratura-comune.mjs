@@ -368,6 +368,69 @@ export const trovaArco = (pg, battuta) => pg.evaluate(async (b) => {
  * accanto spiega che esistono per non far cercare a nessuno il punto per
  * bisezione. Erano li' da prima di oggi.
  */
+/**
+ * ─── SI CHIEDE LA BATTUTA PER NOME, NON SI CERCA
+ *
+ * REGOLA PRESA IL 1 SETTEMBRE 2026, dopo che la promozione della traversata ha
+ * prodotto QUATTRO conseguenze della stessa specie in un pomeriggio:
+ *
+ *   `traversata-world`  vietava la lastra anche nella coda, dove e' il finale
+ *   `continuita`        vietava il beccheggio anche dentro lo scafo
+ *   `finale`            0,90 schermate invece di 1
+ *   `varco`             cercava dal fondo e trovava prima la coda
+ *
+ * Non e' sfortuna, e' una proprieta' della suite. Contati: DUE cancelli leggono
+ * gli intervalli da `regia.js`; DICIASSETTE usano `data-battuta` senza leggerla;
+ * OTTO scandiscono la pagina in cerca del proprio fotogramma.
+ *
+ * Un cancello che CERCA «il fotogramma dove si vede il meccanismo» usa
+ * un'euristica su un contenuto che cambia. Quando il contenuto cambia, la
+ * ricerca atterra su un'altra cosa e il cancello denuncia il sito per un
+ * difetto della propria ricerca.
+ *
+ * E LA CURA PER ESCLUSIONI SI ACCUMULA. Ogni «escludi la traversata», «escludi
+ * la coda» e' un posto in cui quel cancello non guarda piu', e nessuna di quelle
+ * esclusioni si dichiara come tale: se domani la battuta si sposta li', il
+ * cancello non fallisce dicendo «non l'ho trovata» -- trova qualcos'altro che
+ * soddisfa il criterio. Un cancello che restringe il campo a ogni collisione
+ * converge verso uno che guarda un punto solo e lo chiama verde.
+ *
+ * La regia le DICHIARA tutte, con nome e intervallo. Chiederle costa una riga:
+ *
+ *     await aBattuta(pg, 'verticale')        // meta' della battuta
+ *     await aBattuta(pg, 'traversata', 0)    // il suo inizio
+ *     const [da, a] = finestra('taglio')
+ *
+ * NON convertirne diciassette adesso: convertire QUELLO CHE SI STA TOCCANDO,
+ * invece di aggiungergli un'esclusione. E' lo stesso tempo e non lascia debito.
+ */
+/* `import` e poi `export`, non `export ... from`: quest'ultimo ri-esporta senza
+   portare il nome nello scope, e `finestra()` qui sotto trovava «S is not
+   defined». Preso al primo lancio, e la prova serviva a questo. */
+import { S } from '../src/regia.js'
+export { S }
+
+/** L'intervallo dichiarato di una battuta. Alza se il nome non esiste: un
+ *  nome sbagliato deve fallire subito, non tornare `undefined` e diventare
+ *  `NaN` tre righe dopo. */
+export function finestra (nome) {
+  const w = S[nome]
+  if (!w) {
+    throw new Error(`la regia non dichiara nessuna battuta «${nome}». ` +
+      `Ci sono: ${Object.keys(S).join(', ')}`)
+  }
+  return w
+}
+
+/**
+ * Porta la pagina DENTRO una battuta dichiarata.
+ * @param {number} dove  0 = l'inizio della battuta, 1 = la fine, 0,5 = meta'.
+ */
+export const aBattuta = (pg, nome, dove = 0.5) => {
+  const [da, a] = finestra(nome)
+  return vaiA(pg, da + (a - da) * dove)
+}
+
 export const vaiA = (pg, f) => pg.evaluate((ff) => {
   const n = window.__nautica
   if (n && typeof n.cimaSezione === 'number' && n.corsaRacconto > 0) {
