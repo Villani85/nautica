@@ -32,6 +32,7 @@
  *   node strumenti/collaudo-finale-vivo.mjs [--url https://...]
  */
 import { apriBrowser } from './browser.mjs'
+import { anteprima } from './anteprima.mjs'
 import { mkdirSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
@@ -44,7 +45,8 @@ const arg = (n, d) => { const i = process.argv.indexOf(n); return i > 0 ? proces
  * `traversataFinita` non esiste e questo strumento aspetterebbe un fatto che
  * nessuno dichiara mai -- che e' come e' fallito la prima volta.
  */
-const BASE = arg('--url', 'http://localhost:4173/')
+const _ant = await anteprima()
+const BASE = arg('--url', _ant.indirizzo)
 const URL = BASE + (BASE.includes('?') ? '&' : '?') + 'ispeziona=1'
 /** Quanti fotogrammi di tela, e a che passo. Due secondi coprono il loop. */
 const CAMPIONI = 12
@@ -140,6 +142,7 @@ for (let i = 0; i < CAMPIONI; i++) {
   } catch { saltate++ }
 }
 await b.close()
+_ant.ferma()
 
 const grezze = vie.map((via) => spawnSync('ffmpeg', ['-v', 'error', '-i', via,
   '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 26 }).stdout)

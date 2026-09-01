@@ -36,6 +36,7 @@
  * Un tratto fermo in MEZZO al racconto non ha nessuna scusa: e' rosso e basta.
  */
 import { apriBrowser } from './browser.mjs'
+import { anteprima } from './anteprima.mjs'
 
 const PASSI = 60
 /** Sotto questo avanzamento `p` non si e' mosso: e' zero, con un margine. */
@@ -49,10 +50,11 @@ const FERMO = 0.002
 const TETTO_TESTA = 0.10
 const TETTO_CODA = 0.25
 
+const _ant = await anteprima()
 const b = await apriBrowser({ conGpu: true })
 const pg = await b.newPage()
 await pg.setViewportSize({ width: 1280, height: 800 })
-await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
+await pg.goto(`${_ant.indirizzo}?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
 await pg.waitForFunction(() => window.__nautica && typeof window.__nautica.p === 'number', null, { timeout: 30000 })
 
 const H = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight)
@@ -66,6 +68,7 @@ for (let i = 0; i <= PASSI; i++) {
   letti.push({ f: i / PASSI, p: await pg.evaluate(() => window.__nautica.p) })
 }
 await b.close()
+_ant.ferma()
 
 const passi = []
 for (let i = 1; i < letti.length; i++) {

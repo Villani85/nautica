@@ -21,6 +21,7 @@
  * formato: a 1280 era un bordo, a 390 era totale.
  */
 import { apriBrowser } from './browser.mjs'
+import { anteprima } from './anteprima.mjs'
 
 const FORMATI = [[1280, 800], [1440, 900], [390, 844], [768, 1024]]
 /** Gli elementi che occupano la prima schermata e non devono toccarsi. */
@@ -30,13 +31,14 @@ const VISIBILE = 0.06
 /** Dove si guarda: la battuta in cui l'invito e la nota sono entrambi accesi. */
 const P = 0.10
 
+const _ant = await anteprima()
 const b = await apriBrowser({ conGpu: true })
 const pg = await b.newPage()
 let rossi = 0
 
 for (const [W, H] of FORMATI) {
   await pg.setViewportSize({ width: W, height: H })
-  await pg.goto('http://localhost:4173/?ispeziona=1', { waitUntil: 'load', timeout: 45000 })
+  await pg.goto(`${_ant.indirizzo}?ispeziona=1`, { waitUntil: 'load', timeout: 45000 })
   await pg.waitForFunction(() => window.__nautica?.corsaRacconto > 0, null, { timeout: 30000 })
   await pg.evaluate((p) => scrollTo(0, window.__nautica.cimaSezione + window.__nautica.corsaRacconto * p), P)
   /* non si aspetta un tempo: si aspetta che la corsa sia arrivata dove si e' chiesto */
@@ -69,6 +71,7 @@ for (const [W, H] of FORMATI) {
   if (!quiRossi) console.log('  nessuna collisione')
 }
 await b.close()
+_ant.ferma()
 
 if (rossi) { console.log(`\nROSSO — ${rossi} collisioni fra elementi dell'interfaccia.`); process.exit(1) }
 console.log('\nVERDE — nessun elemento dell\'interfaccia ne copre un altro.')
