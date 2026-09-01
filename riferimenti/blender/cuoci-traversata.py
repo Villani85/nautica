@@ -118,6 +118,10 @@ def argomenti():
     p.add_argument('--min-copertura', type=float, default=98.0, dest='min_copertura',
                    help='percentuale dell\'area UV che deve risultare cotta')
     p.add_argument('--uscita', default=USCITE)
+    p.add_argument("--gia-assemblata", action="store_true", dest="gia_assemblata",
+                   help="la scena e gia in memoria: non rieseguire scena-continua.py. "
+                        "Serve a cuocere piu collezioni nella STESSA sessione, cosi "
+                        "le loro UV convivono e un solo export le porta tutte.")
     p.add_argument('--gpu', action='store_true',
                    help='cuoci su GPU OPTIX (Colab T4). MUORE se OPTIX non c\'e\': '
                         'vedi accendi_gpu()')
@@ -227,9 +231,19 @@ def main():
     dice('=' * 78)
     dice('B8a — COTTURA AO di %s' % a.collezione)
     dice('=' * 78)
-    dice('assemblo il mondo eseguendo scena-continua.py (non ricostruisco niente)')
-    ns = runpy.run_path(SCENA_CONTINUA, run_name='__main__')
-    risultati = ns.get('RISULTATI', {})
+    if a.gia_assemblata:
+        # ─── LA SCENA C'E' GIA', e riassemblarla cancellerebbe le UV precedenti
+        #
+        # Ogni cottura srotola SOLO la propria collezione. Rieseguendo
+        # l'assemblaggio a ogni giro, le UV del giro prima spariscono con gli
+        # oggetti che le portavano: alla fine ne sopravvive una sola, e il
+        # rientro nel GLB porterebbe una mappa su tre.
+        dice("scena gia assemblata: non rieseguo scena-continua.py")
+        risultati = {}
+    else:
+        dice('assemblo il mondo eseguendo scena-continua.py (non ricostruisco niente)')
+        ns = runpy.run_path(SCENA_CONTINUA, run_name='__main__')
+        risultati = ns.get('RISULTATI', {})
 
     dice('')
     dice('-' * 78)
