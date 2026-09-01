@@ -312,6 +312,79 @@ for (const [etichetta, byte] of ATTESI) {
  * Non e' differito quanto sembra: il salone e' la PRIMA battuta, quindi il
  * filmato della stanza sta nel percorso di chi apre la pagina.
  */
+/**
+ * ─── E UN TETTO SUI MODELLI, che non c'era
+ *
+ * DIFETTO SEGNALATO DALLA REVISIONE nell'unico momento in cui serviva: prima
+ * della promozione del mondo, non dopo. Qui c'era il tetto sui filmati e quello
+ * sul JavaScript, e per i modelli NIENTE. Sono passati da 1,3 a 3,02 MB in una
+ * notte, `traversata-world.glb` da solo pesa piu' di tutti gli altri sommati, e
+ * nessun cancello se n'e' accorto perche' nessun cancello li guardava.
+ *
+ * MISURATO col browser, non letto dal codice -- quello che il visitatore
+ * scarica davvero:
+ *
+ *   percorso predefinito   1.204.334 byte   interni, propulsione, impianto,
+ *                                           giroscopio, sovrastruttura, scafo-ao
+ *   con ?mondo=1           2.891.207 byte
+ *   differenza             1.686.873 byte
+ *
+ * Il tetto vale su cio' che si scarica SEMPRE. Quello che sta dietro un
+ * interruttore non lo paga nessuno, e va dichiarato -- non dedotto dal nome.
+ *
+ * 1,6 MB e' il tetto: un terzo sopra il peso di oggi. Non e' generoso, e' la
+ * misura piu' il margine per un modello in piu'. E QUANDO IL MONDO USCIRA' DAL
+ * FLAG questo cancello diventera' ROSSO, ed e' esattamente quello che deve
+ * fare: costringere a guardare il peso invece di scoprirlo dopo.
+ *
+ * La via d'uscita c'e' gia' ed e' misurata: promuovendo il mondo si toglie
+ * `traversata.mp4`, che pesa 1.587.637 byte contro i 1.670.304 del mondo. Lo
+ * scambio e' quasi pari -- ottantatremila byte netti -- e non tocca ne'
+ * qualita' ne' risoluzione. Ma va FATTO, non sperato: il tetto e' li' per
+ * ricordarlo.
+ */
+const TETTO_MODELLI = 1.6 * 1e6
+
+/**
+ * Modelli che vivono dietro un interruttore e che nessun visitatore scarica.
+ * Si DICHIARANO: dedurlo dal nome sarebbe indovinare, e il giorno in cui uno
+ * esce dal flag nessuno se ne accorgerebbe.
+ */
+const DIETRO_INTERRUTTORE = {
+  'traversata-world.glb': '?mondo=1 — il mondo della traversata, non ancora promosso',
+  'guscio-salone.glb': '?guscio=1 — il guscio 3D del salone, non certificato'
+}
+
+let pesoModelli = 0
+let pesoDietro = 0
+const modelli = []
+try {
+  for (const f of readdirSync('public/modelli')) {
+    const b = statSync('public/modelli/' + f).size
+    if (DIETRO_INTERRUTTORE[f]) { pesoDietro += b; continue }
+    pesoModelli += b
+    modelli.push(`${f} ${(b / 1e6).toFixed(2)} MB`)
+  }
+} catch { /* nessuna cartella */ }
+if (modelli.length) {
+  const ok = pesoModelli <= TETTO_MODELLI
+  console.log(`  ${ok ? 'OK   ' : 'FALSO'}  ${'Modelli sempre scaricati'.padEnd(42)} ` +
+              `${(pesoModelli / 1e6).toFixed(2)} MB su un tetto di ${(TETTO_MODELLI / 1e6).toFixed(1)}` +
+              `   (${modelli.join(', ')})`)
+  if (pesoDietro) {
+    console.log(`         piu' ${(pesoDietro / 1e6).toFixed(2)} MB dietro interruttore, che nessuno scarica:`)
+    for (const [f, perche] of Object.entries(DIETRO_INTERRUTTORE)) {
+      try { console.log(`           ${f} — ${perche}`) } catch { /* assente */ }
+    }
+  }
+  if (!ok) {
+    scarti.push(`i modelli sempre scaricati pesano ${(pesoModelli / 1e6).toFixed(2)} MB contro un ` +
+                `tetto di ${(TETTO_MODELLI / 1e6).toFixed(1)}. Se e' appena stato promosso il mondo, ` +
+                "la via d uscita misurata e togliere traversata.mp4: libera 1.587.637 byte " +
+                "contro i 1.670.304 che il mondo aggiunge.")
+  }
+}
+
 const TETTO_FILMATI = 4 * 1024 * 1024
 let pesoFilmati = 0
 const filmati = []

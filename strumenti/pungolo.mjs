@@ -53,7 +53,38 @@ const bundleServito = async () => {
 }
 
 const testaLocale = () => sh('git rev-parse HEAD')
-const testaRemota = () => sh('git rev-parse origin/main')
+const testaRemota = () => {
+  /* ─── SI FA `fetch`, o si guarda una copia ferma
+   *
+   * `git rev-parse origin/main` legge il riferimento LOCALE al remoto, che si
+   * aggiorna solo quando qualcuno fa fetch o push. Senza, il pungolo poteva
+   * non accorgersi mai che il remoto e' cambiato -- e un pungolo che non vede
+   * il fatto per cui esiste e' peggio di nessun pungolo. */
+  sh('git fetch -q origin main')
+  return sh('git rev-parse origin/main')
+}
+
+/**
+ * ─── C'E' UNA CORSA IN VOLO?
+ *
+ * DIFETTO GRAVE DEL PRIMO PUNGOLO, segnalato dalla revisione: incoraggiava i
+ * micro-push. E `cancel-in-progress: true` fa si' che ogni push UCCIDA la corsa
+ * precedente -- le corse 289 e 290 sono morte cosi'.
+ *
+ * Uno strumento nato per far arrivare il lavoro al pubblico che impedisce al
+ * lavoro di arrivare al pubblico. Adesso, se una corsa sta girando, il pungolo
+ * dice di ASPETTARE, non di spingere: il lotto si accumula e parte una volta
+ * sola.
+ */
+const corsaInVolo = async () => {
+  try {
+    const r = await fetch('https://api.github.com/repos/Villani85/nautica/actions/runs?per_page=3',
+      { headers: { accept: 'application/vnd.github+json' } })
+    const d = await r.json()
+    const c = (d.workflow_runs || []).find((x) => x.status !== 'completed')
+    return c ? { numero: c.run_number, sha: c.head_sha.slice(0, 7) } : null
+  } catch { return null }
+}
 
 const t0 = Date.now()
 const localeIniziale = testaLocale()
@@ -95,8 +126,15 @@ while (true) {
   const daSpingere = Number(sh('git rev-list --count origin/main..HEAD') || 0)
 
   if (daSpingere > 0 && fermoDa > 3) {
-    chiudi(`HAI ${daSpingere} COMMIT NON SPINTI da ${fermoDa.toFixed(0)} minuti. ` +
-           'Da fuori il lavoro non esiste: spingi prima di continuare.')
+    const volo = await corsaInVolo()
+    if (volo) {
+      chiudi(`hai ${daSpingere} commit non spinti, MA LA CORSA ${volo.numero} ` +
+             `(${volo.sha}) STA GIRANDO. NON spingere: ogni push la annulla ` +
+             '(`cancel-in-progress: true`), ed e cosi che sono morte la 289 e la ' +
+             '290. Aspetta che finisca e spingi il lotto in una volta.')
+    }
+    chiudi(`HAI ${daSpingere} COMMIT NON SPINTI da ${fermoDa.toFixed(0)} minuti, ` +
+           'e nessuna corsa sta girando. Da fuori il lavoro non esiste: spingi.')
   }
 
   if (fermoDa >= SILENZIO_MIN) {
