@@ -1593,11 +1593,29 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * `corsaTraversata` e' la stessa `q` che la regia passa a `impostaTraversata`.
      * Zero significa che comanda la scena; uno che comanda la traversata.
      */
-    if (mondo && mondo.pronto && corsaTraversata > 0.002) {
-      const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
-      if (posa) {
-        camera.position.copy(posa.p)
-        camera.quaternion.copy(posa.q)
+    if (mondo && mondo.pronto) {
+      /* ─── E SI ACCENDE ANCHE LA GEOMETRIA, che prima non si accendeva
+       *
+       * Qui c'era solo la posa. `mondo.mostra()` esisteva, con la sua soglia, e
+       * NON LO CHIAMAVA NESSUNO: `gruppo.visible` restava il `false` di
+       * `mondo.js:89` per sempre. Il mondo si scaricava, prestava la propria
+       * curva alla camera, e non disegnava un poligono. Un megabyte e sei
+       * decimi di peso morto, e nessun errore da nessuna parte -- il sito
+       * funzionava, mostrava la nave di prima da una camera nuova.
+       *
+       * L'ho trovato cercando dove si accendessero le ombre: `castShadow` non
+       * c'e' su nessuna maglia del mondo, e cercando chi lo impostasse ho visto
+       * che non c'era nemmeno chi lo rendeva visibile.
+       *
+       * La soglia sta dentro `mostra`, ed e' la stessa della posa: cosi' i due
+       * non possono divergere, che e' il difetto pagato tre volte stanotte. */
+      mondo.mostra(corsaTraversata)
+      if (corsaTraversata > 0.002) {
+        const posa = mondo.posaA(MathUtils.clamp(corsaTraversata, 0, 1))
+        if (posa) {
+          camera.position.copy(posa.p)
+          camera.quaternion.copy(posa.q)
+        }
       }
     }
 

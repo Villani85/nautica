@@ -229,20 +229,48 @@ export function creaMondo (base, scena) {
   let pose = null
   let lunghezza = 0
 
+  /**
+   * ─── LE POSE SI COMPONGONO DOPO, NON APPENA ARRIVANO
+   *
+   * DIFETTO GRAVE, e mascherato bene. Qui le pose venivano portate nello spazio
+   * della scena con `gruppo.matrixWorld` NEL MOMENTO IN CUI ARRIVAVA IL JSON.
+   * Ma l'offset verticale del gruppo lo scrive `appoggiaSullaChiglia()`, che
+   * gira quando arriva il GLB. Il JSON pesa 16 KB e il GLB 1,67 MB: il piccolo
+   * vince sempre, quindi le pose venivano composte con `position.y = 0` e la
+   * camera restava UN METRO E VENTICINQUE SOTTO -- fuori dallo scafo,
+   * sott'acqua, davanti a lastre grigie.
+   *
+   * Nessun errore da nessuna parte: due `Promise` che si risolvono, ognuna
+   * corretta per conto suo, e in mezzo una dipendenza che il codice non
+   * dichiarava. L'ho visto solo guardando un fotogramma, dopo aver acceso la
+   * geometria -- finche' il mondo era invisibile, la camera sbagliata non si
+   * vedeva.
+   *
+   * Adesso il JSON si tiene GREZZO, e la composizione avviene una volta sola
+   * quando ENTRAMBI sono arrivati. Una dipendenza fra due caricamenti si
+   * scrive, non si spera nell'ordine di arrivo.
+   */
+  let grezze = null
+
+  function componiPose () {
+    if (!grezze) return
+    gruppo.updateWorldMatrix(true, false)
+    pose = grezze.map((v) => {
+      const p = new Vector3(v.p[0], v.p[1], v.p[2]).applyMatrix4(gruppo.matrixWorld)
+      /* il quaternione arriva in ordine glTF (x,y,z,w), che e' anche quello
+         del costruttore di three: si passa diretto. Poi si compone con la
+         rotazione del gruppo, o la camera guarderebbe dove guardava nel
+         frame del mondo invece che in quello della scena. */
+      const q = new Quaternion(v.q_gltf[0], v.q_gltf[1], v.q_gltf[2], v.q_gltf[3])
+      return { s: v.s, p, q: gruppo.quaternion.clone().multiply(q) }
+    })
+  }
+
   const curva = fetch(base + 'modelli/traversata-camera.json')
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
     .then((d) => {
       lunghezza = d.lunghezza_m || 0
-      gruppo.updateWorldMatrix(true, false)
-      pose = d.pose.map((v) => {
-        const p = new Vector3(v.p[0], v.p[1], v.p[2]).applyMatrix4(gruppo.matrixWorld)
-        /* il quaternione arriva in ordine glTF (x,y,z,w), che e' anche quello
-           del costruttore di three: si passa diretto. Poi si compone con la
-           rotazione del gruppo, o la camera guarderebbe dove guardava nel
-           frame del mondo invece che in quello della scena. */
-        const q = new Quaternion(v.q_gltf[0], v.q_gltf[1], v.q_gltf[2], v.q_gltf[3])
-        return { s: v.s, p, q: gruppo.quaternion.clone().multiply(q) }
-      })
+      grezze = d.pose
       return true
     })
     .catch((e) => { errore = errore || ('curva: ' + e.message); return false })
@@ -269,11 +297,20 @@ export function creaMondo (base, scena) {
 
   return {
     gruppo,
-    caricato: Promise.all([caricato, curva]).then((v) => v[0] && v[1]),
+    caricato: Promise.all([caricato, curva]).then((v) => {
+      /* qui, e solo qui, il gruppo e' appoggiato sulla chiglia E le pose
+         esistono: e' l'unico istante in cui comporle e' corretto */
+      if (v[0] && v[1]) componiPose()
+      return v[0] && v[1]
+    }),
     posaA,
     get lunghezza () { return lunghezza },
     get pose () { return pose ? pose.length : 0 },
-    get pronto () { return pronto },
+    /* «pronto» vuol dire USABILE, non «il GLB e' arrivato». Senza le pose
+       composte la camera non viene spostata, e accendere la geometria vista
+       dalla camera del sito mostrerebbe le stanze da fuori per qualche
+       fotogramma. Una sola condizione, cosi' chi la legge non deve saperne due. */
+    get pronto () { return pronto && !!pose },
     get errore () { return errore },
     get maglie () { return maglie },
     /** `q` da 0 a 1: quanto il mondo e' in campo. Per ora acceso/spento. */
