@@ -96,7 +96,13 @@ const PONTE_OFFSET_Z = 1.9089
     decine di migliaia di oggetti per un conto che si fa una volta sola. */
 const _v = new Vector3()
 
-export function creaMondo (base, scena) {
+/**
+ * @param {number} ombre  il livello d'ombra scelto dal sito (0, 1024, 2048).
+ *   Arriva da `index.js` invece di essere riletto da `?ombre`: due posti che
+ *   leggono lo stesso interruttore sono due valori che un giorno divergono, ed
+ *   e' il difetto che questo file ha gia' pagato con `mostra`.
+ */
+export function creaMondo (base, scena, { ombre = 0 } = {}) {
   const gruppo = new Group()
   gruppo.name = 'MONDO_TRAVERSATA'
   gruppo.visible = false
@@ -283,10 +289,56 @@ export function creaMondo (base, scena) {
  * macchine sta a 3,00 e la posa e' l'occhio, non il pavimento. Adesso si
  * misura, vedi `accendiLuci`.
  */
+/**
+ * ─── UN INTERRUTTORE ASSENTE NON E' UNO ZERO
+ *
+ * DIFETTO PRESO IL 2 SETTEMBRE leggendo lo stato vivo delle luci, e vale la
+ * pena scriverlo perche' e' silenzioso: `Number(params.get('x'))` su un
+ * parametro ASSENTE non da' `NaN`, da' **0** -- `Number(null) === 0`. Un
+ * controllo scritto `Number.isFinite(v) && v >= 0 ? v : predefinito` accetta
+ * quello zero e il predefinito non si usa MAI.
+ *
+ * Cosi' `AMBIENTE` valeva 0 in ogni visita: la luce diffusa che serve a far
+ * vedere l'occlusione cotta -- il motivo per cui esiste -- era spenta, e il
+ * commento qui sotto raccontava una cura che il sito non aveva. `INTENSITA` si
+ * era salvata per caso, chiedendo `v > 0`.
+ *
+ * Qui si guarda la STRINGA: assente o vuota vuol dire «non chiesto».
+ */
+function numeroDaUrl (nome, predefinito, min, max) {
+  if (typeof location === 'undefined') return predefinito
+  const grezzo = new URLSearchParams(location.search).get(nome)
+  if (grezzo === null || grezzo.trim() === '') return predefinito
+  const v = Number(grezzo)
+  return Number.isFinite(v) && v >= min && v <= max ? v : predefinito
+}
+
 const QUANTE_LUCI = 7
-/** Portata: due terzi di corridoio, cosi' due plafoniere si sovrappongono
- *  appena e restano i tratti in ombra fra l'una e l'altra. */
-const PORTATA_M = 3.6
+/**
+ * ─── LA PORTATA DICE METRI E VALE UNITA' DI SCENA: 3,6 SONO NOVE METRI
+ *
+ * DIFETTO DI UNITA', trovato il 2 settembre misurando perche' le ombre non si
+ * vedessero. `PointLight.distance` three.js lo usa in coordinate di MONDO, e
+ * non lo scala col gruppo che lo contiene: questa lampada vive dentro un gruppo
+ * scalato 1/2,5, quindi «3,6» non e' la portata di 3,6 m che il nome promette,
+ * sono 3,6 unita' di scena, cioe' **nove metri**.
+ *
+ * La conseguenza si vede: le sette plafoniere distano un metro e mezzo l'una
+ * dall'altra, e con nove metri di portata ILLUMINANO TUTTE LA STESSA STANZA.
+ * Il commento di prima diceva «restano i tratti in ombra fra l'una e l'altra»:
+ * non ci sono, e l'ombra che una lampada proietta la riempiono le altre sei --
+ * misurato, l'ombra cambia al massimo 4 livelli su 255 (con una lampada sola e
+ * forte ne cambia 18).
+ *
+ * NON LA CAMBIO DA SOLO: correggerla vuol dire rifare la luce della traversata,
+ * che e' messa in scena, ed e' un numero sul tavolo del committente
+ * (`feedback/CHIEDO.md` §3.6). `?portata=<n>` la cambia per guardarla, e il
+ * valore di serie resta quello con cui il provino e' stato approvato.
+ *
+ *     ?portata=3.6   com'e' adesso: nove metri, le lampade si sovrappongono
+ *     ?portata=1.44  i 3,6 metri che il nome promette
+ */
+const PORTATA_M = numeroDaUrl('portata', 3.6, 0.1, 20)
 const COLORE_LUCE = 0xffe6c4     // lampada da lavoro, non luce di giorno
 /**
  * Intensita' di serie, e `?luce=<n>` la cambia per cercarla guardando -- come
@@ -299,12 +351,7 @@ const COLORE_LUCE = 0xffe6c4     // lampada da lavoro, non luce di giorno
  * invece di illuminarla. Un ambiente sotto coperta deve essere piu' scuro del
  * mare, non piu' chiaro.
  */
-const INTENSITA = (() => {
-  const v = typeof location !== 'undefined'
-    ? Number(new URLSearchParams(location.search).get('luce'))
-    : NaN
-  return Number.isFinite(v) && v > 0 ? v : 0.35
-})()
+const INTENSITA = numeroDaUrl('luce', 0.35, 0.001, 20)
 /**
  * ─── LA COTTURA SI VEDE SOLO CON UNA LUCE DIFFUSA, e non ce n'era
  *
@@ -320,13 +367,68 @@ const INTENSITA = (() => {
  * Una luce d'ambiente bassa, sullo strato del mondo, e' la cosa che la accende.
  * Il livello e' un numero, e `?ambiente=<n>` lo cambia per guardarlo.
  */
-const AMBIENTE = (() => {
-  const v = typeof location !== 'undefined'
-    ? Number(new URLSearchParams(location.search).get('ambiente'))
-    : NaN
-  return Number.isFinite(v) && v >= 0 ? v : 0.22
-})()
+const AMBIENTE = numeroDaUrl('ambiente', 0.22, 0, 4)
 /** Quanto sotto il soffitto misurato sta il corpo della plafoniera, e la sua luce. */
+/**
+ * ─── QUANTE PLAFONIERE PROIETTANO, e perche' non tutte e sette
+ *
+ * Un'ombra da PointLight in three.js e' una mappa CUBICA: sei rendering della
+ * stanza per lampada. Sette lampade sarebbero quarantadue passaggi, e sopra a
+ * ogni frammento sette prove d'ombra -- per un corridoio in cui, dalla
+ * plafoniera piu' vicina, la terza e' gia' fuori portata (`PORTATA_M` 3,6 m e
+ * il passo fra due e' 1,5).
+ *
+ * Ne proiettano DUE, le piu' vicine alla camera, e il numero resta due per
+ * tutta la traversata: e' quello che tiene i programmi compilati una volta
+ * sola. Cambiare quante lampade proiettano cambia lo shader di OGNI materiale
+ * della scena -- three.js mette il conteggio nella chiave del programma -- e
+ * una ricompilazione a meta' movimento e' uno scatto che si vede.
+ *
+ * E la geometria non si muove: `shadow.autoUpdate` e' SPENTO e la mappa si
+ * cuoce quando quella lampada entra fra le due. Sei rendering una volta per
+ * lampada in tutta la traversata, invece di quarantadue per fotogramma.
+ *
+ * ─── MA UNA COTTURA SOLA NON BASTA, e il conto dei passi lo dice
+ *
+ * Primo tentativo: `needsUpdate = true` nell'istante in cui la lampada entra
+ * fra le due. Misurato con `render.info.render.calls`, il passaggio d'ombra NON
+ * disegnava niente -- 50 passi con le ombre accese, 50 con le ombre spente, e
+ * 155 appena si accendeva `autoUpdate`. La cottura sola c'era stata, ma in un
+ * fotogramma in cui non valeva: il mondo si ANCORA (`ancoraA`) dopo essere
+ * diventato visibile, e una mappa d'ombra cotta prima dell'ancoraggio descrive
+ * la stanza dov'era, non dov'e'.
+ *
+ * Adesso si cuoce per `RICOTTURE` fotogrammi di fila dopo ogni cambio: tre
+ * cotture invece di una, e la terza vede una stanza ferma. Il numero e' piccolo
+ * apposta -- se un giorno il mondo si muovesse davvero, questo commento e' il
+ * posto dove si scopre perche' le ombre restano indietro.
+ */
+const RICOTTURE = 3
+const OMBRE_QUANTE = 2
+/**
+ * ─── QUANTO E' NERA UN'OMBRA, o il rimbalzo che questo motore non calcola
+ *
+ * Con l'ombra a forza piena il pagliolo sotto le macchine va a nero: nel
+ * provino a s = 0,05 il quadro sotto la prima stazione misura 6 livelli su 255,
+ * cioe' niente. Non e' un difetto delle ombre, e' cio' che manca intorno:
+ * three.js illumina in diretta e non calcola nessun rimbalzo, e in una stanza
+ * con pareti chiare il rimbalzo e' proprio quello che riempie l'ombra. La
+ * mappa cotta non puo' aiutare -- l'AO e' occlusione, toglie luce, non ne
+ * aggiunge.
+ *
+ * `shadow.intensity` toglie all'ombra una frazione: e' l'approssimazione piu'
+ * onesta che questo motore permette del rimbalzo mancante, ed e' UN numero, non
+ * una luce in piu' da mantenere. `?ombraforza=` lo cambia per guardarlo.
+ *
+ * MISURATO sul pagliolo in ombra, s = 0,05, riquadro centrale basso:
+ *     forza 1,00 -> ...   forza 0,70 -> ...   forza 0,50 -> ...
+ * (i numeri li scrive `strumenti/misura-ombra.mjs`, e stanno nel commit)
+ */
+const OMBRA_FORZA = numeroDaUrl('ombraforza', 0.7, 0, 1)
+/** La cubica costa sei facce: 512 per lampada sono gia' 1,5 M di texel. */
+const LATO_OMBRA_GRANDE = 512
+const LATO_OMBRA_PICCOLO = 256
+
 const PIASTRA_SOTTO_IL_SOFFITTO_M = 0.01
 const LUCE_SOTTO_IL_SOFFITTO_M = 0.18
 /** Da dove parte il raggio che cerca il soffitto: sopra la posa, sotto l'occhio. */
@@ -373,6 +475,21 @@ function isolaDallaLuceDiFuori (camera) {
     /* SOLO lo strato del mondo: restando anche sullo zero, le luci del sito
        continuerebbero ad arrivare e non sarebbe cambiato niente */
     o.layers.set(STRATO_MONDO)
+    /**
+     * ─── LE STANZE RICEVONO L'OMBRA, NON LA PROIETTANO
+     *
+     * Le pareti sono scatole chiuse con la lampada DENTRO: se proiettassero,
+     * ogni parete si farebbe l'ombra da sola sulle proprie facce posteriori --
+     * e con `side = DoubleSide` (poche righe piu' giu') il passaggio d'ombra
+     * disegna proprio quelle. Il risultato non e' un'ombra, e' una stanza a
+     * macchie che si muovono con la camera.
+     *
+     * A proiettare sono i pezzi dell'arredo -- tubi, staffe, macchine,
+     * corrimano -- che e' esattamente cio' che mancava: il contatto fra un
+     * oggetto e il pavimento su cui poggia. Le stanze lo ricevono.
+     */
+    o.receiveShadow = true
+    o.castShadow = false
     const mm = Array.isArray(o.material) ? o.material : [o.material]
     for (const m of mm) {
       if (!m) continue
@@ -412,6 +529,20 @@ function isolaDallaLuceDiFuori (camera) {
   })
   camera?.layers?.enable(STRATO_MONDO)
 }
+
+/**
+ * Il lato della mappa d'ombra segue il livello scelto dal sito: dove il sito
+ * rinuncia alle ombre (`?ombre=0`, o una macchina che dichiara pochi nuclei)
+ * qui non se ne accendono di nuove.
+ */
+const LATO_OMBRA = ombre >= 2048 ? LATO_OMBRA_GRANDE : ombre > 0 ? LATO_OMBRA_PICCOLO : 0
+
+/** Le plafoniere che possono proiettare, in ordine di percorso. */
+const plafoniere = []
+/** Chi proietta adesso: si tiene per non riassegnare a ogni fotogramma. */
+let ombreggianti = []
+/** Quante volte ancora ricuocere la mappa dopo un cambio: vedi `RICOTTURE`. */
+let daRicuocere = 0
 
 function accendiLuci () {
   if (luci || !grezze || !grezze.length) return
@@ -454,6 +585,41 @@ function accendiLuci () {
     const l = new PointLight(COLORE_LUCE, INTENSITA, PORTATA_M, 2)
     l.layers.set(STRATO_MONDO)
     l.position.set(x, cielino - LUCE_SOTTO_IL_SOFFITTO_M, z)
+    if (LATO_OMBRA > 0) {
+      l.shadow.mapSize.set(LATO_OMBRA, LATO_OMBRA)
+      l.shadow.autoUpdate = false
+      /* la camera dell'ombra vive in UNITA' DI SCENA (il gruppo e' scalato
+         1/2,5): un metro qui e' 0,4 unita', e il piano vicino va sotto il
+         raggio del tubo piu' sottile o i tubi si tagliano l'ombra da soli */
+      /**
+       * ─── E LA CAMERA DELL'OMBRA HA STRATI SUOI, che nessuno aveva acceso
+       *
+       * DIFETTO PAGATO CON UN'ORA DI PROVINI IDENTICI. Ombre accese, due
+       * lampade con `castShadow`, mappe 512 allocate, trentacinque pezzi
+       * proiettanti sullo strato giusto -- e il quadro NON CAMBIAVA DI UN
+       * LIVELLO: differenza media 0 fra ombre accese e spente, anche a `?luce=3`
+       * e spegnendole a caldo sulla stessa pagina.
+       *
+       * Il passaggio d'ombra non filtra con gli strati della LUCE: filtra con
+       * quelli della sua CAMERA (`WebGLShadowMap`: `object.layers.test(camera.layers)`),
+       * e quella nasce sullo strato zero. Le maglie del mondo stanno solo sull'1
+       * da quando le ho isolate dalla luce di fuori: nella mappa d'ombra non
+       * entrava NIENTE, e una mappa vuota vuol dire «tutto illuminato».
+       *
+       * E' la terza volta che lo stesso strato rompe qualcosa in silenzio: le
+       * luci (che era il suo scopo), poi il raggio di `vistaLibera`
+       * (`_raggio.layers.enable`), adesso l'ombra. Quando si isola qualcosa su
+       * uno strato, ogni COSA CHE GUARDA va portata li' a mano.
+       */
+      l.shadow.camera.layers.enable(STRATO_MONDO)
+      l.shadow.camera.near = 0.02
+      l.shadow.camera.far = PORTATA_M / METRI_PER_UNITA
+      /* `normalBias` invece di `bias`: la stanza e' fatta di pareti piatte e
+         grandi, dove il bias costante o non basta o stacca l'ombra dal piede */
+      l.shadow.normalBias = 0.01
+      l.shadow.intensity = OMBRA_FORZA
+      plafoniere.push(l)
+    }
     luci.add(l)
 
     /* e il corpo illuminante si VEDE: una luce senza sorgente visibile e' una
@@ -1075,6 +1241,47 @@ function vistaLibera (s) {
     return { p: _pa, q: _qa }
   }
 
+  /**
+   * ─── CHI PROIETTA LO DECIDE LA POSA, e non un secondo padrone
+   *
+   * ─── E LA DISTANZA SI MISURA NELLO STESSO SISTEMA, o non e' una distanza
+   *
+   * Primo tentativo, e il provino non e' cambiato di un pixel: confrontavo la
+   * `x` della posa con la `x` della lampada. La posa che `posaA` restituisce e'
+   * gia' in coordinate di SCENA -- serve a `camera.position.copy` -- mentre le
+   * lampade sono figlie del gruppo, cioe' in METRI del mondo, su un asse che il
+   * gruppo per giunta ruota (la x del mondo diventa la z della scena). Due
+   * numeri con lo stesso nome e due significati: a s = 0,05, con la camera a
+   * -9,5 m, proiettavano le due lampade del SALONE.
+   *
+   * Adesso la posa si riporta dentro il gruppo con `worldToLocal`, e li' le due
+   * x sono la stessa x.
+   *
+   * Le mappe si cuociono quando una lampada ENTRA fra le due: `needsUpdate` una
+   * volta, e poi mai piu' -- ne' la stanza ne' la lampada si muovono.
+   */
+  const _dentro = new Vector3()
+  function scegliChiProietta (dovePerLaScena) {
+    if (!plafoniere.length) return
+    const dove = gruppo.worldToLocal(_dentro.copy(dovePerLaScena))
+    const vicine = plafoniere
+      .map((l) => ({ l, d: Math.abs(l.position.x - dove.x) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, OMBRE_QUANTE)
+      .map((v) => v.l)
+    const uguali = vicine.length === ombreggianti.length && vicine.every((l, i) => l === ombreggianti[i])
+    if (!uguali) {
+      for (const l of ombreggianti) if (!vicine.includes(l)) l.castShadow = false
+      for (const l of vicine) l.castShadow = true
+      ombreggianti = vicine
+      daRicuocere = RICOTTURE
+    }
+    if (daRicuocere > 0) {
+      for (const l of ombreggianti) l.shadow.needsUpdate = true
+      daRicuocere--
+    }
+  }
+
   scena.add(gruppo)
 
   return {
@@ -1156,7 +1363,12 @@ function vistaLibera (s) {
      * e' una cosa diversa: vedi li' sotto il perche' averle unite fosse un
      * difetto.
      */
-    mostra (q) { gruppo.visible = pronto && q > 0.002 },
+    mostra (q) {
+      gruppo.visible = pronto && q > 0.002
+      /* chi proietta lo decide chi si vede: `mostra` e' l'unico che sa se la
+         stanza e' in scena, e riceve la stessa corsa della posa */
+      if (gruppo.visible) { const p = posaA(q); if (p) scegliChiProietta(p.p) }
+    },
 
     /**
      * ─── ESSERE DENTRO E SPEGNERE IL FUORI SONO DUE COSE DIVERSE

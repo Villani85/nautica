@@ -5,7 +5,7 @@ const S_VOLUTI = (process.env.S || '0.02,0.15,0.30,0.45,0.60,0.75,0.90').split('
 const FUORI = process.env.FUORI
 const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars'] })
 const pg = await browser.newPage({ viewport: { width: 1440, height: 900 } })
-await pg.goto(`http://localhost:${PORTA}/nautica/?ispeziona=1`, { waitUntil: 'load' })
+await pg.goto(`http://localhost:${PORTA}/nautica/?ispeziona=1${process.env.PARAMETRI ? "&" + process.env.PARAMETRI : ""}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => window.__nautica?.mondo()?.ancorato === true, null, { timeout: 120000 })
 for (const s of S_VOLUTI) {
   const info = await pg.evaluate(async (s) => {

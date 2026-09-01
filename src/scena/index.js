@@ -745,7 +745,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * `?mondo=0` resta per misurare il sito com'era: serve ai cancelli, non al
    * visitatore.
    */
-  const mondo = vuoleMondo() ? creaMondo(base, scena) : null
+  const mondo = vuoleMondo() ? creaMondo(base, scena, { ombre: TESSITURA_OMBRA }) : null
 
   /**
    * ─── DUE RAPPRESENTAZIONI DELLA STESSA STANZA NON POSSONO CONVIVERE

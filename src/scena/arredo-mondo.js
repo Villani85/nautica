@@ -43,6 +43,25 @@ import {
 const STRATO = 1
 
 /**
+ * ─── UN PEZZO D'ARREDO NASCE SUL SUO STRATO E CON LA SUA OMBRA
+ *
+ * Prima ogni pezzo faceva `layers.set(STRATO)` per conto suo, sei volte. Il
+ * giorno in cui se ne aggiunge un settimo, quello nasce senza -- ed e' gia'
+ * successo con `castShadow`, che in tutto il mondo non c'era: le macchine
+ * poggiavano sul pagliolo senza toccarlo, e una cosa che non tocca il pavimento
+ * galleggia anche se sta ferma.
+ *
+ * Le stanze RICEVONO e non proiettano (vedi `mondo.js`, `isolaDallaLuceDiFuori`):
+ * qui sta l'altra meta', chi l'ombra la fa.
+ */
+function inScena (m) {
+  m.layers.set(STRATO)
+  m.castShadow = true
+  m.receiveShadow = true
+  return m
+}
+
+/**
  * ─── I TUBI STANNO SOTTO IL SOFFITTO, CONTRO LA PARETE -- misurati, non offset
  *
  * La prima versione li metteva a un offset fisso dall'asse della camera:
@@ -204,7 +223,7 @@ export function arredaMondo (gruppo, pose) {
       const tubo = new Mesh(new CylinderGeometry(spec.raggio, spec.raggio, x1 - x0, 10, 1, false), mat)
       tubo.rotation.z = Math.PI / 2   // il cilindro nasce lungo Y: lo si stende lungo x
       tubo.position.set((x0 + x1) / 2, y, z)
-      tubo.layers.set(STRATO)
+      inScena(tubo)
       arredo.add(tubo)
       pezzi++
 
@@ -213,7 +232,7 @@ export function arredaMondo (gruppo, pose) {
         const h = spec.sotto - spec.raggio
         const s = new Mesh(new BoxGeometry(0.02, h, 0.05), matStaffa)
         s.position.set(punti[i].x, y + spec.raggio + h / 2, z)
-        s.layers.set(STRATO)
+        inScena(s)
         arredo.add(s)
         pezzi++
       }
@@ -256,13 +275,13 @@ export function arredaMondo (gruppo, pose) {
 
       const b = new Mesh(new BoxGeometry(MACCHINA.lungo, MACCHINA.alto, MACCHINA.largo), matMacchina)
       b.position.copy(centro)
-      b.layers.set(STRATO)
+      inScena(b)
       arredo.add(b)
 
       const t = new Mesh(new CylinderGeometry(0.16, 0.16, 0.9, 12), matRame)
       t.rotation.z = Math.PI / 2
       t.position.set(centro.x, v.p[1] + MACCHINA.alto + 0.14, centro.z)
-      t.layers.set(STRATO)
+      inScena(t)
       arredo.add(t)
       pezzi += 2
       messa = true
@@ -331,7 +350,7 @@ function corrimano (gruppo, arredo, matMontante) {
   const tubo = new Mesh(new CylinderGeometry(RAGGIO_CORRIMANO_M, RAGGIO_CORRIMANO_M, d.length(), 10, 1), matTubo)
   tubo.position.copy(a).addScaledVector(d, 0.5)
   tubo.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), d.clone().normalize())
-  tubo.layers.set(STRATO)
+  inScena(tubo)
   tubo.name = 'corrimano'
   arredo.add(tubo)
   let pezzi = 1
@@ -345,7 +364,7 @@ function corrimano (gruppo, arredo, matMontante) {
     if (h <= 0) continue
     const m = new Mesh(new CylinderGeometry(0.012, 0.012, h, 8), matMontante)
     m.position.set(g.x, g.y + h / 2, z)
-    m.layers.set(STRATO)
+    inScena(m)
     m.name = 'montante'
     arredo.add(m)
     pezzi++
