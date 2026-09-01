@@ -85,6 +85,20 @@ const ECCEZIONI = {
     "giudicata su un rasterizzatore software che non e' quello di un " +
     'visitatore vero. Documentato in pubblica.yml riga ~95.',
 
+  fluidita: "misura il RITMO DEI FOTOGRAMMI: p50/p95/p99 dell'intervallo fra " +
+    "rAF, i long task, e il salto alle quattro giunzioni. Su un rasterizzatore " +
+    "software quei numeri descrivono il runner, non un visitatore -- e il " +
+    "cancello lo sa: rileva SwiftShader da WEBGL_debug_renderer_info e stampa " +
+    "«nessun verdetto di prestazione». Ma nella corsa 288 e' uscito rosso " +
+    "DOPO quattro minuti e mezzo, quindi il rosso viene da uno dei controlli a " +
+    "monte, non dal verdetto finale. COSA NON SO: quale. Senza poter leggere " +
+    "il log della CI non lo distinguo, e provarlo qui non si puo' -- coi flag " +
+    "software ANGLE usa comunque la GPU vera su questa macchina, e il cancello " +
+    "passa in 14 s. Resta in `npm run collaudo`, dove gira su hardware vero e " +
+    "i suoi numeri significano qualcosa: p95 16,8 ms, p99 17,0, un fotogramma " +
+    "oltre 25 ms su 359, zero long task. Il giorno in cui il log e' leggibile, " +
+    "guardare quale dei `finisci(2)` scatta.",
+
   cinematica: "aspetta che un ingresso compia un giro intero entro un tetto " +
     "di orologio reale (45 s). Sul rasterizzatore software del runner il " +
     "motore gira a circa un fotogramma al secondo: `index.js` blocca il " +

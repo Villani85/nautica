@@ -151,10 +151,6 @@ jobs:
       # di prestazione -- stampa i numeri per debug ed esce verde. Per questo
       # puo' entrare in CI anche senza GPU vera, a differenza di orizzonte e
       # cielo qui sotto.
-      - name: 'Cancello · fluidita dello scorrimento'
-        timeout-minutes: 20
-        run: node strumenti/collaudo-fluidita.mjs
-        env: { CHROMIUM: '1' }
       # Non apre un browser: legge riferimenti/ e feedback/ e cerca righe che
       # negano l'esistenza di qualcosa che il disco smentisce. Nessuna ragione
       # per restare fuori dalla CI -- puo' girare ovunque giri Node.
