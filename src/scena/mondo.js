@@ -464,8 +464,20 @@ const RIFLESSO = numeroDaUrl('riflesso', 1, 0, 4)
  * `VideoTexture` sullo stesso `<video>` non costa un secondo flusso.
  */
 const PROIEZIONE_GRADI = 34
-/** Da che punto della corsa la fotografia comincia a comparire sul guscio. */
-const PROIEZIONE_DA = numeroDaUrl('proiezioneda', 0.55, 0, 1)
+/**
+ * Da che punto della corsa la fotografia comincia a comparire sul guscio.
+ *
+ * Cercato guardando, fra due difetti opposti. Con 0,55 in cima alla scala c'e'
+ * un rettangolo bianco: la scala porta in una stanza vuota. Con 0,30 la
+ * fotografia comincia troppo presto e si SPALMA sulle pareti del guscio che si
+ * vedono di scorcio -- bande verticali calde attraverso tutto il quadro, che e'
+ * il difetto noto di ogni proiezione guardata da fuori fuoco.
+ *
+ * 0,42 e' dove il guscio si vede solo attraverso il vano della porta: li' la
+ * proiezione non ha spazio per sbagliare in modo visibile, e in cima alla scala
+ * si intravede il mare invece del bianco. Guardato a s = 0,38, 0,45 e 0,52.
+ */
+const PROIEZIONE_DA = numeroDaUrl('proiezioneda', 0.42, 0, 1)
 /** Quanto ne arriva alla fine: `?proiezione=0` spegne tutto e lascia il beige. */
 const PROIEZIONE = numeroDaUrl('proiezione', 1, 0, 1)
 
