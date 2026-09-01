@@ -382,7 +382,27 @@ export function avviaDimostrazione () {
     /* durante l'antefatto la tela si vede e il cruscotto no: dietro un titolo
        i pannelli sarebbero rumore, non informazione */
     palco.dataset.antefatto = (-r.top < ante) ? 'si' : 'no'
-    regia(p)
+    /**
+     * ─── LA CODA E' UN SECONDO PARAMETRO, e va alla scena come `p`
+     *
+     * `p` e' tappato a 1 quando il fondo della sezione tocca il fondo della
+     * finestra, e da li' restano 1,2 altezze in cui non dice piu' niente.
+     * Con il FILMATO quel tratto e' pieno per costruzione. Con il MONDO
+     * promosso il filmato della traversata non c'e' -- `index.js` spegne la
+     * lastra appena `mondo.pronto` -- e la coda resterebbe muta.
+     *
+     * DECISIONE DEL COMMITTENTE, 1 settembre 2026: nella coda la camera e' GIA'
+     * DENTRO il salone, e li' suona il filmato del salone. La coda non serve
+     * all'arrivo, serve alle persone.
+     *
+     * `corsa` NON si tocca: la leggono diciannove strumenti, e demo.js:350-353
+     * spiega che non e' cambiata di un pixel proprio perche' ogni finestra
+     * della regia restasse dov'era. Si aggiunge un parametro, non si sposta.
+     */
+    const pCoda = coda > 0
+      ? Math.min(1, Math.max(0, (-r.top - ante - corsa) / coda))
+      : 0
+    regia(p, pCoda)
 
     /**
      * --- LA CORSA DEL RACCONTO SI PUO' LEGGERE DA FUORI
@@ -431,9 +451,9 @@ export function avviaDimostrazione () {
        * accorge.
        */
       window.__nautica.coda = coda
-      window.__nautica.pCoda = coda > 0
-        ? Math.min(1, Math.max(0, (-r.top - ante - corsa) / coda))
-        : 0
+      /* lo stesso valore passato alla regia, non un secondo conto: due conti
+         per una grandezza sono due grandezze che un giorno divergono */
+      window.__nautica.pCoda = pCoda
       /**
        * E anche la CORSA, in pixel. Con la sola posizione un cancello puo'
        * solo cercare il punto per bisezione -- e cercare vuol dire SALTARE

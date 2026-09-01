@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
   Box3, Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
-  PMREMGenerator, Raycaster, PCFSoftShadowMap
+  PMREMGenerator, Raycaster, PCFSoftShadowMap, Object3D
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z, PRUA_Z } from '../scafo/ordinate.js'
@@ -167,6 +167,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let ultimoStato = null
   /** L'ultima corsa della traversata, per la camera del mondo. Vedi `disegna`. */
   let corsaTraversata = 0
+  /* appoggio per costruire la posa d'arrivo del mondo: vedi `ancoraA` */
+  const _mira = new Object3D()
   /* l'ultima simulazione passata a `disegna`: serve al passo dichiarato, che
      deve poter rientrare in `disegna` senza che il chiamante gliela ripassi */
   let ultimaSim = null
@@ -1610,7 +1612,46 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * Una volta sola: `ancorato` lo dichiara il mondo.
      */
     if (mondo && mondo.pronto && !mondo.ancorato) {
-      mondo.ancoraA(scarto, dentroY, tugaZ + dist)
+      /**
+       * E L'ORIENTAMENTO SI COSTRUISCE, non si campiona.
+       *
+       * Avevo passato `camera.quaternion`, cioe' l'orientamento del fotogramma
+       * in cui il mondo diventa pronto -- che dipende da dove si trova lo
+       * scorrimento in quell'istante, e quindi e' un valore diverso a ogni
+       * caricamento. La POSIZIONE si puo' campionare perche' `scarto`,
+       * `dentroY` e `tugaZ + dist` non dipendono dalla corsa; l'orientamento
+       * no, perche' `lookAt` interpola verso l'uscita.
+       *
+       * La posa d'arrivo e' quella della battuta del salotto: dal punto
+       * d'ancoraggio si guarda il salone, cioe' `(scarto, dentroY, tugaZ)` --
+       * gli stessi argomenti che `camera.lookAt` riceve quando `uscita` vale
+       * zero. Costruirla e' deterministico; campionarla e' una lotteria.
+       */
+      /**
+       * LA POSA D'ARRIVO NON E' ANCORA ANCORATA, E VA DETTO PERCHE'.
+       *
+       * MISURATO all'istante della giunzione, camera nello stesso punto:
+       *   sito, battuta salotto   guarda ( 0,0000 ·  0,0000 · -1,0000)
+       *   mondo, ultima posa      guarda (-0,3248 · -0,0493 · -0,9445)
+       *   scarto                  19,2 gradi
+       *
+       * Diciannove gradi bastano a far vedere il ponte al posto della stanza.
+       * Il contratto garantisce la giunzione del PUNTO -- l'ultima posa e'
+       * [0,0,0], cioe' l'origine -- ma sull'origine non c'e' scritto dove si
+       * guarda.
+       *
+       * HO PROVATO A COSTRUIRE LA POSA VOLUTA con un `lookAt` da qui verso
+       * `(scarto, dentroY, tugaZ)`, e il quaternione che ne usciva era
+       * [0, 1, 0, 0]: CENTOTTANTA GRADI esatti, cioe' guardava dalla parte
+       * opposta. Applicata, la correzione diventava 161 gradi e la camera
+       * arrivava a guardare lungo +Z invece che -Z -- peggio di prima.
+       *
+       * Il bersaglio e' sbagliato, non il metodo: da questa posizione `tugaZ`
+       * non sta davanti. Quale sia il punto giusto va misurato, non indovinato,
+       * e finche' non lo e' la correzione resta spenta: meglio uno scarto di 19
+       * gradi noto che uno di 161 introdotto da me.
+       */
+      mondo.ancoraA(scarto, dentroY, tugaZ + dist, null)
     }
 
     if (mondo && mondo.pronto) {
@@ -2012,6 +2053,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * accenderlo o spegnerlo per far tornare un numero. Puo' solo chiedere di
      * misurare cio' che c'e' SOTTO, dichiarandolo nella URL.
      */
+    /**
+     * ─── LA CODA, e cosa ci suona quando la traversata la fa il mondo
+     *
+     * DECISIONE DEL COMMITTENTE, 1 settembre 2026: il sito finisce col filmato
+     * del SALONE, che e' dove stanno le due persone. Nella coda la camera e'
+     * GIA' DENTRO -- la coda non serve all'arrivo, serve alle persone.
+     *
+     * Con il filmato acceso questa non fa niente: la consegna alla calma la
+     * guida gia' il filmato che finisce, ed e' la ragione per cui la coda
+     * esiste (demo.js:309). Con il mondo promosso il filmato non c'e', e senza
+     * questa riga la coda resterebbe muta.
+     */
+    impostaCoda: (c) => {
+      if (mondo && mondo.pronto) traversata.mostraCalma(c)
+    },
     impostaTraversata: (q) => {
       corsaTraversata = q
       /* col mondo acceso il filmato non serve: la traversata la fa la camera */

@@ -186,7 +186,15 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
   let mareRaggiunto = 0
   let ultimaP = 0
 
-  function aggiorna (p) {
+  /**
+   * @param {number} p      la battuta, 0..1 sulla corsa del racconto
+   * @param {number} pCoda  la CODA, 0..1 sul tratto dopo che `p` e' arrivato a 1.
+   *   Esiste perche' `p` li' non dice piu' niente: vedi demo.js, «la coda e' un
+   *   secondo parametro». Con il filmato quel tratto e' pieno da se'; col mondo
+   *   promosso serve a far suonare li' il filmato del SALONE, che e' l'ultima
+   *   immagine del sito.
+   */
+  function aggiorna (p, pCoda = 0) {
     ultimaP = p
     /**
      * 1 - 2 · la nave emerge, poi il mare sale.
@@ -293,6 +301,9 @@ export function creaRegia ({ scena, sim, palco, didascalia, alCambio, allaBattut
     scena.impostaVerticale?.(dolce(fra(p, S.verticale[0], S.verticale[1])))
 
     scena.impostaTraversata?.(fra(p, S.traversata[0], S.traversata[1]))
+    /* la coda arriva alla scena come parametro suo: chi non la usa non se ne
+       accorge, e con il filmato acceso non la usa nessuno */
+    scena.impostaCoda?.(pCoda)
     /**
      * ─── E L'INTERFACCIA SI RITIRA, o il finale non e' un finale
      *

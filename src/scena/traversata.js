@@ -353,8 +353,39 @@ export function creaTraversata (base, camera, scena, videoCalma) {
    * Si apre risalendo: `mostra()` segue la corsa, quindi scorrendo indietro
    * l'opacita' cala e si rientra nella scena viva. Il cerchio lo chiude la mano.
    */
+  /**
+   * ─── LA CALMA DA SOLA, per quando la traversata la fa il mondo
+   *
+   * DECISIONE DEL COMMITTENTE, 1 settembre 2026: il sito finisce col filmato
+   * del SALONE, dove stanno le due persone. Si toglie solo `traversata.mp4`.
+   *
+   * Con il mondo promosso `index.js` chiama `mostra(0)`, e `componi(0)` spegne
+   * TUTTE E DUE le lastre -- quella della traversata e quella della calma.
+   * Giusto per la prima, sbagliato per la seconda: la calma e' l'ultima
+   * immagine del sito e deve suonare lo stesso.
+   *
+   * Questa la accende da sola, guidata dalla CODA invece che dalla consegna del
+   * filmato: senza filmato non c'e' nessuna consegna da cui farsi guidare.
+   *
+   * La giunzione e' esatta per costruzione, e non e' una coincidenza:
+   * l'ultima posa di `traversata-camera.json` e' [0,0,0], cioe' l'origine, e
+   * l'origine e' il nodo CAMERA_SORGENTE_SALONE (world_root.py:80). La camera
+   * 3D finisce NELLA STESSA POSIZIONE da cui e' stato girato questo filmato.
+   */
+  function mostraCalma (c) {
+    if (!pianoCalma || !matCalma) return
+    const a = Math.max(0, Math.min(1, c * 4))
+    matCalma.opacity = a
+    pianoCalma.visible = a > 0.002
+    if (pianoCalma.visible) {
+      posiziona()
+      if (videoCalma && videoCalma.paused) videoCalma.play().catch(() => {})
+    }
+  }
+
   return {
     mostra,
+    mostraCalma,
     avanza,
     spegni,
     piano,

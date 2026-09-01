@@ -214,13 +214,46 @@ export function creaMondo (base, scena) {
    * arrivano da li', dallo stesso ambito che li usa per la camera, cosi' non
    * esistono due copie che un giorno divergono.
    */
+  /**
+   * ─── E ANCHE L'ORIENTAMENTO ARRIVA DALLA REGIA
+   *
+   * L'ancoraggio in posizione non basta, e si vede in un fotogramma. Misurato
+   * all'istante della giunzione, con la camera nello stesso punto:
+   *
+   *   sito, battuta salotto   guarda ( 0,0000 ·  0,0000 · -1,0000)
+   *   mondo, ultima posa      guarda (-0,3248 · -0,0493 · -0,9445)
+   *   scarto                  19,2 gradi
+   *
+   * Diciannove gradi bastano a far vedere il ponte al posto della stanza: il
+   * filmato del salone e' girato guardando la finestra e le due persone, la
+   * camera del mondo arriva guardando altrove. La giunzione che il contratto
+   * garantisce e' quella del PUNTO, non della direzione -- l'ultima posa e'
+   * [0,0,0], cioe' l'origine, e sull'origine non c'e' scritto dove si guarda.
+   *
+   * La correzione NON si applica a tutta la curva: ruotare ogni posa di 19
+   * gradi vorrebbe dire attraversare il corridoio guardando le pareti. Si
+   * innesta sull'ultimo tratto, cosi' la camera converge sulla posa del
+   * filmato mentre arriva, e all'istante del taglio le due inquadrature
+   * coincidono.
+   */
+  const INNESTO = 0.15
+  let correzione = null
+  let diag = null
+
   let ancorato = false
-  function ancoraA (x, y, z) {
+  function ancoraA (x, y, z, guardaCome) {
     gruppo.position.set(x, y, z)
     gruppo.updateWorldMatrix(true, true)
     componiPose()            // dipendono da matrixWorld: vanno rifatte
     misuraFrancoChiglia()
     contaPoseSopraPonte()
+    /* la correzione porta l'ULTIMA posa esattamente sull'orientamento del sito:
+       delta = voluto * attuale^-1, applicato a sinistra */
+    if (guardaCome && pose && pose.length) {
+      const ultima = pose[pose.length - 1].q
+      correzione = guardaCome.clone().multiply(ultima.clone().invert())
+      diag = { voluto: [guardaCome.x, guardaCome.y, guardaCome.z, guardaCome.w].map(n=>+n.toFixed(4)), ultima: [ultima.x, ultima.y, ultima.z, ultima.w].map(n=>+n.toFixed(4)) }
+    }
     ancorato = true
   }
 
@@ -388,6 +421,7 @@ export function creaMondo (base, scena) {
 
   const _pa = new Vector3()
   const _qa = new Quaternion()
+  const _qc = new Quaternion()
   function posaA (s) {
     if (!pose || pose.length < 2) return null
     const x = MathUtils.clamp(s, 0, 1) * (pose.length - 1)
@@ -395,6 +429,15 @@ export function creaMondo (base, scena) {
     const f = x - i
     _pa.copy(pose[i].p).lerp(pose[i + 1].p, f)
     _qa.copy(pose[i].q).slerp(pose[i + 1].q, f)
+    if (correzione) {
+      /* si innesta solo sull'ultimo tratto, e in modo continuo: a s = 1-INNESTO
+         la correzione e' nulla, a s = 1 e' intera */
+      const t = Math.max(0, (MathUtils.clamp(s, 0, 1) - (1 - INNESTO)) / INNESTO)
+      if (t > 0) {
+        _qc.identity().slerp(correzione, t)
+        _qa.premultiply(_qc)
+      }
+    }
     return { p: _pa, q: _qa }
   }
 
@@ -435,6 +478,8 @@ export function creaMondo (base, scena) {
         sfondamentoPonte: sfondamento,
         francoChiglia,
         ancorato,
+        diag,
+        correzioneGradi: correzione ? +(2 * Math.acos(Math.min(1, Math.abs(correzione.w))) * 180 / Math.PI).toFixed(2) : null,
         /* misurati nello spazio della scena, non sull'asset -- vedi
            contaPoseSopraPonte() e la nota che la accompagna */
         poseSopraPonte,
