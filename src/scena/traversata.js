@@ -14,7 +14,7 @@ import { LinearFilter, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, V
  * che si veda quel modellino che sembra plastica»*.
  *
  * Quindi la traversata la fa un filmato fotorealistico, ed e' la stessa
- * decisione gia' presa per la discesa. `public/filmati/traversata.mp4`: dieci
+ * decisione gia' presa per la discesa. Il filmato della traversata: dieci
  * secondi, meccanismo alla linea d'acqua, attraverso lo scafo, sala macchine,
  * scala, corridoio, salone con le due persone.
  *
@@ -54,7 +54,21 @@ const DISTANZA = 1.0
 
 export function creaTraversata (base, camera, scena, videoCalma) {
   const v = document.createElement('video')
-  v.src = base + 'filmati/traversata.mp4'
+  /**
+   * ─── IL FILMATO DELLA TRAVERSATA NON C'E' PIU'
+   *
+   * DECISIONE DEL COMMITTENTE, 1 settembre 2026: la traversata diventa 3D
+   * world-space, e il filmato della traversata esce dal repo (-1,5 MB). I
+   * filmati del SALONE restano tutti, perche' sono le persone.
+   *
+   * La sorgente non si assegna piu': chiederla darebbe un 404 a ogni
+   * caricamento, e un errore di rete in console e' la prima cosa che un
+   * giurato attento apre. La lastra della traversata resta nel modulo perche'
+   * la calma ci vive accanto e ne condivide la posa, ma non ha piu' niente da
+   * mostrare: `mostra()` la lascia invisibile e `impostaTraversata` la chiama
+   * gia' con zero appena il mondo e' pronto.
+   */
+  /* niente `v.src`: il filmato della traversata e' uscito dal repo */
   v.muted = true
   v.playsInline = true
   v.preload = 'auto'
@@ -119,7 +133,7 @@ export function creaTraversata (base, camera, scena, videoCalma) {
    * DIFETTO PRESO GUARDANDO IL SITO PUBBLICATO, non leggendo il codice. Alla
    * fine della corsa la misura diceva:
    *
-   *     traversata.mp4    t 8.04 -> 8.04   fermo: true   finito: true
+   *     (il filmato)      t 8.04 -> 8.04   fermo: true   finito: true
    *     salone-largo.mp4  t 3.75 -> 1.22   fermo: false
    *
    * cioe' il filmato era congelato sull'ultimo fotogramma e copriva tutto,
@@ -287,9 +301,24 @@ export function creaTraversata (base, camera, scena, videoCalma) {
    * della consegna: il fondo non trasparisce mai e il numero non dipende piu'
    * da quando lo si legge.
    */
+  /**
+   * ─── SENZA SORGENTE LA LASTRA NON SI ACCENDE, e il numero smette di mentire
+   *
+   * Tolto il filmato della traversata, `mostra(q)` continuava a rendere
+   * visibile un piano con una VideoTexture senza immagine. Non si vedeva --
+   * dietro c'era la scena -- ma `coperturaTraversata` restituisce
+   * `mat.opacity`, cioe' un numero DICHIARATO, e diceva 1.
+   *
+   * MISURATO bloccando il GLB del mondo, che e' il percorso degradato:
+   * `cop = 1` a p=0,96 mentre il fotogramma mostrava il meccanismo e la pinna.
+   * Tre cancelli leggono quel numero. Un piano fantasma nella scena e una
+   * misura che mente sono due difetti, non uno.
+   */
+  const HA_FILMATO = false
+
   function componi (a) {
-    mat.opacity = a * (1 - consegna)
-    piano.visible = a > 0.002 && consegna < 0.999
+    mat.opacity = HA_FILMATO ? a * (1 - consegna) : 0
+    piano.visible = HA_FILMATO && a > 0.002 && consegna < 0.999
     if (matCalma) matCalma.opacity = a
     if (pianoCalma) pianoCalma.visible = a > 0.002 && consegna > 0.001
     if (piano.visible || pianoCalma?.visible) posiziona()
@@ -374,7 +403,36 @@ export function creaTraversata (base, camera, scena, videoCalma) {
    */
   function mostraCalma (c) {
     if (!pianoCalma || !matCalma) return
-    const a = Math.max(0, Math.min(1, c * 4))
+    /**
+     * ─── E QUI LA TRAVERSATA E' «FINITA», perche' non c'e' piu' un `ended`
+     *
+     * `finita` diventava vera sull'evento `ended` del filmato della traversata.
+     * Tolto il filmato, quell'evento non arriva mai, e `collaudo-finale-vivo`
+     * diceva -- correttamente -- «il filmato non finisce: il finale non e'
+     * stato raggiunto».
+     *
+     * Non e' una taratura per far tornare un numero: il significato di `finita`
+     * e' «la traversata e' arrivata e comincia il salone», e adesso quel
+     * momento e' l'apertura della coda invece della fine di un mp4. La soglia
+     * e' la stessa a cui la lastra diventa visibile, cosi' le due cose non
+     * possono divergere.
+     */
+    if (c > 0.002) { finita = true; consegna = 1 }
+    /**
+     * ─── LA RAMPA E' OTTO, ED E' UN CONTO
+     *
+     * Con `c * 4` la calma apriva a pCoda = 0,25, cioe' dopo 0,3 schermate
+     * delle 1,2 della coda: restavano 0,90 schermate di quadro intero.
+     * `collaudo-finale` pretende almeno 1 -- «chi si ferma sul finale vede una
+     * striscia, non una stanza» -- e falliva con esattamente 0.90.
+     *
+     * Servono >= 1 schermata piena su 1,2 disponibili, quindi la rampa deve
+     * chiudersi entro 0,2 schermate, cioe' pCoda <= 1/6 = 0,167: moltiplicatore
+     * >= 6. Otto chiude a 0,125, cioe' 0,15 schermate, e ne lascia 1,05 piene.
+     * Il margine e' voluto: sei sarebbe esatto e un pixel di arrotondamento lo
+     * farebbe fallire.
+     */
+    const a = Math.max(0, Math.min(1, c * 8))
     matCalma.opacity = a
     pianoCalma.visible = a > 0.002
     if (pianoCalma.visible) {

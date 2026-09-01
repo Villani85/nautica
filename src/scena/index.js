@@ -167,8 +167,18 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   let ultimoStato = null
   /** L'ultima corsa della traversata, per la camera del mondo. Vedi `disegna`. */
   let corsaTraversata = 0
-  /* appoggio per costruire la posa d'arrivo del mondo: vedi `ancoraA` */
+  /**
+   * Appoggio per costruire la posa d'arrivo del mondo: vedi `ancoraA`.
+   *
+   * `isCamera = true` NON e' un trucco, e' la convenzione. `Object3D.lookAt`
+   * punta al bersaglio il **+Z** per un oggetto qualunque e il **-Z** per una
+   * camera o una luce. Senza questa riga il quaternione usciva [0, 1, 0, 0] --
+   * centottanta gradi esatti -- e la correzione diventava 161 invece di 19.
+   * Avevo scritto che il bersaglio era sbagliato: era sbagliata la convenzione,
+   * e i 180 gradi tondi lo dicevano gia'.
+   */
   const _mira = new Object3D()
+  _mira.isCamera = true
   /* l'ultima simulazione passata a `disegna`: serve al passo dichiarato, che
      deve poter rientrare in `disegna` senza che il chiamante gliela ripassi */
   let ultimaSim = null
@@ -649,6 +659,28 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * Il mondo della traversata: gli spazi veri, dietro `?mondo=1`. Entra spento
    * e non tocca niente finche' la prova verticale non e' verde -- vedi la
    * testata di `mondo.js`, «entra spento».
+   */
+  /**
+   * ─── IL MONDO E' PROMOSSO, e `?mondo=0` lo spegne
+   *
+   * DECISIONE DEL COMMITTENTE, 1 settembre 2026: la traversata diventa 3D
+   * world-space. Il sito attraversa locale tecnico, sala macchine e corridoio,
+   * arriva nel salone, e da li' riprende il FILMATO DEL SALONE, che e' la coda
+   * e l'ultima immagine. Si toglie solo `traversata.mp4`; i filmati del salone
+   * restano tutti, perche' sono le persone.
+   *
+   * Promosso dopo che la giunzione e' stata chiusa e non prima: alla fine della
+   * traversata la direzione della camera del mondo e quella della camera del
+   * sito alla battuta del salone coincidono entro 0,097 gradi, contro una
+   * soglia di uno. Era 19,2 prima dell'innesto.
+   *
+   * IL RIPIEGO ESISTE GIA' e non e' stato scritto per l'occasione:
+   * `impostaTraversata` spegne la lastra solo se `mondo.pronto`. Con rete
+   * lenta, GLB che non arriva o WebGL che ripiega, `pronto` resta falso e il
+   * sito torna da solo al filmato -- senza un ramo in piu' da mantenere.
+   *
+   * `?mondo=0` resta per misurare il sito com'era: serve ai cancelli, non al
+   * visitatore.
    */
   const mondo = vuoleMondo() ? creaMondo(base, scena) : null
 
@@ -1628,9 +1660,9 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * zero. Costruirla e' deterministico; campionarla e' una lotteria.
        */
       /**
-       * LA POSA D'ARRIVO NON E' ANCORA ANCORATA, E VA DETTO PERCHE'.
+       * ─── E L'ORIENTAMENTO D'ARRIVO E' QUELLO DELLA CAMERA DEL SITO
        *
-       * MISURATO all'istante della giunzione, camera nello stesso punto:
+       * MISURATO prima di correggerlo, camera nello stesso punto:
        *   sito, battuta salotto   guarda ( 0,0000 ·  0,0000 · -1,0000)
        *   mondo, ultima posa      guarda (-0,3248 · -0,0493 · -0,9445)
        *   scarto                  19,2 gradi
@@ -1638,20 +1670,30 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * Diciannove gradi bastano a far vedere il ponte al posto della stanza.
        * Il contratto garantisce la giunzione del PUNTO -- l'ultima posa e'
        * [0,0,0], cioe' l'origine -- ma sull'origine non c'e' scritto dove si
-       * guarda.
+       * guarda, e l'orientamento e' arrivato in dote con la posizione senza che
+       * nessuno lo confrontasse con niente.
        *
-       * HO PROVATO A COSTRUIRE LA POSA VOLUTA con un `lookAt` da qui verso
-       * `(scarto, dentroY, tugaZ)`, e il quaternione che ne usciva era
-       * [0, 1, 0, 0]: CENTOTTANTA GRADI esatti, cioe' guardava dalla parte
-       * opposta. Applicata, la correzione diventava 161 gradi e la camera
-       * arrivava a guardare lungo +Z invece che -Z -- peggio di prima.
+       * E IL BERSAGLIO NON E' IL NODO DEL GLB. Il filmato del salone non ha una
+       * camera propria nel sito: e' una texture su una lastra piazzata davanti
+       * alla camera del sito. Chi lo inquadra e' la camera del sito, sempre.
+       * Quindi la posa che il mondo deve raggiungere e' quella da cui il
+       * filmato verra' mostrato un istante dopo. Il nodo dentro il GLB porta
+       * l'orientamento della camera che genero' le immagini in Blender: giusto
+       * per la posizione, senza ruolo nel passaggio.
        *
-       * Il bersaglio e' sbagliato, non il metodo: da questa posizione `tugaZ`
-       * non sta davanti. Quale sia il punto giusto va misurato, non indovinato,
-       * e finche' non lo e' la correzione resta spenta: meglio uno scarto di 19
-       * gradi noto che uno di 161 introdotto da me.
+       * `salone3d.js:534-546` fa gia' esattamente questo per il guscio -- «in
+       * asse, 1,31 unita' davanti alla lastra, rotazione identita'» -- e il
+       * guscio e' stato adattato al sito, non il contrario.
+       *
+       * Costruita e non campionata: `camera.quaternion` qui e' l'orientamento
+       * del fotogramma in cui il mondo diventa pronto, che dipende da dove sta
+       * lo scorrimento. La posa del salotto e' `lookAt` dal punto d'ancoraggio
+       * verso `(scarto, dentroY, tugaZ)`, gli stessi argomenti che
+       * `camera.lookAt` riceve quando `uscita` vale zero.
        */
-      mondo.ancoraA(scarto, dentroY, tugaZ + dist, null)
+      _mira.position.set(scarto, dentroY, tugaZ + dist)
+      _mira.lookAt(scarto, dentroY, tugaZ)
+      mondo.ancoraA(scarto, dentroY, tugaZ + dist, _mira.quaternion.clone())
     }
 
     if (mondo && mondo.pronto) {
@@ -2066,7 +2108,22 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
      * questa riga la coda resterebbe muta.
      */
     impostaCoda: (c) => {
-      if (mondo && mondo.pronto) traversata.mostraCalma(c)
+      /**
+       * SEMPRE, non solo col mondo pronto -- ed e' cambiato togliendo
+       * `traversata.mp4`.
+       *
+       * L'ordine del committente diceva che il ripiego esisteva gia': se il GLB
+       * non arriva, `mondo.pronto` resta falso e il sito «torna da solo al
+       * filmato». Vero finche' il filmato c'era. Il passo 5 dello stesso ordine
+       * lo cancella, e con lui il ripiego: senza mondo E senza filmato il
+       * finale sarebbe uno schermo vuoto.
+       *
+       * Quindi la coda accende la calma in ogni caso. Con il mondo pronto e' la
+       * consegna voluta; senza, e' l'unico finale rimasto -- e resta il finale
+       * giusto, perche' e' il filmato del salone con le due persone, che era
+       * gia' l'ultima immagine del sito.
+       */
+      traversata.mostraCalma(c)
     },
     impostaTraversata: (q) => {
       corsaTraversata = q

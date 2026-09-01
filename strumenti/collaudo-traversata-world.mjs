@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { apriBrowser } from './browser.mjs'
 import { avvisaSePortaAltrui } from './porta-altrui.mjs'
+import { S } from '../src/regia.js'
 
 /**
  * COLLAUDO DELLA LASTRA — nessun piano appeso alla camera copre l'intero canvas.
@@ -270,13 +271,36 @@ for (let i = 0; i <= PASSI; i++) {
 const note = []
 
 // ─── copertura ──────────────────────────────────────────────────────────
-const cop = campioni.map(c => c.copertura)
+/**
+ * ─── SI GIUDICA DENTRO LA FINESTRA DELLA TRAVERSATA, non su tutta la pagina
+ *
+ * DECISIONE DEL COMMITTENTE, 1 settembre 2026: il sito finisce col FILMATO DEL
+ * SALONE, che e' dove stanno le due persone. Si toglie solo `traversata.mp4`.
+ *
+ * Quindi nella CODA una lastra a copertura totale non solo e' ammessa: e'
+ * l'ultima immagine del sito, ed e' voluta. Questo cancello la vietava ovunque
+ * e falliva su di essa -- «copre il quadro per intero fra p=0.96 e p=1.00» --
+ * accusando il montaggio di un difetto che e' il finale.
+ *
+ * NON E' UNA DEROGA, e la differenza conta: la regola «la traversata non e' un
+ * filmato» resta vera dove la traversata AVVIENE. Fuori di li' la lastra non
+ * sta mostrando la traversata: sta mostrando il salone.
+ *
+ * La finestra si LEGGE da regia.js invece di essere ricopiata qui: due copie di
+ * un intervallo sono due intervalli che un giorno divergono.
+ */
+const FINESTRA = S.traversata
+const dentroFinestra = (c) => c.p >= FINESTRA[0] && c.p <= FINESTRA[1]
+const inFinestra = campioni.filter(dentroFinestra)
+const cop = inFinestra.map(c => c.copertura)
 const massima = cop.length ? Math.max(...cop) : null
-const dovePicco = cop.length ? campioni[cop.indexOf(massima)].p : null
+const dovePicco = cop.length ? inFinestra[cop.indexOf(massima)].p : null
 if (massima === null) {
   guasti.push('nessun campione valido: la copertura non e stata misurata da nessuna parte')
 } else {
-  const coperti = campioni.filter(c => c.copertura >= SOGLIA_COPERTURA_TOTALE)
+  const coperti = inFinestra.filter(c => c.copertura >= SOGLIA_COPERTURA_TOTALE)
+  note.push(`FINESTRA    p in [${FINESTRA[0]}, ${FINESTRA[1]}], letta da regia.js — ` +
+            `${inFinestra.length} campioni su ${campioni.length} ci cadono dentro`)
   note.push(`COPERTURA   massima ${(massima * 100).toFixed(1)}% (a p=${dovePicco.toFixed(2)}), ` +
             `tetto non negoziabile ${(SOGLIA_COPERTURA_TOTALE * 100).toFixed(0)}%; ` +
             `${coperti.length} campioni su ${campioni.length} coprono il quadro per intero`)

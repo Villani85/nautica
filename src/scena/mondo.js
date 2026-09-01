@@ -46,10 +46,21 @@ import { sezioneA, PRUA_Z, POPPA_Z } from '../scafo/ordinate.js'
  * cercare la causa altrove.
  */
 
-/** `?mondo=1` (o `si`, o `true`) accende il mondo. Assente = spento. */
+/**
+ * Il mondo e' ACCESO di serie. `?mondo=0` (o `no`, o `false`) lo spegne.
+ *
+ * Era il contrario -- «entra spento e non tocca niente finche' la prova
+ * verticale non e' verde». Quella prova adesso e' verde, la giunzione con il
+ * filmato del salone combacia entro 0,097 gradi, e il committente ha deciso il
+ * 1 settembre 2026 che la traversata diventa 3D.
+ *
+ * L'interruttore resta perche' serve a MISURARE il sito senza il mondo, non
+ * perche' il visitatore debba sceglierlo.
+ */
 export function vuoleMondo (ricerca = (typeof location === 'undefined' ? '' : location.search)) {
   const v = new URLSearchParams(ricerca).get('mondo')
-  return v === '1' || v === 'si' || v === 'true'
+  if (v === '0' || v === 'no' || v === 'false') return false
+  return true
 }
 
 /**

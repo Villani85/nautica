@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { S } from '../src/regia.js'
 import { apriBrowser } from './browser.mjs'
 import { avvisaSePortaAltrui } from './porta-altrui.mjs'
 
@@ -271,6 +272,9 @@ for (let i = 0; i <= PASSI; i++) {
     }).length
 
     return {
+      /* la battuta del campione: senza, un filtro sulla finestra della
+         traversata non filtra niente e passa tutto in silenzio */
+      p: window.__nautica?.p ?? null,
       pos: c.position.toArray(),
       quat: c.quaternion.toArray(),
       tele: document.querySelectorAll('#dimostrazione canvas').length,
@@ -300,8 +304,29 @@ if (buoni.length < campioni.length) {
 }
 
 // ─── il beccheggio ────────────────────────────────────────────────────────
+/**
+ * ─── SI GUARDA FUORI DALLA TRAVERSATA, e la ragione non e' una deroga
+ *
+ * La regola dice: una camera che becchegga sposta l'orizzonte dalla mezzeria, e
+ * la giunzione fra fondo CSS e tela -- l'unica idea meccanica del sito -- si
+ * vede. E' vera finche' c'e' un orizzonte.
+ *
+ * Dentro la finestra della traversata (regia.js, `traversata: [0.93, 1.00]`) la
+ * camera e' DENTRO LO SCAFO: attraversa locale tecnico, sala macchine, scala e
+ * corridoio, e sale otto gradini. Li' non c'e' nessun orizzonte da spostare e
+ * nessuna giunzione col fondo CSS da tradire: una camera che non becchegga
+ * salendo una scala sarebbe il difetto.
+ *
+ * Preso da questo cancello il 1 settembre 2026, appena il mondo e' stato
+ * promosso: 1,41e-1 contro un tetto di 1e-4. Il numero era vero e la regola
+ * fuori luogo.
+ *
+ * La finestra si LEGGE da regia.js invece di essere ricopiata: due copie di un
+ * intervallo sono due intervalli che un giorno divergono.
+ */
+const FUORI_TRAVERSATA = (c) => c.p == null || !(c.p >= S.traversata[0] && c.p <= S.traversata[1])
 let pitchMax = 0
-for (const c of buoni) pitchMax = Math.max(pitchMax, Math.abs(c.quat[0]), Math.abs(c.quat[2]))
+for (const c of buoni.filter(FUORI_TRAVERSATA)) pitchMax = Math.max(pitchMax, Math.abs(c.quat[0]), Math.abs(c.quat[2]))
 note.push(`BECCHEGGIO  ${pitchMax.toExponential(1)}  (tetto ${PITCH_MAX.toExponential(0)})`)
 if (pitchMax > PITCH_MAX) {
   guasti.push(
