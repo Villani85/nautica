@@ -128,6 +128,12 @@ jobs:
       - { name: 'Cancello · fantasma',     run: node strumenti/collaudo-fantasma.mjs, timeout-minutes: 20 }
       - { name: 'Cancello · filmati',      run: node strumenti/collaudo-filmato.mjs, timeout-minutes: 20 }
       - { name: 'Cancello · loop filmati', run: node strumenti/collaudo-loop.mjs, timeout-minutes: 20 }
+      # Nuovo: l'audio non aveva NESSUN cancello, ed era in cima alla lista di
+      # cio' che nessuno guardava. Conta i contesti e i guadagni strumentando
+      # AudioContext prima che la pagina parta -- il sito non viene toccato.
+      # Provato al contrario prima di entrare: con un limite finto a 0,5 esce 1,
+      # e col pulsante rinominato dice «non esiste nessun button.suono».
+      - { name: 'Cancello · il suono non parte da solo e non satura', run: node strumenti/collaudo-audio.mjs, timeout-minutes: 20 }
       - name: 'Cancello · il sollievo e una conseguenza'
         timeout-minutes: 20
         run: node strumenti/collaudo-sollievo.mjs
