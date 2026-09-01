@@ -1911,6 +1911,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       /* quanto e' libera la vista davanti a una posa della traversata: serve a
          capire dove la camera guarda un muro invece del passaggio */
       vistaTraversata: (s) => mondo?.vistaLibera?.(s) ?? null,
+      /* la tabella completa del franco, posa per posa: vedi mondo.js misuraFrancoPose */
+      francoTraversata: () => mondo?.francoPose?.() ?? null,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**

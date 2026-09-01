@@ -537,6 +537,7 @@ function riallineaSalone (radice) {
     gruppo.updateWorldMatrix(true, true)
     componiPose()            // dipendono da matrixWorld: vanno rifatte
     alzaSulPavimento()       // e l'occhio va sopra il pavimento, non dentro
+    misuraFrancoPose()       // e si MISURA che ci stia, posa per posa
     misuraFrancoChiglia()
     contaPoseSopraPonte()
     /* la correzione porta l'ULTIMA posa esattamente sull'orientamento del sito:
@@ -664,6 +665,8 @@ const OCCHIO_M = 1.55
 const FRANCO_TESTA = 0.25
 const SPEGNI_DA = 0.85
 const _giu = new Vector3(0, -1, 0)
+const _su = new Vector3(0, 1, 0)
+const _nrm = new Vector3()
 
 function alzaSulPavimento () {
   if (!pose || !pose.length) return
@@ -680,9 +683,17 @@ function alzaSulPavimento () {
     const da = pose[i].p.clone().addScaledVector(_giu, -alto)
     _raggio.set(da, _giu)
     _raggio.far = alto * 3
-    const colpi = _raggio.intersectObjects(bersagli, false)
-    if (!colpi.length) continue
-    const pavimento = colpi[0].point.y
+    /* e anche qui si scartano le facce posteriori: alla porta di poppa della
+       sala macchine il raggio partiva DENTRO l'architrave e ne prendeva la
+       faccia inferiore per pavimento (misurato: i=33, occhio dentro il blocco
+       con 17 mm di franco). Un pavimento si vede da sopra. */
+    const colpo = _raggio.intersectObjects(bersagli, false).find((c) => {
+      if (!c.face) return true
+      _nrm.copy(c.face.normal).transformDirection(c.object.matrixWorld)
+      return _nrm.dot(_giu) < 0
+    })
+    if (!colpo) continue
+    const pavimento = colpo.point.y
 
     /**
      * ─── E IL SOFFITTO, che alla prima stesura ho dimenticato
@@ -700,15 +711,122 @@ function alzaSulPavimento () {
      * schiaccia; sopra, in un vano basso l'occhio scenderebbe piu' del
      * necessario.
      */
-    const su = pose[i].p.clone()
-    _raggio.set(su, new Vector3(0, 1, 0))
+    /**
+     * ─── E IL RAGGIO PARTE DAL PAVIMENTO, NON DALLA POSA
+     *
+     * Seconda stesura, dopo una misura vera (misuraFrancoPose): 13 pose su 96
+     * stavano DENTRO i gradini 8..12, franco minimo 7 millimetri. Il meccanismo:
+     * la posa grezza sta dentro un gradino, il raggio verso l'alto partiva da
+     * li' e il primo colpo era la PEDATA DI QUELLO STESSO GRADINO vista da
+     * sotto -- una faccia posteriore. La prendevo per soffitto e mettevo
+     * l'occhio venticinque centimetri sotto la pedata: dentro lo scalino.
+     *
+     * Il controllo scritto per non sbattere in alto era quello che teneva la
+     * camera dentro la scala. Quindi: si parte da appena sopra il pavimento
+     * trovato, e si scartano le facce posteriori -- un soffitto si vede dal
+     * di sotto, cioe' con la normale che viene verso il raggio.
+     */
+    const su = new Vector3(pose[i].p.x, pavimento + 0.01 / METRI_PER_UNITA, pose[i].p.z)
+    _raggio.set(su, _su)
     _raggio.far = alto * 3
-    const sopra = _raggio.intersectObjects(bersagli, false)
-    const tetto = sopra.length ? sopra[0].point.y - FRANCO_TESTA / METRI_PER_UNITA : Infinity
+    const sopra = _raggio.intersectObjects(bersagli, false).find((c) => {
+      if (!c.face) return true
+      _nrm.copy(c.face.normal).transformDirection(c.object.matrixWorld)
+      return _nrm.dot(_su) < 0   // la faccia guarda verso il basso: e' un soffitto
+    })
+    const tetto = sopra ? sopra.point.y - FRANCO_TESTA / METRI_PER_UNITA : Infinity
     const voluta = Math.min(pavimento + alto, tetto)
     /* si spegne verso l'arrivo: quella posa e' ancorata e non si tocca */
     const peso = s < SPEGNI_DA ? 1 : 1 - (s - SPEGNI_DA) / (1 - SPEGNI_DA)
     pose[i].p.y += (voluta - pose[i].p.y) * peso
+  }
+}
+
+/**
+ * ─── L'OCCHIO STA IN UN VANO O DENTRO UNA MAGLIA? Misurato, non stimato.
+ *
+ * Il revisore ha contato 13 pose su 96 «dentro un solido». Il conto era fatto
+ * sull'asset e con le SCATOLE (AABB) delle maglie: una scatola che avvolge un
+ * gradino a sbalzo, o la lamiera di un guscio, e' piena anche dove la maglia
+ * e' vuota. Quindi tredici e' un tetto, non un numero -- e vale in un sistema
+ * di coordinate in cui le pose non vivono (vedi contaPoseSopraPonte).
+ *
+ * La misura vera si fa qui, dopo `alzaSulPavimento()`, con la geometria: da
+ * ogni posa si tirano sei raggi lungo gli assi e si guarda la faccia piu'
+ * vicina. Se la sua normale e' CONCORDE col raggio, il raggio sta USCENDO da
+ * quella maglia: l'occhio era dentro. Funziona perche' le maglie sono
+ * `DoubleSide` (isolaDallaLuceDiFuori) e il raggio vede le facce posteriori.
+ *
+ * Due numeri per posa: il franco -- quanto e' vicina la superficie piu' vicina,
+ * in metri -- e l'elenco delle maglie da cui un raggio esce. Il franco dice
+ * «qui si sfiora», l'elenco dice «qui si e' dentro, e dentro COSA»: un nome
+ * come `gradino_5` e' un difetto della curva, `GUSCIO` e' il salone che e'
+ * cavo per costruzione e sta attorno all'occhio per mestiere.
+ *
+ * L'ultima posa non si esclude: e' ancorata alla camera del sito, e se risulta
+ * dentro qualcosa e' il salone a essere nel posto sbagliato, non la curva.
+ */
+const _ASSI = [
+  new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+  new Vector3(0, 1, 0), new Vector3(0, -1, 0),
+  new Vector3(0, 0, 1), new Vector3(0, 0, -1)
+]
+const _n = new Vector3()
+let francoPose = null
+let francoRiassunto = null
+
+function misuraFrancoPose () {
+  if (!pose || !pose.length) { francoPose = null; francoRiassunto = null; return }
+  /* solo gli AMBIENTI: l'arredo generato sta lungo la curva per costruzione e
+     un tubo a trenta centimetri dall'asse non e' un difetto della curva */
+  const bersagli = []
+  ;(function raccogli (o) {
+    if (o.name === 'arredoMondo') return
+    if (o.isMesh) bersagli.push(o)
+    for (const c of o.children) raccogli(c)
+  })(gruppo)
+  if (!bersagli.length) return
+  francoPose = pose.map((v, i) => {
+    let franco = Infinity
+    let cosa = null
+    const dentro = new Set()
+    const assi = []
+    for (const d of _ASSI) {
+      _raggio.set(v.p, d)
+      _raggio.far = 12 / METRI_PER_UNITA
+      const colpi = _raggio.intersectObjects(bersagli, false)
+      if (!colpi.length) { assi.push(null); continue }
+      const c = colpi[0]
+      const m = c.distance * METRI_PER_UNITA
+      const nome = c.object.name || '(senza nome)'
+      let dietro = false
+      if (c.face) {
+        _n.copy(c.face.normal).transformDirection(c.object.matrixWorld)
+        dietro = _n.dot(d) > 0
+      }
+      if (m < franco) { franco = m; cosa = nome }
+      if (dietro) dentro.add(nome)
+      assi.push({ m: +m.toFixed(3), cosa: nome, dietro })
+    }
+    return {
+      i,
+      s: +(i / (pose.length - 1)).toFixed(3),
+      p: [v.p.x, v.p.y, v.p.z].map((n) => +(n * METRI_PER_UNITA).toFixed(3)),
+      franco: Number.isFinite(franco) ? +franco.toFixed(3) : null,
+      cosa,
+      dentro: [...dentro],
+      /* i sei raggi in ordine +x -x +y -y +z -z, per chi deve capire PERCHE' */
+      assi
+    }
+  })
+  /* il riassunto per lo stato: quante pose stanno dentro qualcosa che non sia
+     il guscio del salone, quale e' il franco piu' stretto e dove */
+  const sospette = francoPose.filter((f) => f.dentro.some((n) => !/GUSCIO|Mesh_[0-7]$/.test(n)))
+  const stretta = francoPose.reduce((a, f) => (f.franco !== null && (a === null || f.franco < a.franco) ? f : a), null)
+  francoRiassunto = {
+    poseDentroSolido: sospette.length,
+    quali: sospette.map((f) => ({ i: f.i, s: f.s, dentro: f.dentro })),
+    francoMinimo: stretta ? { m: stretta.franco, i: stretta.i, s: stretta.s, cosa: stretta.cosa } : null
   }
 }
 
@@ -887,6 +1005,8 @@ function vistaLibera (s) {
     }),
     posaA,
     vistaLibera,
+    /** La tabella completa, posa per posa -- vedi misuraFrancoPose(). */
+    francoPose: () => francoPose,
     ancoraA,
     get ancorato () { return ancorato },
     get lunghezza () { return lunghezza },
@@ -983,6 +1103,9 @@ function vistaLibera (s) {
         poseSopraPonte,
         margineMinimoPonte,
         campionePonte,
+        /* intersezione vera maglia-contro-posa, sei raggi per posa -- vedi
+           misuraFrancoPose(). Il conto AABB del revisore (13) e' un tetto. */
+        franco: francoRiassunto,
         pose: pose ? pose.length : 0,
         lunghezzaCurva: lunghezza,
         ponte: 'DERIVATO, non confermato — vedi collaudo-verticale.mjs'
