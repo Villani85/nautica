@@ -193,6 +193,21 @@ const jsDopo = dopo.filter(v => v.p.endsWith('.js'))
  * Va detto chiaro perche' e' una perdita vera: «measured, not declared» era
  * la prova di onesta' del sito, e adesso vive solo nel repository.
  */
+/**
+ * ─── DORMIENTE, E ADESSO LO DICE
+ *
+ * Questo elenco e' VUOTO, e il ciclo che lo percorre (poco sotto) gira su zero
+ * elementi. Da fuori sembrava un confronto attivo fra i numeri stampati in
+ * pagina e quelli misurati dalla build; in realta' non confronta niente da
+ * quando le dichiarazioni sono uscite dalla pagina.
+ *
+ * Un cancello che non puo' fallire non e' un cancello. Lasciarlo sembrare
+ * attivo costa la fiducia in tutto il resto della suite; segnarlo dormiente
+ * costa una riga.
+ *
+ * Si risveglia da solo: basta rimettere le coppie [etichetta, byte] quando le
+ * dichiarazioni tornano in pagina. Finche' e' vuoto, il referto lo dice.
+ */
 const ATTESI = []
 
 const TOLLERANZA = 0.3
@@ -227,6 +242,11 @@ const scarti = []
  */
 const TETTI_ARMATI = false
 console.log('\nI NUMERI IN PAGINA')
+if (!ATTESI.length) {
+  console.log('  dorme  ' + 'Confronto pagina/build'.padEnd(42) +
+              ' nessuna coppia dichiarata: questo controllo non puo fallire, ' +
+              'e non e un verde')
+}
 for (const [etichetta, byte] of ATTESI) {
   /**
    * Si cerca con una ricerca testuale, non con un'espressione regolare: le

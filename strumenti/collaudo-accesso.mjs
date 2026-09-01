@@ -8,33 +8,69 @@
  * di tabulazione, segno del fuoco. Sono voci di Usability, che pesa il 30%, e
  * non avevano nessun cancello.
  *
- * ─── DUE STESURE SBAGLIATE PRIMA DI QUESTA, ed e' la parte che vale
+ * ─── TRE STESURE SBAGLIATE PRIMA DI QUESTA, ed e' la parte che vale
  *
  * PRIMA: risalivo l'albero cercando un `background-color` opaco e, non
- * trovandolo, ripiegavo sul bianco. Ma qui quasi tutto il testo sta SOPRA IL
+ * trovandolo, ripiegavo sul bianco. Ma qui quasi tutto il testo sta sopra il
  * CANVAS, che di fondo CSS non ne ha: il ripiego diventava la risposta, e per
- * il titolo usciva «1:1», cioe' inchiostro uguale a carta. Non era il sito: era
- * il metro che, non sapendo, inventava.
+ * il titolo usciva «1:1», inchiostro uguale a carta. Non era il sito: era il
+ * metro che, non sapendo, inventava.
  *
- * SECONDA: preso il fondo dai pixel veri, uscivano trentacinque testi su
- * quarantanove, molti a 1:1. Non erano illeggibili: erano NON ANCORA RIVELATI.
- * Questo sito scopre le battute scorrendo, e giudicare a pagina ferma in cima
- * vuol dire bocciare qualcosa per non essere ancora comparso.
+ * SECONDA: preso il fondo dai pixel veri, uscivano 35 testi su 49, molti a 1:1.
+ * Non erano illeggibili: erano NON ANCORA RIVELATI. Questo sito scopre le
+ * battute scorrendo, e giudicare a pagina ferma in cima vuol dire bocciare
+ * qualcosa per non essere ancora comparso.
  *
- * QUESTA: ogni testo si giudica NEL SUO MOMENTO MIGLIORE. Si percorre il
- * racconto in dieci stazioni, si fotografa a ognuna, e per ciascun testo si
- * tiene il contrasto PIU' ALTO che raggiunge. Se al suo meglio resta sotto la
- * soglia, allora non esiste nessun istante in cui si legge: quello si' e' un
- * difetto.
+ * TERZA: giudicavo ogni testo nel suo MOMENTO MIGLIORE. Meglio, ma una
+ * revisione ha visto il buco: approva lo stato finale e salta il transito. Un
+ * testo fermo a mezza opacita' per un'intera sezione passerebbe, perche' da
+ * qualche parte raggiunge il suo valore buono.
  *
- * Soglie 4,5:1 (testo normale) e 3:1 (testo grande): sono WCAG 2.1 AA, non
- * numeri scelti qui.
+ * QUESTA. Tre correzioni, tutte da quella revisione, e tutte giuste.
  *
- * ─── COSA NON COPRE
+ * 1. IL PEGGIO, NON IL MEGLIO — ma solo dove il testo e' DICHIARATAMENTE in
+ *    scena. Si tiene il contrasto MINIMO fra tutti i fotogrammi in cui quel
+ *    testo sta sullo schermo con opacita' cumulativa >= OPACITA_IN_SCENA. Una
+ *    dissolvenza di duecento millisecondi non e' una violazione e resta fuori;
+ *    un testo fermo a mezza opacita' per una sezione intera ci entra, ed e' il
+ *    caso che conta. La soglia di opacita' e' DICHIARATA qui sotto.
  *
- * Non prova un lettore di schermo, non giudica se le etichette abbiano senso, e
- * non dice niente sul testo che compare fra una stazione e l'altra: dieci
- * stazioni sono una griglia, non un continuo.
+ *    E l'opacita' si conta CUMULATIVA, risalendo i genitori: un contenitore a
+ *    0,2 rende invisibile un figlio che si dichiara a 1.
+ *
+ * 2. IL CONTRASTO NON E' UNA MEDIA. Prima prendevo la mediana di una fascia
+ *    fuori dal riquadro. Ma il numero che serve e' fra INCHIOSTRO e CARTA, e
+ *    dentro il riquadro ci sono entrambi: si prendono i percentili di luminanza
+ *    (5o e 95o), che danno il piu' scuro e il piu' chiaro senza farsi ingannare
+ *    da qualche pixel di antialiasing. Su un font sottile la media sottostima,
+ *    su un grassetto sovrastima; i percentili no.
+ *
+ * 3. LO SFONDO NON E' UN COLORE, E' UNA TELA CHE SI MUOVE. Il mare cambia, il
+ *    rollio cambia. Un cancello che misura UN fotogramma su una tela animata e'
+ *    verde per fortuna, non per costruzione — ed e' esattamente la famiglia di
+ *    difetti che questo repo sta cacciando. Quindi a ogni stazione si guardano
+ *    piu' fotogrammi DISTINTI e si tiene il peggiore.
+ *
+ * ─── LA SOGLIA E' 4,5 DAPPERTUTTO, E NON E' UNA SEMPLIFICAZIONE
+ *
+ * WCAG 2.1 AA chiede 4,5:1, che scendono a 3:1 per il «testo grande» (>= 24px,
+ * o >= 18,66px in grassetto). Qui quel ramo non serve, ed e' un fatto contato:
+ * `src/stile.css` dichiara 31 corpi in pixel e il piu' grande e' 15px. Nessun
+ * testo di questo sito qualifica come grande.
+ *
+ * Lo stesso conteggio dice un'altra cosa, che NON e' un problema di contrasto e
+ * che quindi nessun cancello di contrasto trovera' mai: c'e' un corpo a 7px,
+ * tre a 8px e cinque a 9px, su un sito che punta al 30% di Usability. Questo
+ * file lo riporta perche' l'ha visto, non perche' sappia giudicarlo.
+ *
+ * ─── COSA NON COPRE, e va detto
+ *
+ * Non prova un lettore di schermo e non giudica se le etichette abbiano senso.
+ * Non copre WCAG 1.4.11, che chiede 3:1 per i COMPONENTI non testuali — bordi
+ * dei pulsanti, cursori, maniglie: questo sito ne ha, servirebbe un cancello
+ * suo che sappia dove finisce un bordo e comincia il fondo, e qui non lo si
+ * finge misurando testo.
+ * E dieci stazioni sono una griglia: fra una e l'altra puo' passare qualcosa.
  */
 import { apriBrowser } from './browser.mjs'
 import { anteprima } from './anteprima.mjs'
@@ -43,13 +79,18 @@ import { readFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-/* NON '.': in CI scriverebbe dieci PNG e dieci RGB nella radice del repo, e
-   `actions/upload-pages-artifact` se li porterebbe dietro. Una cartella
-   temporanea sua, che il sistema pulisce da solo. */
+/* NON '.': in CI scriverebbe le fotografie nella radice del repo, e
+   `upload-pages-artifact` se le porterebbe dietro. */
 const DOVE = process.env.SCRATCH || mkdtempSync(join(tmpdir(), 'accesso-'))
 const LARG = 1280
 const ALTO = 800
 const STAZIONI = 10
+/** Quanti fotogrammi distinti per stazione: la tela sotto il testo si muove. */
+const FOTOGRAMMI = 3
+/** Sotto questa opacita' un testo sta transitando, non stando: non si giudica. */
+const OPACITA_IN_SCENA = 0.9
+/** WCAG 2.1 AA. Uguale per tutti: qui non esiste «testo grande» — vedi testata. */
+const SOGLIA = 4.5
 
 /**
  * ─── MISURA E GRIDA, NON FERMA. Per due ragioni, e nessuna e' pigrizia.
@@ -57,18 +98,14 @@ const STAZIONI = 10
  * La prima e' la stessa dei tetti di `peso.mjs`: il committente ha deciso il
  * 1 settembre 2026 che finche' il sito non e' completo nessun numero deve
  * bloccare il lavoro, «altrimenti mi impedisce di completare il sito
- * inutilmente». Ha ragione: un sito a meta' sfonda ogni soglia tarata su cio'
- * che c'era prima.
+ * inutilmente».
  *
- * La seconda e' piu' specifica, e vale anche dopo. Un contrasto scarso si
- * corregge CAMBIANDO UN COLORE, e i colori di questo sito non li decido io:
- * sono tavolozza, e la tavolozza e' del committente. Un cancello che bocciasse
- * la build costringerebbe a una scelta cromatica per far tornare un numero --
- * cioe' esattamente il modo in cui uno strumento si mette a fare regia.
+ * La seconda vale anche dopo. Un contrasto scarso si corregge CAMBIANDO UN
+ * COLORE, e i colori di questo sito sono tavolozza: li decide il committente.
+ * Un cancello che bocciasse la build costringerebbe a una scelta cromatica per
+ * far tornare un numero — cioe' uno strumento che si mette a fare regia.
  *
- * Quindi qui si misura, si stampa l'elenco per esteso con i colori veri, e si
- * esce verdi. Chi legge ha davanti i numeri e decide. Per armarlo:
- * `BLOCCA_ACCESSO = true`.
+ * Per armarlo: `BLOCCA_ACCESSO = true`.
  */
 const BLOCCA_ACCESSO = false
 
@@ -76,27 +113,25 @@ const lum = (c) => {
   const v = c.map((x) => { const t = x / 255; return t <= 0.03928 ? t / 12.92 : ((t + 0.055) / 1.055) ** 2.4 })
   return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
 }
-const rapporto = (f, s) => { const a = lum(f) + 0.05, b = lum(s) + 0.05; return a > b ? a / b : b / a }
 
-/** In pagina: i testi VISIBILI adesso, col rettangolo di adesso. */
-const RACCOGLI = () => {
-  const leggi = (s) => (s.match(/[0-9.]+/g) || []).slice(0, 4).map(Number)
+/** In pagina: i testi IN SCENA adesso, col rettangolo di adesso. */
+const RACCOGLI = (opacitaMinima) => {
   const fuori = []
   for (const el of document.querySelectorAll('body *')) {
     const testo = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim())
       .map((n) => n.textContent.trim()).join(' ')
     if (!testo) continue
     const st = getComputedStyle(el)
-    if (st.visibility === 'hidden' || st.display === 'none' || +st.opacity < 0.9) continue
+    if (st.visibility === 'hidden' || st.display === 'none') continue
+    let o = 1
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) o *= +getComputedStyle(n).opacity
+    if (o < opacitaMinima) continue
     const r = el.getBoundingClientRect()
     if (r.width < 4 || r.height < 4 || r.bottom < 8 || r.top > innerHeight - 8) continue
-    const px = parseFloat(st.fontSize)
     fuori.push({
       chiave: el.tagName + '|' + (el.className || '') + '|' + testo.slice(0, 30),
       testo: testo.slice(0, 40),
-      px: +px.toFixed(0),
-      soglia: (px >= 24 || (px >= 18.66 && +st.fontWeight >= 700)) ? 3.0 : 4.5,
-      colore: leggi(st.color).slice(0, 3),
+      px: +parseFloat(st.fontSize).toFixed(1),
       r: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
     })
   }
@@ -114,62 +149,70 @@ try {
   await pg.waitForFunction(() => window.__nautica?.fotogrammi > 3, null, { timeout: 90000 })
 
   let cruda = null
-  const pix = (x, y) => {
-    if (x < 0 || y < 0 || x >= LARG || y >= ALTO) return null
-    const k = (y * LARG + x) * 3
-    return [cruda[k], cruda[k + 1], cruda[k + 2]]
-  }
-  const mediana = (v) => v.slice().sort((p, q) => p - q)[Math.floor(v.length / 2)]
 
-  /* la fascia si prende FUORI dal rettangolo: dentro ci sono le lettere, e
-     mediarle col fondo darebbe un contrasto piu' basso di quello vero */
-  const fondoDi = (r) => {
-    const p = []
-    for (let d = 2; d <= 5; d++) {
-      for (let x = r.x - d; x <= r.x + r.w + d; x += 3) {
-        const s = pix(x, r.y - d); if (s) p.push(s)
-        const t = pix(x, r.y + r.h + d); if (t) p.push(t)
-      }
-      for (let y = r.y - d; y <= r.y + r.h + d; y += 3) {
-        const s = pix(r.x - d, y); if (s) p.push(s)
-        const t = pix(r.x + r.w + d, y); if (t) p.push(t)
+  /**
+   * Il contrasto DENTRO il riquadro, per percentili di luminanza. Il 5o e il
+   * 95o danno inchiostro e carta senza che un pixel di antialiasing o un
+   * singolo punto acceso spostino la risposta.
+   */
+  const contrastoDi = (r) => {
+    const L = []
+    for (let y = Math.max(0, r.y); y < Math.min(ALTO, r.y + r.h); y++) {
+      for (let x = Math.max(0, r.x); x < Math.min(LARG, r.x + r.w); x++) {
+        const k = (y * LARG + x) * 3
+        L.push(lum([cruda[k], cruda[k + 1], cruda[k + 2]]))
       }
     }
-    return p.length < 8 ? null : [0, 1, 2].map((k) => mediana(p.map((q) => q[k])))
+    if (L.length < 40) return null
+    L.sort((p, q) => p - q)
+    const scuro = L[Math.floor(L.length * 0.05)]
+    const chiaro = L[Math.floor(L.length * 0.95)]
+    return (chiaro + 0.05) / (scuro + 0.05)
+  }
+
+  const fotografa = async (nome) => {
+    await pg.screenshot({ path: DOVE + '/' + nome + '.png' })
+    execSync('ffmpeg -v error -y -i "' + DOVE + '/' + nome + '.png" -f rawvideo -pix_fmt rgb24 "' + DOVE + '/' + nome + '.rgb"')
+    cruda = readFileSync(DOVE + '/' + nome + '.rgb')
   }
 
   const corsa = await pg.evaluate(() => document.documentElement.scrollHeight - innerHeight)
-  const migliore = new Map()
+  const peggiore = new Map()
+  let corpoMinimo = Infinity
+  let quantiFotogrammi = 0
 
   for (let k = 0; k < STAZIONI; k++) {
     await pg.evaluate((y) => scrollTo(0, y), Math.round(corsa * k / (STAZIONI - 1)))
-    /* si aspetta un FOTOGRAMMA, non un tempo: la fotografia deve ritrarre lo
-       stato dopo lo scorrimento, e a 2,3 fps un'attesa a orologio sbaglia */
-    const n0 = await pg.evaluate(() => window.__nautica.fotogrammi)
-    await pg.waitForFunction((n) => window.__nautica.fotogrammi > n + 1, n0, { timeout: 20000 }).catch(() => {})
+    for (let j = 0; j < FOTOGRAMMI; j++) {
+      /* si aspetta un FOTOGRAMMA NUOVO, non un tempo: a 2,3 fps un'attesa a
+         orologio fotograferebbe due volte la stessa tela */
+      const n0 = await pg.evaluate(() => window.__nautica.fotogrammi)
+      await pg.waitForFunction((n) => window.__nautica.fotogrammi > n + 1, n0, { timeout: 20000 }).catch(() => {})
 
-    const testi = await pg.evaluate(RACCOGLI)
-    await pg.screenshot({ path: DOVE + '/acc-' + k + '.png' })
-    execSync('ffmpeg -v error -y -i "' + DOVE + '/acc-' + k + '.png" -f rawvideo -pix_fmt rgb24 "' + DOVE + '/acc-' + k + '.rgb"')
-    cruda = readFileSync(DOVE + '/acc-' + k + '.rgb')
+      const testi = await pg.evaluate(RACCOGLI, OPACITA_IN_SCENA)
+      await fotografa('acc-' + k + '-' + j)
+      quantiFotogrammi++
 
-    for (const t of testi) {
-      const f = fondoDi(t.r)
-      if (!f) continue
-      const c = rapporto(t.colore, f)
-      const p = migliore.get(t.chiave)
-      if (!p || c > p.c) migliore.set(t.chiave, { ...t, c: +c.toFixed(2), fondo: f, stazione: k })
+      for (const t of testi) {
+        if (t.px < corpoMinimo) corpoMinimo = t.px
+        const c = contrastoDi(t.r)
+        if (c == null) continue
+        const p = peggiore.get(t.chiave)
+        /* IL PEGGIO, non il meglio: e' la correzione che vale */
+        if (!p || c < p.c) peggiore.set(t.chiave, { ...t, c: +c.toFixed(2), stazione: k })
+      }
     }
   }
 
-  const scarsi = [...migliore.values()].filter((t) => t.c < t.soglia).sort((x, y) => x.c - y.c)
-  console.log('  contrasto     ' + migliore.size + ' testi giudicati nel loro momento migliore su ' + STAZIONI + ' stazioni')
-  console.log('                ' + scarsi.length + ' restano sotto la soglia WCAG AA anche al loro meglio')
-  for (const s of scarsi.slice(0, 10)) {
-    console.log('      ' + String(s.c).padStart(5) + ':1 (serve ' + s.soglia + ') ' + String(s.px).padStart(3) + 'px  ' +
-                'rgb(' + s.colore + ') su rgb(' + s.fondo + ')  «' + s.testo + '»')
+  const scarsi = [...peggiore.values()].filter((t) => t.c < SOGLIA).sort((x, y) => x.c - y.c)
+  console.log('  contrasto     ' + peggiore.size + ' testi, ciascuno al suo PEGGIO su ' + quantiFotogrammi + ' fotogrammi')
+  console.log('                (' + STAZIONI + ' stazioni x ' + FOTOGRAMMI + ', solo con opacita cumulativa >= ' + OPACITA_IN_SCENA + ')')
+  console.log('                ' + scarsi.length + ' sotto ' + SOGLIA + ':1, la soglia WCAG 2.1 AA')
+  for (const s of scarsi.slice(0, 12)) {
+    console.log('      ' + String(s.c).padStart(5) + ':1  ' + String(s.px).padStart(4) + 'px  (stazione ' + s.stazione + ')  «' + s.testo + '»')
   }
-  if (scarsi.length > 10) console.log('      ...e altri ' + (scarsi.length - 10))
+  if (scarsi.length > 12) console.log('      ...e altri ' + (scarsi.length - 12))
+  console.log('  corpo minimo  ' + (corpoMinimo === Infinity ? 'n/d' : corpoMinimo + 'px reso a schermo'))
 
   /* --- fuoco e tabulazione, in cima dove la barra e' quella vera ---------- */
   await pg.evaluate(() => scrollTo(0, 0))
@@ -193,7 +236,7 @@ try {
   console.log('  fuoco         ' + f.senza.length + ' senza nessun segno visibile')
   for (const s of [...new Set(f.senza)].slice(0, 6)) console.log('      ' + s)
 
-  if (scarsi.length) guai.push(scarsi.length + ' testi sotto il contrasto WCAG AA anche nel loro momento migliore')
+  if (scarsi.length) guai.push(scarsi.length + ' testi sotto ' + SOGLIA + ':1 nel loro momento PEGGIORE')
   if (!f.quanti) guai.push('nessun elemento raggiungibile col tasto di tabulazione')
   if (f.senza.length) guai.push(f.senza.length + ' elementi non mostrano dove sta il fuoco')
 } finally {
@@ -202,13 +245,14 @@ try {
 }
 
 const coda = () => {
-  console.log('  NON VERIFICATO: un lettore di schermo, il senso delle etichette, e il testo')
-  console.log('  che compare fra una stazione e l altra — dieci stazioni sono una griglia.')
+  console.log('  NON VERIFICATO: un lettore di schermo, il senso delle etichette, e WCAG')
+  console.log('  1.4.11 — i 3:1 dei componenti non testuali (bordi, cursori, maniglie),')
+  console.log('  che servirebbe un cancello suo e qui non si finge misurando testo.')
 }
 
 console.log('')
 if (guai.length) {
-  for (const g of guai) console.log('  ' + (BLOCCA_ACCESSO ? 'ROTTO ' : 'DA VEDERE') + '  ' + g)
+  for (const g of guai) console.log('  ' + (BLOCCA_ACCESSO ? 'ROTTO    ' : 'DA VEDERE') + '  ' + g)
   if (!BLOCCA_ACCESSO) {
     console.log('')
     console.log('  CANCELLO ADDORMENTATO: non ferma nessuno. Il contrasto si corregge')
@@ -219,6 +263,6 @@ if (guai.length) {
   coda()
   process.exit(BLOCCA_ACCESSO ? 1 : 0)
 }
-console.log('  ACCESSO IN ORDINE — contrasto AA nel momento migliore, fuoco visibile ovunque.')
+console.log('  ACCESSO IN ORDINE — contrasto AA anche al peggio, fuoco visibile ovunque.')
 console.log('')
 coda()
