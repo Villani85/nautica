@@ -273,17 +273,53 @@ export function arredaMondo (gruppo, pose) {
       const mezza = MACCHINA.lungo / 2 + 0.05
       if (misura(centro, AVANTI, mezza) !== null || misura(centro, INDIETRO, mezza) !== null) continue
 
+      /**
+       * ─── UNA MACCHINA E' FATTA DI BORDI, non di volumi lisci
+       *
+       * Prima erano due pezzi: una scatola e un cilindro di rame. Nel provino
+       * leggevano come due MACCHIE marroni senza scala -- e la ragione e' la
+       * stessa per cui il metallo sembrava plastica: senza spigoli non c'e'
+       * niente che accrocci la luce, e adesso che c'e' una mappa d'ambiente
+       * (`creaAmbienteInterno`) un bordo si vede eccome.
+       *
+       * Quindi: la basetta che la solleva dal pagliolo, tre costole sul fianco,
+       * e le due flange agli estremi del cilindro. Sono cinque pezzi in piu' per
+       * stazione e nessuno di loro e' decorazione: la basetta dice dove poggia,
+       * le costole danno la lunghezza, le flange dicono che quel cilindro e' un
+       * corpo montato e non un tubo che passa.
+       */
+      const basetta = new Mesh(
+        new BoxGeometry(MACCHINA.lungo + 0.12, 0.06, MACCHINA.largo + 0.10), matStaffa)
+      basetta.position.set(centro.x, v.p[1] + 0.03, centro.z)
+      inScena(basetta)
+      arredo.add(basetta)
+
       const b = new Mesh(new BoxGeometry(MACCHINA.lungo, MACCHINA.alto, MACCHINA.largo), matMacchina)
       b.position.copy(centro)
+      b.position.y += 0.06
       inScena(b)
       arredo.add(b)
 
+      for (let k = -1; k <= 1; k++) {
+        const costola = new Mesh(new BoxGeometry(0.04, MACCHINA.alto - 0.08, MACCHINA.largo + 0.03), matStaffa)
+        costola.position.set(centro.x + k * (MACCHINA.lungo / 3), centro.y + 0.06, centro.z)
+        inScena(costola)
+        arredo.add(costola)
+      }
+
       const t = new Mesh(new CylinderGeometry(0.16, 0.16, 0.9, 12), matRame)
       t.rotation.z = Math.PI / 2
-      t.position.set(centro.x, v.p[1] + MACCHINA.alto + 0.14, centro.z)
+      t.position.set(centro.x, v.p[1] + MACCHINA.alto + 0.20, centro.z)
       inScena(t)
       arredo.add(t)
-      pezzi += 2
+      for (const q of [-1, 1]) {
+        const flangia = new Mesh(new CylinderGeometry(0.20, 0.20, 0.04, 12), matMacchina)
+        flangia.rotation.z = Math.PI / 2
+        flangia.position.set(centro.x + q * 0.45, t.position.y, centro.z)
+        inScena(flangia)
+        arredo.add(flangia)
+      }
+      pezzi += 8
       messa = true
     }
     if (messa) prossimaX = v.p[0] + OGNI_M
