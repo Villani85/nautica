@@ -76,6 +76,22 @@
  * quando lo strato di fuori torna acceso, e la strada non provata e' disegnare
  * la nave per un fotogramma mentre il mondo e' acceso, invece di compilarla in
  * anticipo.
+ *
+ * ─── E GLI ALTRI DUE BLOCCHI DEL RACCONTO, misurati e NON chiusi
+ *
+ * Scorrendo la pagina intera la prima volta (200 passi, 1440x900):
+ *
+ *     1.148 ms a p 0,099   quattro programmi nuovi. Le maglie che compaiono li'
+ *                          sono `coperta` x3 e `acciaio` x10: pezzi della nave
+ *                          che diventano visibili quando emerge.
+ *       642 ms a p 0,936   l'ingresso della traversata, quattro programmi.
+ *
+ * Provate due strade, tutte e due SENZA effetto e quindi tolte dal codice:
+ * compilare l'intera scena a orologio (1,5 s e 6 s dal primo fotogramma), e
+ * compilarla ogni volta che il numero di maglie cresce -- cioe' quando un
+ * modello arriva. In tutti e due i casi restavano esattamente quei quattro
+ * programmi: dipendono da qualcosa che cambia in quell'istante, non dalla
+ * presenza dell'oggetto nella scena. Chi riprende parta da li'.
  */
 import { anteprima } from './anteprima.mjs'
 import { apriBrowser } from './browser.mjs'
