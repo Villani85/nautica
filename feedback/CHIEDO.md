@@ -329,6 +329,16 @@ conseguenza visibile: `PointLight.distance` sta in coordinate di mondo e non si
 scala col gruppo, quindi le sette plafoniere -- una ogni metro e mezzo --
 hanno tutte nove metri di portata e illuminano la stessa stanza.
 
+**E su telefono la sala macchine quasi non c'e'.** La lente della traversata si
+apre a 58 gradi VERTICALI (`CAMPO_DENTRO_GRADI`), e su un quadro verticale
+(390x844, rapporto 0,46) quei 58 gradi in alto e in basso diventano 28 di lato:
+si vede il corridoio davanti e quasi niente ai fianchi. Le macchine e i tubi
+che ho messo nella sala si vedono su schermo largo e si perdono sul telefono.
+`?campo=85` li riporta dentro -- guardato a s = 0,06, la stanza legge con i
+tubi sul cielino e le macchine su tutti e due i lati. Non lo cambio da solo:
+quanto aprire l'obiettivo e' inquadratura. Se vuoi, il confronto e' un
+interruttore: `?campo=58` (com'e') contro `?campo=85`.
+
 **E il primo piano del meccanismo: un numero e tre fotogrammi.** Il cancello
 delle inquadrature dice che il soggetto della battuta «The part you never see»
 occupa il **5,77% del quadro** nel suo momento migliore, sotto il minimo di 6
