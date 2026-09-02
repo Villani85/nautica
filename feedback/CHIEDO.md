@@ -414,18 +414,27 @@ suoi cancelli; cuocere `DIFFUSE` diretto+indiretto con le lampade nelle stesse
 posizioni misurate e' lo stesso copione con due righe diverse, e su Colab con
 la GPU costa qualche minuto.
 
-Cosa cambierebbe, e perche' NON l'ho fatto stanotte:
+**FATTO, col tuo via libera delle 8:40** («la cottura usa quella piu'
+fotorealistica in autonomia»). Il giro, per come e' andato:
 
-  · **il guadagno**: zero luci a runtime per le stanze (restano l'ambiente e
-    UNA lampada per l'arredo, che e' generato in JS e nella cottura non c'e'),
-    quindi niente ricompilazioni e un fotogramma molto piu' leggero dove serve;
-  · **il costo**: la luce cotta ha il RIMBALZO, che adesso non c'e'. Le stanze
-    verrebbero piu' morbide e piu' vere -- ma DIVERSE. E' resa, e la resa e'
-    tua: non la cambio da solo alle sei del mattino.
+  · le posizioni delle plafoniere le ESPORTA il sito (`esporta-luci-mondo.mjs`)
+    invece di farle riscrivere a mano in Blender: le decide un raggio a runtime,
+    e due copie di un valore sono due valori che divergono;
+  · `cuoci-luce-mondo.py` cuoce DIFFUSE diretto+indiretto con lampade AD AREA
+    (50x12 cm, la misura vera della plafoniera: ombre morbide invece che dure);
+  · cotto su Colab, T4, 2048 campioni: **112 secondi** per i tre atlanti contro
+    i 223 della CPU locale a 400 campioni;
+  · le stanze portano `lightMap` (157 KB in tutto), l'arredo -- che nella
+    cottura non c'e' perche' nasce in JS -- tiene TRE lampade su uno strato suo,
+    cosi' non illuminano una seconda volta le paratie.
 
-Se dici di si', il giro e': posizioni delle plafoniere gia' misurate (le ho, le
-stampa `strumenti/inventario-mondo.mjs`), cottura su Colab, `lightMap` sui
-materiali delle stanze, e una lampada sola per l'arredo.
+Misurato dopo: giunzione 1.660 -> 1.272 ms, fotogramma su GPU software
+1.429 -> 1.039. `?lucecotta=0` torna alle nove lampade vive, per confrontare.
+
+**Quello che devi guardare tu**: la luce cotta ha il rimbalzo, quindi le stanze
+sono un po' piu' morbide e un po' meno calde di prima. Nei provini la
+differenza e' piccola, ma e' resa: se la preferivi com'era, il numero e'
+`?lucecotta=0` e si torna indietro in una riga.
 
 ### 3.6ter · E all'AVVIO ce ne sono altri 8,3 secondi, che NON ho chiuso
 
