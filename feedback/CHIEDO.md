@@ -13,7 +13,7 @@ o se vuoi sapere dove sta il lavoro invece di cosa serve adesso. L'obiettivo e'
 la candidatura a **Site of the Year** su Awwwards, e il vincolo dichiarato dal
 committente e' che **la qualita' sia fotorealistica sempre**.
 
-Aggiornato: **2 settembre 2026, 00:35.** Da quando hai clonato potrei aver spinto
+Aggiornato: **2 settembre 2026, 03:30.** Da quando hai clonato potrei aver spinto
 altro: `git log --oneline -25` resta la fonte, non questo elenco.
 
 > **Il giro delle 07:00 e' stato il primo utile, e aveva ragione.** La risposta
@@ -353,6 +353,36 @@ Misurato con `node strumenti/misura-ombra.mjs`: **6 livelli su 255 nel blocco
 che cambia di piu', contro un fondo di rumore di 6** -- cioe' niente. Se le
 macchine devono toccare il pavimento, la leva non e' l'ombra: e' la luce
 (portata, quante plafoniere, intensita'), e quella e' tua.
+
+### 3.7 · Il salone non e' piu' una scatola beige (2 settembre, notte)
+
+Il difetto piu' visibile del filmato della traversata era la fine: otto secondi
+di stanza vuota color crema prima che partisse il filmato del salone. Adesso
+quella stanza **e' la fotografia**, proiettata sul guscio dal punto in cui e'
+stata scattata. Regge per una ragione che non vale altrove: la traversata
+FINISCE sulla camera sorgente, quindi l'errore della proiezione si chiude
+mentre ci si avvicina ed e' nullo dove la lastra prende il comando. Misurato:
+198 livelli su 255 di differenza fra proiezione accesa e spenta all'arrivo,
+contro un fondo di rumore di 6.
+
+**E su telefono era una carta.** Guardata a 390x844 -- una misura che questa
+traversata non aveva mai avuto -- la stanza proiettata usciva come un
+rettangolo orizzontale sospeso nel guscio beige: esattamente il difetto che il
+guscio esiste per evitare. Due cause, tutte e due chiuse: il rapporto del
+proiettore veniva da un oggetto che non e' la camera che disegna, e fuori dal
+fotogramma il guscio tornava beige. Ora il rapporto arriva dalla camera vera, e
+oltre il bordo si usa la stessa cura che il sito ha gia' per la lastra (una
+copia ingrandita quattro volte, sfumata).
+
+**Quello che NON e' chiuso, e va detto:** il guscio del salone dietro
+`?guscio=1` -- il salone visto da FUORI, dove la lastra si rivela -- non e'
+piazzato. Ci ho lavorato stanotte e ho trovato due cose che valgono piu' del
+mio non essere arrivato in fondo: il GLB **non porta le UV** che il codice
+dichiarava (otto maglie con solo `POSITION` e `NORMAL`), quindi quel percorso
+dipingeva il guscio col colore di un texel; e `registro-guscio.mjs`, lo
+strumento che doveva farne convergere la posa, **misurava qualcosa che non era
+il guscio** -- dipinta la uv proiettata come colore, il guscio occupa una
+striscia del quadro e basta. I numeri di quel file adesso lo dicono.
 
 E due che restano dal giro precedente: **le schede HUD sopra il corridoio a
 p≈0,93** (la traversata comincia sotto una scheda), e **lo sguardo in scala**
