@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh, BoxGeometry, PlaneGeometry,
   MeshStandardMaterial, MeshBasicMaterial, VideoTexture, HemisphereLight,
-  DirectionalLight, RectAreaLight, Timer, MathUtils, SRGBColorSpace,
+  DirectionalLight, RectAreaLight, Clock, MathUtils, SRGBColorSpace,
   AgXToneMapping, PMREMGenerator
 } from 'three'
 import { creaAmbiente } from './ambiente.js'
@@ -416,7 +416,7 @@ export function creaSalone (contenitore) {
    * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
    * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
    */
-  const orologio = new Timer()
+  const orologio = new Clock()
   let t = 0
   let frame = 0
 
@@ -431,7 +431,6 @@ export function creaSalone (contenitore) {
   new ResizeObserver(ridimensiona).observe(contenitore)
 
   function disegna (sim, marca) {
-    orologio.update(typeof marca === 'number' ? marca : undefined)
     const dt = Math.min(orologio.getDelta(), 0.05)
     frame++
     if (!sim.S.ridotto) t += dt

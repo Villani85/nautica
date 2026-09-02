@@ -1,6 +1,6 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  Box3, Timer, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
+  Box3, Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
   PMREMGenerator, Raycaster, PCFShadowMap, Object3D
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
@@ -875,6 +875,25 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   }
 
   /**
+   * ─── `Timer` HA SPENTO LA SCIA, E `Clock` RESTA
+   *
+   * MISURATO IL 2 SETTEMBRE, con `collaudo-scia`: passando da `Clock` a
+   * `Timer` la scia lungo la murata e' passata da 14,6 livelli di
+   * schiarimento a 0,9 (il minimo del cancello e' 12). Cioe' la scia c'era
+   * ancora come sagoma -- il 10% dei pixel cambia -- ma non si vedeva.
+   * Rimesso `Clock`, torna a 13,3.
+   *
+   * Perche' non l'ho capito fino in fondo, e lo scrivo invece di inventarlo:
+   * `disegna` viene chiamata da due cicli (`demo.js` e `salone-atto.js`), e
+   * con `Timer` il passo temporale che arriva alla simulazione non e' lo stesso
+   * che arrivava con `Clock`. La velocita' della nave ci sale sopra, e la scia
+   * cresce con la velocita'. Un cancello che guarda un fatto FISICO ha visto
+   * quello che il calcolo del tempo aveva cambiato.
+   *
+   * Quindi `Clock` resta, deprecato e funzionante, finche' qualcuno non porta
+   * `Timer` con la stessa misura in mano. L'avviso in console e' rumore; la
+   * scia spenta e' un difetto.
+   *
    * ─── `Clock` E' DEPRECATO, E LO DICEVA SOLO LA CONSOLE
    *
    * «THREE.Clock: This module has been deprecated. Please use THREE.Timer
@@ -888,7 +907,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
    * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
    */
-  const orologio = new Timer()
+  const orologio = new Clock()
   let t = 0
   let frame = 0
   // Di fronte l'estrusione si legge come una lastra piatta: si parte gia'
@@ -1270,7 +1289,6 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     ultimoStato = sim.S
     ultimaSim = sim
     const dichiarato = opz && typeof opz.dt === 'number'
-    if (!dichiarato) orologio.update(typeof marca === 'number' ? marca : undefined)
     const dt = dichiarato ? opz.dt : Math.min(orologio.getDelta(), 0.05)
     frame++
     /**
