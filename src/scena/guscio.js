@@ -66,13 +66,32 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
  * traversata la stessa proiezione regge fino a combaciare con la lastra
  * all'arrivo (`mondo.js`).
  *
- * NON FUNZIONA ANCORA: la POSA di questo guscio. A scorrimento 0,05 e 0,09 la
- * stanza proiettata sta storta rispetto alla lastra -- la coppia non e' dove
- * deve essere, e a 0,09 il guscio si legge come un accrocco di piani. Non e' la
- * proiezione: e' il piazzamento, quello che `?conv=`, `?ds=` e `?dx/dy/dz`
- * dichiarano di cercare e che nessuno ha ancora chiuso col registro in pixel
- * (`strumenti/registro-guscio.mjs`). Per questo `?guscio=1` resta un
- * interruttore e non il percorso predefinito.
+ * NON FUNZIONA ANCORA: **il guscio copre solo una fascia del quadro**, e il
+ * resto di cio' che si vede non e' lui. Provato dipingendo la uv proiettata
+ * come colore invece della fotografia: le tinte del diagnostico compaiono in
+ * una striscia verticale al centro-destra e sul bordo destro, e basta. Tutto il
+ * resto -- il mare, le nuvole, il montante -- e' altra roba della scena.
+ *
+ * Il che spiega anche perche' `registro-guscio.mjs` non scendeva sotto i 17
+ * livelli per quanto si spostasse il bersaglio: **confrontava la lastra con
+ * qualcosa che non era il guscio**. Un metro che non controlla di avere in
+ * quadro la cosa che misura da' sempre un numero, e il numero e' sempre
+ * sbagliato.
+ *
+ * Cio' che si SA adesso, e da cui ripartire:
+ *
+ *   · il proiettore combacia con la camera del sito quando il bersaglio e'
+ *     quello MISURATO -- [0,1188 0,0043 1,3089] nel sistema del salone, non
+ *     [-0,01 0 1,3089] come dichiarato qui sotto. Verificato: uv del proiettore
+ *     e ndc della camera coincidono a tre decimali;
+ *   · con proiettore e camera coincidenti la proiezione DEVE dare la
+ *     fotografia, e infatti dove il guscio c'e' la da';
+ *   · quindi non e' un problema di proiezione ne' di posa del proiettore: e'
+ *     che il guscio, in coordinate camera, sta fra x -0,6 e +2,49 -- tutto
+ *     spostato a destra -- e la sua scatola alta 1,2 unita' sta a 3,5 unita'
+ *     di distanza. Occupa una fetta del quadro, non il quadro.
+ *
+ * Per questo `?guscio=1` resta un interruttore e non il percorso predefinito.
  *
  * ─── DOVE VA MESSO: aritmetica, non tentativi
  *
@@ -123,6 +142,10 @@ export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
   const proiettore = new PerspectiveCamera(34, aspetto, 0.05, 60)
   const matriceLocaleSorgente = new Matrix4()
   const _proiezione = new Matrix4()
+  const _dove = new Vector3()
+  const _verso = new Quaternion()
+  const _scala = new Vector3()
+  const UNO = new Vector3(1, 1, 1)
   const proiezioni = []
   let dentroIlGruppo = null
   let pronto = false
@@ -256,10 +279,28 @@ export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
     if (!pronto || !proiezioni.length) return
     dentroIlGruppo.updateWorldMatrix(true, false)
     proiettore.matrixWorld.multiplyMatrices(dentroIlGruppo.matrixWorld, matriceLocaleSorgente)
+    /**
+     * ─── E LA SCALA DEL GRUPPO NON DEVE ENTRARE NEL PROIETTORE
+     *
+     * DIFETTO MISURATO, ed era tutta la storia. Il gruppo del guscio e' scalato
+     * 1/2,5 (metri -> unita' di scena), e componendo la matrice del proiettore
+     * col gruppo quella scala ci finiva dentro: il verso di vista usciva lungo
+     * 0,4 invece di 1. Una camera con la scala dentro proietta un'immagine
+     * INGRANDITA di due volte e mezzo -- ed e' esattamente cio' che si vedeva,
+     * il montante del finestrone enorme e la coppia fuori quadro a destra,
+     * con 24 livelli di scarto che nessuno spostamento riusciva a chiudere.
+     *
+     * Posa si', scala no: si scompone e si ricompone con scala unitaria.
+     */
+    proiettore.matrixWorld.decompose(_dove, _verso, _scala)
+    proiettore.matrixWorld.compose(_dove, _verso, UNO)
     proiettore.matrixWorldInverse.copy(proiettore.matrixWorld).invert()
     _proiezione.copy(proiettore.projectionMatrix).multiply(proiettore.matrixWorldInverse)
     gruppo.userData.proiettore = {
-      p: [+proiettore.matrixWorld.elements[12].toFixed(3), +proiettore.matrixWorld.elements[13].toFixed(3), +proiettore.matrixWorld.elements[14].toFixed(3)]
+      p: [+proiettore.matrixWorld.elements[12].toFixed(3), +proiettore.matrixWorld.elements[13].toFixed(3), +proiettore.matrixWorld.elements[14].toFixed(3)],
+      /* la terza colonna della matrice e' l'asse Z del proiettore: una camera
+         guarda lungo -Z, quindi il verso di vista e' il suo opposto */
+      avanti: [-(+proiettore.matrixWorld.elements[8].toFixed(3)), -(+proiettore.matrixWorld.elements[9].toFixed(3)), -(+proiettore.matrixWorld.elements[10].toFixed(3))]
     }
     for (const r of proiezioni) {
       if (!r.uniformi) continue

@@ -548,6 +548,21 @@ export function creaSalone3D (base, tuga) {
     gruppo.add(g)
     guscio = g
     stanza.visible = false
+    /**
+     * ─── E ANCHE IL FONDO SE NE VA, o il guscio resta dietro una tenda
+     *
+     * DIFETTO TROVATO IL 2 SETTEMBRE, e spiega perche' `?guscio=1` non ha mai
+     * mostrato niente di sensato. Spegnere la lastra non basta: il `fondo` e'
+     * una copia INGRANDITA dello stesso filmato, `depthWrite: false`, messa li'
+     * per nascondere i bordi della lastra. Col guscio acceso resta davanti e
+     * copre la stanza vera -- verificato dipingendo il guscio di magenta: nel
+     * quadro ne compariva una striscia all'estremo destro, tutto il resto era
+     * fondo.
+     *
+     * Ed e' anche la ragione per cui `registro-guscio.mjs` misurava numeri che
+     * non scendevano: confrontava la lastra col FONDO, non col guscio.
+     */
+    fondo.visible = false
   }
 
   /**
