@@ -123,11 +123,11 @@ await scorriA(0.86, 6)
 await pg.waitForTimeout(3000)
 
 dice('\n4 · SI SPEGNE LA PROPULSIONE — da qui il gesto e\' inventato, e si dichiara')
-await pg.click('#propulsione').catch(() => {})
+await pg.click('#propulsione', { noWaitAfter: true }).catch(() => {})
 await guarda(20, 'dopo lo spegnimento')
 
 dice('\n5 · SI ACCENDE IL GIROSCOPIO')
-await pg.click('#giroscopio').catch(() => {})
+await pg.click('#giroscopio', { noWaitAfter: true }).catch(() => {})
 await guarda(14, 'col rotore che sale')
 
 dice('\n6 · il finale, e il ritorno alle persone')

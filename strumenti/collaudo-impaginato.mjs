@@ -232,7 +232,13 @@ for (const vp of VIEWPORT) {
        */
       await pg.evaluate(([t, c]) => scrollTo(0, t + 0.31 * c), [g.top, g.corsa])
       await pg.waitForTimeout(700)
-      await pg.click('#stab')
+      /* `noWaitAfter`: il clic va a segno e poi Playwright resta trenta
+         secondi «waiting for scheduled navigations to finish». Nessuna
+         navigazione arriva -- questo bottone accende lo stabilizzatore, non
+         cambia pagina -- e il cancello muore per un'attesa che non riguarda
+         quello che misura. E' lo stesso difetto che aveva fermato il cancello
+         del suono: qui i clic dei collaudi non aspettano navigazioni. */
+      await pg.click('#stab', { noWaitAfter: true })
       await pg.waitForTimeout(600)
     }
     for (const p of PUNTI) {

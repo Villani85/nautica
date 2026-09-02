@@ -1267,7 +1267,7 @@ async function misuraCopertura (browser) {
                 `sotto i ${BERSAGLIO_44}x${BERSAGLIO_44} che questo repo si e dato per cio che si tocca`)
   }
 
-  await pT.click('#entra-esplorazione')
+  await pT.click('#entra-esplorazione', { noWaitAfter: true })
   await pT.waitForFunction(() => document.querySelector('#esplorazione')?.dataset.stato === 'aperta',
     null, { timeout: 15000 }).catch(() => {
     R.guai.push('copertura: premuto il pulsante, l esplorazione non si e aperta in 15 secondi')
@@ -1496,7 +1496,7 @@ async function misuraCopertura (browser) {
   const ultimo = R.sistemi.find(x => x.comandoPresente)
   if (ultimo) {
     const prima = await pT.evaluate(() => document.querySelector('.espl__comando').getAttribute('aria-pressed'))
-    await pT.click('.espl__comando')
+    await pT.click('.espl__comando', { noWaitAfter: true })
     await new Promise(r => setTimeout(r, 250))
     const dopo = await pT.evaluate(() => {
       const cm = document.querySelector('.espl__comando')

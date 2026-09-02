@@ -179,7 +179,7 @@ try {
    * quindi che il rollio sia davvero sceso, invece di dare per scontato che
    * un clic basti.
    */
-  await pagina.click('#stab-salone').catch(() => pagina.click('#stab').catch(() => {}))
+  await pagina.click('#stab-salone', { noWaitAfter: true }).catch(() => pagina.click('#stab', { noWaitAfter: true }).catch(() => {}))
   /* `polling: 100` e non il fotogramma: qui la simulazione la avanza il
      SONDAGGIO, quindi legarlo ai fotogrammi farebbe scorrere il tempo simulato
      alla velocita' della macchina. In CI, dove un fotogramma puo' durare un

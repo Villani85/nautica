@@ -335,7 +335,7 @@ console.log(`  a propulsione accesa   velocita ${prima.velocita} kn   bolla: ${p
  *
  * Quindi il tempo lo detta il cancello, e i secondi che stampa sono SIMULATI.
  */
-await pg.click('#propulsione').catch(() => {})
+await pg.click('#propulsione', { noWaitAfter: true }).catch(() => {})
 
 /** Ogni bolla vista, una volta sola, col tempo simulato e lo stato di quel momento. */
 const fila = []
@@ -386,7 +386,7 @@ for (const x of fila) {
  */
 let dopoGyro = null
 if (fila.some(x => /gyro/i.test(x.testo))) {
-  await pg.click('#giroscopio').catch(() => {})
+  await pg.click('#giroscopio', { noWaitAfter: true }).catch(() => {})
   await pg.waitForTimeout(1500)                    /* la bolla in corso si spegne */
   const viste = []
   for (let i = 0; i < 20; i++) {
