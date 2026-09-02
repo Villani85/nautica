@@ -280,17 +280,21 @@ export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
     dentroIlGruppo.updateWorldMatrix(true, false)
     proiettore.matrixWorld.multiplyMatrices(dentroIlGruppo.matrixWorld, matriceLocaleSorgente)
     /**
-     * ─── E LA SCALA DEL GRUPPO NON DEVE ENTRARE NEL PROIETTORE
+     * ─── LA SCALA DEL GRUPPO SI TOGLIE, MA NON ERA LEI
      *
-     * DIFETTO MISURATO, ed era tutta la storia. Il gruppo del guscio e' scalato
-     * 1/2,5 (metri -> unita' di scena), e componendo la matrice del proiettore
-     * col gruppo quella scala ci finiva dentro: il verso di vista usciva lungo
-     * 0,4 invece di 1. Una camera con la scala dentro proietta un'immagine
-     * INGRANDITA di due volte e mezzo -- ed e' esattamente cio' che si vedeva,
-     * il montante del finestrone enorme e la coppia fuori quadro a destra,
-     * con 24 livelli di scarto che nessuno spostamento riusciva a chiudere.
+     * Il gruppo del guscio e' scalato 1/2,5 (metri -> unita' di scena), e
+     * componendo la matrice del proiettore col gruppo quella scala ci finisce
+     * dentro: il verso di vista usciva lungo 0,4 invece di 1. L'avevo presa per
+     * la causa dell'immagine ingrandita e ho scritto qui che «era tutta la
+     * storia»: NON LO ERA, e la misura l'ha detto subito -- tolta la scala, il
+     * registro restava 23,9. Una scala UNIFORME si semplifica nella divisione
+     * prospettica: x/z non cambia, quindi l'immagine nemmeno.
      *
-     * Posa si', scala no: si scompone e si ricompone con scala unitaria.
+     * La riga resta perche' una camera con la scala dentro e' comunque una
+     * camera che dichiara il falso -- e il giorno in cui la scala non fosse
+     * uniforme si semplificherebbe niente. Ma la ragione dell'ingrandimento e'
+     * un'altra, ed e' scritta in testa al file: il guscio copre solo una fascia
+     * del quadro.
      */
     proiettore.matrixWorld.decompose(_dove, _verso, _scala)
     proiettore.matrixWorld.compose(_dove, _verso, UNO)
