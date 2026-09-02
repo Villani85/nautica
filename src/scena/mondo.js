@@ -726,9 +726,9 @@ const postiPlafoniera = []
  * tarati a occhio: se si ricuoce, si riportano da li'.
  */
 const MAPPE_LUCE = [
-  { file: 'stair_corridor-luce.webp', divisore: 3.534259, quali: (n) => n.startsWith('CORRIDOIO') },
-  { file: 'engine_room-luce.webp', divisore: 1.655554, quali: (n) => n.startsWith('MECH') && n.includes('engine_room') },
-  { file: 'mechanism_bay-luce.webp', divisore: 0.336958, quali: (n) => n.startsWith('MECH') && !n.includes('engine_room') }
+  { file: 'stair_corridor-luce.webp', divisore: 3.5275, quali: (n) => n.startsWith('CORRIDOIO') },
+  { file: 'engine_room-luce.webp', divisore: 1.6408, quali: (n) => n.startsWith('MECH') && n.includes('engine_room') },
+  { file: 'mechanism_bay-luce.webp', divisore: 0.3041, quali: (n) => n.startsWith('MECH') && !n.includes('engine_room') }
 ]
 /** Quanto della luce cotta arriva: `?lucecotta=0` la spegne e si torna alle lampade. */
 const LUCE_COTTA = numeroDaUrl('lucecotta', 1, 0, 4)
