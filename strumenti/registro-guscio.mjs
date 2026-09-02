@@ -79,11 +79,23 @@
  * guadagnano meno di due livelli. Il piazzamento e' in un minimo locale su
  * tutti e cinque i gradi di liberta'.
  *
- * **Il residuo di 26,7 non e' un errore di piazzamento**, ed e' la cosa piu'
- * utile che questo strumento abbia detto. E' strutturale: la lastra e' la
- * fotografia ritagliata in un rettangolo 16:10, il guscio la proietta su
- * geometria che quel rettangolo lo eccede -- pavimento, soffitto, pareti. Il
- * guscio mostra PIU' STANZA, ed e' esattamente cio' per cui esiste.
+ * **«Il residuo non e' un errore di piazzamento» ERA SBAGLIATO, e adesso c'e'
+ * la misura che lo dice.** Questo paragrafo sosteneva che i 26,7 livelli
+ * fossero strutturali -- il guscio mostra piu' stanza della lastra, quindi una
+ * parte dello scarto e' cio' per cui il guscio esiste. Ragionamento buono,
+ * verifica mancante. Con `MASCHERA=lastra` si contano SOLO i pixel dove la
+ * lastra disegna, dove le due immagini devono coincidere per costruzione:
+ *
+ *     tutti i pixel        24,3
+ *     solo dove la lastra disegna   23,9
+ *
+ * Quattro decimi. La stanza in piu' non spiega niente: **lo scarto e' il
+ * piazzamento**. E non e' nemmeno una traslazione -- cercato lo spostamento
+ * migliore fra le due immagini su una griglia di 40x30 pixel, il minimo resta a
+ * (0,0) con lo stesso 24,3. Guardate una accanto all'altra, la ragione si vede:
+ * il guscio mostra la stanza INGRANDITA, col montante del finestrone molto piu'
+ * grande e la coppia fuori quadro a destra. E' un errore di posa fra il
+ * proiettore e la camera del sito, non di ritaglio.
  *
  * Quindi questo metro sa dire «grossolanamente fuori posto» ma **non sa
  * certificare che sia giusto**: ha un pavimento sopra la soglia dei 10,6. Chi
@@ -243,11 +255,26 @@ if (!A.length || A.length !== B.length) {
   process.exit(2)
 }
 
+/**
+ * ─── E SI PUO' GUARDARE SOLO DOVE LA LASTRA HA QUALCOSA (`MASCHERA=lastra`)
+ *
+ * Il residuo di questo metro e' strutturale, e la testa del file lo dice: il
+ * guscio mostra PIU' STANZA della lastra -- pavimento, soffitto, pareti oltre
+ * il rettangolo 16:10 -- quindi una parte dello scarto e' esattamente cio' per
+ * cui il guscio esiste. Con questa maschera si contano solo i pixel dove la
+ * LASTRA disegna: li' le due immagini devono coincidere per costruzione, e il
+ * numero smette di contenere la ragione per cui non possono coincidere.
+ *
+ * Serve a separare due domande che il numero unico confondeva: «il guscio e'
+ * piazzato bene?» e «il guscio mostra piu' stanza?».
+ */
+const SOLO_DOVE_LA_LASTRA_DISEGNA = process.env.MASCHERA === 'lastra'
+
 let somma = 0
 let contati = 0
 let peggio = 0
 for (let i = 0; i < A.length; i++) {
-  if (A[i] < 6 && B[i] < 6) continue
+  if (SOLO_DOVE_LA_LASTRA_DISEGNA ? A[i] < 6 : (A[i] < 6 && B[i] < 6)) continue
   const d = Math.abs(A[i] - B[i])
   somma += d
   contati++

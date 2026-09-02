@@ -231,7 +231,12 @@ export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
        * Quindi si tiene la sua matrice LOCALE e si compone a mano: il
        * proiettore vive fuori dal grafo e la sua `matrixWorld` la scrivo io.
        */
-      matriceLocaleSorgente.copy(sorgente.matrix)
+      /* relativa alla RADICE del GLB, non al genitore: se un giorno la camera
+         sorgente finisse annidata sotto un altro nodo, `sorgente.matrix` da
+         sola descriverebbe un'altra cosa */
+      sorgente.updateWorldMatrix(true, false)
+      glb.scene.updateWorldMatrix(true, false)
+      matriceLocaleSorgente.copy(glb.scene.matrixWorld).invert().multiply(sorgente.matrixWorld)
       sorgente.parent?.remove(sorgente)
       gruppo.add(glb.scene)
       dentroIlGruppo = glb.scene
@@ -253,6 +258,9 @@ export function creaGuscio (base, texturaStanza, bersaglio, aspetto = 1.6) {
     proiettore.matrixWorld.multiplyMatrices(dentroIlGruppo.matrixWorld, matriceLocaleSorgente)
     proiettore.matrixWorldInverse.copy(proiettore.matrixWorld).invert()
     _proiezione.copy(proiettore.projectionMatrix).multiply(proiettore.matrixWorldInverse)
+    gruppo.userData.proiettore = {
+      p: [+proiettore.matrixWorld.elements[12].toFixed(3), +proiettore.matrixWorld.elements[13].toFixed(3), +proiettore.matrixWorld.elements[14].toFixed(3)]
+    }
     for (const r of proiezioni) {
       if (!r.uniformi) continue
       r.uniformi.uMiscela.value = miscela
