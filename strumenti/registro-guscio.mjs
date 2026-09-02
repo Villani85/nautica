@@ -97,10 +97,35 @@
  * grande e la coppia fuori quadro a destra. E' un errore di posa fra il
  * proiettore e la camera del sito, non di ritaglio.
  *
+ * ─── DOVE E' ARRIVATA LA RICERCA, e dove si e' fermata
+ *
+ * Con la maschera sulla lastra, partendo da 23,9 (tutto a zero):
+ *
+ *     dx  +0,03 -> 21,2   +0,06 -> 20,2   +0,09 -> 20,7   +0,13 -> 21,8
+ *         +0,19 -> 27,2   +0,26 -> 34,9   -0,13 -> 37,4
+ *     dz (a dx +0,06)  -0,15 -> 22,6   +0,15 -> 19,3   +0,30 -> 18,2
+ *                      +0,45 -> 17,7   +0,60 -> 18,1   +0,80 -> 19,4
+ *     dy (a dx +0,06, dz +0,45)  -0,06 -> 17,2   +0,08 -> 24,3
+ *     ds (a dx +0,06, dz +0,45)   0,88 -> 17,4    1,12 -> 18,0
+ *
+ * Da 23,9 a 17,2: la ricerca converge, ma il difetto NON e' quello che il
+ * numero sta chiudendo. Guardato il fotogramma migliore: il guscio mostra
+ * ancora la stanza INGRANDITA, col montante enorme e la coppia fuori quadro.
+ * Un ingrandimento non si chiude spostando: si chiude quando il proiettore
+ * torna dove sta la camera del sito. Misurato al fotogramma: camera del sito
+ * [0,006 1,453 1,909], proiettore [-0,122 1,448 1,909] -- dodici centimetri di
+ * scena, cioe' trenta centimetri veri, su geometria a un metro.
+ *
+ * **La prossima persona parta da li'**: non dalla minimizzazione, ma dal perche'
+ * il proiettore non cade sulla camera quando `bersaglio` dice che dovrebbe. La
+ * formula di piazzamento e' `T.q = B.q · S.q⁻¹`, `T.p = B.p − T.q·(S.p·scala)`;
+ * se torna, la camera sorgente FINISCE su `bersaglio` per costruzione. Non ci
+ * finisce: o `bersaglio` non e' nel sistema che credo, o `S` non e' quello che
+ * credo.
+ *
  * Quindi questo metro sa dire «grossolanamente fuori posto» ma **non sa
- * certificare che sia giusto**: ha un pavimento sopra la soglia dei 10,6. Chi
- * riprende non perda una giornata a minimizzare un numero che non puo'
- * scendere.
+ * certificare che sia giusto**. Chi riprende non perda una giornata a
+ * minimizzare: il numero scende e l'immagine resta sbagliata.
  *
  * Il metro che chiuderebbe la domanda e' un altro, e non l'ho costruito:
  * confrontare il guscio col FOTOGRAMMA DELLA CLIP dentro il solo rettangolo
