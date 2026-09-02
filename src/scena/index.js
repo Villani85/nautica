@@ -888,6 +888,8 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
    * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
    */
+  let mondoCompilato = false
+
   const orologio = new Timer()
   let t = 0
   let frame = 0
@@ -1832,6 +1834,36 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       /* e il filmato del salone si scalda mentre si attraversa: quando la coda
          comincia deve gia' presentare, o restano due secondi di quadro vuoto */
       if (corsaTraversata > 0.002) traversata.scaldaCalma()
+      /**
+       * ─── E I PROGRAMMI DELLE STANZE SI COMPILANO PRIMA DI VEDERLE
+       *
+       * Una maglia fuori dal tronco di visione non si disegna, quindi il suo
+       * programma nasce quando la camera ci arriva. Il guscio del salone e'
+       * l'ultima stanza: i suoi programmi nascevano ALLA GIUNZIONE, dove ogni
+       * millisecondo si vede. `compile` traversa anche cio' che non si vede:
+       * si chiede una volta sola, appena il mondo e' pronto, quando il
+       * visitatore sta ancora guardando la nave da fuori.
+       */
+      if (!mondoCompilato && mondo.nodo) {
+        mondoCompilato = true
+        /**
+         * ─── E CON LORO LA NAVE, che alla giunzione torna in quadro
+         *
+         * Durante la traversata la camera spegne lo strato di fuori, quindi la
+         * nave non si disegna e i suoi programmi non nascono. Alla giunzione
+         * torna tutta insieme. Si compila anche lei, e per la durata della
+         * compilazione si riaccende lo strato zero sulla camera: `compile`
+         * raccoglie le luci che la CAMERA vede, e con lo strato spento
+         * raccoglierebbe solo quelle del mondo -- cioe' un programma che alla
+         * giunzione non vale. La maschera si rimette subito com'era.
+         */
+        const maschera = camera.layers.mask
+        camera.layers.enableAll()
+        for (const b of [mondo.nodo, nave].filter(Boolean)) {
+          try { render.compileAsync(b, camera, scena)?.catch?.(() => {}) } catch { /* e' un anticipo, non un obbligo */ }
+        }
+        camera.layers.mask = maschera
+      }
       if (corsaTraversata > 0.002) {
         const s = MathUtils.clamp(corsaTraversata, 0, 1)
         const posa = mondo.posaA(s)

@@ -57,10 +57,25 @@
  *   4966 ms.
  * · misura di controllo, `?mondo=0` (il mondo non si accende mai): 1737 ms.
  *
- * Resta aperto. Le strade non ancora provate, in ordine di quanto costano:
- * ridurre le plafoniere del mondo a poche e crearle PRIMA del primo disegno
- * (cosi' il conteggio non cambia mai), oppure disegnare la nave per un
- * fotogramma mentre il mondo e' acceso, invece di compilarla in anticipo.
+ * ─── COME E' STATO CHIUSO (per tre quarti), il 2 settembre
+ *
+ *     5.340 ms   com'era
+ *     2.100 ms   le luci del mondo nascono con la scena, spente, e stanno
+ *                NELLA SCENA invece che dentro il gruppo: il conteggio e'
+ *                quello definitivo dal primo fotogramma e non cambia mai
+ *     1.660 ms   spente di serie le ombre delle plafoniere, che non si vedono
+ *                (6 livelli contro 6 di rumore) e alla giunzione costano i
+ *                programmi `distance` della nave
+ *     1.440 ms   `compileAsync` del MONDO appena e' pronto: le stanze fuori dal
+ *                tronco di visione non si disegnano, quindi i programmi del
+ *                guscio del salone nascevano proprio alla giunzione
+ *     1.377 ms   e con lui la nave, compilata con lo strato zero riacceso per
+ *                un istante, cosi' le luci raccolte sono quelle della giunzione
+ *
+ * Restano sei programmi. Chi riprende: sono `physical` e `basic` che nascono
+ * quando lo strato di fuori torna acceso, e la strada non provata e' disegnare
+ * la nave per un fotogramma mentre il mondo e' acceso, invece di compilarla in
+ * anticipo.
  */
 import { anteprima } from './anteprima.mjs'
 import { apriBrowser } from './browser.mjs'

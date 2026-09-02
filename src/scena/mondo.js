@@ -1645,6 +1645,17 @@ function vistaLibera (s) {
       if (si && pronto) cameraDelSito.layers.disable(0)
       else cameraDelSito.layers.enable(0)
     },
+    /**
+     * Il nodo del mondo, per chi deve FARLO COMPILARE PRIMA.
+     *
+     * Le stanze si disegnano solo quando entrano nel tronco di visione, quindi
+     * i loro programmi nascono quando la camera ci arriva -- e il guscio del
+     * salone e' l'ultimo, cioe' proprio alla giunzione. Chi ha il renderer puo'
+     * chiedere di compilarli in anticipo: `compile` traversa anche gli oggetti
+     * che non si vedono.
+     */
+    get nodo () { return gruppo },
+
     /** Lo stato, per i cancelli: cosi' misurano invece di fidarsi. */
     get stato () {
       return {
