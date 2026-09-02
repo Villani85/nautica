@@ -1794,7 +1794,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * Adesso decide una sola espressione: la traversata e' finita quando
        * comincia la coda.
        */
-      mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata, corsaCoda)
+      mondo.mostra(corsaCoda > CODA_CONSEGNATA ? 0 : corsaTraversata, corsaCoda, camera.aspect)
       /* il fuori si spegne solo mentre si attraversa: appena comincia la coda
          il salone deve poter apparire, e vive sullo strato zero */
       mondo.soloDentro(corsaTraversata > 0.002 && corsaCoda <= 0.002)
@@ -2250,7 +2250,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
          E' il difetto dei due padroni che questo file ha gia' pagato con
          `mostra`, e stavolta l'ho visto in un provino: 92 livelli di scarto
          sul primo fotogramma della coda fra proiezione accesa e spenta. */
-      mondo?.mostra(q, corsaCoda)
+      mondo?.mostra(q, corsaCoda, camera.aspect)
     },
     /**
      * Aggancia i richiami tecnici. `fn.nomi` sono i nodi del GLB a cui puntano;

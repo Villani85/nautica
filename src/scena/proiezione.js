@@ -74,9 +74,32 @@ varying vec3 vPuntoMondo;
     vec4 pp = uProiezione * vec4(vPuntoMondo, 1.0);
     if (pp.w > 0.0) {
       vec2 uvp = pp.xy / pp.w * 0.5 + 0.5;
-      /* fuori dal fotogramma non si inventa niente: resta quello che c'era */
-      float dentro = step(0.0, uvp.x) * step(uvp.x, 1.0) * step(0.0, uvp.y) * step(uvp.y, 1.0);
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, texture2D(uFoto, uvp).rgb, uMiscela * dentro);
+      /**
+       * ─── FUORI DAL FOTOGRAMMA, LA STESSA CURA DEL SITO: una copia ingrandita
+       *
+       * La prima stesura spegneva la proiezione fuori dal quadro della
+       * fotografia. Su uno schermo largo si notava appena; su un telefono
+       * (390x844) no: la stanza usciva come un rettangolo sospeso in mezzo al
+       * guscio color crema -- cioe' la «carta» che il guscio esiste per non far
+       * vedere. Preso guardando i provini a 390x844, che nessuno aveva ancora
+       * guardato.
+       *
+       * La seconda stesura allungava il bordo (clamp): peggio, strisce lunghe e
+       * evidenti su tutta la parete.
+       *
+       * Questa e' la cura che il sito usa gia' per lo stesso problema: il
+       * fondo di salone3d.js e' una copia INGRANDITA quattro volte dello
+       * stesso filmato, messa dietro la lastra per non lasciare bordi. Qui si
+       * fa lo stesso dentro lo shader -- fuori dal fotogramma si campiona la
+       * stessa immagine rimpicciolita attorno al centro -- e la transizione si
+       * sfuma. Non e' stanza inventata: e' la stessa fotografia, e chi guarda
+       * legge una continuazione fuori fuoco invece di un taglio.
+       */
+      vec2 stretta = clamp(uvp, 0.0, 1.0);
+      float fuori = smoothstep(0.0, 0.06, length(uvp - stretta));
+      vec2 larga = clamp((uvp - 0.5) / 4.0 + 0.5, 0.0, 1.0);
+      vec3 foto = mix(texture2D(uFoto, stretta).rgb, texture2D(uFoto, larga).rgb, fuori);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, foto, uMiscela);
     }
   }`)
   }

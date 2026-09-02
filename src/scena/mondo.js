@@ -668,7 +668,7 @@ let daRicuocere = 0
   }
 
   /** La miscela segue la corsa: zero lontano, tutta all'arrivo. */
-  function aggiornaProiezione (q, coda) {
+  function aggiornaProiezione (q, coda, rapporto) {
     if (!proiezioni.length) return
     const t = MathUtils.smoothstep(q, PROIEZIONE_DA, 1)
     /**
@@ -697,14 +697,24 @@ let daRicuocere = 0
     proiettore.quaternion.copy(arrivo.q)
     const vicino = 1 - MathUtils.smoothstep(coda, 0, CODA_SPEGNI_PROIEZIONE)
     /**
-     * L'apertura del proiettore e' quella della LASTRA che segue, non quella
-     * della camera in quel momento: durante la traversata l'obiettivo si apre
-     * a 58 gradi per far stare i locali nel quadro (`index.js`, `campoTraversata`),
-     * ma la fotografia e' montata su 34. Il rapporto invece e' quello dello
-     * schermo, perche' e' cosi' che la lastra riempie il quadro.
+     * ─── L'APERTURA E' QUELLA DELLA LASTRA, IL RAPPORTO QUELLO DELLO SCHERMO
+     *
+     * L'obiettivo del proiettore resta a 34 gradi anche mentre quello della
+     * camera si apre a 58 per far stare i locali nel quadro (`index.js`,
+     * `campoTraversata`): la fotografia e' montata su 34 e non cambia con la
+     * lente di chi guarda.
+     *
+     * Il RAPPORTO invece deve essere quello del quadro, perche' e' cosi' che la
+     * lastra lo riempie -- e va passato da chi la camera ce l'ha davvero.
+     * Prima lo leggevo da `cameraDelSito`, che e' l'oggetto che `ancoraA`
+     * riceve e NON e' la camera che disegna: restava a 1,6 sempre. Su un
+     * telefono (390x844, rapporto 0,46) la proiezione usciva come un
+     * RETTANGOLO ORIZZONTALE sospeso in mezzo a una stanza beige -- cioe'
+     * esattamente la «carta» che il guscio esiste per non far vedere. Preso
+     * guardando i provini a 390x844, che nessuno aveva ancora guardato.
      */
-    if (cameraDelSito && cameraDelSito.aspect && proiettore.aspect !== cameraDelSito.aspect) {
-      proiettore.aspect = cameraDelSito.aspect
+    if (rapporto > 0 && proiettore.aspect !== rapporto) {
+      proiettore.aspect = rapporto
       proiettore.updateProjectionMatrix()
     }
     matriceProiettore(proiettore, _matriceProiezione)
@@ -1534,14 +1544,14 @@ function vistaLibera (s) {
      * e' una cosa diversa: vedi li' sotto il perche' averle unite fosse un
      * difetto.
      */
-    mostra (q, coda = 0) {
+    mostra (q, coda = 0, rapporto = 0) {
       gruppo.visible = pronto && q > 0.002
       /* chi proietta lo decide chi si vede: `mostra` e' l'unico che sa se la
          stanza e' in scena, e riceve la stessa corsa della posa */
       if (gruppo.visible) {
         const p = posaA(q)
         if (p) scegliChiProietta(p.p)
-        aggiornaProiezione(q, coda)
+        aggiornaProiezione(q, coda, rapporto)
       }
     },
 

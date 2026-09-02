@@ -4,7 +4,12 @@ const PORTA = 5287
 const S_VOLUTI = (process.env.S || '0.02,0.15,0.30,0.45,0.60,0.75,0.90').split(',').map(Number)
 const FUORI = process.env.FUORI
 const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars'] })
-const pg = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+/* `LARGO`/`ALTO`: la traversata va guardata anche su un telefono, dove il
+   rapporto del quadro cambia tutto -- la lente, la proiezione sul guscio e
+   quanto locale ci sta dentro */
+const pg = await browser.newPage({
+  viewport: { width: Number(process.env.LARGO || 1440), height: Number(process.env.ALTO || 900) }
+})
 await pg.goto(`http://localhost:${PORTA}/nautica/?ispeziona=1${process.env.PARAMETRI ? "&" + process.env.PARAMETRI : ""}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => window.__nautica?.mondo()?.ancorato === true, null, { timeout: 120000 })
 for (const s of S_VOLUTI) {
