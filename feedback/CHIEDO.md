@@ -387,6 +387,29 @@ Te lo scrivo qui e non lo tengo per me perche' e' il difetto piu' grave che
 abbia trovato stanotte, e riguarda l'unico istante del sito in cui uno
 sconosciuto decide se restare.
 
+### 3.6ter · E all'AVVIO ce ne sono altri 8,3 secondi, che NON ho chiuso
+
+Misurato subito dopo: caricando la pagina e restando fermi, i fotogrammi sopra
+i 150 ms sommano **8,3 secondi** su questa macchina (che ha una GPU vera). Il
+piu' lungo e' 5,2 s, e arriva quando il mondo si aggancia.
+
+Non e' il file: e' la COMPILAZIONE degli shader. La prova sta in una seconda
+visita nello stesso browser, dove la cache dei programmi e' calda: gli stessi
+fotogrammi lunghi scendono a **1,5 secondi**. E ho provato a spostare la
+decompressione meshopt sui thread (`useWorkers`): nessuna differenza misurabile,
+quindi non l'ho tenuta.
+
+Quello che ho tolto da quel blocco e' l'ancoraggio del mondo: costava 761 ms di
+generazione delle tele procedurali dentro il fotogramma piu' carico, e adesso si
+generano mentre il GLB e' ancora in volo (7 ms). Il totale pero' non cambia: e'
+distribuzione, non lavoro in meno, e sarebbe disonesto contarlo due volte.
+
+**Perche' te lo scrivo invece di risolverlo:** ridurre la compilazione vuol dire
+ridurre il numero di VARIANTI di materiale della scena, e le varianti sono
+scelte di resa -- quanti materiali diversi, con quante mappe, sotto quante luci.
+E' architettura del rendering, non una taratura: se la apro stanotte la lascio
+a meta'.
+
 ### 3.7 · Il salone non e' piu' una scatola beige (2 settembre, notte)
 
 Il difetto piu' visibile del filmato della traversata era la fine: otto secondi
