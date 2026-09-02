@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight,
-  Box3, Clock, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
-  PMREMGenerator, Raycaster, PCFSoftShadowMap, Object3D
+  Box3, Timer, MathUtils, SRGBColorSpace, AgXToneMapping, Plane, Vector3,
+  PMREMGenerator, Raycaster, PCFShadowMap, Object3D
 } from 'three'
 import { costruisciNave, Z_PINNE } from './nave.js'
 import { POPPA_Z, PRUA_Z } from '../scafo/ordinate.js'
@@ -479,7 +479,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
   const TESSITURA_OMBRA = forzata !== null ? Number(forzata) : auto
 
   render.shadowMap.enabled = TESSITURA_OMBRA > 0
-  render.shadowMap.type = PCFSoftShadowMap
+  /**
+   * ─── QUI C'ERA `PCFSoftShadowMap`, E THREE LO IGNORAVA
+   *
+   * Preso dalla console durante un provino, non da un cancello:
+   * «THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using
+   * PCFShadowMap instead.» Non e' un avviso di stile: `WebGLShadowMap.render`
+   * SOSTITUISCE il tipo al primo fotogramma (riga 99-104 del sorgente di
+   * three 0.185). Da quando three e' stato aggiornato, il sito montava una
+   * costante e ne otteneva un'altra, e i commenti raccontavano ombre morbide
+   * che nessuno ha mai visto.
+   *
+   * Qui si scrive quello che gira. Se un giorno servisse davvero un bordo
+   * morbido, l'opzione che resta e' `VSMShadowMap`, che pero' cambia la resa
+   * (sanguinamento della luce, sfocatura da tarare) -- e' un numero sul tavolo
+   * del committente, non una sostituzione trasparente.
+   */
+  render.shadowMap.type = PCFShadowMap
   sole.castShadow = TESSITURA_OMBRA > 0
   if (TESSITURA_OMBRA > 0) sole.shadow.mapSize.set(TESSITURA_OMBRA, TESSITURA_OMBRA)
   const c = sole.shadow.camera
@@ -858,7 +874,21 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     })
   }
 
-  const orologio = new Clock()
+  /**
+   * ─── `Clock` E' DEPRECATO, E LO DICEVA SOLO LA CONSOLE
+   *
+   * «THREE.Clock: This module has been deprecated. Please use THREE.Timer
+   * instead.» Funziona ancora, e finche' funziona un avviso e' solo rumore --
+   * ma e' lo stesso rumore in cui stanotte era nascosto `PCFSoftShadowMap`,
+   * che three sostituiva in silenzio da un aggiornamento. Un avviso letto e
+   * lasciato li' e' un avviso che la prossima volta non si legge.
+   *
+   * `Timer` vuole la marca del fotogramma: `update(marca)` e poi `getDelta()`.
+   * La marca c'e' gia', arriva da `requestAnimationFrame` -- e usare quella
+   * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
+   * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
+   */
+  const orologio = new Timer()
   let t = 0
   let frame = 0
   // Di fronte l'estrusione si legge come una lastra piatta: si parte gia'
@@ -1240,6 +1270,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
     ultimoStato = sim.S
     ultimaSim = sim
     const dichiarato = opz && typeof opz.dt === 'number'
+    if (!dichiarato) orologio.update(typeof marca === 'number' ? marca : undefined)
     const dt = dichiarato ? opz.dt : Math.min(orologio.getDelta(), 0.05)
     frame++
     /**

@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh, BoxGeometry, PlaneGeometry,
   MeshStandardMaterial, MeshBasicMaterial, VideoTexture, HemisphereLight,
-  DirectionalLight, RectAreaLight, Clock, MathUtils, SRGBColorSpace,
+  DirectionalLight, RectAreaLight, Timer, MathUtils, SRGBColorSpace,
   AgXToneMapping, PMREMGenerator
 } from 'three'
 import { creaAmbiente } from './ambiente.js'
@@ -402,7 +402,21 @@ export function creaSalone (contenitore) {
     for (const l of [...scena.children].filter(o => o.isLight)) scena.remove(l)
   }
 
-  const orologio = new Clock()
+  /**
+   * ─── `Clock` E' DEPRECATO, E LO DICEVA SOLO LA CONSOLE
+   *
+   * «THREE.Clock: This module has been deprecated. Please use THREE.Timer
+   * instead.» Funziona ancora, e finche' funziona un avviso e' solo rumore --
+   * ma e' lo stesso rumore in cui stanotte era nascosto `PCFSoftShadowMap`,
+   * che three sostituiva in silenzio da un aggiornamento. Un avviso letto e
+   * lasciato li' e' un avviso che la prossima volta non si legge.
+   *
+   * `Timer` vuole la marca del fotogramma: `update(marca)` e poi `getDelta()`.
+   * La marca c'e' gia', arriva da `requestAnimationFrame` -- e usare quella
+   * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
+   * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
+   */
+  const orologio = new Timer()
   let t = 0
   let frame = 0
 
@@ -417,6 +431,7 @@ export function creaSalone (contenitore) {
   new ResizeObserver(ridimensiona).observe(contenitore)
 
   function disegna (sim, marca) {
+    orologio.update(typeof marca === 'number' ? marca : undefined)
     const dt = Math.min(orologio.getDelta(), 0.05)
     frame++
     if (!sim.S.ridotto) t += dt
