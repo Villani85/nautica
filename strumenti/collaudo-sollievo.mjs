@@ -186,11 +186,24 @@ try {
      secondo, e' quello che ha ucciso `collaudo-nudge` nelle corse 309 e 312. */
   const calmata = await pagina.waitForFunction(() => {
     const n = window.__nautica
-    /* 240 passi e non 30: un sondaggio costa piu' di due secondi, quindi in
-       venti secondi di attesa se ne fanno pochi -- contati in `collaudo-nudge`:
-       undici in trenta secondi. Con trenta passi erano cinque secondi simulati
-       in tutto, e il rollio non fa in tempo a scendere. */
-    if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 240)
+    /* Quattro secondi simulati per sondaggio, GUARDATI OTTO VOLTE.
+       
+       Qui non si misura una media come nel nudge: si misura il rollio
+       ISTANTANEO, che oscilla con un periodo di pochi secondi. Avanzare 240
+       passi e guardare solo alla fine vuol dire campionare la sinusoide ogni
+       quattro secondi: puo' cadere sempre vicino a una cresta e dire «non
+       scende» di una nave gia' calma. E' quello che ha fatto fallire la corsa
+       316 dopo che il tempo di simulazione era stato sistemato.
+       
+       Quindi si avanza a blocchi di trenta passi -- mezzo secondo di nave -- e
+       si guarda dopo ognuno. Stesso tempo simulato per sondaggio, otto volte
+       piu' occhi. */
+    if (typeof n.passoDichiarato === 'function') {
+      for (let k = 0; k < 8; k++) {
+        n.passoDichiarato(1 / 60, 30)
+        if (Math.abs(n.stato.rollio) < 1.2) return true
+      }
+    }
     return Math.abs(n.stato.rollio) < 1.2
   }, null, { timeout: 60000, polling: 100 }).then(() => true).catch(() => false)
   if (!calmata) guai.push('accendendo lo stabilizzatore il rollio non scende: il sollievo non avrebbe una causa')
