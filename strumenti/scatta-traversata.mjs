@@ -1,6 +1,9 @@
 import { chromium } from 'playwright-core'
 /* la finestra si legge dal sito, non da regia.js: qui si chiede s, non p */
-const PORTA = 5287
+/* la porta e l'indirizzo si possono dare da fuori: qui c'e' l'anteprima che
+   tengo aperta mentre lavoro, ma un cancello ne accende una sua */
+const PORTA = Number(process.env.PORTA || 5287)
+const INDIRIZZO = process.env.INDIRIZZO || `http://localhost:${PORTA}/nautica/`
 const S_VOLUTI = (process.env.S || '0.02,0.15,0.30,0.45,0.60,0.75,0.90').split(',').map(Number)
 const FUORI = process.env.FUORI
 const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars'] })
@@ -10,7 +13,7 @@ const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle
 const pg = await browser.newPage({
   viewport: { width: Number(process.env.LARGO || 1440), height: Number(process.env.ALTO || 900) }
 })
-await pg.goto(`http://localhost:${PORTA}/nautica/?ispeziona=1${process.env.PARAMETRI ? "&" + process.env.PARAMETRI : ""}`, { waitUntil: 'load' })
+await pg.goto(`${INDIRIZZO}?ispeziona=1${process.env.PARAMETRI ? '&' + process.env.PARAMETRI : ''}`, { waitUntil: 'load' })
 await pg.waitForFunction(() => window.__nautica?.mondo()?.ancorato === true, null, { timeout: 120000 })
 for (const s of S_VOLUTI) {
   const info = await pg.evaluate(async (s) => {

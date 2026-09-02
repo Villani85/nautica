@@ -289,6 +289,10 @@ jobs:
         run: node strumenti/collaudo-scia.mjs
         env: { CHROMIUM: '1' }
 
+      - name: 'Cancello · alla fine della traversata il salone c e'
+        timeout-minutes: 25
+        run: node strumenti/collaudo-proiezione.mjs
+        env: { CHROMIUM: '1' }
       - name: 'Cancello · il varco nel pelo si apre col taglio'
         timeout-minutes: 20
         run: node strumenti/collaudo-varco.mjs
