@@ -159,11 +159,26 @@ await pg.evaluate(() => { window.__nautica.stato.stab = true })
  * Si aspetta quindi che l'RMS sia sceso sotto la soglia del giroscopio, cosi'
  * la fila delle battute riparte da zero come per chi visita davvero.
  */
+/**
+ * ─── E SI SONDA A OROLOGIO, NON A FOTOGRAMMA
+ *
+ * `waitForFunction` di serie sonda su `requestAnimationFrame`. Qui dentro pero'
+ * la simulazione la avanza il SONDAGGIO stesso (`passoDichiarato`), quindi con
+ * il sondaggio legato ai fotogrammi il tempo simulato scorre alla velocita'
+ * della macchina: su questo PC un secondo simulato ogni 16 ms, in CI -- dove la
+ * GPU e' software e un fotogramma puo' durare un secondo -- uno ogni secondo.
+ * Il cancello e' morto cosi' nelle corse 309 e 312, dicendo «il rollio non si
+ * calma» di un sito che si calma benissimo.
+ *
+ * Con `polling: 100` il tempo simulato non dipende piu' da quanto e' veloce chi
+ * guarda. Non e' un allentamento: la soglia e la finestra sono le stesse, e un
+ * rollio che non scende resta rosso.
+ */
 const calmata = await pg.waitForFunction(() => {
   const n = window.__nautica
   if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 60)
   return (n.stato.rollioRms ?? 99) < 1.5
-}, null, { timeout: 30000 }).then(() => true).catch(() => false)
+}, null, { timeout: 30000, polling: 100 }).then(() => true).catch(() => false)
 if (!calmata) {
   console.log('\n  ROTTO  acceso lo stabilizzatore il rollio non si calma: le battute non hanno un ordine\n')
   await browser.close(); preview?.kill(); process.exit(1)

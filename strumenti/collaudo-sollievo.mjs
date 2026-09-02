@@ -180,11 +180,15 @@ try {
    * un clic basti.
    */
   await pagina.click('#stab-salone').catch(() => pagina.click('#stab').catch(() => {}))
+  /* `polling: 100` e non il fotogramma: qui la simulazione la avanza il
+     SONDAGGIO, quindi legarlo ai fotogrammi farebbe scorrere il tempo simulato
+     alla velocita' della macchina. In CI, dove un fotogramma puo' durare un
+     secondo, e' quello che ha ucciso `collaudo-nudge` nelle corse 309 e 312. */
   const calmata = await pagina.waitForFunction(() => {
     const n = window.__nautica
     if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 30)
     return Math.abs(n.stato.rollio) < 1.2
-  }, null, { timeout: 20000 }).then(() => true).catch(() => false)
+  }, null, { timeout: 20000, polling: 100 }).then(() => true).catch(() => false)
   if (!calmata) guai.push('accendendo lo stabilizzatore il rollio non scende: il sollievo non avrebbe una causa')
 
   /**
