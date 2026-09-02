@@ -723,6 +723,8 @@ let daRicuocere = 0
    * `CODA_CONSEGNATA`.
    */
   const CODA_SPEGNI_PROIEZIONE = 0.125
+  /** Dove si spengono le plafoniere: vedi `mostra`. */
+  const CODA_SPEGNI_LUCI = 0.35
 
   function preparaProiezione (mesh) {
     if (!videoSalone) return
@@ -1656,6 +1658,25 @@ function vistaLibera (s) {
      */
     mostra (q, coda = 0, rapporto = 0) {
       gruppo.visible = pronto && q > 0.002
+      /**
+       * ─── E LE LUCI SI SPENGONO TARDI, non alla giunzione
+       *
+       * Tenerle accese per sempre costa: sono nove punti luce nella chiave del
+       * programma di ogni materiale, e su una GPU software (la CI, e i telefoni
+       * peggiori) un fotogramma passa da 749 a 1.434 ms. La corsa 308 e' morta
+       * proprio li': `page.screenshot` scaduto nel finale.
+       *
+       * Spegnerle costa una ricompilazione -- e' la stessa cosa che alla
+       * giunzione costava 5,3 secondi. Ma DOVE la si paga cambia tutto: alla
+       * giunzione il visitatore sta guardando il salone che arriva; a un terzo
+       * della coda la lastra copre gia' tutto il quadro da un pezzo, e dietro
+       * non c'e' piu' niente da guardare.
+       *
+       * Quindi le luci restano finche' la lastra non ha finito il suo lavoro, e
+       * si spengono li'. Il numero non e' scelto a occhio: `CODA_CONSEGNATA` di
+       * `index.js` vale 0,13 ed e' dove la lastra e' piena; 0,35 e' ben oltre.
+       */
+      if (luci) luci.visible = !(pronto && coda > CODA_SPEGNI_LUCI)
       /* chi proietta lo decide chi si vede: `mostra` e' l'unico che sa se la
          stanza e' in scena, e riceve la stessa corsa della posa */
       if (gruppo.visible) {
