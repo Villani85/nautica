@@ -1,5 +1,6 @@
 import { Group, MathUtils, Quaternion, Vector3, PointLight, AmbientLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4, PerspectiveCamera, VideoTexture, SRGBColorSpace } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { TextureLoader, LinearSRGBColorSpace } from 'three'
 import { vestiMondo, preparaMaterie } from './materie-mondo.js'
 import { arredaMondo, misuratore } from './arredo-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
@@ -543,6 +544,35 @@ let riallineati = 0
  * la nave, e dentro lo scafo non c'e' aria da attraversare.
  */
 const STRATO_MONDO = 1
+/** Lo strato dell'arredo: vedi `arredo-mondo.js`, la luce cotta e le lampade. */
+const STRATO_ARREDO = 2
+
+/**
+ * La luce cotta addosso al materiale: `lightMap` di three, sul canale UV che
+ * queste stanze hanno (uno solo, lo stesso dell'occlusione).
+ *
+ * Le tessiture si caricano una volta sola e si condividono: tre file per
+ * diciassette materiali.
+ */
+const tessitureLuce = new Map()
+function vestiDiLuceCotta (m) {
+  if (!m || m.__luceCotta || LUCE_COTTA <= 0) return
+  const spec = MAPPE_LUCE.find((x) => x.quali(m.name || ''))
+  if (!spec) return
+  m.__luceCotta = true
+  if (!tessitureLuce.has(spec.file)) {
+    const t = new TextureLoader().load(base + 'modelli/' + spec.file)
+    /* la luce cotta e' un DATO in lineare, non un colore in sRGB: leggerla
+       come sRGB la schiarirebbe di una curva che nella cottura non c'era */
+    t.colorSpace = LinearSRGBColorSpace
+    t.flipY = false          // come le UV del glTF
+    t.channel = 0            // queste stanze hanno un canale UV solo
+    tessitureLuce.set(spec.file, t)
+  }
+  m.lightMap = tessitureLuce.get(spec.file)
+  m.lightMapIntensity = spec.divisore * LUCE_COTTA
+  m.needsUpdate = true
+}
 
 function isolaDallaLuceDiFuori (camera) {
   gruppo.traverse((o) => {
@@ -593,6 +623,7 @@ function isolaDallaLuceDiFuori (camera) {
        * prima e non rompe niente.
        */
       if (m.name === 'GUSCIO') preparaProiezione(o)
+      vestiDiLuceCotta(m)
       m.envMap = ambienteInterno || null
       m.envMapIntensity = ambienteInterno ? RIFLESSO : 0
       /**
@@ -613,6 +644,7 @@ function isolaDallaLuceDiFuori (camera) {
     }
   })
   camera?.layers?.enable(STRATO_MONDO)
+  camera?.layers?.enable(STRATO_ARREDO)
 }
 
 /**
@@ -670,6 +702,42 @@ const LATO_OMBRA = !OMBRE_DEL_MONDO ? 0 : ombre >= 2048 ? LATO_OMBRA_GRANDE : om
  * volta sola, quindi basta copiargli la posa quando succede.
  */
 const luciPronte = []
+/** Dove stanno le plafoniere, nel frame del gruppo: la lampada viva le segue. */
+const postiPlafoniera = []
+/**
+ * ─── LA LUCE DELLE STANZE E' COTTA, non calcolata
+ *
+ * Le stanze non si muovono e le plafoniere nemmeno: la loro luce e' un DATO.
+ * `riferimenti/blender/cuoci-luce-mondo.py` la cuoce in Cycles con lampade AD
+ * AREA nelle posizioni misurate dal sito stesso (le esporta
+ * `strumenti/esporta-luci-mondo.mjs`), diretto PIU' indiretto -- cioe' col
+ * rimbalzo, che in tempo reale non c'e'.
+ *
+ * Il perche' non e' solo la resa. In three il NUMERO di luci entra nella chiave
+ * del programma di ogni materiale: dieci lampade accese costano 75 ms di
+ * fotogramma ciascuna su GPU software, e ogni volta che il numero cambia tutta
+ * la scena si ricompila (5,3 secondi alla giunzione, misurati). Cotta la luce,
+ * le stanze non hanno piu' bisogno di nessuna lampada: ne resta UNA, per
+ * l'arredo, che nella cottura non c'e' perche' nasce in JS.
+ *
+ * I divisori vengono dalla cottura (`uscite/luce-divisori.json`): la luce cotta
+ * e' HDR, il PNG tiene 0..1, quindi ogni mappa e' stata divisa per il suo
+ * novantanovesimo percentile e qui si rimoltiplica. Sono numeri MISURATI, non
+ * tarati a occhio: se si ricuoce, si riportano da li'.
+ */
+const MAPPE_LUCE = [
+  { file: 'stair_corridor-luce.webp', divisore: 3.534259, quali: (n) => n.startsWith('CORRIDOIO') },
+  { file: 'engine_room-luce.webp', divisore: 1.655554, quali: (n) => n.startsWith('MECH') && n.includes('engine_room') },
+  { file: 'mechanism_bay-luce.webp', divisore: 0.336958, quali: (n) => n.startsWith('MECH') && !n.includes('engine_room') }
+]
+/** Quanto della luce cotta arriva: `?lucecotta=0` la spegne e si torna alle lampade. */
+const LUCE_COTTA = numeroDaUrl('lucecotta', 1, 0, 4)
+/**
+ * Quante lampade restano accese a runtime, per l'arredo che nella cottura non
+ * c'e'. Una: e' quella sopra la testa, e segue la camera.
+ */
+const LUCI_A_RUNTIME = 3
+
 /** Le plafoniere che possono proiettare, in ordine di percorso. */
 const plafoniere = []
 /** Chi proietta adesso: si tiene per non riassegnare a ogni fotogramma. */
@@ -807,13 +875,26 @@ let daRicuocere = 0
     luci.name = 'luciPratiche'
     const ambiente = new AmbientLight(0xffffff, 0)
     ambiente.layers.set(STRATO_MONDO)
+    /* l'ambiente vale anche per l'arredo, che sta su uno strato suo */
+    ambiente.layers.enable(STRATO_ARREDO)
     luci.add(ambiente)
     luciPronte.push(ambiente)
-    /* QUANTE_LUCI per il percorso, piu' le due del salone: il numero e' fisso
-       perche' il conteggio non deve dipendere da cosa i raggi troveranno */
-    for (let i = 0; i < QUANTE_LUCI + 2; i++) {
+    /**
+     * QUANTE. Con la luce COTTA ne basta una: le stanze la portano gia' addosso
+     * e a runtime resta solo l'arredo da illuminare, che nella cottura non c'e'.
+     * Senza (`?lucecotta=0`) si torna alle nove di prima -- il percorso piu' il
+     * salone -- e si vede quanto costavano.
+     *
+     * Il numero e' fisso e deciso QUI, prima del primo disegno, perche' il
+     * conteggio delle luci sta nella chiave del programma di ogni materiale: se
+     * cambia dopo, tutta la scena si ricompila.
+     */
+    const quante = LUCE_COTTA > 0 ? LUCI_A_RUNTIME : QUANTE_LUCI + 2
+    for (let i = 0; i < quante; i++) {
       const l = new PointLight(COLORE_LUCE, 0, PORTATA_M, 2)
-      l.layers.set(STRATO_MONDO)
+      /* con la luce cotta la lampada serve SOLO all'arredo: sulle stanze
+         sarebbe una seconda illuminazione sopra quella gia' cotta */
+      l.layers.set(LUCE_COTTA > 0 ? STRATO_ARREDO : STRATO_MONDO)
       if (LATO_OMBRA > 0 && i < OMBRE_QUANTE) {
         l.castShadow = true
         l.shadow.mapSize.set(LATO_OMBRA, LATO_OMBRA)
@@ -840,6 +921,9 @@ let daRicuocere = 0
   let prossima = 1
   const ambiente = luciPronte[0]
   ambiente.intensity = AMBIENTE
+  /* dove stanno le plafoniere: le piastre ci vanno sempre, la lampada viva ci
+     passa sopra una alla volta (vedi `seguiLaPlafoniera`) */
+  postiPlafoniera.length = 0
   const piastre = new Group()
   piastre.name = 'luciPratiche'
   /**
@@ -873,13 +957,15 @@ let daRicuocere = 0
     if (soffitto === null) continue
     const cielino = sonda.y + soffitto
 
+    postiPlafoniera.push(new Vector3(x, cielino - LUCE_SOTTO_IL_SOFFITTO_M, z))
     const l = luciPronte[prossima++]
-    if (!l) continue
-    l.intensity = INTENSITA
-    l.position.set(x, cielino - LUCE_SOTTO_IL_SOFFITTO_M, z)
-    /* l'ombra e' gia' preparata da `preparaLuci`: qui si dice solo che questa
-       lampada e' una di quelle che possono proiettare */
-    if (LATO_OMBRA > 0) plafoniere.push(l)
+    if (l) {
+      l.intensity = INTENSITA
+      l.position.copy(postiPlafoniera[postiPlafoniera.length - 1])
+      /* l'ombra e' gia' preparata da `preparaLuci`: qui si dice solo che questa
+         lampada e' una di quelle che possono proiettare */
+      if (LATO_OMBRA > 0) plafoniere.push(l)
+    }
 
     /* e il corpo illuminante si VEDE: una luce senza sorgente visibile e' una
        stanza illuminata da niente, che l'occhio legge come finta */
@@ -1535,6 +1621,32 @@ function vistaLibera (s) {
    * Le mappe si cuociono quando una lampada ENTRA fra le due: `needsUpdate` una
    * volta, e poi mai piu' -- ne' la stanza ne' la lampada si muovono.
    */
+  /**
+   * ─── LA LAMPADA VIVA SEGUE QUELLA PIU' VICINA
+   *
+   * Con la luce cotta le stanze non hanno piu' bisogno di lampade, ma l'arredo
+   * si': tubi, staffe, macchine e corrimano nascono in JS e nella cottura non
+   * ci sono. Invece di tenerne nove accese -- che e' il prezzo che questo file
+   * ha appena finito di misurare -- ne resta UNA, e si sposta sulla plafoniera
+   * piu' vicina alla camera. Sopra la testa c'e' sempre una lampada, e le altre
+   * si vedono come piastre luminose: il quadro non cambia, il conto si'.
+   */
+  const _viva = new Vector3()
+  function seguiLaPlafoniera (dovePerLaScena) {
+    if (LUCE_COTTA <= 0 || !postiPlafoniera.length) return
+    const dove = gruppo.worldToLocal(_viva.copy(dovePerLaScena))
+    /* le tre plafoniere piu' vicine alla camera: sono quelle che l'arredo
+       davanti agli occhi vede davvero, e le altre non arriverebbero */
+    const vicine = postiPlafoniera
+      .map((p) => ({ p, d: Math.abs(p.x - dove.x) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, LUCI_A_RUNTIME)
+    for (let i = 0; i < LUCI_A_RUNTIME; i++) {
+      const l = luciPronte[1 + i]
+      if (l && vicine[i]) l.position.copy(vicine[i].p)
+    }
+  }
+
   const _dentro = new Vector3()
   function scegliChiProietta (dovePerLaScena) {
     if (!plafoniere.length) return
@@ -1681,7 +1793,7 @@ function vistaLibera (s) {
          stanza e' in scena, e riceve la stessa corsa della posa */
       if (gruppo.visible) {
         const p = posaA(q)
-        if (p) scegliChiProietta(p.p)
+        if (p) { scegliChiProietta(p.p); seguiLaPlafoniera(p.p) }
         aggiornaProiezione(q, coda, rapporto)
       }
     },
@@ -1715,6 +1827,33 @@ function vistaLibera (s) {
       if (si && pronto) cameraDelSito.layers.disable(0)
       else cameraDelSito.layers.enable(0)
     },
+    /**
+     * Dove stanno le plafoniere, nel frame del MONDO (metri).
+     *
+     * Serve alla cottura: le posizioni le decide un raggio che misura il
+     * soffitto a runtime, quindi in Blender non si possono ricalcolare a mano
+     * senza rifare lo stesso conto e rischiare che i due divergano. Si
+     * misurano qui, dove nascono, e si esportano.
+     */
+    luciPratiche: () => {
+      if (!luci) return []
+      gruppo.updateWorldMatrix(true, true)
+      const inv = new Matrix4().copy(gruppo.matrixWorld).invert()
+      const p = new Vector3()
+      return luci.children
+        .filter((o) => o.isPointLight && o.intensity > 0)
+        .map((o) => {
+          o.getWorldPosition(p)
+          p.applyMatrix4(inv)
+          return {
+            p: [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)],
+            intensita: +o.intensity.toFixed(4),
+            portata: +o.distance.toFixed(4),
+            colore: '#' + o.color.getHexString()
+          }
+        })
+    },
+
     /**
      * Il nodo del mondo, per chi deve FARLO COMPILARE PRIMA.
      *

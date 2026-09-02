@@ -41,6 +41,20 @@ import {
 
 /** Lo strato del mondo: l'arredo va illuminato dalle plafoniere, non dal cielo. */
 const STRATO = 1
+/**
+ * ─── L'ARREDO STA SU UNO STRATO SUO, e non e' un dettaglio
+ *
+ * Le stanze portano la luce COTTA (`mondo.js`, `vestiDiLuceCotta`): non hanno
+ * piu' bisogno di lampade, e una lampada accesa sopra di loro le illuminerebbe
+ * DUE VOLTE. L'arredo invece nella cottura non c'e' -- nasce qui, in JS -- e
+ * una lampada gli serve.
+ *
+ * In three una luce illumina solo le maglie il cui strato interseca il suo:
+ * mettendo l'arredo su uno strato tutto suo, la lampada viva puo' accendere i
+ * tubi e le macchine senza toccare le paratie. E' la stessa leva che aveva gia'
+ * separato il mondo dalla luce di fuori.
+ */
+const STRATO_ARREDO = 2
 
 /**
  * ─── UN PEZZO D'ARREDO NASCE SUL SUO STRATO E CON LA SUA OMBRA
@@ -55,7 +69,7 @@ const STRATO = 1
  * qui sta l'altra meta', chi l'ombra la fa.
  */
 function inScena (m) {
-  m.layers.set(STRATO)
+  m.layers.set(STRATO_ARREDO)
   m.castShadow = true
   m.receiveShadow = true
   return m

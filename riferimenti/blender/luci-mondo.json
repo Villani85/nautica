@@ -1,0 +1,97 @@
+{
+ "sistema": "metri nel frame del MONDO (GLB traversata): x lungo il percorso, y in alto, z di traverso",
+ "perBlender": "blender = (x, -z, y)",
+ "quando": "2026-09-02T06:39:41Z",
+ "luci": [
+  {
+   "p": [
+    -9.2177,
+    0.25,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -7.7408,
+    0.25,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -6.1498,
+    0.25,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -4.5635,
+    0.65,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -3.1243,
+    0.65,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -1.8419,
+    0.65,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    -0.791,
+    1.0001,
+    0
+   ],
+   "intensita": 0.35,
+   "portata": 3.6,
+   "colore": "#ffe6c4"
+  },
+  {
+   "p": [
+    2.1557,
+    0.7079,
+    1.4437
+   ],
+   "intensita": 0.91,
+   "portata": 8.867,
+   "colore": "#ffdcb0"
+  },
+  {
+   "p": [
+    6.2936,
+    0.7079,
+    1.4437
+   ],
+   "intensita": 0.91,
+   "portata": 8.867,
+   "colore": "#ffdcb0"
+  }
+ ]
+}
