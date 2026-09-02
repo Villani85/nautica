@@ -180,6 +180,31 @@ const calmata = await pg.waitForFunction(() => {
   return (n.stato.rollioRms ?? 99) < 1.5
 }, null, { timeout: 30000, polling: 100 }).then(() => true).catch(() => false)
 if (!calmata) {
+  /**
+   * ─── E SE NON SI CALMA, SI DICE A QUANTO E' ARRIVATO
+   *
+   * Questo cancello e' rosso in CI e verde in locale -- anche con la GPU
+   * software -- da tre corse, e il messaggio non bastava a capire perche'.
+   * Le due ipotesi si distinguono con due numeri: se `passoDichiarato` non
+   * c'e', la simulazione avanza solo coi fotogrammi veri e su una macchina
+   * lenta il tempo simulato non arriva mai; se c'e' ed e' l'RMS a non
+   * scendere, il difetto e' nel sito.
+   *
+   * Un cancello che dice «non si calma» senza dire a quanto e' arrivato
+   * costringe chi legge a indovinare, ed e' quello che ho fatto per due corse.
+   */
+  const perche = await pg.evaluate(() => {
+    const n = window.__nautica
+    return {
+      rms: n.stato?.rollioRms ?? null,
+      rollio: n.stato?.rollio ?? null,
+      stab: n.stato?.stab ?? null,
+      velocita: n.stato?.velocita ?? null,
+      passoDichiarato: typeof n.passoDichiarato,
+      passiFatti: typeof n.passoDichiarato === 'function' ? n.passoDichiarato(1 / 60, 60) : null
+    }
+  }).catch((e) => ({ errore: String(e).slice(0, 120) }))
+  console.log('  come e finita: ' + JSON.stringify(perche))
   console.log('\n  ROTTO  acceso lo stabilizzatore il rollio non si calma: le battute non hanno un ordine\n')
   await browser.close(); preview?.kill(); process.exit(1)
 }
