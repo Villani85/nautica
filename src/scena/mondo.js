@@ -314,7 +314,29 @@ function numeroDaUrl (nome, predefinito, min, max) {
   return Number.isFinite(v) && v >= min && v <= max ? v : predefinito
 }
 
-const QUANTE_LUCI = 7
+/**
+ * ─── QUANTE PLAFONIERE, e cosa costano anche quando non si vedono
+ *
+ * Il numero di luci della scena entra nel programma di OGNI materiale, quindi
+ * si paga a ogni fotogramma della visita e non solo dentro la traversata.
+ * Misurato a 2560x1440, fermi sulla nave a p 0,35, dove il mondo non si vede:
+ *
+ *     sette plafoniere (13 luci in tutto)   24,3 ms per fotogramma
+ *     tre                                   24,0
+ *     una                                   23,0
+ *     `?mondo=0`, nessun mondo               18,0
+ *
+ * E QUI LA MISURA CORREGGE L'IPOTESI, che era mia: pensavo che il prezzo
+ * fossero le lampade, e invece togliendone sei si guadagna UN millisecondo. I
+ * sei che separano il mondo dal non-mondo stanno da un'altra parte -- geometria,
+ * tessiture, materiali -- e questo commento non dice dove, perche' non l'ho
+ * misurato.
+ *
+ * `?plafoniere=<n>` resta perche' quante lampade illuminano il corridoio e' una
+ * scelta di resa, ed e' giusto che si possa guardare. Ma non e' una leva di
+ * prestazione: la misura dice di no.
+ */
+const QUANTE_LUCI = numeroDaUrl('plafoniere', 7, 1, 12)
 /**
  * ─── LA PORTATA DICE METRI E VALE UNITA' DI SCENA: 3,6 SONO NOVE METRI
  *
