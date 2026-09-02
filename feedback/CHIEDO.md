@@ -397,6 +397,36 @@ Te lo scrivo qui e non lo tengo per me perche' e' il difetto piu' grave che
 abbia trovato stanotte, e riguarda l'unico istante del sito in cui uno
 sconosciuto decide se restare.
 
+### 3.6quater · LA COTTURA DELLA LUCE: la strada che risolverebbe tutte e tre
+
+Le tre cose che ho misurato stanotte -- il blocco alla giunzione, quello a un
+terzo della coda, e gli otto secondi dell'avvio -- hanno la stessa radice: **le
+plafoniere del mondo sono luci vere, e in three il numero di luci entra nella
+chiave del programma di ogni materiale**. Ogni volta che quel numero cambia,
+tutto si ricompila; e finche' restano accese, ogni frammento le paga. Sulla GPU
+software (la CI, e i telefoni peggiori) sono 75 ms di fotogramma per luce.
+
+La strada che le toglie tutte e tre e' **cuocere la luce nella texture**, come
+gia' si fa per l'occlusione: le stanze non si muovono e le lampade nemmeno,
+quindi la loro luce e' un DATO, non un calcolo da rifare sessanta volte al
+secondo. `riferimenti/blender/cuoci-traversata.py` cuoce gia' l'AO con tutti i
+suoi cancelli; cuocere `DIFFUSE` diretto+indiretto con le lampade nelle stesse
+posizioni misurate e' lo stesso copione con due righe diverse, e su Colab con
+la GPU costa qualche minuto.
+
+Cosa cambierebbe, e perche' NON l'ho fatto stanotte:
+
+  · **il guadagno**: zero luci a runtime per le stanze (restano l'ambiente e
+    UNA lampada per l'arredo, che e' generato in JS e nella cottura non c'e'),
+    quindi niente ricompilazioni e un fotogramma molto piu' leggero dove serve;
+  · **il costo**: la luce cotta ha il RIMBALZO, che adesso non c'e'. Le stanze
+    verrebbero piu' morbide e piu' vere -- ma DIVERSE. E' resa, e la resa e'
+    tua: non la cambio da solo alle sei del mattino.
+
+Se dici di si', il giro e': posizioni delle plafoniere gia' misurate (le ho, le
+stampa `strumenti/inventario-mondo.mjs`), cottura su Colab, `lightMap` sui
+materiali delle stanze, e una lampada sola per l'arredo.
+
 ### 3.6ter · E all'AVVIO ce ne sono altri 8,3 secondi, che NON ho chiuso
 
 Misurato subito dopo: caricando la pagina e restando fermi, i fotogrammi sopra
