@@ -173,12 +173,32 @@ await pg.evaluate(() => { window.__nautica.stato.stab = true })
  * Con `polling: 100` il tempo simulato non dipende piu' da quanto e' veloce chi
  * guarda. Non e' un allentamento: la soglia e la finestra sono le stesse, e un
  * rollio che non scende resta rosso.
+ *
+ * ─── E SESSANTA PASSI A SONDAGGIO NON BASTAVANO, contati
+ *
+ * Il sondaggio non gira ogni 100 ms: gira quando ha finito il giro prima, e
+ * sessanta passi di simulazione costano piu' di due secondi. MISURATO
+ * contandoli: in trenta secondi di attesa si fanno **undici sondaggi**, cioe'
+ * 660 passi, cioe' UNDICI SECONDI simulati -- e su una macchina lenta anche
+ * meno. Il rollio che deve scendere sotto 1,5 ce ne mette di piu'.
+ *
+ * Duecentoquaranta passi a sondaggio fanno quattro secondi simulati per giro.
+ * E NON BASTA NEMMENO QUELLO, misurato con la CPU frenata sei volte: i
+ * sondaggi scendono a tre, i passi restano 720, cioe' sempre dodici secondi
+ * simulati. Il collo non e' il numero di passi per giro: e' che quella macchina
+ * simula circa quattro decimi di secondo di nave per ogni secondo di orologio.
+ *
+ * Quindi l'attesa passa da trenta a NOVANTA secondi. Non e' una soglia
+ * allentata -- il rollio deve scendere sotto 1,5 come prima, e un rollio che
+ * non scende resta rosso -- e' il tempo che si concede alla macchina lenta per
+ * simulare gli stessi secondi di nave. Su una macchina veloce il cancello esce
+ * appena la nave si e' calmata, come sempre.
  */
 const calmata = await pg.waitForFunction(() => {
   const n = window.__nautica
-  if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 60)
+  if (typeof n.passoDichiarato === 'function') n.passoDichiarato(1 / 60, 240)
   return (n.stato.rollioRms ?? 99) < 1.5
-}, null, { timeout: 30000, polling: 100 }).then(() => true).catch(() => false)
+}, null, { timeout: 90000, polling: 100 }).then(() => true).catch(() => false)
 if (!calmata) {
   /**
    * ─── E SE NON SI CALMA, SI DICE A QUANTO E' ARRIVATO
