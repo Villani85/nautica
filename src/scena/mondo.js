@@ -724,6 +724,14 @@ const postiPlafoniera = []
  * e' HDR, il PNG tiene 0..1, quindi ogni mappa e' stata divisa per il suo
  * novantanovesimo percentile e qui si rimoltiplica. Sono numeri MISURATI, non
  * tarati a occhio: se si ricuoce, si riportano da li'.
+ *
+ * ─── E LE MAPPE STANNO A META' RISOLUZIONE DELL'AO
+ *
+ * La luce e' una funzione LENTA: cambia su decine di centimetri, non su un
+ * texel. Rimpicciolite a meta' del lato dell'atlante (256, 320, 384) il quadro
+ * cambia di DUE livelli su 255 -- cioe' il fondo di rumore di due scatti
+ * identici -- e i tre file passano da 157 KB a 19. L'occlusione invece resta
+ * grande, perche' li' il dettaglio e' negli spigoli.
  */
 const MAPPE_LUCE = [
   { file: 'stair_corridor-luce.webp', divisore: 3.5275, quali: (n) => n.startsWith('CORRIDOIO') },
