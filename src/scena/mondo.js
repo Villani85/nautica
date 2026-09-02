@@ -598,8 +598,56 @@ function isolaDallaLuceDiFuori (camera) {
  * rinuncia alle ombre (`?ombre=0`, o una macchina che dichiara pochi nuclei)
  * qui non se ne accendono di nuove.
  */
-const LATO_OMBRA = ombre >= 2048 ? LATO_OMBRA_GRANDE : ombre > 0 ? LATO_OMBRA_PICCOLO : 0
+/**
+ * ─── E DI SERIE LE OMBRE DEL MONDO SONO SPENTE, con due numeri per dirlo
+ *
+ * Le ombre delle plafoniere funzionano (ci sono volute due cure: gli strati
+ * della camera d'ombra e il frame in cui si sceglie chi proietta). E non si
+ * vedono: `strumenti/misura-ombra.mjs` dice **6 livelli su 255** nel blocco che
+ * cambia di piu', contro un fondo di rumore di **6**. La ragione e' la portata,
+ * che dice metri e vale unita': nove metri, e le sette plafoniere si riempiono
+ * l'ombra a vicenda (vedi `PORTATA_M`).
+ *
+ * Quello che invece si misura e' il costo: alla giunzione fra traversata e
+ * salone la nave torna in quadro e i suoi materiali vogliono anche i programmi
+ * `distance` per le due lampade che proiettano. Con le ombre accese quel
+ * fotogramma dura **2.100 ms**, spente **1.659**. Quattrocentoquaranta
+ * millisecondi del climax per un'immagine che non cambia.
+ *
+ * Quindi spente di serie e `?ombremondo=1` per riaccenderle: il giorno in cui
+ * la luce cambia -- e' un numero sul tavolo del committente -- torneranno a
+ * valere qualcosa, e il codice e' li'.
+ */
+const OMBRE_DEL_MONDO = numeroDaUrl('ombremondo', 0, 0, 1) === 1
+const LATO_OMBRA = !OMBRE_DEL_MONDO ? 0 : ombre >= 2048 ? LATO_OMBRA_GRANDE : ombre > 0 ? LATO_OMBRA_PICCOLO : 0
 
+/**
+ * ─── LE LUCI NASCONO SUBITO E SPENTE, e non stanno dentro il gruppo
+ *
+ * DIFETTO MISURATO IL 2 SETTEMBRE, ed e' il piu' caro trovato finora: la
+ * giunzione fra traversata e salone costava 5.340 ms di quadro fermo, una
+ * volta sola -- quella del visitatore, sul climax.
+ *
+ * La catena: in three il CONTEGGIO delle luci fa parte della chiave del
+ * programma di ogni materiale. Le plafoniere nascevano dentro il gruppo del
+ * mondo e con lui si accendevano e spegnevano, quindi il conteggio cambiava
+ * tre volte durante la visita. La nave, che durante la traversata non si
+ * disegna (`soloDentro` spegne lo strato di fuori), alla giunzione torna in
+ * quadro con una configurazione di luci che non ha mai visto: diciannove
+ * programmi `physical` nuovi, tutti insieme, e il fotogramma dura cinque
+ * secondi e mezzo. Misurato con `render.info.programs` e col profilo della CPU
+ * (`strumenti/misura-giunzione.mjs` racconta la caccia e le cinque strade che
+ * NON hanno funzionato).
+ *
+ * Adesso le luci esistono da prima del primo disegno, tutte, con intensita'
+ * zero: il conteggio e' quello definitivo dal primo fotogramma e non cambia
+ * mai piu'. `accendiLuci` non le crea, le SPOSTA e le accende.
+ *
+ * E vivono nella scena, non nel gruppo: dentro, sparirebbero ogni volta che il
+ * mondo si nasconde -- che e' esattamente il difetto. Il gruppo si ancora una
+ * volta sola, quindi basta copiargli la posa quando succede.
+ */
+const luciPronte = []
 /** Le plafoniere che possono proiettare, in ordine di percorso. */
 const plafoniere = []
 /** Chi proietta adesso: si tiene per non riassegnare a ogni fotogramma. */
@@ -725,13 +773,51 @@ let daRicuocere = 0
     }
   }
 
+  /**
+   * Le luci si allocano qui, alla creazione del mondo: spente, senza posizione,
+   * ma CONTATE. Vedi il commento di `luciPronte`.
+   */
+  function preparaLuci () {
+    if (luci) return
+    luci = new Group()
+    luci.name = 'luciPratiche'
+    const ambiente = new AmbientLight(0xffffff, 0)
+    ambiente.layers.set(STRATO_MONDO)
+    luci.add(ambiente)
+    luciPronte.push(ambiente)
+    /* QUANTE_LUCI per il percorso, piu' le due del salone: il numero e' fisso
+       perche' il conteggio non deve dipendere da cosa i raggi troveranno */
+    for (let i = 0; i < QUANTE_LUCI + 2; i++) {
+      const l = new PointLight(COLORE_LUCE, 0, PORTATA_M, 2)
+      l.layers.set(STRATO_MONDO)
+      if (LATO_OMBRA > 0 && i < OMBRE_QUANTE) {
+        l.castShadow = true
+        l.shadow.mapSize.set(LATO_OMBRA, LATO_OMBRA)
+        l.shadow.autoUpdate = false
+        l.shadow.camera.layers.enable(STRATO_MONDO)
+        l.shadow.camera.near = 0.02
+        l.shadow.camera.far = PORTATA_M / METRI_PER_UNITA
+        l.shadow.normalBias = 0.01
+        l.shadow.intensity = OMBRA_FORZA
+      }
+      luci.add(l)
+      luciPronte.push(l)
+    }
+    scena.add(luci)
+  }
+
   function accendiLuci () {
-  if (luci || !grezze || !grezze.length) return
-  luci = new Group()
-  luci.name = 'luciPratiche'
-  const ambiente = new AmbientLight(0xffffff, AMBIENTE)
-  ambiente.layers.set(STRATO_MONDO)
-  luci.add(ambiente)
+  if (!grezze || !grezze.length) return
+  preparaLuci()
+  /* la posa del gruppo si copia una volta: il mondo si ancora e poi sta fermo */
+  luci.position.copy(gruppo.position)
+  luci.quaternion.copy(gruppo.quaternion)
+  luci.scale.copy(gruppo.scale)
+  let prossima = 1
+  const ambiente = luciPronte[0]
+  ambiente.intensity = AMBIENTE
+  const piastre = new Group()
+  piastre.name = 'luciPratiche'
   /**
    * ─── LA PLAFONIERA STA SUL SOFFITTO, non a sei centimetri dall'occhio
    *
@@ -763,45 +849,13 @@ let daRicuocere = 0
     if (soffitto === null) continue
     const cielino = sonda.y + soffitto
 
-    const l = new PointLight(COLORE_LUCE, INTENSITA, PORTATA_M, 2)
-    l.layers.set(STRATO_MONDO)
+    const l = luciPronte[prossima++]
+    if (!l) continue
+    l.intensity = INTENSITA
     l.position.set(x, cielino - LUCE_SOTTO_IL_SOFFITTO_M, z)
-    if (LATO_OMBRA > 0) {
-      l.shadow.mapSize.set(LATO_OMBRA, LATO_OMBRA)
-      l.shadow.autoUpdate = false
-      /* la camera dell'ombra vive in UNITA' DI SCENA (il gruppo e' scalato
-         1/2,5): un metro qui e' 0,4 unita', e il piano vicino va sotto il
-         raggio del tubo piu' sottile o i tubi si tagliano l'ombra da soli */
-      /**
-       * ─── E LA CAMERA DELL'OMBRA HA STRATI SUOI, che nessuno aveva acceso
-       *
-       * DIFETTO PAGATO CON UN'ORA DI PROVINI IDENTICI. Ombre accese, due
-       * lampade con `castShadow`, mappe 512 allocate, trentacinque pezzi
-       * proiettanti sullo strato giusto -- e il quadro NON CAMBIAVA DI UN
-       * LIVELLO: differenza media 0 fra ombre accese e spente, anche a `?luce=3`
-       * e spegnendole a caldo sulla stessa pagina.
-       *
-       * Il passaggio d'ombra non filtra con gli strati della LUCE: filtra con
-       * quelli della sua CAMERA (`WebGLShadowMap`: `object.layers.test(camera.layers)`),
-       * e quella nasce sullo strato zero. Le maglie del mondo stanno solo sull'1
-       * da quando le ho isolate dalla luce di fuori: nella mappa d'ombra non
-       * entrava NIENTE, e una mappa vuota vuol dire «tutto illuminato».
-       *
-       * E' la terza volta che lo stesso strato rompe qualcosa in silenzio: le
-       * luci (che era il suo scopo), poi il raggio di `vistaLibera`
-       * (`_raggio.layers.enable`), adesso l'ombra. Quando si isola qualcosa su
-       * uno strato, ogni COSA CHE GUARDA va portata li' a mano.
-       */
-      l.shadow.camera.layers.enable(STRATO_MONDO)
-      l.shadow.camera.near = 0.02
-      l.shadow.camera.far = PORTATA_M / METRI_PER_UNITA
-      /* `normalBias` invece di `bias`: la stanza e' fatta di pareti piatte e
-         grandi, dove il bias costante o non basta o stacca l'ombra dal piede */
-      l.shadow.normalBias = 0.01
-      l.shadow.intensity = OMBRA_FORZA
-      plafoniere.push(l)
-    }
-    luci.add(l)
+    /* l'ombra e' gia' preparata da `preparaLuci`: qui si dice solo che questa
+       lampada e' una di quelle che possono proiettare */
+    if (LATO_OMBRA > 0) plafoniere.push(l)
 
     /* e il corpo illuminante si VEDE: una luce senza sorgente visibile e' una
        stanza illuminata da niente, che l'occhio legge come finta */
@@ -812,7 +866,11 @@ let daRicuocere = 0
     piastra.position.set(x, cielino - PIASTRA_SOTTO_IL_SOFFITTO_M, z)
     piastra.layers.set(STRATO_MONDO)
     piastra.rotation.x = Math.PI / 2
-    luci.add(piastra)
+    /* la PIASTRA e' geometria e sta nel gruppo -- se stesse col resto delle
+       luci, che adesso vivono nella scena, resterebbe visibile anche a mondo
+       spento: una lastra crema sospesa in mezzo alla nave. Il nodo si chiama
+       `luciPratiche` perche' `maglieDelMondo` lo esclude gia' dai raggi. */
+    piastre.add(piastra)
   }
   /**
    * ─── E IL SALONE HA UNA LUCE SUA
@@ -857,18 +915,20 @@ let daRicuocere = 0
     const c = new Vector3(); scatola.getCenter(c)
     const d = new Vector3(); scatola.getSize(d)
     for (const f of [0.3, 0.72]) {
-      const l = new PointLight(0xffdcb0, INTENSITA * 2.6, Math.max(d.x, d.z) * 0.9, 2)
-      l.layers.set(STRATO_MONDO)
+      const l = luciPronte[prossima++]
+      if (!l) continue
+      l.color.setHex(0xffdcb0)
+      l.intensity = INTENSITA * 2.6
+      l.distance = Math.max(d.x, d.z) * 0.9
       l.position.set(
         scatola.min.x + d.x * f,
         scatola.min.y + d.y * 0.78,
         c.z
       )
-      luci.add(l)
     }
   }
 
-  gruppo.add(luci)
+  gruppo.add(piastre)
 }
 
 /**
@@ -1450,6 +1510,7 @@ function vistaLibera (s) {
       .sort((a, b) => a.d - b.d)
       .slice(0, OMBRE_QUANTE)
       .map((v) => v.l)
+    if (!ombreggianti.length) ombreggianti = plafoniere.filter((l) => l.castShadow)
     const uguali = vicine.length === ombreggianti.length && vicine.every((l, i) => l === ombreggianti[i])
     if (!uguali) {
       for (const l of ombreggianti) if (!vicine.includes(l)) l.castShadow = false
@@ -1490,7 +1551,7 @@ function vistaLibera (s) {
       const b = new Box3()
       const m = new Matrix4()
       const out = []
-      for (const radice of [gruppo.getObjectByName('arredoMondo'), luci]) {
+      for (const radice of [gruppo.getObjectByName('arredoMondo'), gruppo.getObjectByName('luciPratiche')]) {
         if (!radice) continue
         radice.traverse((o) => {
           if (!o.isMesh || o === radice) return

@@ -24,16 +24,24 @@
  * 32x32 di medie locali. Non e' un giudizio di resa: e' la domanda «la
  * fotografia arriva sul guscio, si' o no».
  *
- * I numeri, dalla corsa del 2 settembre 2026 a 1440x900:
+ * I numeri, dalla corsa del 2 settembre 2026, con i filmati INCHIODATI
+ * (`FERMA_VIDEO`, vedi sotto):
  *
- *     alla fine della traversata (s = 0,95)   198 livelli su 255 nel blocco
- *                                             peggiore, 41,7 di media
- *     due scatti IDENTICI (fondo di rumore)     6 livelli, 1,9 di media
+ *     schermo largo 1440x900   113 livelli su 255 nel blocco peggiore
+ *     telefono       390x844   110 livelli
+ *     due scatti IDENTICI (fondo di rumore)   5 e 2 livelli
  *
- * Trentatre volte il rumore. La soglia sta a 60, cioe' dieci volte il fondo e
- * un terzo di cio' che si misura: abbastanza alta da non passare se la
- * proiezione si spegne a meta', abbastanza bassa da non diventare rossa perche'
- * il filmato e' un fotogramma piu' avanti.
+ * Venti volte il rumore. La soglia sta a 60 su schermo largo e 30 su telefono:
+ * abbastanza alta da non passare se la proiezione si spegne, abbastanza bassa
+ * da non diventare rossa per un fotogramma di scarto.
+ *
+ * ─── E I FILMATI SI FERMANO, o il metro misura il film
+ *
+ * Prima presa senza fermarli: il fondo di rumore era 26 livelli invece di 5,
+ * perche' fra uno scatto e l'altro il filmato del salone avanza. Il cancello
+ * se n'e' accorto da solo -- guarda anche il proprio rumore -- ed e' rosso
+ * uscito la prima volta. `FERMA_VIDEO=1` mette in pausa ogni video e lo porta
+ * allo stesso istante.
  *
  * ─── E SI GUARDA ANCHE UN TELEFONO
  *
@@ -66,7 +74,9 @@ function scatta (dir, largo, alto, s, parametri) {
     env: {
       ...process.env,
       S: s, FUORI: dir, LARGO: String(largo), ALTO: String(alto), PARAMETRI: parametri,
-      INDIRIZZO: servito.indirizzo
+      INDIRIZZO: servito.indirizzo,
+      /* i filmati fermi, o il fondo di rumore misura il film che avanza */
+      FERMA_VIDEO: '1'
     },
     stdio: 'ignore'
   })

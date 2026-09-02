@@ -24,6 +24,28 @@ for (const s of S_VOLUTI) {
     const v = await leggi((lo + hi) / 2)
     return { s: v, p: n.p, pCoda: n.pCoda, y: Math.round((lo + hi) / 2) }
   }, s)
+  /**
+   * ─── E SE SI CHIEDE, I FILMATI SI INCHIODANO
+   *
+   * `FERMA_VIDEO=1` mette in pausa ogni `<video>` e lo porta allo stesso
+   * istante. Serve ai cancelli che confrontano due scatti: senza, fra una
+   * presa e l'altra il filmato del salone avanza e il fondo di rumore sale da
+   * 2 a 26 livelli -- cioe' il metro comincia a misurare il film invece della
+   * cosa che gli si e' chiesta. Con il fermo, i due scatti mostrano lo stesso
+   * fotogramma.
+   */
+  if (process.env.FERMA_VIDEO === '1') {
+    await pg.evaluate(async () => {
+      for (const v of document.querySelectorAll('video')) {
+        try {
+          v.pause()
+          if (v.readyState >= 1 && Number.isFinite(v.duration)) v.currentTime = Math.min(0.5, v.duration * 0.1)
+        } catch { /* un video che non si lascia fermare non ferma lo scatto */ }
+      }
+      await new Promise(r => setTimeout(r, 500))
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    })
+  }
   await pg.waitForTimeout(900)
   const nome = `${FUORI}/s-${s.toFixed(2)}.jpg`
   await pg.screenshot({ path: nome, type: 'jpeg', quality: 85 })

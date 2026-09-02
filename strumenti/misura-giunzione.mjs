@@ -71,7 +71,7 @@ const ALTO = Number(process.env.ALTO || 900)
 const servito = await anteprima()
 const browser = await apriBrowser({ conGpu: true })
 const pg = await (await browser.newContext({ viewport: { width: LARGO, height: ALTO } })).newPage()
-await pg.goto(servito.indirizzo + '?ispeziona=1', { waitUntil: 'load' })
+await pg.goto(servito.indirizzo + '?ispeziona=1' + (process.env.PARAMETRI ? '&' + process.env.PARAMETRI : ''), { waitUntil: 'load' })
 await pg.waitForFunction(() => window.__nautica?.mondo()?.ancorato === true, null, { timeout: 120000 })
 await pg.waitForTimeout(3000)
 
