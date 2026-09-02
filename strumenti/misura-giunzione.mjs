@@ -72,6 +72,13 @@
  *     1.377 ms   e con lui la nave, compilata con lo strato zero riacceso per
  *                un istante, cosi' le luci raccolte sono quelle della giunzione
  *
+ * GLI ULTIMI DUE PASSI SONO STATI TOLTI, e vale la pena dire perche': in CI la
+ * GPU e' software (SwiftShader), e compilare tutti quei programmi in un colpo
+ * ha fatto scadere lo screenshot di `collaudo-finale-vivo` -- trenta secondi.
+ * Un anticipo che su una macchina veloce guadagna 280 ms e su una lenta blocca
+ * il fotogramma non e' un anticipo: e' un rischio spostato addosso a chi ha la
+ * macchina peggiore. Il valore di serie resta 1.660 ms.
+ *
  * Restano sei programmi. Chi riprende: sono `physical` e `basic` che nascono
  * quando lo strato di fuori torna acceso, e la strada non provata e' disegnare
  * la nave per un fotogramma mentre il mondo e' acceso, invece di compilarla in

@@ -888,8 +888,6 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
    * invece dell'orologio di sistema e' anche piu' onesto: il delta e' la
    * distanza fra i due fotogrammi che il browser ha DAVVERO consegnato.
    */
-  let mondoCompilato = false
-
   const orologio = new Timer()
   let t = 0
   let frame = 0
@@ -1844,26 +1842,23 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
        * si chiede una volta sola, appena il mondo e' pronto, quando il
        * visitatore sta ancora guardando la nave da fuori.
        */
-      if (!mondoCompilato && mondo.nodo) {
-        mondoCompilato = true
-        /**
-         * ─── E CON LORO LA NAVE, che alla giunzione torna in quadro
-         *
-         * Durante la traversata la camera spegne lo strato di fuori, quindi la
-         * nave non si disegna e i suoi programmi non nascono. Alla giunzione
-         * torna tutta insieme. Si compila anche lei, e per la durata della
-         * compilazione si riaccende lo strato zero sulla camera: `compile`
-         * raccoglie le luci che la CAMERA vede, e con lo strato spento
-         * raccoglierebbe solo quelle del mondo -- cioe' un programma che alla
-         * giunzione non vale. La maschera si rimette subito com'era.
-         */
-        const maschera = camera.layers.mask
-        camera.layers.enableAll()
-        for (const b of [mondo.nodo, nave].filter(Boolean)) {
-          try { render.compileAsync(b, camera, scena)?.catch?.(() => {}) } catch { /* e' un anticipo, non un obbligo */ }
-        }
-        camera.layers.mask = maschera
-      }
+      /**
+       * ─── QUI C'ERA UN ANTICIPO DI COMPILAZIONE, E L'HO TOLTO
+       *
+       * `compileAsync` del mondo e della nave, all'ingresso della traversata,
+       * faceva scendere la giunzione da 1.660 a 1.377 ms su questa macchina.
+       * Duecentottanta millisecondi: poco. E in CI, dove la GPU e' software
+       * (SwiftShader), compilare tutti quei programmi in un colpo ha fatto
+       * scadere lo screenshot di `collaudo-finale-vivo` -- trenta secondi -- e
+       * la corsa 307 e' morta li'.
+       *
+       * Un anticipo che su una macchina veloce guadagna un quinto di secondo e
+       * su una lenta blocca il fotogramma non e' un anticipo: e' un rischio
+       * spostato addosso a chi ha la macchina peggiore. La cura grossa -- le
+       * luci che esistono dal primo fotogramma, 5.340 -> 1.660 ms -- resta,
+       * perche' quella non compila niente in piu': cambia solo QUANDO nasce il
+       * programma di ognuno.
+       */
       if (corsaTraversata > 0.002) {
         const s = MathUtils.clamp(corsaTraversata, 0, 1)
         const posa = mondo.posaA(s)
