@@ -459,6 +459,34 @@ scelte di resa -- quanti materiali diversi, con quante mappe, sotto quante luci.
 E' architettura del rendering, non una taratura: se la apro stanotte la lascio
 a meta'.
 
+### 3.8 · La luce cotta non ha cambiato la resa: i due numeri, sul sito vivo
+
+La cottura della luce (D70) serviva a togliere lo stallo di 5,3 s alla
+giunzione, non a cambiare come si vede. E' una cosa che si dichiara facilmente e
+si verifica di rado, quindi l'ho misurata SUL SITO PUBBLICATO, stessi fotogrammi
+con `?lucecotta=1` (cotta) e `?lucecotta=0` (lampade vive), video fermi,
+1280x720, luminanza sotto la testata:
+
+| fotogramma | luce | media | p10 | p50 | p90 | scarto p90-p10 |
+|---|---|---|---|---|---|---|
+| s=0,08 (vano meccanismo) | cotta | 85,7 | 11 | 97 | 144 | 133 |
+| s=0,08 | viva | 89,6 | 11 | 95 | 164 | 153 |
+| s=0,32 (corridoio scala) | cotta | 101,0 | 54 | 104 | 148 | 94 |
+| s=0,32 | viva | 99,3 | 53 | 101 | 148 | 95 |
+
+Nel corridoio sono la stessa immagine (media 101,0 contro 99,3, scarto 94
+contro 95). Nel vano meccanismo la cotta e' un po' piu' chiusa in alto: p90 144
+contro 164, cioe' i colpi di luce diretta sulle macchine sono meno accesi -- il
+rimbalzo li ha ammorbiditi. Media e ombre profonde (p10 = 11 in entrambe) non si
+muovono.
+
+**Cosa resta al committente.** Le stanze sono pallide -- pareti chiare, poco
+contrasto -- e questo *non* e' un effetto della cottura: viene identico con le
+lampade vive. Se la traversata deve essere piu' cupa e piu' industriale prima di
+arrivare al salone, e' una scelta di tavolozza e di messa in scena, e le leve
+sono numeri: `?ambiente=` (ora 0,22), `?intensita=` (0,35), e in cottura la
+potenza delle lampade ad area. Dimmi il numero e lo metto; non lo scelgo io.
+
 ### 3.7 · Il salone non e' piu' una scatola beige (2 settembre, notte)
 
 Il difetto piu' visibile del filmato della traversata era la fine: otto secondi
