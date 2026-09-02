@@ -2022,6 +2022,7 @@ export function creaScena (contenitore, base = import.meta.env.BASE_URL) {
       francoTraversata: () => mondo?.francoPose?.() ?? null,
       /* cosa il mondo ha messo dentro se stesso (arredo, plafoniere), in metri: vedi mondo.js inventario */
       inventarioMondo: () => mondo?.inventario?.() ?? null,
+      luciMondo: () => mondo?.luciPratiche?.() ?? null,
       statoSollievo: () => salone?.statoSollievo ?? null,
       provaSollievo: (gradi, dt = 1 / 24) => salone?.aggiorna(gradi, dt),
       /**
