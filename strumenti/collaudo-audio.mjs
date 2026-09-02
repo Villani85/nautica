@@ -108,9 +108,26 @@ try {
   }
   console.log('  collisioni    ' + (collisione ? (collisione.length || 'nessuna') : 'pulsante assente'))
 
+  /**
+   * ─── E IL CLIC NON ASPETTA NAVIGAZIONI, perche' non ce ne sono
+   *
+   * DIFETTO DEL CANCELLO, preso dalla corsa 306: «page.click: Timeout 30000ms
+   * exceeded ... performing click action / click action done / waiting for
+   * scheduled navigations to finish». Il clic era GIA' avvenuto: quello che
+   * scadeva era l'attesa che Playwright fa dopo, per vedere se la pagina
+   * naviga. Su un runner lento, con la scena che compila i suoi programmi,
+   * quella finestra non si chiude in trenta secondi.
+   *
+   * Il pulsante del suono non naviga da nessuna parte: `noWaitAfter` dice a
+   * Playwright di non aspettare una cosa che non succede. Locale passava
+   * sempre, e questa e' la differenza fra un cancello che misura il sito e uno
+   * che misura quanto e' carico il computer che lo fa girare.
+   */
+  const PREMI = { noWaitAfter: true }
+
   /* --- C. DOPO IL GESTO: un contesto solo, e vivo ------------------------- */
   if (bott.c) {
-    await pg.click('button.suono')
+    await pg.click('button.suono', PREMI)
     await pg.waitForFunction(() => window.__audio.leggi().contesti > 0, null, { timeout: 8000 })
       .catch(() => guai.push('dopo il gesto non nasce nessun AudioContext'))
     const dopo = await pg.evaluate(() => window.__audio.leggi())
@@ -120,8 +137,8 @@ try {
     if (dopo.stato !== 'running') guai.push(`il contesto resta «${dopo.stato}» dopo il consenso`)
 
     /* --- D. SI PREME ANCORA e non se ne costruisce un altro --------------- */
-    await pg.click('button.suono')
-    await pg.click('button.suono')
+    await pg.click('button.suono', PREMI)
+    await pg.click('button.suono', PREMI)
     const terzo = await pg.evaluate(() => window.__audio.leggi())
     console.log(`  spento e riacceso contesti ${terzo.contesti}`)
     if (terzo.contesti > 1) guai.push(`accendere e spegnere costruisce contesti nuovi (${terzo.contesti})`)
