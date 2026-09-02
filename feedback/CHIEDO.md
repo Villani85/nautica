@@ -354,6 +354,39 @@ che cambia di piu', contro un fondo di rumore di 6** -- cioe' niente. Se le
 macchine devono toccare il pavimento, la leva non e' l'ombra: e' la luce
 (portata, quante plafoniere, intensita'), e quella e' tua.
 
+### 3.6bis · UN DIFETTO CHE NON SAPEVO DI AVERE: la giunzione costa 5,3 secondi
+
+Cercando altro, ho misurato lo scorrimento attraverso la giunzione fra la
+traversata e il salone. Il fotogramma in cui il filmato prende il comando --
+pCoda 0,0074, cioe' il climax del sito -- dura **5.340 millisecondi**. Al
+secondo e al terzo passaggio ne dura 28 e 23.
+
+E' un costo che si paga una volta sola, quindi **lo paga il visitatore**, che
+la giunzione la attraversa una volta sola. Cinque secondi e mezzo di quadro
+fermo, sul finale.
+
+Da cosa viene, misurato e non supposto: profilo della CPU su quel fotogramma,
+5.725 ms campionati di cui 5.370 in `getProgramInfoLog` -- una lettura sincrona
+che aspetta la fine del link di programmi nuovi. Chiesti al renderer quali:
+**diciannove programmi nuovi, tutti i materiali della nave**. Il perche' e' il
+conteggio delle luci, che in three fa parte della chiave del programma: durante
+la traversata la camera spegne lo strato di fuori e la nave non si disegna,
+mentre il mondo accende nove plafoniere; alla giunzione la nave torna in quadro
+con una configurazione di luci che non ha mai visto.
+
+**Non l'ho chiuso**, e ho provato sei strade (`strumenti/misura-giunzione.mjs`
+le elenca tutte con i numeri, comprese quelle che non hanno funzionato: la
+migliore scende a 4.966 ms). La misura di controllo dice quanto vale la posta:
+con `?mondo=0` lo stesso passaggio costa 1.737 ms.
+
+**E il cancello che avrebbe dovuto vederlo dichiara di non guardare li'**:
+`collaudo-fluidita`, arrivato alla giunzione, stampa «NON MISURABILE (la corsa
+non attraversa p = 1,0319)». Adesso c'e' `misura-giunzione.mjs` che la guarda.
+
+Te lo scrivo qui e non lo tengo per me perche' e' il difetto piu' grave che
+abbia trovato stanotte, e riguarda l'unico istante del sito in cui uno
+sconosciuto decide se restare.
+
 ### 3.7 · Il salone non e' piu' una scatola beige (2 settembre, notte)
 
 Il difetto piu' visibile del filmato della traversata era la fine: otto secondi
