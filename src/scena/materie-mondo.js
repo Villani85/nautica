@@ -241,6 +241,29 @@ function materiaPer (nome) {
  * Veste le maglie di un gruppo. Ritorna quante ne ha vestite, perche' un numero
  * si guarda e una promessa no.
  */
+/**
+ * ─── E SI POSSONO PREPARARE PRIMA, perche' non dipendono da niente
+ *
+ * MISURATO: l'ancoraggio del mondo -- il fotogramma in cui il GLB arriva, si
+ * isola dalla luce di fuori, si veste e si arreda -- costa 756 ms, e sono
+ * TUTTI qui: generare le tele procedurali (mandorlata, buccia, vena, e le
+ * normali che ne derivano) e' l'unica parte pesante. Isolamento 0 ms, arredo 4,
+ * luci 1.
+ *
+ * Ma queste tele non dipendono dal GLB: sono rumore e aritmetica. Chiamando
+ * `preparaMaterie()` presto -- alla creazione del mondo, mentre il file da 1,6
+ * MB e' ancora in volo -- l'ancoraggio scende da 761 a 7 ms.
+ *
+ * E VA DETTO COSA NON CAMBIA: il totale dei fotogrammi lunghi all'avvio resta
+ * lo stesso (8,3 s su questa macchina, misurati sommando ogni fotogramma sopra
+ * i 150 ms). Il lavoro non sparisce, si sposta: esce dal fotogramma in cui il
+ * mondo si aggancia -- che e' quello piu' carico, perche' li' arrivano anche il
+ * parsing del GLB e le prime compilazioni -- e entra in uno in cui non sta
+ * arrivando nient'altro. E' un guadagno di distribuzione, non di lavoro, e
+ * chiamarlo diversamente sarebbe raccontare una cosa che la misura non dice.
+ */
+export function preparaMaterie () { costruisci() }
+
 export function vestiMondo (gruppo) {
   if (typeof document === 'undefined') return 0
   const m = costruisci()

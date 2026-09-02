@@ -1,6 +1,6 @@
 import { Group, MathUtils, Quaternion, Vector3, PointLight, AmbientLight, Mesh, PlaneGeometry, MeshBasicMaterial, Color, DoubleSide, Raycaster, Box3, Matrix4, PerspectiveCamera, VideoTexture, SRGBColorSpace } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { vestiMondo } from './materie-mondo.js'
+import { vestiMondo, preparaMaterie } from './materie-mondo.js'
 import { arredaMondo, misuratore } from './arredo-mondo.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { METRI_PER_UNITA } from './acqua.js'
@@ -1006,16 +1006,26 @@ function riallineaSalone (radice) {
       diag = { voluto: [guardaCome.x, guardaCome.y, guardaCome.z, guardaCome.w].map(n=>+n.toFixed(4)), ultima: [ultima.x, ultima.y, ultima.z, ultima.w].map(n=>+n.toFixed(4)) }
     }
     cameraDelSito = camera || null
+    const _t = []
+    const _segna = (nome, da) => _t.push(nome + ' ' + Math.round(performance.now() - da))
+    let _d = performance.now()
     isolaDallaLuceDiFuori(camera)
+    _segna('isolamento', _d); _d = performance.now()
     /* le materie DOPO l'isolamento: `isolaDallaLuceDiFuori` chiama
        `needsUpdate`, e vestire prima significherebbe farlo due volte */
     vestite = vestiMondo(gruppo)
+    _segna('materie', _d); _d = performance.now()
     /* l'arredo DOPO l'isolamento e le materie: nasce gia' sullo strato giusto e
        con materiali suoi, quindi non va rivestito */
     arredati = arredaMondo(gruppo, grezze || [])
+    _segna('arredo', _d); _d = performance.now()
+    accendiLuci()
+    _segna('luci', _d)
+    tempiAncoraggio = _t.join(' · ')
     ancorato = true
   }
 
+  let tempiAncoraggio = ''
   let pronto = false
   let errore = null
   let maglie = 0
@@ -1524,6 +1534,23 @@ function vistaLibera (s) {
     }
   }
 
+  /**
+   * ─── E LE LUCI SI ALLOCANO SUBITO, prima del primo disegno
+   *
+   * MISURATO: con le luci create all'arrivo del GLB, il fotogramma in cui
+   * nascono dura SEI SECONDI -- il conteggio delle luci passa da tre a tredici
+   * e ogni materiale gia' compilato ne vuole uno nuovo. Allocandole qui, alla
+   * creazione della scena, il primo programma di ogni materiale nasce gia' con
+   * il conteggio definitivo: la compilazione si paga una volta, distribuita
+   * come sempre su cio' che entra in quadro.
+   *
+   * Sono spente (intensita' zero) finche' `accendiLuci` non le mette al loro
+   * posto: una luce spenta non illumina, ma CONTA.
+   */
+  preparaLuci()
+  /* le tele procedurali si generano adesso, mentre il GLB e' ancora in volo:
+     costano 756 ms e non dipendono da lui. Vedi `preparaMaterie`. */
+  preparaMaterie()
   scena.add(gruppo)
 
   return {
@@ -1669,6 +1696,7 @@ function vistaLibera (s) {
         sfondamentoPonte: sfondamento,
         francoChiglia,
         ancorato,
+        tempiAncoraggio,
         luci: luci ? luci.children.filter((c) => c.isLight).length : 0,
         /* la proiezione sul guscio: quanto ne arriva adesso e quanto siamo
            lontani dalla posa in cui e' esatta. Un cancello (o io in un
